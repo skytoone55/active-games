@@ -538,20 +538,17 @@ export default function ReservationPage() {
                             setSelectedYear(year)
                             setSelectedMonth(month)
                           }}
-                          className="border border-primary/30 rounded-lg px-4 py-2 pr-10 font-bold text-lg hover:border-primary/70 transition-all cursor-pointer backdrop-blur-sm"
+                          className="month-selector border-2 border-primary/30 rounded-lg px-4 py-2 pr-10 font-bold text-lg hover:border-primary/70 transition-all cursor-pointer backdrop-blur-sm"
                           style={{ 
-                            fontFamily: 'Orbitron, sans-serif',
-                            backgroundColor: 'rgba(42, 42, 62, 0.9)',
-                            color: '#00f0ff',
-                            appearance: 'none',
-                            WebkitAppearance: 'none',
-                            MozAppearance: 'none',
-                            textShadow: '0 0 8px rgba(0, 240, 255, 0.6)',
-                            minWidth: '200px'
+                            minWidth: '200px',
+                            outline: 'none'
                           }}
                         >
                           {availableMonths.map(({ year, month, key }) => (
-                            <option key={key} value={key} style={{ backgroundColor: 'rgba(26, 26, 46, 0.98)', color: '#00f0ff' }}>
+                            <option 
+                              key={key} 
+                              value={key}
+                            >
                               {new Date(year, month, 1).toLocaleDateString(isRTL ? 'he-IL' : 'en-US', { 
                                 month: 'long', 
                                 year: 'numeric' 
@@ -561,7 +558,7 @@ export default function ReservationPage() {
                         </select>
                         <div 
                           className="absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none"
-                          style={{ color: '#00f0ff' }}
+                          style={{ color: '#00f0ff', zIndex: 1 }}
                         >
                           <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <path d="M6 9L1 4h10z" fill="currentColor" />
