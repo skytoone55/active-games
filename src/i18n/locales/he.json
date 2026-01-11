@@ -188,21 +188,69 @@
       "subtitle": "בחרו את המיקום שבו אתם רוצים לשחק"
     },
     "step2": {
+      "title": "סוג הזמנה",
+      "subtitle": "בחרו את סוג הפעילות"
+    },
+    "step3": {
       "title": "בחרו תאריך",
       "subtitle": "בחרו את היום למפגש שלכם"
     },
-    "step3": {
+    "step4": {
       "title": "בחרו שעה",
       "subtitle": "בחרו את חלון הזמן"
+    },
+    "step5": {
+      "title": "פרטי יצירת קשר",
+      "subtitle": "אנא מלאו את הפרטים שלכם"
+    },
+    "contact": {
+      "first_name": "שם פרטי",
+      "last_name": "שם משפחה",
+      "phone": "מספר טלפון",
+      "email": "אימייל",
+      "special_request": "בקשה מיוחדת",
+      "first_name_placeholder": "הזינו שם פרטי",
+      "last_name_placeholder": "הזינו שם משפחה",
+      "phone_placeholder": "הזינו מספר טלפון",
+      "email_placeholder": "הזינו אימייל (אופציונלי)",
+      "special_request_placeholder": "אם יש לכם בקשה מיוחדת, אנא ציינו כאן (אופציונלי)",
+      "terms": {
+        "label": "אני קראתי ואני מסכים לתנאים והכללים",
+        "read_terms": "קרא את התנאים והכללים",
+        "title": "תנאים והכללים",
+        "close": "סגור"
+      }
+    },
+    "type": {
+      "game": {
+        "title": "משחק",
+        "description": "משחק ללא הגבלה לשעה אחת"
+      },
+      "event": {
+        "title": "אירוע",
+        "description": "חבילת אירוע עם חדר פרטי"
+      },
+      "players": {
+        "label": "מספר שחקנים",
+        "placeholder": "בחרו או הקלידו מספר"
+      }
     },
     "next": "הבא",
     "previous": "הקודם",
     "confirm": "אשרו הזמנה",
     "loading": "טוען...",
+    "confirmation": {
+      "title": "הזמנה אושרה!",
+      "subtitle": "תודה על ההזמנה שלכם",
+      "reservation_number": "מספר הזמנה",
+      "back_to_site": "חזרה לאתר",
+      "finished": "סיום"
+    },
     "arrival_note": "אנא הגיעו לפחות 10 דקות לפני השעה שנקבעה",
     "summary": {
       "title": "סיכום הזמנה",
       "branch": "סניף:",
+      "type": "סוג:",
       "date": "תאריך:",
       "time": "שעה:"
     }

@@ -156,21 +156,69 @@
       "subtitle": "Choisissez l'emplacement où vous souhaitez jouer"
     },
     "step2": {
+      "title": "Type de réservation",
+      "subtitle": "Choisissez le type d'activité"
+    },
+    "step3": {
       "title": "Sélectionner la date",
       "subtitle": "Choisissez le jour pour votre session"
     },
-    "step3": {
+    "step4": {
       "title": "Sélectionner l'heure",
       "subtitle": "Choisissez le créneau horaire"
+    },
+    "step5": {
+      "title": "Informations de contact",
+      "subtitle": "Veuillez remplir vos coordonnées"
+    },
+    "contact": {
+      "first_name": "Prénom",
+      "last_name": "Nom",
+      "phone": "Numéro de téléphone",
+      "email": "Email",
+      "special_request": "Demande particulière",
+      "first_name_placeholder": "Entrez le prénom",
+      "last_name_placeholder": "Entrez le nom",
+      "phone_placeholder": "Entrez le numéro de téléphone",
+      "email_placeholder": "Entrez l'email (optionnel)",
+      "special_request_placeholder": "Si vous avez des demandes particulières, veuillez les mentionner ici (optionnel)",
+      "terms": {
+        "label": "J'ai lu et j'accepte les conditions et règles",
+        "read_terms": "Lire les conditions et règles",
+        "title": "Conditions et Règles",
+        "close": "Fermer"
+      }
+    },
+    "type": {
+      "game": {
+        "title": "Jeu",
+        "description": "Jeux illimités pendant une heure"
+      },
+      "event": {
+        "title": "Événement",
+        "description": "Forfait événement avec salle privée"
+      },
+      "players": {
+        "label": "Nombre de joueurs",
+        "placeholder": "Sélectionnez ou entrez un nombre"
+      }
     },
     "next": "Suivant",
     "previous": "Précédent",
     "confirm": "Confirmer la réservation",
     "loading": "Chargement...",
+    "confirmation": {
+      "title": "Réservation confirmée !",
+      "subtitle": "Merci pour votre réservation",
+      "reservation_number": "Numéro de réservation",
+      "back_to_site": "Retour au site",
+      "finished": "Terminé"
+    },
     "arrival_note": "Veuillez arriver au moins 10 minutes avant l'heure prévue",
     "summary": {
       "title": "Résumé de la réservation",
       "branch": "Succursale:",
+      "type": "Type:",
       "date": "Date:",
       "time": "Heure:"
     }

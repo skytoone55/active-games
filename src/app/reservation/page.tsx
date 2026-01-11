@@ -2,17 +2,26 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
-import { MapPin, Calendar, Clock, ChevronRight, ChevronLeft, Check } from 'lucide-react'
+import { MapPin, Calendar, Clock, ChevronRight, ChevronLeft, Check, Users, Gamepad2, User, Phone, Mail, MessageSquare, FileText, ExternalLink, X, Home } from 'lucide-react'
 import { getTranslations, getDirection, Locale, defaultLocale } from '@/i18n'
 import { Header, Footer } from '@/components'
 
-type BookingStep = 1 | 2 | 3
+type BookingStep = 1 | 2 | 3 | 4 | 5 | 6
 
 interface BookingData {
   branch: string | null
+  type: 'game' | 'event' | null
+  players: number | null
   date: string | null
   time: string | null
+  firstName: string | null
+  lastName: string | null
+  phone: string | null
+  email: string | null
+  specialRequest: string | null
+  termsAccepted: boolean
 }
 
 export default function ReservationPage() {
@@ -22,11 +31,21 @@ export default function ReservationPage() {
   const [step, setStep] = useState<BookingStep>(1)
   const [bookingData, setBookingData] = useState<BookingData>({
     branch: null,
+    type: null,
+    players: null,
     date: null,
     time: null,
+    firstName: null,
+    lastName: null,
+    phone: null,
+    email: null,
+    specialRequest: null,
+    termsAccepted: false,
   })
   const [selectedMonth, setSelectedMonth] = useState<number>(new Date().getMonth())
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear())
+  const [showTermsModal, setShowTermsModal] = useState(false)
+  const [reservationNumber, setReservationNumber] = useState<string | null>(null)
 
   useEffect(() => {
     const savedLocale = localStorage.getItem('locale') as Locale
@@ -123,9 +142,23 @@ export default function ReservationPage() {
     setTimeout(() => setStep(2), 300)
   }
 
+  const handleTypeSelect = (type: 'game' | 'event') => {
+    setBookingData({ ...bookingData, type, players: type === 'game' ? null : bookingData.players })
+  }
+
+  const handlePlayersChange = (players: number | null) => {
+    setBookingData({ ...bookingData, players })
+  }
+
+  const handleContinueToDate = () => {
+    if (bookingData.type === 'game' && bookingData.players && bookingData.players > 0) {
+      setTimeout(() => setStep(3), 300)
+    }
+  }
+
   const handleDateSelect = (date: string) => {
     setBookingData({ ...bookingData, date })
-    setTimeout(() => setStep(3), 300)
+    setTimeout(() => setStep(4), 300)
   }
 
   const handleTimeSelect = (time: string) => {
@@ -133,7 +166,7 @@ export default function ReservationPage() {
   }
 
   const handleNext = () => {
-    if (step < 3) {
+    if (step < 5) {
       setStep((step + 1) as BookingStep)
     }
   }
@@ -144,11 +177,20 @@ export default function ReservationPage() {
     }
   }
 
+  const handleContactInfoChange = (field: 'firstName' | 'lastName' | 'phone' | 'email' | 'specialRequest', value: string) => {
+    setBookingData({ ...bookingData, [field]: value })
+  }
+
   const handleConfirm = () => {
     // TODO: Submit booking data to backend
     console.log('Booking confirmed:', bookingData)
-    alert(`Reservation confirmed!\nBranch: ${bookingData.branch}\nDate: ${bookingData.date}\nTime: ${bookingData.time}`)
-    router.push('/')
+    // Generate a temporary reservation number (format: AG-YYYYMMDD-HHMMSS)
+    const now = new Date()
+    const dateStr = now.toISOString().slice(0, 10).replace(/-/g, '')
+    const timeStr = now.toTimeString().slice(0, 8).replace(/:/g, '')
+    const tempReservationNumber = `AG-${dateStr}-${timeStr}`
+    setReservationNumber(tempReservationNumber)
+    setStep(6)
   }
 
   const formatDate = (dateString: string) => {
@@ -195,7 +237,7 @@ export default function ReservationPage() {
 
         {/* Progress Steps */}
         <div className="flex justify-center items-center mb-12 gap-4">
-          {[1, 2, 3].map((s) => (
+          {[1, 2, 3, 4, 5].map((s) => (
             <div key={s} className="flex items-center">
               <div
                 className={`w-12 h-12 rounded-full flex items-center justify-center font-bold transition-all duration-300 ${
@@ -204,9 +246,9 @@ export default function ReservationPage() {
                     : 'bg-dark-200 text-gray-400'
                 }`}
               >
-                {step > s ? <Check className="w-6 h-6" /> : s}
-              </div>
-              {s < 3 && (
+                    {step > s ? <Check className="w-6 h-6" /> : s}
+                  </div>
+                  {s < 5 && (
                 <div
                   className={`w-16 h-1 mx-2 transition-all duration-300 ${
                     step > s ? 'bg-primary' : 'bg-dark-200'
@@ -265,7 +307,7 @@ export default function ReservationPage() {
             </motion.div>
           )}
 
-          {/* Step 2: Select Date */}
+          {/* Step 2: Select Type */}
           {step === 2 && (
             <motion.div
               key="step2"
@@ -274,12 +316,151 @@ export default function ReservationPage() {
               exit={{ opacity: 0, x: isRTL ? -50 : 50 }}
               className="bg-dark-100/50 backdrop-blur-sm rounded-2xl p-8 border border-primary/30"
             >
+              <div className="text-center mb-8">
+                <Users className="w-16 h-16 text-primary mx-auto mb-4" />
+                <h2 className="text-2xl font-bold mb-2" style={{ fontFamily: 'Orbitron, sans-serif' }}>
+                  {translations.booking?.step2?.title || 'Reservation Type'}
+                </h2>
+                <p className="text-gray-400">{translations.booking?.step2?.subtitle || 'Choose the type of activity'}</p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                {/* Game */}
+                <motion.button
+                  onClick={() => handleTypeSelect('game')}
+                  className={`border-2 rounded-xl p-6 text-left transition-all duration-300 ${
+                    bookingData.type === 'game'
+                      ? 'bg-dark-200 border-primary/70 shadow-[0_0_20px_rgba(0,240,255,0.3)]'
+                      : 'bg-dark-200/50 border-primary/30 hover:border-primary/70 hover:shadow-[0_0_20px_rgba(0,240,255,0.3)]'
+                  }`}
+                  whileHover={{ scale: bookingData.type === 'game' ? 1 : 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <div className="flex items-start gap-4">
+                    <Gamepad2 className={`w-8 h-8 flex-shrink-0 mt-1 ${
+                      bookingData.type === 'game' ? 'text-primary' : 'text-primary/70'
+                    }`} />
+                    <div>
+                      <h3 className="text-xl font-bold mb-2" style={{ fontFamily: 'Poppins, sans-serif' }}>
+                        {translations.booking?.type?.game?.title || 'Game'}
+                      </h3>
+                      <p className="text-gray-400 text-sm" style={{ fontFamily: 'Poppins, sans-serif' }}>
+                        {translations.booking?.type?.game?.description || 'Unlimited games for one hour'}
+                      </p>
+                    </div>
+                  </div>
+                </motion.button>
+
+                {/* Event - Disabled */}
+                <motion.button
+                  disabled
+                  className="bg-dark-200/30 border-2 border-gray-600/30 rounded-xl p-6 text-left opacity-50 cursor-not-allowed"
+                >
+                  <div className="flex items-start gap-4">
+                    <Users className="w-8 h-8 text-gray-600 flex-shrink-0 mt-1" />
+                    <div>
+                      <h3 className="text-xl font-bold mb-2 text-gray-500" style={{ fontFamily: 'Poppins, sans-serif' }}>
+                        {translations.booking?.type?.event?.title || 'Event'}
+                      </h3>
+                      <p className="text-gray-500 text-sm" style={{ fontFamily: 'Poppins, sans-serif' }}>
+                        {translations.booking?.type?.event?.description || 'Event package with private room'}
+                      </p>
+                    </div>
+                  </div>
+                </motion.button>
+              </div>
+
+              {/* Number of Players - Appears when Game is selected */}
+              {bookingData.type === 'game' && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="mb-6"
+                >
+                  <label className="block text-white mb-3 text-sm font-medium" style={{ fontFamily: 'Poppins, sans-serif' }}>
+                    {translations.booking?.type?.players?.label || 'Number of players'}
+                  </label>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="relative">
+                      <input
+                        type="number"
+                        min="1"
+                        max="100"
+                        value={bookingData.players || ''}
+                        onChange={(e) => handlePlayersChange(e.target.value ? parseInt(e.target.value) : null)}
+                        placeholder={translations.booking?.type?.players?.placeholder || 'Enter number of players'}
+                        className="w-full border border-primary/30 rounded-lg px-4 py-3 pr-12 font-medium hover:border-primary/70 transition-all backdrop-blur-sm"
+                        style={{ 
+                          fontFamily: 'Poppins, sans-serif',
+                          backgroundColor: 'rgba(50, 50, 70, 0.7)',
+                          color: '#00f0ff',
+                          outline: 'none'
+                        }}
+                      />
+                      <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex flex-col gap-0.5">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const current = bookingData.players || 1
+                            if (current < 100) handlePlayersChange(current + 1)
+                          }}
+                          className="p-1 hover:bg-primary/20 rounded transition-colors"
+                          style={{ color: '#00f0ff' }}
+                        >
+                          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M6 3L9 6H3L6 3Z" fill="currentColor" />
+                          </svg>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const current = bookingData.players || 1
+                            if (current > 1) handlePlayersChange(current - 1)
+                          }}
+                          className="p-1 hover:bg-primary/20 rounded transition-colors"
+                          style={{ color: '#00f0ff' }}
+                        >
+                          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M6 9L3 6H9L6 9Z" fill="currentColor" />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                    <div></div>
+                  </div>
+                  
+                  {/* Continue button */}
+                  {bookingData.players && bookingData.players > 0 && (
+                    <div className="mt-6 text-center">
+                      <button
+                        onClick={handleContinueToDate}
+                        className="glow-button inline-flex items-center gap-2"
+                      >
+                        {translations.booking?.next || 'Next'}
+                        <ChevronRight className="w-5 h-5" />
+                      </button>
+                    </div>
+                  )}
+                </motion.div>
+              )}
+            </motion.div>
+          )}
+
+          {/* Step 3: Select Date */}
+          {step === 3 && (
+            <motion.div
+              key="step3"
+              initial={{ opacity: 0, x: isRTL ? 50 : -50 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: isRTL ? -50 : 50 }}
+              className="bg-dark-100/50 backdrop-blur-sm rounded-2xl p-8 border border-primary/30"
+            >
               <div className="text-center mb-6">
                 <Calendar className="w-16 h-16 text-primary mx-auto mb-4" />
                 <h2 className="text-2xl font-bold mb-2" style={{ fontFamily: 'Orbitron, sans-serif' }}>
-                  {translations.booking?.step2?.title || 'Select date'}
+                  {translations.booking?.step3?.title || 'Select date'}
                 </h2>
-                <p className="text-gray-400">{translations.booking?.step2?.subtitle || 'Choose the day for your session'}</p>
+                <p className="text-gray-400">{translations.booking?.step3?.subtitle || 'Choose the day for your session'}</p>
               </div>
 
               {/* Month/Year Selector */}
@@ -440,10 +621,10 @@ export default function ReservationPage() {
             </motion.div>
           )}
 
-          {/* Step 3: Select Time */}
-          {step === 3 && (
+          {/* Step 4: Select Time */}
+          {step === 4 && (
             <motion.div
-              key="step3"
+              key="step4"
               initial={{ opacity: 0, x: isRTL ? 50 : -50 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: isRTL ? -50 : 50 }}
@@ -452,9 +633,9 @@ export default function ReservationPage() {
               <div className="text-center mb-8">
                 <Clock className="w-16 h-16 text-primary mx-auto mb-4" />
                 <h2 className="text-2xl font-bold mb-2" style={{ fontFamily: 'Orbitron, sans-serif' }}>
-                  {translations.booking?.step3?.title || 'Select time'}
+                  {translations.booking?.step4?.title || 'Select time'}
                 </h2>
-                <p className="text-gray-400">{translations.booking?.step3?.subtitle || 'Choose the time slot'}</p>
+                <p className="text-gray-400">{translations.booking?.step4?.subtitle || 'Choose the time slot'}</p>
               </div>
 
               <div className="grid grid-cols-4 md:grid-cols-6 gap-3 mb-4">
@@ -484,37 +665,332 @@ export default function ReservationPage() {
                 </p>
               </div>
 
-              {/* Booking Summary */}
+
               {bookingData.time && (
+                <div className="mt-6 text-center">
+                  <button
+                    onClick={handleNext}
+                    className="glow-button inline-flex items-center gap-2"
+                  >
+                    {translations.booking?.next || 'Next'}
+                    <ChevronRight className="w-5 h-5" />
+                  </button>
+                </div>
+              )}
+            </motion.div>
+          )}
+
+          {/* Step 5: Contact Information */}
+          {step === 5 && (
+            <motion.div
+              key="step5"
+              initial={{ opacity: 0, x: isRTL ? 50 : -50 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: isRTL ? -50 : 50 }}
+              className="bg-dark-100/50 backdrop-blur-sm rounded-2xl p-8 border border-primary/30"
+            >
+              <div className="text-center mb-8">
+                <User className="w-16 h-16 text-primary mx-auto mb-4" />
+                <h2 className="text-2xl font-bold mb-2" style={{ fontFamily: 'Orbitron, sans-serif' }}>
+                  {translations.booking?.step5?.title || 'Contact Information'}
+                </h2>
+                <p className="text-gray-400">{translations.booking?.step5?.subtitle || 'Please fill in your details'}</p>
+              </div>
+
+              <div className="space-y-6">
+                {/* First Name and Last Name on same line */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* First Name */}
+                  <div>
+                    <label className="block text-white mb-2 text-sm font-medium" style={{ fontFamily: 'Poppins, sans-serif' }}>
+                      {translations.booking?.contact?.first_name || 'First Name'}
+                      <span className="text-primary ml-1">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={bookingData.firstName || ''}
+                      onChange={(e) => handleContactInfoChange('firstName', e.target.value)}
+                      placeholder={translations.booking?.contact?.first_name_placeholder || 'Enter first name'}
+                      className="w-full border border-primary/30 rounded-lg px-4 py-3 font-medium hover:border-primary/70 transition-all backdrop-blur-sm"
+                      style={{ 
+                        fontFamily: 'Poppins, sans-serif',
+                        backgroundColor: 'rgba(50, 50, 70, 0.7)',
+                        color: '#00f0ff',
+                        outline: 'none'
+                      }}
+                      required
+                    />
+                  </div>
+
+                  {/* Last Name */}
+                  <div>
+                    <label className="block text-white mb-2 text-sm font-medium" style={{ fontFamily: 'Poppins, sans-serif' }}>
+                      {translations.booking?.contact?.last_name || 'Last Name'}
+                      <span className="text-primary ml-1">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={bookingData.lastName || ''}
+                      onChange={(e) => handleContactInfoChange('lastName', e.target.value)}
+                      placeholder={translations.booking?.contact?.last_name_placeholder || 'Enter last name'}
+                      className="w-full border border-primary/30 rounded-lg px-4 py-3 font-medium hover:border-primary/70 transition-all backdrop-blur-sm"
+                      style={{ 
+                        fontFamily: 'Poppins, sans-serif',
+                        backgroundColor: 'rgba(50, 50, 70, 0.7)',
+                        color: '#00f0ff',
+                        outline: 'none'
+                      }}
+                      required
+                    />
+                  </div>
+                </div>
+
+                {/* Phone */}
+                <div>
+                  <label className="block text-white mb-2 text-sm font-medium" style={{ fontFamily: 'Poppins, sans-serif' }}>
+                    {translations.booking?.contact?.phone || 'Phone Number'}
+                    <span className="text-primary ml-1">*</span>
+                  </label>
+                  <div className="relative">
+                    <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-primary" />
+                    <input
+                      type="tel"
+                      value={bookingData.phone || ''}
+                      onChange={(e) => handleContactInfoChange('phone', e.target.value)}
+                      placeholder={translations.booking?.contact?.phone_placeholder || 'Enter phone number'}
+                      className="w-full border border-primary/30 rounded-lg pl-12 pr-4 py-3 font-medium hover:border-primary/70 transition-all backdrop-blur-sm"
+                      style={{ 
+                        fontFamily: 'Poppins, sans-serif',
+                        backgroundColor: 'rgba(50, 50, 70, 0.7)',
+                        color: '#00f0ff',
+                        outline: 'none'
+                      }}
+                      required
+                    />
+                  </div>
+                </div>
+
+                {/* Email - Optional */}
+                <div>
+                  <label className="block text-white mb-2 text-sm font-medium" style={{ fontFamily: 'Poppins, sans-serif' }}>
+                    {translations.booking?.contact?.email || 'Email'}
+                  </label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-primary" />
+                    <input
+                      type="email"
+                      value={bookingData.email || ''}
+                      onChange={(e) => handleContactInfoChange('email', e.target.value)}
+                      placeholder={translations.booking?.contact?.email_placeholder || 'Enter email (optional)'}
+                      className="w-full border border-primary/30 rounded-lg pl-12 pr-4 py-3 font-medium hover:border-primary/70 transition-all backdrop-blur-sm"
+                      style={{ 
+                        fontFamily: 'Poppins, sans-serif',
+                        backgroundColor: 'rgba(50, 50, 70, 0.7)',
+                        color: '#00f0ff',
+                        outline: 'none'
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {/* Special Request - Optional */}
+                <div>
+                  <label className="block text-white mb-2 text-sm font-medium" style={{ fontFamily: 'Poppins, sans-serif' }}>
+                    {translations.booking?.contact?.special_request || 'Special Request'}
+                  </label>
+                  <div className="relative">
+                    <MessageSquare className="absolute left-3 top-4 w-5 h-5 text-primary" />
+                    <textarea
+                      value={bookingData.specialRequest || ''}
+                      onChange={(e) => handleContactInfoChange('specialRequest', e.target.value)}
+                      placeholder={translations.booking?.contact?.special_request_placeholder || 'If you have any special requests, please mention them here (optional)'}
+                      rows={4}
+                      className="w-full border border-primary/30 rounded-lg pl-12 pr-4 py-3 font-medium hover:border-primary/70 transition-all backdrop-blur-sm resize-none"
+                      style={{ 
+                        fontFamily: 'Poppins, sans-serif',
+                        backgroundColor: 'rgba(50, 50, 70, 0.7)',
+                        color: '#00f0ff',
+                        outline: 'none'
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Terms and Conditions Checkbox */}
+              <div className="mt-6 p-4 bg-dark-200/30 rounded-lg border border-primary/20">
+                <div className="flex items-start gap-3">
+                  <input
+                    type="checkbox"
+                    id="terms-checkbox"
+                    checked={bookingData.termsAccepted}
+                    onChange={(e) => setBookingData({ ...bookingData, termsAccepted: e.target.checked })}
+                    className="mt-0.5 w-5 h-5 rounded border-primary/30 bg-dark-200/50 text-primary focus:ring-primary focus:ring-2 cursor-pointer"
+                    style={{ 
+                      accentColor: '#00f0ff',
+                      flexShrink: 0
+                    }}
+                  />
+                  <div className="flex-1">
+                    <label htmlFor="terms-checkbox" className="text-white text-sm cursor-pointer flex items-center" style={{ fontFamily: 'Poppins, sans-serif', lineHeight: '1.5' }}>
+                      {translations.booking?.contact?.terms?.label || 'I have read and agree to the terms and rules'}
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setShowTermsModal(true)}
+                      className="mt-3 ml-0 inline-flex items-center gap-2 text-primary hover:text-primary/80 transition-colors text-sm underline"
+                      style={{ fontFamily: 'Poppins, sans-serif' }}
+                    >
+                      <FileText className="w-4 h-4" />
+                      {translations.booking?.contact?.terms?.read_terms || 'Read terms and rules'}
+                      <ExternalLink className="w-3 h-3" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Booking Summary */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-dark-200/50 rounded-xl p-6 mt-6 border border-primary/30"
+              >
+                <h3 className="text-xl font-bold mb-4" style={{ fontFamily: 'Orbitron, sans-serif' }}>
+                  {translations.booking?.summary?.title || 'Booking Summary'}
+                </h3>
+                <div className="space-y-2" style={{ fontFamily: 'Poppins, sans-serif' }}>
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">{translations.booking?.summary?.branch || 'Branch:'}</span>
+                    <span className="font-bold">{bookingData.branch}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">{translations.booking?.summary?.type || 'Type:'}</span>
+                    <span className="font-bold">
+                      {bookingData.type === 'game' 
+                        ? (translations.booking?.type?.game?.title || 'Game')
+                        : (translations.booking?.type?.event?.title || 'Event')}
+                    </span>
+                  </div>
+                  {bookingData.players && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">{translations.booking?.type?.players?.label || 'Players:'}</span>
+                      <span className="font-bold">{bookingData.players}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">{translations.booking?.summary?.date || 'Date:'}</span>
+                    <span className="font-bold">{bookingData.date && formatDate(bookingData.date)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">{translations.booking?.summary?.time || 'Time:'}</span>
+                    <span className="font-bold">{bookingData.time}</span>
+                  </div>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+
+          {/* Step 6: Confirmation */}
+          {step === 6 && reservationNumber && (
+            <motion.div
+              key="step6"
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="bg-dark-100/50 backdrop-blur-sm rounded-2xl p-8 border-2 border-primary/50 shadow-[0_0_30px_rgba(0,240,255,0.3)]"
+            >
+              <div className="text-center">
+                {/* Success Icon */}
                 <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="bg-dark-200/50 rounded-xl p-6 mb-6 border border-primary/30"
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
+                  className="w-20 h-20 mx-auto mb-6 bg-primary/20 rounded-full flex items-center justify-center"
                 >
-                  <h3 className="text-xl font-bold mb-4" style={{ fontFamily: 'Orbitron, sans-serif' }}>
+                  <Check className="w-12 h-12 text-primary" />
+                </motion.div>
+
+                {/* Title */}
+                <h2 className="text-3xl font-bold mb-2 text-primary" style={{ fontFamily: 'Orbitron, sans-serif' }}>
+                  {translations.booking?.confirmation?.title || 'Reservation Confirmed!'}
+                </h2>
+                <p className="text-gray-300 mb-8" style={{ fontFamily: 'Poppins, sans-serif' }}>
+                  {translations.booking?.confirmation?.subtitle || 'Thank you for your reservation'}
+                </p>
+
+                {/* Reservation Number */}
+                <div className="bg-primary/10 border border-primary/30 rounded-lg p-4 mb-8">
+                  <p className="text-gray-400 text-sm mb-2" style={{ fontFamily: 'Poppins, sans-serif' }}>
+                    {translations.booking?.confirmation?.reservation_number || 'Reservation Number'}
+                  </p>
+                  <p className="text-2xl font-bold text-primary" style={{ fontFamily: 'Orbitron, sans-serif', letterSpacing: '2px' }}>
+                    {reservationNumber}
+                  </p>
+                </div>
+
+                {/* Booking Summary */}
+                <div className="bg-dark-200/50 rounded-xl p-6 mb-8 border border-primary/30 text-left max-w-2xl mx-auto">
+                  <h3 className="text-xl font-bold mb-4 text-primary" style={{ fontFamily: 'Orbitron, sans-serif' }}>
                     {translations.booking?.summary?.title || 'Booking Summary'}
                   </h3>
-                  <div className="space-y-2" style={{ fontFamily: 'Poppins, sans-serif' }}>
+                  <div className="space-y-3" style={{ fontFamily: 'Poppins, sans-serif' }}>
                     <div className="flex justify-between">
                       <span className="text-gray-400">{translations.booking?.summary?.branch || 'Branch:'}</span>
-                      <span className="font-bold">{bookingData.branch}</span>
+                      <span className="font-bold text-white">{bookingData.branch}</span>
                     </div>
                     <div className="flex justify-between">
+                      <span className="text-gray-400">{translations.booking?.summary?.type || 'Type:'}</span>
+                      <span className="font-bold text-white">
+                        {bookingData.type === 'game' 
+                          ? (translations.booking?.type?.game?.title || 'Game')
+                          : (translations.booking?.type?.event?.title || 'Event')}
+                      </span>
+                    </div>
+                    {bookingData.players && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">{translations.booking?.type?.players?.label || 'Players:'}</span>
+                        <span className="font-bold text-white">{bookingData.players}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between">
                       <span className="text-gray-400">{translations.booking?.summary?.date || 'Date:'}</span>
-                      <span className="font-bold">{bookingData.date && formatDate(bookingData.date)}</span>
+                      <span className="font-bold text-white">{bookingData.date && formatDate(bookingData.date)}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-400">{translations.booking?.summary?.time || 'Time:'}</span>
-                      <span className="font-bold">{bookingData.time}</span>
+                      <span className="font-bold text-white">{bookingData.time}</span>
                     </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">Name:</span>
+                      <span className="font-bold text-white">{bookingData.firstName} {bookingData.lastName}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">Phone:</span>
+                      <span className="font-bold text-white">{bookingData.phone}</span>
+                    </div>
+                    {bookingData.email && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">Email:</span>
+                        <span className="font-bold text-white">{bookingData.email}</span>
+                      </div>
+                    )}
                   </div>
-                </motion.div>
-              )}
+                </div>
+
+                {/* Back to Site Button */}
+                <Link
+                  href="/"
+                  className="glow-button inline-flex items-center gap-2"
+                >
+                  <Home className="w-5 h-5" />
+                  {translations.booking?.confirmation?.back_to_site || 'Back to Site'}
+                </Link>
+              </div>
             </motion.div>
           )}
         </AnimatePresence>
 
         {/* Navigation Buttons */}
+        {step !== 6 && (
         <div className="flex justify-between mt-8">
           <button
             onClick={handlePrevious}
@@ -529,19 +1005,123 @@ export default function ReservationPage() {
             {translations.booking?.previous || 'Previous'}
           </button>
 
-          {step === 3 && bookingData.time && (
+          {step === 5 && (
             <button
               onClick={handleConfirm}
-              className="glow-button inline-flex items-center gap-2"
+              disabled={!bookingData.firstName || !bookingData.lastName || !bookingData.phone || !bookingData.termsAccepted}
+              className={`inline-flex items-center gap-2 px-6 py-3 rounded-xl transition-all duration-300 ${
+                bookingData.firstName && bookingData.lastName && bookingData.phone && bookingData.termsAccepted
+                  ? 'glow-button'
+                  : 'bg-dark-200 border-2 border-primary/30 text-gray-300 cursor-not-allowed hover:border-primary/40'
+              }`}
+              style={{
+                opacity: bookingData.firstName && bookingData.lastName && bookingData.phone && bookingData.termsAccepted ? 1 : 0.75
+              }}
             >
               {translations.booking?.confirm || 'Confirm booking'}
               <Check className="w-5 h-5" />
             </button>
           )}
         </div>
+        )}
         </div>
       </div>
       <Footer translations={translations} />
+
+      {/* Terms and Conditions Modal */}
+      {showTermsModal && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ backgroundColor: 'rgba(0, 0, 0, 0.9)', backdropFilter: 'blur(5px)' }}
+          onClick={() => setShowTermsModal(false)}
+        >
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            className="bg-dark-100 rounded-2xl border border-primary/30 max-w-3xl w-full max-h-[80vh] overflow-hidden flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-6 border-b border-primary/30">
+              <h2 className="text-2xl font-bold text-white" style={{ fontFamily: 'Orbitron, sans-serif' }}>
+                {translations.booking?.contact?.terms?.title || 'Terms and Rules'}
+              </h2>
+              <button
+                onClick={() => setShowTermsModal(false)}
+                className="p-2 hover:bg-dark-200 rounded-lg transition-colors"
+                style={{ color: '#00f0ff' }}
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="flex-1 overflow-y-auto p-6" style={{ fontFamily: 'Poppins, sans-serif' }}>
+              <div className="space-y-4 text-gray-300">
+                <div>
+                  <h3 className="text-xl font-bold text-primary mb-2">Booking Information</h3>
+                  <ul className="list-disc list-inside space-y-2 ml-4">
+                    <li>Please arrive at least 10 minutes before your scheduled time</li>
+                    <li>Reservations are confirmed upon payment</li>
+                    <li>Changes or cancellations must be made at least 24 hours in advance</li>
+                    <li>Late arrivals may result in reduced play time</li>
+                  </ul>
+                </div>
+
+                <div>
+                  <h3 className="text-xl font-bold text-primary mb-2">Rules and Regulations</h3>
+                  <ul className="list-disc list-inside space-y-2 ml-4">
+                    <li>Follow all safety instructions provided by staff</li>
+                    <li>Respect other players and maintain a friendly environment</li>
+                    <li>No food or drinks inside the game rooms</li>
+                    <li>Smoking is strictly prohibited</li>
+                    <li>Children under 12 must be accompanied by an adult</li>
+                    <li>Any damage to equipment will result in additional charges</li>
+                  </ul>
+                </div>
+
+                <div>
+                  <h3 className="text-xl font-bold text-primary mb-2">Payment Details</h3>
+                  <ul className="list-disc list-inside space-y-2 ml-4">
+                    <li>Payment is required at the time of booking</li>
+                    <li>Accepted payment methods: Cash, Credit Card, Bank Transfer</li>
+                    <li>Refunds are available only for cancellations made 24+ hours in advance</li>
+                    <li>Smart bracelet fee: 10₪ (one-time, reusable)</li>
+                    <li>Event packages include smart bracelet in the price</li>
+                  </ul>
+                </div>
+
+                <div>
+                  <h3 className="text-xl font-bold text-primary mb-2">Contact Information</h3>
+                  <p>For questions or special requests, please contact us:</p>
+                  <ul className="list-disc list-inside space-y-2 ml-4 mt-2">
+                    <li>Phone: 03-551-2277</li>
+                    <li>Email: contact@activegames.co.il</li>
+                    <li>WhatsApp: Available on our website</li>
+                  </ul>
+                </div>
+
+                <div className="pt-4 border-t border-primary/30">
+                  <p className="text-sm text-gray-400">
+                    By checking the box, you acknowledge that you have read, understood, and agree to all terms and conditions stated above.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-6 border-t border-primary/30 flex justify-end">
+              <button
+                onClick={() => setShowTermsModal(false)}
+                className="glow-button inline-flex items-center gap-2"
+              >
+                {translations.booking?.contact?.terms?.close || 'Close'}
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </div>
   )
 }

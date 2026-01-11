@@ -291,6 +291,17 @@ select:hover {
   box-shadow: 0 0 10px rgba(0, 240, 255, 0.3) !important;
 }
 
+/* Hide default number input spinners */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type="number"] {
+  -moz-appearance: textfield;
+}
+
 /* Form Styling */
 .form-input {
   background: var(--dark-100);

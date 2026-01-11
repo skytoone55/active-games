@@ -188,21 +188,69 @@
       "subtitle": "Choose the location where you want to play"
     },
     "step2": {
+      "title": "Reservation Type",
+      "subtitle": "Choose the type of activity"
+    },
+    "step3": {
       "title": "Select date",
       "subtitle": "Choose the day for your session"
     },
-    "step3": {
+    "step4": {
       "title": "Select time",
       "subtitle": "Choose the time slot"
+    },
+    "step5": {
+      "title": "Contact Information",
+      "subtitle": "Please fill in your details"
+    },
+    "contact": {
+      "first_name": "First Name",
+      "last_name": "Last Name",
+      "phone": "Phone Number",
+      "email": "Email",
+      "special_request": "Special Request",
+      "first_name_placeholder": "Enter first name",
+      "last_name_placeholder": "Enter last name",
+      "phone_placeholder": "Enter phone number",
+      "email_placeholder": "Enter email (optional)",
+      "special_request_placeholder": "If you have any special requests, please mention them here (optional)",
+      "terms": {
+        "label": "I have read and agree to the terms and rules",
+        "read_terms": "Read terms and rules",
+        "title": "Terms and Rules",
+        "close": "Close"
+      }
+    },
+    "type": {
+      "game": {
+        "title": "Game",
+        "description": "Unlimited games for one hour"
+      },
+      "event": {
+        "title": "Event",
+        "description": "Event package with private room"
+      },
+      "players": {
+        "label": "Number of players",
+        "placeholder": "Select or enter a number"
+      }
     },
     "next": "Next",
     "previous": "Previous",
     "confirm": "Confirm booking",
     "loading": "Loading...",
+    "confirmation": {
+      "title": "Reservation Confirmed!",
+      "subtitle": "Thank you for your reservation",
+      "reservation_number": "Reservation Number",
+      "back_to_site": "Back to Site",
+      "finished": "Finished"
+    },
     "arrival_note": "Please arrive at least 10 minutes before your scheduled time",
     "summary": {
       "title": "Booking Summary",
       "branch": "Branch:",
+      "type": "Type:",
       "date": "Date:",
       "time": "Time:"
     }
