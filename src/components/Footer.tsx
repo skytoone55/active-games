@@ -2,6 +2,7 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
+import { Mail, Phone, MapPin } from 'lucide-react'
 
 interface FooterProps {
   translations: {
@@ -10,118 +11,135 @@ interface FooterProps {
       concept_title: string
       pricing_title: string
     }
-    games: {
-      items: Record<string, { name: string }>
+    branches: {
+      title: string
+      items: Array<{
+        name: string
+        address: string
+        city: string
+        phone: string
+        venue: string
+      }>
+    }
+    contact: {
+      info: {
+        phone: string
+        email: string
+      }
     }
   }
 }
 
 export default function Footer({ translations }: FooterProps) {
-  // 8 jeux du franchisé (sans control)
-  const gameNames = ['grid', 'arena', 'push', 'basketball', 'climbing', 'hide', 'flash', 'laser']
-
   return (
     <footer className="bg-dark border-t border-dark-200 py-12">
       <div className="container mx-auto px-4">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           {/* Logo + Laser City */}
-          <div className="space-y-4">
-            <Link href="/">
+          <div className="flex flex-col items-center space-y-4">
+            <Link href="/" className="block">
               <Image
                 src="/images/logo.png"
                 alt="Active Games"
-                width={150}
-                height={40}
-                className="h-10 w-auto"
+                width={250}
+                height={65}
+                className="h-auto w-auto"
+                style={{
+                  height: '65px',
+                  width: 'auto',
+                  filter: 'drop-shadow(0 0 8px rgba(0, 240, 255, 0.4)) brightness(1.15)'
+                }}
               />
             </Link>
             <a 
-              href="http://www.laser-city.co.il" 
+              href="https://laser-city.co.il" 
               target="_blank" 
               rel="noopener noreferrer"
-              className="block opacity-60 hover:opacity-100 transition-opacity"
+              className="block transition-opacity hover:opacity-90"
+              style={{
+                opacity: 1,
+                filter: 'drop-shadow(0 0 8px rgba(0, 240, 255, 0.6)) brightness(1.2)'
+              }}
             >
-              <p className="text-gray-500 text-xs">Powered by</p>
-              <p className="text-gray-400 text-sm font-medium">Laser City</p>
+              <Image
+                src="/images/logo_laser_city.png"
+                alt="Laser City"
+                width={200}
+                height={71}
+                className="h-auto w-auto max-w-[200px]"
+                unoptimized
+              />
             </a>
           </div>
 
-          {/* Games Links */}
+          {/* First Branch (Rishon LeZion) */}
           <div>
             <h4 className="text-white font-bold mb-4 text-sm uppercase tracking-wider">
-              <a href="#games" className="hover:text-primary transition-colors">
-                {translations.footer.games_title}
-              </a>
+              {translations.branches.items[0]?.name || translations.branches.title}
             </h4>
-            <ul className="space-y-2">
-              {gameNames.slice(0, 4).map((gameKey) => {
-                const game = translations.games.items[gameKey]
-                if (!game) return null
-                return (
-                  <li key={gameKey}>
-                    <a
-                      href="#games"
-                      className="text-gray-400 hover:text-primary transition-colors text-sm"
-                    >
-                      {game.name}
-                    </a>
-                  </li>
-                )
-              })}
-            </ul>
+            {translations.branches.items[0] && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <MapPin className="w-4 h-4 text-primary flex-shrink-0" />
+                  <p className="text-gray-400 text-sm">{translations.branches.items[0].address}</p>
+                </div>
+                <p className="text-primary text-sm pl-6">{translations.branches.items[0].venue}</p>
+                <a
+                  href={`tel:${translations.branches.items[0].phone.replace(/[^\d]/g, '')}`}
+                  className="flex items-center gap-2 text-gray-400 hover:text-primary transition-colors text-sm pl-6"
+                >
+                  <Phone className="w-3 h-3" />
+                  {translations.branches.items[0].phone}
+                </a>
+              </div>
+            )}
           </div>
 
-          {/* More Games */}
-          <div>
-            <h4 className="text-white font-bold mb-4 text-sm uppercase tracking-wider opacity-0">
-              More
-            </h4>
-            <ul className="space-y-2">
-              {gameNames.slice(4).map((gameKey) => {
-                const game = translations.games.items[gameKey]
-                if (!game) return null
-                return (
-                  <li key={gameKey}>
-                    <a
-                      href="#games"
-                      className="text-gray-400 hover:text-primary transition-colors text-sm"
-                    >
-                      {game.name}
-                    </a>
-                  </li>
-                )
-              })}
-            </ul>
-          </div>
-
-          {/* Navigation Links */}
+          {/* Second Branch (Petah Tikva) */}
           <div>
             <h4 className="text-white font-bold mb-4 text-sm uppercase tracking-wider">
-              Navigation
+              {translations.branches.items[1]?.name || ''}
             </h4>
-            <ul className="space-y-2">
+            {translations.branches.items[1] && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <MapPin className="w-4 h-4 text-primary flex-shrink-0" />
+                  <p className="text-gray-400 text-sm">{translations.branches.items[1].address}</p>
+                </div>
+                <p className="text-primary text-sm pl-6">{translations.branches.items[1].venue}</p>
+                <a
+                  href={`tel:${translations.branches.items[1].phone.replace(/[^\d]/g, '')}`}
+                  className="flex items-center gap-2 text-gray-400 hover:text-primary transition-colors text-sm pl-6"
+                >
+                  <Phone className="w-3 h-3" />
+                  {translations.branches.items[1].phone}
+                </a>
+              </div>
+            )}
+          </div>
+
+          {/* Contact */}
+          <div>
+            <h4 className="text-white font-bold mb-4 text-sm uppercase tracking-wider">
+              Contact
+            </h4>
+            <ul className="space-y-3">
               <li>
                 <a
-                  href="#concept"
-                  className="text-gray-400 hover:text-primary transition-colors text-sm"
+                  href={`tel:${translations.contact.info.phone.replace(/\s/g, '')}`}
+                  className="flex items-center gap-2 text-gray-400 hover:text-primary transition-colors text-sm"
                 >
-                  {translations.footer.concept_title}
+                  <Phone className="w-4 h-4" />
+                  {translations.contact.info.phone}
                 </a>
               </li>
               <li>
                 <a
-                  href="#pricing"
-                  className="text-gray-400 hover:text-primary transition-colors text-sm"
+                  href={`mailto:${translations.contact.info.email}`}
+                  className="flex items-center gap-2 text-gray-400 hover:text-primary transition-colors text-sm"
                 >
-                  {translations.footer.pricing_title}
-                </a>
-              </li>
-              <li>
-                <a
-                  href="#contact"
-                  className="text-gray-400 hover:text-primary transition-colors text-sm"
-                >
-                  Contact
+                  <Mail className="w-4 h-4" />
+                  {translations.contact.info.email}
                 </a>
               </li>
             </ul>

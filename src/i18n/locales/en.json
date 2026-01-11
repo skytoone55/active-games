@@ -3,6 +3,7 @@
     "concept": "ABOUT THE GAME",
     "games": "GAMES",
     "pricing": "PRICING",
+    "branches": "LOCATIONS",
     "contact": "CONTACT"
   },
   "hero": {
@@ -99,7 +100,7 @@
       "features": [
         "Access to all 8 rooms",
         "Unlimited games",
-        "Smart bracelet: 5₪ first-time fee (reusable)"
+        "Smart bracelet: 10₪ first-time fee (reusable)"
       ]
     },
     "packages": {
@@ -116,7 +117,9 @@
             "Sound and lighting system",
             "Game tables",
             "Unlimited snacks and drinks",
-            "Two pizza slices per participant"
+            "Two pizza slices per participant",
+            "Smart bracelet included in package price",
+            "Collector gold bracelet for the birthday person"
           ]
         },
         {
@@ -130,11 +133,33 @@
             "Sound and lighting system",
             "Game tables",
             "Unlimited snacks and drinks",
-            "Two pizza slices per participant"
+            "Two pizza slices per participant",
+            "Smart bracelet included in package price",
+            "Collector gold bracelet for the birthday person"
           ]
         }
       ]
     }
+  },
+  "branches": {
+    "title": "LOCATIONS",
+    "subtitle": "Find the location nearest to you",
+    "items": [
+      {
+        "name": "Rishon LeZion",
+        "address": "Aliyat HaNoar 1, Bar-On Center – Floor 5",
+        "city": "Rishon LeZion",
+        "phone": "03-5512277 (Ext. 1)",
+        "venue": "At Laser City complex"
+      },
+      {
+        "name": "Petah Tikva",
+        "address": "Amal 37",
+        "city": "Petah Tikva",
+        "phone": "03-5512277 (Ext. 3)",
+        "venue": "At Laser City complex"
+      }
+    ]
   },
   "contact": {
     "title": "Contact Us",
@@ -146,8 +171,6 @@
       "send": "Send"
     },
     "info": {
-      "address": "Aliyat HaNoar 1, Bar-On Center – Floor 5 – Rishon LeZion",
-      "venue": "At Laser City complex",
       "phone": "03 551-2277",
       "email": "contact@activegames.co.il"
     }

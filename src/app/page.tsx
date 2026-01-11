@@ -7,6 +7,7 @@ import {
   ConceptSection,
   GamesSection,
   PricingSection,
+  BranchesSection,
   ContactSection,
   Footer,
   WhatsAppButton,
@@ -51,6 +52,7 @@ export default function Home() {
         <ConceptSection translations={translations} />
         <GamesSection translations={translations} />
         <PricingSection translations={translations} isRTL={isRTL} />
+        <BranchesSection translations={translations} />
         <ContactSection translations={translations} />
       </main>
 

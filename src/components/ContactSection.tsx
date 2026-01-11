@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
 import Image from 'next/image'
-import { Send, Mail, Phone, MapPin, Building } from 'lucide-react'
+import { Send } from 'lucide-react'
 
 interface ContactSectionProps {
   translations: {
@@ -72,74 +72,13 @@ export default function ContactSection({ translations }: ContactSectionProps) {
         </motion.div>
 
         <div className="max-w-6xl mx-auto">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-            {/* Contact Info */}
-            <motion.div
-              initial={{ opacity: 0, x: -30 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-              className="space-y-6 w-full"
-            >
-            {/* Address */}
-            <div className="flex items-start gap-4 p-4 bg-dark-100/90 backdrop-blur-sm rounded-xl border border-primary/30 hover:border-primary/50 transition-all duration-300">
-              <div className="w-12 h-12 bg-primary/20 rounded-full flex items-center justify-center flex-shrink-0">
-                <MapPin className="w-6 h-6 text-primary" />
-              </div>
-              <div>
-                <p className="text-white font-medium" style={{ fontFamily: 'Poppins, sans-serif' }}>{translations.contact.info.address}</p>
-                <p className="text-gray-400 text-sm mt-1" style={{ fontFamily: 'Poppins, sans-serif' }}>{translations.contact.info.venue}</p>
-              </div>
-            </div>
-
-            {/* Phone */}
-            <a
-              href={`tel:${translations.contact.info.phone.replace(/\s/g, '')}`}
-              className="flex items-center gap-4 p-4 bg-dark-100/90 backdrop-blur-sm rounded-xl border border-secondary/30 hover:border-secondary/50 transition-all duration-300 group"
-            >
-              <div className="w-12 h-12 bg-secondary/20 rounded-full flex items-center justify-center group-hover:bg-secondary/30 transition-colors">
-                <Phone className="w-6 h-6 text-secondary" />
-              </div>
-              <div>
-                <p className="text-gray-400 text-sm" style={{ fontFamily: 'Poppins, sans-serif' }}>Phone</p>
-                <p className="text-white font-medium text-lg" style={{ fontFamily: 'Poppins, sans-serif' }}>{translations.contact.info.phone}</p>
-              </div>
-            </a>
-
-            {/* Email */}
-            <a
-              href={`mailto:${translations.contact.info.email}`}
-              className="flex items-center gap-4 p-4 bg-dark-100/90 backdrop-blur-sm rounded-xl border border-primary/30 hover:border-primary/50 transition-all duration-300 group"
-            >
-              <div className="w-12 h-12 bg-primary/20 rounded-full flex items-center justify-center group-hover:bg-primary/30 transition-colors">
-                <Mail className="w-6 h-6 text-primary" />
-              </div>
-              <div>
-                <p className="text-gray-400 text-sm" style={{ fontFamily: 'Poppins, sans-serif' }}>Email</p>
-                <p className="text-white font-medium" style={{ fontFamily: 'Poppins, sans-serif' }}>{translations.contact.info.email}</p>
-              </div>
-            </a>
-
-            {/* Laser City Partner Logo */}
-            <div className="pt-6 border-t border-dark-200">
-              <a 
-                href="http://www.laser-city.co.il" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="flex items-center gap-3 opacity-60 hover:opacity-100 transition-opacity"
-              >
-                <Building className="w-5 h-5 text-white" />
-                <span className="text-white text-sm" style={{ fontFamily: 'Poppins, sans-serif', textShadow: '0 2px 4px rgba(0,0,0,0.3)' }}>Powered by Laser City</span>
-              </a>
-            </div>
-          </motion.div>
-
-            {/* Contact Form */}
-            <motion.div
-              initial={{ opacity: 0, x: 30 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-              className="w-full"
-            >
+          {/* Contact Form */}
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="max-w-2xl mx-auto"
+          >
             <form onSubmit={handleSubmit} className="space-y-6">
               {/* Name */}
               <div>
@@ -151,9 +90,9 @@ export default function ContactSection({ translations }: ContactSectionProps) {
                   id="name"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="form-input bg-dark-100/90 backdrop-blur-sm border-primary/30"
+                  className="form-input backdrop-blur-sm border-primary/30"
                   required
-                  style={{ fontFamily: 'Poppins, sans-serif' }}
+                  style={{ fontFamily: 'Poppins, sans-serif', backgroundColor: 'rgba(50, 50, 70, 0.7)' }}
                 />
               </div>
 
@@ -167,9 +106,9 @@ export default function ContactSection({ translations }: ContactSectionProps) {
                   id="email"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="form-input bg-dark-100/90 backdrop-blur-sm border-primary/30"
+                  className="form-input backdrop-blur-sm border-primary/30"
                   required
-                  style={{ fontFamily: 'Poppins, sans-serif' }}
+                  style={{ fontFamily: 'Poppins, sans-serif', backgroundColor: 'rgba(50, 50, 70, 0.7)' }}
                 />
               </div>
 
@@ -183,9 +122,9 @@ export default function ContactSection({ translations }: ContactSectionProps) {
                   value={formData.message}
                   onChange={(e) => setFormData({ ...formData, message: e.target.value })}
                   rows={5}
-                  className="form-input bg-dark-100/90 backdrop-blur-sm border-primary/30 resize-none"
+                  className="form-input backdrop-blur-sm border-primary/30 resize-none"
                   required
-                  style={{ fontFamily: 'Poppins, sans-serif' }}
+                  style={{ fontFamily: 'Poppins, sans-serif', backgroundColor: 'rgba(50, 50, 70, 0.7)' }}
                 />
               </div>
 
@@ -202,7 +141,6 @@ export default function ContactSection({ translations }: ContactSectionProps) {
               </div>
             </form>
           </motion.div>
-          </div>
         </div>
       </div>
     </section>

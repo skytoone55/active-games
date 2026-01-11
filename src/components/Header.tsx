@@ -13,6 +13,7 @@ interface HeaderProps {
       concept: string
       games: string
       pricing: string
+      branches: string
       contact: string
     }
   }
@@ -59,6 +60,7 @@ export default function Header({ translations, locale, onLocaleChange }: HeaderP
     { href: '#concept', label: translations.nav.concept },
     { href: '#games', label: translations.nav.games },
     { href: '#pricing', label: translations.nav.pricing },
+    { href: '#branches', label: translations.nav.branches },
     { href: '#contact', label: translations.nav.contact },
   ]
 
@@ -74,24 +76,24 @@ export default function Header({ translations, locale, onLocaleChange }: HeaderP
         background: 'rgba(26, 26, 46, 0.95)',
         backdropFilter: 'blur(10px)',
         borderBottom: '1px solid rgba(8, 247, 254, 0.3)',
-        height: '65px',
+        height: '75px',
         boxShadow: '0 2px 10px rgba(0, 0, 0, 0.3)',
       }}
     >
-      <div className="container mx-auto px-4" style={{ height: '65px' }}>
-        <div className="flex items-center justify-between" style={{ height: '65px' }}>
+      <div className="container mx-auto px-4" style={{ height: '75px' }}>
+        <div className="flex items-center justify-between" style={{ height: '75px' }}>
           {/* Logo */}
-          <Link href="/" className="relative z-10 flex items-center" style={{ height: '65px', flexShrink: 0 }}>
+          <Link href="/" className="relative z-10 flex items-center" style={{ height: '75px', flexShrink: 0 }}>
             <Image
               src="/images/logo.png"
               alt="Active Games"
-              width={180}
-              height={50}
+              width={220}
+              height={60}
               className="h-auto"
               style={{ 
-                height: 'clamp(35px, 5vw, 50px)',
+                height: 'clamp(45px, 6vw, 60px)',
                 width: 'auto',
-                filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.5))',
+                filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.5)) drop-shadow(0 0 8px rgba(0, 240, 255, 0.4)) brightness(1.15)',
               }}
               priority
             />
@@ -99,7 +101,7 @@ export default function Header({ translations, locale, onLocaleChange }: HeaderP
 
           {/* Desktop Navigation */}
           {!isMobile && (
-            <nav className="flex items-center gap-0" style={{ height: '65px', marginRight: '0' }}>
+            <nav className="flex items-center gap-0" style={{ height: '75px', marginRight: '0' }}>
               {menuItems.map((item) => (
                 <a
                   key={item.href}
@@ -141,10 +143,40 @@ export default function Header({ translations, locale, onLocaleChange }: HeaderP
                 </a>
               ))}
               
+              {/* Laser City Logo */}
+              <a 
+                href="https://laser-city.co.il" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="transition-opacity hover:opacity-90"
+                style={{ 
+                  marginLeft: '8px',
+                  marginRight: '8px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  height: '75px',
+                  opacity: 1,
+                  filter: 'drop-shadow(0 0 8px rgba(0, 240, 255, 0.6)) brightness(1.2)'
+                }}
+              >
+                <Image
+                  src="/images/logo_laser_city.png"
+                  alt="Laser City"
+                  width={100}
+                  height={35}
+                  style={{ 
+                    height: 'auto',
+                    width: '100px',
+                    maxWidth: '100px'
+                  }}
+                  unoptimized
+                />
+              </a>
+              
               {/* Language Selector */}
               <div 
                 className="relative" 
-                style={{ marginLeft: '8px' }}
+                style={{ marginLeft: '0' }}
                 onMouseEnter={() => setIsLangOpen(true)}
                 onMouseLeave={() => setIsLangOpen(false)}
               >
@@ -316,7 +348,7 @@ export default function Header({ translations, locale, onLocaleChange }: HeaderP
               exit={{ opacity: 0, height: 0 }}
               style={{
                 position: 'fixed',
-                top: '65px',
+                top: '75px',
                 left: 0,
                 right: 0,
                 backgroundColor: 'rgba(26, 26, 46, 0.98)',
