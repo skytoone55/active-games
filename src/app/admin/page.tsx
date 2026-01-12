@@ -2180,7 +2180,7 @@ export default function AdminPage() {
                 <div className="fixed inset-0 z-50 pointer-events-none">
                   <div
                     data-appointment-modal
-                    className={`${bgCard} border ${borderColor} rounded-2xl shadow-xl w-full max-w-4xl max-h-[85vh] flex flex-col pointer-events-auto`}
+                    className={`${bgCard} border ${borderColor} rounded-2xl shadow-xl w-full max-w-4xl max-h-[85vh] flex flex-col pointer-events-auto relative`}
                     style={{
                       position: 'absolute',
                       ...(appointmentModalPosition
@@ -2493,31 +2493,23 @@ export default function AdminPage() {
               </>
             )}
 
-            {/* Modal de confirmation de suppression */}
-            {showDeleteConfirm && (
+            {/* Modal de confirmation de suppression - centré sur la pop-up du rendez-vous */}
+            {showDeleteConfirm && showAppointmentModal && (
               <div
-                className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[100] flex items-center justify-center"
+                className="absolute inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center"
                 onClick={cancelDelete}
                 style={{
-                  position: 'fixed',
+                  position: 'absolute',
                   top: 0,
                   left: 0,
                   right: 0,
                   bottom: 0,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
                 }}
               >
                 <div
                   data-delete-confirm-modal
                   className={`${bgCard} border ${borderColor} rounded-2xl shadow-xl w-full max-w-md p-6 flex flex-col pointer-events-auto`}
                   onClick={(e) => e.stopPropagation()}
-                  style={{
-                    position: 'relative',
-                    maxHeight: '90vh',
-                    overflow: 'auto',
-                  }}
                 >
                   <h3 className={`text-xl font-bold mb-4 ${textPrimary}`}>
                     Confirmer la suppression
