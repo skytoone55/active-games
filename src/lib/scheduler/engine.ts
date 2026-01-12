@@ -698,6 +698,7 @@ export function reorganizeAllBookingsForDate(
   let currentBookings: Booking[] = [] // Liste des bookings déjà réorganisés (avec déplacements)
 
   for (const booking of bookingsToReorganize) {
+    // IMPORTANT : Pour les EVENT, s'assurer que gameDurationMinutes est bien 60 (centré)
     const params: AllocationParams = {
       date: booking.date,
       hour: booking.hour,
@@ -705,7 +706,9 @@ export function reorganizeAllBookingsForDate(
       participants: booking.participants,
       type: booking.type,
       durationMinutes: booking.durationMinutes,
-      gameDurationMinutes: booking.gameDurationMinutes,
+      gameDurationMinutes: booking.type === 'event' 
+        ? 60 // Pour EVENT, jeu toujours 60 min centré
+        : (booking.gameDurationMinutes || booking.durationMinutes || 60),
       excludeBookingId: booking.id // Exclure ce booking lui-même pendant la vérification
     }
 
