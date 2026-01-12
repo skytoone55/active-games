@@ -14,10 +14,11 @@ type SimpleAppointment = {
   id: string
   date: string // 'YYYY-MM-DD'
   hour: number // 10, 11, 12...
+  minute?: number // 0, 15, 30, 45
   title: string
   branch?: string
-  eventType?: string
-  durationMinutes?: number
+  eventType?: string // 'game' pour jeu privé, autre chose pour événement avec salle
+  durationMinutes?: number // Durée de l'événement (bloque la salle d'anniversaire)
   color?: string
   eventNotes?: string
   customerFirstName?: string
@@ -25,8 +26,10 @@ type SimpleAppointment = {
   customerPhone?: string
   customerEmail?: string
   customerNotes?: string
-  gameDurationMinutes?: number
+  gameDurationMinutes?: number // Durée du jeu (bloque les slots)
   participants?: number
+  assignedSlots?: number[] // Indices des slots assignés (1-14)
+  assignedRoom?: number // Salle d'anniversaire assignée (1-4), undefined si pas de salle
 }
 
 export default function AdminPage() {
@@ -74,6 +77,7 @@ export default function AdminPage() {
   const [editingAppointment, setEditingAppointment] = useState<SimpleAppointment | null>(null)
   const [appointmentTitle, setAppointmentTitle] = useState('')
   const [appointmentHour, setAppointmentHour] = useState<number | null>(null)
+  const [appointmentMinute, setAppointmentMinute] = useState<number>(0)
   const [appointmentDate, setAppointmentDate] = useState('')
   const [appointmentBranch, setAppointmentBranch] = useState('')
   const [appointmentEventType, setAppointmentEventType] = useState('')
@@ -87,18 +91,14 @@ export default function AdminPage() {
   const [appointmentCustomerNotes, setAppointmentCustomerNotes] = useState('')
   const [appointmentGameDuration, setAppointmentGameDuration] = useState<number | null>(60)
   const [appointmentParticipants, setAppointmentParticipants] = useState<number | null>(null)
+  const [appointmentRoom, setAppointmentRoom] = useState<number | null>(null) // 1-4 pour les salles d'anniversaire
 
   const presetColors = ['#3b82f6', '#22c55e', '#f97316', '#ef4444', '#a855f7', '#eab308']
 
-  // Position et taille du modal de rendez-vous (draggable / redimensionnable)
-  const [appointmentModalWidth, setAppointmentModalWidth] = useState(900)
-  const [appointmentModalHeight, setAppointmentModalHeight] = useState(600)
-  const [appointmentModalX, setAppointmentModalX] = useState<number | null>(null)
-  const [appointmentModalY, setAppointmentModalY] = useState<number | null>(null)
+  // Position du modal de rendez-vous (draggable)
+  const [appointmentModalPosition, setAppointmentModalPosition] = useState<{ x: number; y: number } | null>(null)
   const [isDraggingModal, setIsDraggingModal] = useState(false)
-  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 })
-  const [isResizingModal, setIsResizingModal] = useState(false)
-  const [resizeStart, setResizeStart] = useState<{ mouseX: number; mouseY: number; width: number; height: number } | null>(null)
+  const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(null)
 
   // Vérifier si déjà authentifié, charger thème + rendez-vous simples + config modal
   useEffect(() => {
@@ -129,35 +129,26 @@ export default function AdminPage() {
       }
     }
 
-    const storedModal = localStorage.getItem('admin_appointment_modal')
-    if (storedModal) {
+    // Charger la position sauvegardée de la pop-up
+    const storedPosition = localStorage.getItem('admin_appointment_modal_position')
+    if (storedPosition) {
       try {
-        const parsed = JSON.parse(storedModal) as {
-          width?: number
-          height?: number
-          x?: number
-          y?: number
+        const parsed = JSON.parse(storedPosition) as { x: number; y: number }
+        if (typeof parsed.x === 'number' && typeof parsed.y === 'number') {
+          setAppointmentModalPosition(parsed)
         }
-        if (parsed.width) setAppointmentModalWidth(parsed.width)
-        if (parsed.height) setAppointmentModalHeight(parsed.height)
-        if (typeof parsed.x === 'number') setAppointmentModalX(parsed.x)
-        if (typeof parsed.y === 'number') setAppointmentModalY(parsed.y)
       } catch {
         // ignore
       }
     }
   }, [])
 
-  // Sauvegarde config modal
+  // Sauvegarde position modal
   useEffect(() => {
-    const data = {
-      width: appointmentModalWidth,
-      height: appointmentModalHeight,
-      x: appointmentModalX,
-      y: appointmentModalY,
+    if (appointmentModalPosition) {
+      localStorage.setItem('admin_appointment_modal_position', JSON.stringify(appointmentModalPosition))
     }
-    localStorage.setItem('admin_appointment_modal', JSON.stringify(data))
-  }, [appointmentModalWidth, appointmentModalHeight, appointmentModalX, appointmentModalY])
+  }, [appointmentModalPosition])
 
   // Sauvegarde des rendez-vous simples
   useEffect(() => {
@@ -521,29 +512,201 @@ export default function AdminPage() {
     return days
   }
 
-  // Générer les slots de temps (10:00, 11:00, 12:00, ...) pour l'affichage agenda
+  // Générer les slots de temps (10:00, 10:15, 10:30, 10:45, ...) pour l'affichage agenda
+  // Grille interne 15 min, mais on affichera seulement les labels 30 min sur le côté
   const getTimeSlots = () => {
-    const slots: Array<{ hour: number; label: string }> = []
+    const slots: Array<{ hour: number; minute: number; label: string; slotId: number }> = []
     for (let h = 10; h <= 22; h++) {
-      slots.push({ hour: h, label: `${String(h).padStart(2, '0')}:00` })
+      slots.push({ hour: h, minute: 0, label: `${String(h).padStart(2, '0')}:00`, slotId: h * 100 + 0 })
+      slots.push({ hour: h, minute: 15, label: `${String(h).padStart(2, '0')}:15`, slotId: h * 100 + 15 })
+      slots.push({ hour: h, minute: 30, label: `${String(h).padStart(2, '0')}:30`, slotId: h * 100 + 30 })
+      slots.push({ hour: h, minute: 45, label: `${String(h).padStart(2, '0')}:45`, slotId: h * 100 + 45 })
     }
     return slots
   }
 
-  // Obtenir les rendez-vous simples pour une HEURE donnée (agenda visuel)
-  const getAppointmentsForHour = (date: Date, hour: number) => {
+  // Calculer le nombre de slots nécessaires selon le nombre de participants
+  const calculateSlotsNeeded = (participants: number | null | undefined): number => {
+    if (!participants || participants <= 0) return 1
+    return Math.ceil(participants / 6)
+  }
+
+  // Trouver les slots disponibles pour un créneau donné
+  const findAvailableSlots = (
+    date: string,
+    startMinutes: number,
+    durationMinutes: number,
+    slotsNeeded: number,
+    excludeAppointmentId?: string
+  ): number[] | null => {
+    const endMinutes = startMinutes + durationMinutes
+    
+    // Créer un tableau de disponibilité pour chaque slot (1-14) sur chaque intervalle de 15 minutes
+    // Structure : slotAvailability[slotNumber][minute] = true/false
+    const slotAvailability: boolean[][] = []
+    for (let slot = 1; slot <= 14; slot++) {
+      slotAvailability[slot] = []
+      // Initialiser tous les créneaux de 15 min comme disponibles (10h à 22h)
+      for (let min = 10 * 60; min < 23 * 60; min += 15) {
+        slotAvailability[slot][min] = true
+      }
+    }
+
+    // Marquer les slots occupés par les autres rendez-vous
+    appointments.forEach(appointment => {
+      // Exclure le rendez-vous en cours de modification (important pour la réallocation)
+      if (appointment.id === excludeAppointmentId) return
+      if (appointment.date !== date) return
+      
+      const appStartMinutes = appointment.hour * 60 + (appointment.minute || 0)
+      // Pour les slots, utiliser la durée du jeu (gameDurationMinutes), pas la durée de l'événement
+      const appGameDuration = appointment.gameDurationMinutes || appointment.durationMinutes || 60
+      const appEndMinutes = appStartMinutes + appGameDuration
+      const assignedSlots = appointment.assignedSlots || []
+      
+      // Si pas de slots assignés, ignorer
+      if (assignedSlots.length === 0) return
+      
+      // Vérifier si ce rendez-vous chevauche le créneau demandé
+      const overlaps = appStartMinutes < endMinutes && appEndMinutes > startMinutes
+      if (!overlaps) return // Pas de chevauchement, on peut ignorer ce rendez-vous
+      
+      // Pour chaque slot assigné, marquer comme occupé sur toute la durée du chevauchement
+      assignedSlots.forEach(slotIndex => {
+        // S'assurer que le slot est valide (1-14)
+        if (slotIndex < 1 || slotIndex > 14) return
+        
+        // Marquer comme occupé seulement sur la partie qui chevauche
+        const overlapStart = Math.max(appStartMinutes, startMinutes)
+        const overlapEnd = Math.min(appEndMinutes, endMinutes)
+        // Marquer chaque créneau de 15 min comme occupé dans la zone de chevauchement
+        for (let min = overlapStart; min < overlapEnd; min += 15) {
+          // S'assurer que le slot existe et que le créneau est initialisé
+          if (slotAvailability[slotIndex] && slotAvailability[slotIndex][min] !== undefined) {
+            slotAvailability[slotIndex][min] = false
+          }
+        }
+      })
+    })
+
+    // IMPORTANT : Trouver automatiquement les slots disponibles (gauche → droite)
+    // Le slot cliqué par l'utilisateur n'est PAS utilisé pour l'assignation
+    // On doit trouver un GROUPE de slots consécutifs qui sont TOUS disponibles simultanément
+    // sur TOUTE la durée (de startMinutes à endMinutes)
+    
+    // Parcourir tous les groupes possibles de slots consécutifs
+    for (let startSlot = 1; startSlot <= 14 - slotsNeeded + 1; startSlot++) {
+      const candidateSlots: number[] = []
+      
+      // Vérifier si ce groupe de slots consécutifs est disponible
+      let allAvailable = true
+      for (let i = 0; i < slotsNeeded; i++) {
+        const slot = startSlot + i
+        if (slot > 14) {
+          allAvailable = false
+          break
+        }
+        
+        // Vérifier que ce slot est disponible sur TOUTE la durée
+        for (let min = startMinutes; min < endMinutes; min += 15) {
+          if (!slotAvailability[slot] || slotAvailability[slot][min] === undefined || !slotAvailability[slot][min]) {
+            allAvailable = false
+            break
+          }
+        }
+        
+        if (!allAvailable) break
+        candidateSlots.push(slot)
+      }
+      
+      // Si tous les slots du groupe sont disponibles, on les retourne
+      if (allAvailable && candidateSlots.length === slotsNeeded) {
+        return candidateSlots.sort((a, b) => a - b)
+      }
+    }
+
+    // Aucun groupe de slots consécutifs disponible trouvé
+    return null
+  }
+
+  // Trouver une salle d'anniversaire disponible pour un créneau donné
+  const findAvailableRoom = (
+    date: string,
+    startMinutes: number,
+    durationMinutes: number,
+    excludeAppointmentId?: string
+  ): number | null => {
+    const endMinutes = startMinutes + durationMinutes
+    
+    // Vérifier chaque salle (1-4)
+    for (let room = 1; room <= 4; room++) {
+      let isAvailable = true
+      
+      // Vérifier si cette salle est occupée par un autre rendez-vous sur ce créneau
+      for (const appointment of appointments) {
+        // Exclure le rendez-vous en cours de modification
+        if (appointment.id === excludeAppointmentId) continue
+        if (appointment.date !== date) continue
+        if (appointment.eventType === 'game') continue // Les "game" ne bloquent pas les salles
+        if (appointment.assignedRoom !== room) continue
+        
+        const appStartMinutes = appointment.hour * 60 + (appointment.minute || 0)
+        const appDuration = appointment.durationMinutes || 60
+        const appEndMinutes = appStartMinutes + appDuration
+        
+        // Vérifier le chevauchement
+        if (appStartMinutes < endMinutes && appEndMinutes > startMinutes) {
+          isAvailable = false
+          break
+        }
+      }
+      
+      if (isAvailable) {
+        return room
+      }
+    }
+    
+    return null
+  }
+
+  // Obtenir les rendez-vous qui commencent ou chevauchent un créneau de 30 minutes donné
+  const getAppointmentsForSlot = (date: Date, slotHour: number, slotMinute: number) => {
     const year = date.getFullYear()
     const month = String(date.getMonth() + 1).padStart(2, '0')
     const day = String(date.getDate()).padStart(2, '0')
     const dateStr = `${year}-${month}-${day}`
 
-    return appointments.filter(a => a.date === dateStr && a.hour === hour)
+    const slotStartMinutes = slotHour * 60 + slotMinute
+    const slotEndMinutes = slotStartMinutes + 30
+
+    return appointments.filter(a => {
+      if (a.date !== dateStr) return false
+      
+      // Convertir l'heure du rendez-vous en minutes depuis minuit
+      const appointmentStartMinutes = a.hour * 60 + (a.minute || 0)
+      const duration = a.durationMinutes || 60
+      const appointmentEndMinutes = appointmentStartMinutes + duration
+      
+      // Le rendez-vous chevauche ce créneau si :
+      // - Il commence avant la fin du créneau ET
+      // - Il se termine après le début du créneau
+      return appointmentStartMinutes < slotEndMinutes && appointmentEndMinutes > slotStartMinutes
+    })
   }
 
-  const openNewAppointmentModal = (hour: number) => {
+  // Calculer combien de créneaux de 30 minutes un rendez-vous occupe
+  const getSlotSpan = (durationMinutes: number) => {
+    return Math.ceil((durationMinutes || 60) / 30)
+  }
+
+  // Ouvrir le modal pour créer un nouveau rendez-vous
+  // NOTE : Le slot cliqué n'est utilisé QUE pour déterminer l'heure
+  // Les slots seront assignés automatiquement par findAvailableSlots (gauche → droite)
+  const openNewAppointmentModal = (hour: number, minute: number = 0) => {
     setEditingAppointment(null)
     setAppointmentTitle('')
     setAppointmentHour(hour)
+    setAppointmentMinute(minute)
     const year = selectedDate.getFullYear()
     const month = String(selectedDate.getMonth() + 1).padStart(2, '0')
     const day = String(selectedDate.getDate()).padStart(2, '0')
@@ -560,6 +723,7 @@ export default function AdminPage() {
     setAppointmentCustomerNotes('')
     setAppointmentGameDuration(60)
     setAppointmentParticipants(null)
+    setAppointmentRoom(null)
     setShowAppointmentModal(true)
   }
 
@@ -567,6 +731,7 @@ export default function AdminPage() {
     setEditingAppointment(appointment)
     setAppointmentTitle(appointment.title)
     setAppointmentHour(appointment.hour)
+    setAppointmentMinute(appointment.minute || 0)
     setAppointmentDate(appointment.date)
     setAppointmentBranch(appointment.branch || '')
     setAppointmentEventType(appointment.eventType || '')
@@ -580,14 +745,129 @@ export default function AdminPage() {
     setAppointmentCustomerNotes(appointment.customerNotes || '')
     setAppointmentGameDuration(appointment.gameDurationMinutes ?? 60)
     setAppointmentParticipants(appointment.participants ?? null)
+    setAppointmentRoom(appointment.assignedRoom ?? null)
     setShowAppointmentModal(true)
   }
+
+  // Assigner automatiquement des slots aux anciens rendez-vous qui n'en ont pas (lors du chargement)
+  useEffect(() => {
+    if (appointments.length === 0) return
+    
+    const needsUpdate = appointments.some(a => !a.assignedSlots || a.assignedSlots.length === 0)
+    if (!needsUpdate) return
+    
+    setAppointments(prev => prev.map(a => {
+      if (a.assignedSlots && a.assignedSlots.length > 0) return a
+      
+      const slotsNeeded = calculateSlotsNeeded(a.participants)
+      const startMinutes = a.hour * 60 + (a.minute || 0)
+      const durationMinutes = a.durationMinutes || 60
+      
+      // Pour la migration, assigner les premiers slots disponibles
+      const defaultSlots = Array.from({ length: slotsNeeded }, (_, i) => Math.min(i + 1, 14))
+      return { ...a, assignedSlots: defaultSlots }
+    }))
+  }, [appointments.length])
 
   const saveAppointment = () => {
     if (!appointmentTitle.trim() || appointmentHour === null || !appointmentDate) {
       return
     }
     const dateStr = appointmentDate
+
+    // Calculer le nombre de slots nécessaires
+    const slotsNeeded = calculateSlotsNeeded(appointmentParticipants)
+    
+    // Calculer les minutes de début
+    const startMinutes = appointmentHour * 60 + appointmentMinute
+    
+    // IMPORTANT : Deux durées différentes
+    // - gameDurationMinutes : durée du jeu (bloque les slots)
+    // - durationMinutes : durée de l'événement (bloque la salle d'anniversaire)
+    const gameDurationMinutes = appointmentGameDuration ?? 60 // Durée du jeu pour les slots
+    const eventDurationMinutes = appointmentDuration ?? 60 // Durée de l'événement pour la salle
+
+    // Vérifier si on modifie un rendez-vous existant et si l'heure/durée/participants ont changé
+    const isModifying = editingAppointment !== null
+    const hasChanged = isModifying && (
+      editingAppointment.hour !== appointmentHour ||
+      editingAppointment.minute !== appointmentMinute ||
+      editingAppointment.durationMinutes !== appointmentDuration ||
+      editingAppointment.participants !== appointmentParticipants
+    )
+
+    // Trouver les slots disponibles (exclure le rendez-vous en cours de modification)
+    // Utiliser la durée du jeu pour les slots
+    const availableSlots = findAvailableSlots(
+      dateStr,
+      startMinutes,
+      gameDurationMinutes,
+      slotsNeeded,
+      editingAppointment?.id
+    )
+
+    if (!availableSlots) {
+      // Compter combien de slots sont disponibles sur ce créneau
+      let availableCount = 0
+      for (let slot = 1; slot <= 14; slot++) {
+        let isAvailable = true
+        for (let min = startMinutes; min < startMinutes + gameDurationMinutes; min += 15) {
+          // Vérifier si ce slot est occupé à ce moment
+          const isOccupied = appointments.some(a => {
+            if (a.id === editingAppointment?.id) return false
+            if (a.date !== dateStr) return false
+            const assignedSlots = a.assignedSlots || []
+            if (!assignedSlots.includes(slot)) return false
+            const aStart = a.hour * 60 + (a.minute || 0)
+            const aGameDuration = a.gameDurationMinutes || 60
+            const aEnd = aStart + aGameDuration
+            return aStart < min + 15 && aEnd > min
+          })
+          if (isOccupied) {
+            isAvailable = false
+            break
+          }
+        }
+        if (isAvailable) availableCount++
+      }
+      
+      const maxParticipants = availableCount * 6
+      alert(`Pas assez de capacité sur ce créneau.\n\nIl faut ${slotsNeeded} slot(s) disponible(s), mais seulement ${availableCount} slot(s) sont libres.\n\nMaximum possible : ${maxParticipants} participants (${availableCount} slot(s) × 6 personnes).`)
+      return
+    }
+
+    // Si ce n'est pas un "game", vérifier la disponibilité d'une salle d'anniversaire
+    let assignedRoom: number | undefined = undefined
+    if (appointmentEventType && appointmentEventType !== 'game') {
+      // Si une salle est déjà sélectionnée, vérifier qu'elle est disponible
+      if (appointmentRoom !== null) {
+        const roomAvailable = findAvailableRoom(
+          dateStr,
+          startMinutes,
+          eventDurationMinutes,
+          editingAppointment?.id
+        )
+        if (roomAvailable === appointmentRoom) {
+          assignedRoom = appointmentRoom
+        } else {
+          alert(`La salle ${appointmentRoom} n'est pas disponible sur ce créneau.`)
+          return
+        }
+      } else {
+        // Trouver automatiquement une salle disponible
+        const availableRoom = findAvailableRoom(
+          dateStr,
+          startMinutes,
+          eventDurationMinutes,
+          editingAppointment?.id
+        )
+        if (!availableRoom) {
+          alert(`Aucune salle d'anniversaire disponible sur ce créneau.`)
+          return
+        }
+        assignedRoom = availableRoom
+      }
+    }
 
     if (editingAppointment) {
       setAppointments(prev =>
@@ -597,6 +877,7 @@ export default function AdminPage() {
                 ...a,
                 title: appointmentTitle.trim(),
                 hour: appointmentHour,
+                minute: appointmentMinute,
                 date: dateStr,
                 branch: appointmentBranch || undefined,
                 eventType: appointmentEventType || undefined,
@@ -610,6 +891,8 @@ export default function AdminPage() {
                 customerNotes: appointmentCustomerNotes || undefined,
                 gameDurationMinutes: appointmentGameDuration ?? undefined,
                 participants: appointmentParticipants ?? undefined,
+                assignedSlots: availableSlots,
+                assignedRoom: assignedRoom,
               }
             : a,
         ),
@@ -619,6 +902,7 @@ export default function AdminPage() {
         id: `app-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
         title: appointmentTitle.trim(),
         hour: appointmentHour,
+        minute: appointmentMinute,
         date: dateStr,
         branch: appointmentBranch || undefined,
         eventType: appointmentEventType || undefined,
@@ -632,6 +916,8 @@ export default function AdminPage() {
         customerNotes: appointmentCustomerNotes || undefined,
         gameDurationMinutes: appointmentGameDuration ?? undefined,
         participants: appointmentParticipants ?? undefined,
+        assignedSlots: availableSlots,
+        assignedRoom: assignedRoom,
       }
       setAppointments(prev => [...prev, newAppointment])
     }
@@ -640,6 +926,7 @@ export default function AdminPage() {
     setEditingAppointment(null)
     setAppointmentTitle('')
     setAppointmentHour(null)
+    setAppointmentMinute(0)
     setAppointmentDate('')
     setAppointmentBranch('')
     setAppointmentEventType('')
@@ -665,65 +952,46 @@ export default function AdminPage() {
   const startDragModal = (e: React.MouseEvent<HTMLDivElement>) => {
     e.preventDefault()
     e.stopPropagation()
-    const modal = (e.currentTarget.closest('[data-appointment-modal]') as HTMLElement) || null
+    const modal = e.currentTarget.closest('[data-appointment-modal]') as HTMLElement
     if (!modal) return
+    
     const rect = modal.getBoundingClientRect()
+    const currentX = appointmentModalPosition?.x ?? window.innerWidth / 2 - rect.width / 2
+    const currentY = appointmentModalPosition?.y ?? window.innerHeight / 2 - rect.height / 2
+    
     setIsDraggingModal(true)
-    setDragOffset({
-      x: e.clientX - rect.left,
-      y: e.clientY - rect.top,
+    setDragStart({
+      x: e.clientX - currentX,
+      y: e.clientY - currentY,
     })
-    if (appointmentModalX === null || appointmentModalY === null) {
-      setAppointmentModalX(rect.left)
-      setAppointmentModalY(rect.top)
-    }
   }
 
-  const startResizeModal = (e: React.MouseEvent<HTMLDivElement>) => {
-    e.preventDefault()
-    e.stopPropagation()
-    setIsResizingModal(true)
-    setResizeStart({
-      mouseX: e.clientX,
-      mouseY: e.clientY,
-      width: appointmentModalWidth,
-      height: appointmentModalHeight,
-    })
-  }
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
-      if (isDraggingModal) {
-        const newX = e.clientX - dragOffset.x
-        const newY = e.clientY - dragOffset.y
-        // Laisser la fenêtre aller vraiment partout, mais garder un minimum visible
-        const minX = -appointmentModalWidth + 80
-        const maxX = window.innerWidth - 80
-        const minY = 0
-        const maxY = window.innerHeight - 80
-        setAppointmentModalX(Math.min(Math.max(minX, newX), maxX))
-        setAppointmentModalY(Math.min(Math.max(minY, newY), maxY))
-      } else if (isResizingModal && resizeStart) {
-        const deltaX = e.clientX - resizeStart.mouseX
-        const deltaY = e.clientY - resizeStart.mouseY
-        const minWidth = 600
-        const minHeight = 400
-        const maxWidth = window.innerWidth - 32
-        const maxHeight = window.innerHeight - 64
-        setAppointmentModalWidth(
-          Math.min(Math.max(minWidth, resizeStart.width + deltaX), maxWidth)
-        )
-        setAppointmentModalHeight(
-          Math.min(Math.max(minHeight, resizeStart.height + deltaY), maxHeight)
-        )
+      if (isDraggingModal && dragStart) {
+        const newX = e.clientX - dragStart.x
+        const newY = e.clientY - dragStart.y
+        // Permettre de déplacer partout, mais garder au moins un peu visible
+        const minX = -600 // permet de cacher une partie mais garde un peu visible
+        const minY = -400
+        const maxX = window.innerWidth - 100
+        const maxY = window.innerHeight - 100
+        setAppointmentModalPosition({
+          x: Math.max(minX, Math.min(maxX, newX)),
+          y: Math.max(minY, Math.min(maxY, newY)),
+        })
       }
     }
 
     const handleMouseUp = () => {
-      if (isDraggingModal) setIsDraggingModal(false)
-      if (isResizingModal) {
-        setIsResizingModal(false)
-        setResizeStart(null)
+      if (isDraggingModal) {
+        setIsDraggingModal(false)
+        setDragStart(null)
+        // Sauvegarder la position
+        if (appointmentModalPosition) {
+          localStorage.setItem('admin_appointment_modal_position', JSON.stringify(appointmentModalPosition))
+        }
       }
     }
 
@@ -733,7 +1001,7 @@ export default function AdminPage() {
       window.removeEventListener('mousemove', handleMouseMove)
       window.removeEventListener('mouseup', handleMouseUp)
     }
-  }, [isDraggingModal, dragOffset, isResizingModal, resizeStart, appointmentModalWidth, appointmentModalHeight])
+  }, [isDraggingModal, dragStart, appointmentModalPosition])
 
   // Générer le calendrier pour le modal
   const getCalendarDays = () => {
@@ -1365,85 +1633,326 @@ export default function AdminPage() {
               </div>
             </div>
 
-            {/* Vue journalière en bas avec tous les créneaux horaires */}
-            <div className="flex">
-              {/* Colonne Heure - Ajustée (1 ligne = 1 heure) */}
-              <div className={`w-24 ${bgHeader} border-r ${borderColor} sticky left-0 flex-shrink-0`}>
+            {/* Vue journalière : Lignes = horaires (15 min), Colonnes = 14 slots */}
+            <div className="flex overflow-x-auto">
+              {/* Colonne Heure - Labels 30 minutes, grille interne 15 minutes */}
+              <div className={`w-24 ${bgHeader} border-r ${borderColor} sticky left-0 flex-shrink-0 z-10`}>
+                {/* En-tête */}
                 <div
                   className={`px-2 ${bgHeader} border-b ${borderColor} text-center flex items-center justify-center`}
                   style={{ height: `${rowHeight}px`, minHeight: `${rowHeight}px` }}
                 >
                   <div className={`text-sm font-bold ${textPrimary}`}>Heure</div>
                 </div>
-                {timeSlots.map((slot) => (
-                  <button
-                    key={slot.hour}
-                    type="button"
-                    onClick={() => openNewAppointmentModal(slot.hour)}
-                    className={`w-full px-2 border-b ${borderColor} text-center flex items-center justify-center hover:${bgCardHover} transition-colors`}
-                    style={{ height: `${rowHeight}px`, minHeight: `${rowHeight}px` }}
-                  >
-                    <div className={`text-sm font-bold ${textPrimary}`}>
-                      {slot.label}
+                
+                {/* Afficher les créneaux de 15 minutes, mais labels seulement sur les 30 min */}
+                {Array.from({ length: 48 }, (_, i) => {
+                  const hour = 10 + Math.floor(i / 4)
+                  const minute = (i % 4) * 15
+                  if (hour > 22) return null
+                  
+                  const is30MinLabel = minute === 0 || minute === 30
+                  
+                  return (
+                    <div
+                      key={`${hour}-${minute}`}
+                      className={`w-full px-2 border-b ${borderColor} text-center flex items-center justify-center`}
+                      style={{ height: `${rowHeight / 2}px`, minHeight: `${rowHeight / 2}px` }}
+                    >
+                      {is30MinLabel && (
+                        <div className={`text-sm font-bold ${textPrimary}`}>
+                          {String(hour).padStart(2, '0')}:{String(minute).padStart(2, '0')}
+                        </div>
+                      )}
                     </div>
-                  </button>
-                ))}
+                  )
+                })}
               </div>
 
-              {/* Colonne Réservations */}
-              <div className="flex-1">
-                  <div
-                    className={`p-4 ${bgHeader} border-b ${borderColor} text-center flex items-center justify-center`}
-                    style={{ height: `${rowHeight}px`, minHeight: `${rowHeight}px` }}
-                  >
-                    <div className={`text-base font-bold ${textPrimary}`}>
-                      Réservations - {formatDateShort(selectedDate)}
-                    </div>
-                  </div>
-                  {timeSlots.map((slot) => {
-                    const slotAppointments = getAppointmentsForHour(selectedDate, slot.hour)
-                    const count = slotAppointments.length || 1
-                    const widthPercent = 100 / count
-
-                    return (
-                      <div
-                        key={slot.hour}
-                        className={`px-3 border-b ${borderColor} ${bgCard} flex items-center cursor-pointer hover:${bgCardHover} transition-colors`}
-                        style={{ height: `${rowHeight}px`, minHeight: `${rowHeight}px` }}
-                        onClick={(e) => {
-                          // Éviter d'ouvrir le modal si on clique sur un rendez-vous existant
-                          if ((e.target as HTMLElement).closest('[data-appointment-card]')) return
-                          openNewAppointmentModal(slot.hour)
+              {/* Zone avec 14 colonnes slots + 4 colonnes salles d'anniversaire */}
+              {/* Utiliser grid pour un contrôle précis et égal des colonnes */}
+              <div className="flex-1 relative" style={{ height: `${rowHeight + 48 * (rowHeight / 2)}px` }}>
+                {/* Constantes pour le nombre de colonnes - facilement modifiables */}
+                {(() => {
+                  const TOTAL_SLOTS = 14
+                  const TOTAL_ROOMS = 4
+                  const TOTAL_COLUMNS = TOTAL_SLOTS + TOTAL_ROOMS
+                  
+                  return (
+                    <>
+                      {/* En-tête avec toutes les colonnes */}
+                      <div 
+                        className="grid sticky top-0 z-10"
+                        style={{ 
+                          gridTemplateColumns: `repeat(${TOTAL_COLUMNS}, 1fr)`,
+                          height: `${rowHeight}px`,
+                          minHeight: `${rowHeight}px`
                         }}
                       >
-                        {slotAppointments.length > 0 ? (
-                          <div className="flex w-full h-full gap-1">
-                            {slotAppointments.map((appointment) => (
-                              <div
-                                key={appointment.id}
-                                data-appointment-card
-                                onClick={() => openEditAppointmentModal(appointment)}
-                                className="h-full rounded border border-primary bg-primary/10 text-xs sm:text-sm font-medium hover:bg-primary/20 transition-all overflow-hidden flex flex-col justify-center px-2"
-                                style={{ width: `${widthPercent}%` }}
-                                title={appointment.title}
-                              >
-                                <div className="flex items-center justify-between gap-1 mb-0.5">
-                                  <span className={`${textMain} truncate`}>{appointment.title}</span>
-                                  <span className={`text-[10px] sm:text-xs ${textSecondary} whitespace-nowrap`}>
-                                    {String(appointment.hour).padStart(2, '0')}:00
-                                  </span>
-                                </div>
+                        {/* 14 colonnes slots */}
+                        {Array.from({ length: TOTAL_SLOTS }, (_, slotIndex) => {
+                          const slotNumber = slotIndex + 1
+                          return (
+                            <div
+                              key={`header-slot-${slotNumber}`}
+                              className={`${bgHeader} border-r ${borderColor} border-b ${borderColor} text-center flex items-center justify-center`}
+                            >
+                              <div className={`text-xs font-bold ${textPrimary}`}>
+                                Slot {slotNumber}
                               </div>
-                            ))}
+                            </div>
+                          )
+                        })}
+                        
+                        {/* 4 colonnes salles d'anniversaire */}
+                        {Array.from({ length: TOTAL_ROOMS }, (_, roomIndex) => {
+                          const roomNumber = roomIndex + 1
+                          return (
+                            <div
+                              key={`header-room-${roomNumber}`}
+                              className={`${bgHeader} border-r ${borderColor} border-b ${borderColor} text-center flex items-center justify-center`}
+                            >
+                              <div className={`text-xs font-bold ${textPrimary}`}>
+                                Room {roomNumber}
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+
+                {/* Grille de base : 48 lignes de 15 min × 18 colonnes (14 slots + 4 salles) */}
+                {(() => {
+                  const TOTAL_SLOTS = 14
+                  const TOTAL_ROOMS = 4
+                  const TOTAL_COLUMNS = TOTAL_SLOTS + TOTAL_ROOMS
+                  
+                  return Array.from({ length: 48 }, (_, timeIndex) => {
+                    const hour = 10 + Math.floor(timeIndex / 4)
+                    const minute = (timeIndex % 4) * 15
+                    if (hour > 22) return null
+                    
+                    const year = selectedDate.getFullYear()
+                    const month = String(selectedDate.getMonth() + 1).padStart(2, '0')
+                    const day = String(selectedDate.getDate()).padStart(2, '0')
+                    const dateStr = `${year}-${month}-${day}`
+                    
+                    const timeStartMinutes = hour * 60 + minute
+                    
+                    // Trouver les rendez-vous qui COMMENCENT à cette heure (sans doublons)
+                    const appointmentsStartingHere = appointments.filter((a, index, self) => {
+                      if (a.date !== dateStr) return false
+                      const assignedSlots = a.assignedSlots || []
+                      if (assignedSlots.length === 0) return false
+                      
+                      const aStart = a.hour * 60 + (a.minute || 0)
+                      if (aStart !== timeStartMinutes) return false
+                      
+                      // Éviter les doublons : vérifier que c'est le premier avec cet ID
+                      return self.findIndex(app => app.id === a.id) === index
+                    })
+                    
+                    return (
+                      <div
+                        key={`time-row-${hour}-${minute}`}
+                        className="grid absolute w-full"
+                        style={{
+                          gridTemplateColumns: `repeat(${TOTAL_COLUMNS}, 1fr)`,
+                          top: `${rowHeight + timeIndex * (rowHeight / 2)}px`,
+                          height: `${rowHeight / 2}px`,
+                        }}
+                      >
+                        {/* 14 colonnes slots */}
+                        {Array.from({ length: TOTAL_SLOTS }, (_, slotIndex) => {
+                          const slotNumber = slotIndex + 1
+                          
+                          return (
+                            <div
+                              key={`cell-${hour}-${minute}-slot-${slotNumber}`}
+                              className={`border-r ${borderColor} border-b ${borderColor} cursor-pointer hover:${bgCardHover} transition-colors relative`}
+                              onClick={(e) => {
+                                if ((e.target as HTMLElement).closest('[data-appointment-card]')) return
+                                openNewAppointmentModal(hour, minute)
+                              }}
+                            />
+                          )
+                        })}
+                        
+                        {/* 4 colonnes salles d'anniversaire */}
+                        {Array.from({ length: TOTAL_ROOMS }, (_, roomIndex) => {
+                          const roomNumber = roomIndex + 1
+                          
+                          return (
+                            <div
+                              key={`cell-${hour}-${minute}-room-${roomNumber}`}
+                              className={`border-r ${borderColor} border-b ${borderColor} cursor-pointer hover:${bgCardHover} transition-colors relative`}
+                              onClick={(e) => {
+                                if ((e.target as HTMLElement).closest('[data-appointment-card]')) return
+                                openNewAppointmentModal(hour, minute)
+                              }}
+                            />
+                          )
+                        })}
+                      
+                      {/* Afficher les rendez-vous au niveau de la ligne complète */}
+                      {appointmentsStartingHere.map((appointment) => {
+                        const appointmentStartMinutes = appointment.hour * 60 + (appointment.minute || 0)
+                        // Pour les slots, utiliser la durée du jeu (gameDurationMinutes), pas la durée de l'événement
+                        const gameDuration = appointment.gameDurationMinutes || appointment.durationMinutes || 60
+                        const appointmentEndMinutes = appointmentStartMinutes + gameDuration
+                        const assignedSlots = appointment.assignedSlots || []
+                        
+                        if (assignedSlots.length === 0) return null
+                        
+                        // Calculer combien de lignes de 15 min ce rendez-vous occupe
+                        const durationIn15MinSlots = (appointmentEndMinutes - appointmentStartMinutes) / 15
+                        
+                        // Trouver le premier slot assigné
+                        const minSlot = Math.min(...assignedSlots)
+                        const widthCols = assignedSlots.length // Nombre total de slots assignés
+                        
+                        // Convertir couleur hex en couleur pleine
+                        const getFullColor = (color: string | undefined) => {
+                          if (!color) return '#93c5fd'
+                          return color
+                        }
+                        
+                        // Assombrir une couleur pour la bordure
+                        const getDarkerColor = (color: string | undefined) => {
+                          if (!color) return '#3b82f6'
+                          const hex = color.replace('#', '')
+                          const r = parseInt(hex.substring(0, 2), 16)
+                          const g = parseInt(hex.substring(2, 4), 16)
+                          const b = parseInt(hex.substring(4, 6), 16)
+                          const darkerR = Math.max(0, Math.floor(r * 0.7))
+                          const darkerG = Math.max(0, Math.floor(g * 0.7))
+                          const darkerB = Math.max(0, Math.floor(b * 0.7))
+                          return `rgb(${darkerR}, ${darkerG}, ${darkerB})`
+                        }
+                        
+                        // Calculer la position et largeur : le bloc commence au premier slot et s'étend sur tous les slots assignés
+                        // Utiliser les constantes définies dans le scope parent
+                        const TOTAL_SLOTS = 14
+                        const TOTAL_ROOMS = 4
+                        const TOTAL_COLUMNS = TOTAL_SLOTS + TOTAL_ROOMS
+                        const startCol = minSlot - 1 // 0-indexed (slot 1 = colonne 0)
+                        
+                        return (
+                          <div
+                            key={appointment.id}
+                            data-appointment-card
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              openEditAppointmentModal(appointment)
+                            }}
+                            className="rounded text-xs font-medium hover:opacity-90 transition-all overflow-hidden flex flex-col justify-center px-2 absolute"
+                            style={{
+                              left: `${(startCol / TOTAL_COLUMNS) * 100}%`,
+                              width: `${(widthCols / TOTAL_COLUMNS) * 100}%`,
+                              top: 0,
+                              height: `${durationIn15MinSlots * (rowHeight / 2)}px`,
+                              backgroundColor: getFullColor(appointment.color),
+                              border: `1px solid ${getDarkerColor(appointment.color)}`,
+                              color: '#fff',
+                              zIndex: 10,
+                              boxSizing: 'border-box',
+                            }}
+                            title={appointment.title}
+                          >
+                            <div className="flex items-center justify-between gap-1">
+                              <span className="truncate font-medium text-white">{appointment.title}</span>
+                            </div>
                           </div>
-                        ) : (
-                          <div className={`text-sm ${textSecondary} w-full`}>
-                            Cliquez pour ajouter un rendez-vous
-                          </div>
-                        )}
+                        )
+                      })}
+                      
+                      {/* Afficher les événements dans les colonnes de salles d'anniversaire */}
+                      {(() => {
+                        // Trouver les rendez-vous qui COMMENCENT à cette heure et qui ont une salle assignée
+                        const appointmentsWithRooms = appointments.filter((a, index, self) => {
+                          if (a.date !== dateStr) return false
+                          if (!a.assignedRoom) return false
+                          if (a.eventType === 'game') return false // Les "game" ne bloquent pas les salles
+                          
+                          const aStart = a.hour * 60 + (a.minute || 0)
+                          if (aStart !== timeStartMinutes) return false
+                          
+                          // Éviter les doublons
+                          return self.findIndex(app => app.id === a.id) === index
+                        })
+                        
+                        return appointmentsWithRooms.map((appointment) => {
+                          const appointmentStartMinutes = appointment.hour * 60 + (appointment.minute || 0)
+                          // Pour les salles, utiliser la durée de l'événement (durationMinutes), pas gameDurationMinutes
+                          const eventDuration = appointment.durationMinutes || 60
+                          const appointmentEndMinutes = appointmentStartMinutes + eventDuration
+                          const assignedRoom = appointment.assignedRoom!
+                          
+                          // Calculer combien de lignes de 15 min cet événement occupe dans la salle
+                          const durationIn15MinSlots = (appointmentEndMinutes - appointmentStartMinutes) / 15
+                          
+                          // Convertir couleur hex en couleur pleine
+                          const getFullColor = (color: string | undefined) => {
+                            if (!color) return '#93c5fd'
+                            return color
+                          }
+                          
+                          // Assombrir une couleur pour la bordure
+                          const getDarkerColor = (color: string | undefined) => {
+                            if (!color) return '#3b82f6'
+                            const hex = color.replace('#', '')
+                            const r = parseInt(hex.substring(0, 2), 16)
+                            const g = parseInt(hex.substring(2, 4), 16)
+                            const b = parseInt(hex.substring(4, 6), 16)
+                            const darkerR = Math.max(0, Math.floor(r * 0.7))
+                            const darkerG = Math.max(0, Math.floor(g * 0.7))
+                            const darkerB = Math.max(0, Math.floor(b * 0.7))
+                            return `rgb(${darkerR}, ${darkerG}, ${darkerB})`
+                          }
+                          
+                          // Position dans les colonnes de salles (après les 14 slots)
+                          const TOTAL_SLOTS = 14
+                          const TOTAL_ROOMS = 4
+                          const TOTAL_COLUMNS = TOTAL_SLOTS + TOTAL_ROOMS
+                          // Les salles commencent après les 14 slots, donc colonne 14, 15, 16, 17 (0-indexed)
+                          const roomCol = TOTAL_SLOTS + (assignedRoom - 1) // Colonne 14, 15, 16, 17 pour les salles 1, 2, 3, 4
+                          
+                          return (
+                            <div
+                              key={`room-${appointment.id}`}
+                              data-appointment-card
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                openEditAppointmentModal(appointment)
+                              }}
+                              className="rounded text-xs font-medium hover:opacity-90 transition-all overflow-hidden flex flex-col justify-center px-2 absolute"
+                              style={{
+                                left: `${(roomCol / TOTAL_COLUMNS) * 100}%`,
+                                width: `${(1 / TOTAL_COLUMNS) * 100}%`,
+                                top: 0,
+                                height: `${durationIn15MinSlots * (rowHeight / 2)}px`,
+                                backgroundColor: getFullColor(appointment.color),
+                                border: `1px solid ${getDarkerColor(appointment.color)}`,
+                                color: '#fff',
+                                zIndex: 10,
+                                boxSizing: 'border-box',
+                              }}
+                              title={appointment.title}
+                            >
+                              <div className="flex items-center justify-between gap-1">
+                                <span className="truncate font-medium text-white">{appointment.title}</span>
+                              </div>
+                            </div>
+                          )
+                        })
+                      })()}
                       </div>
                     )
-                  })}
+                  })
+                })()}
+                    </div>
+                  </>
+                )
+              })()}
               </div>
             </div>
 
@@ -1460,17 +1969,36 @@ export default function AdminPage() {
                     setAppointmentDate('')
                   }}
                 />
-                {/* Fenêtre pop-up indépendante, centrée écran */}
-                <div className="fixed inset-0 z-50 flex items-center justify-center px-4 py-8">
+                {/* Fenêtre pop-up indépendante, draggable */}
+                <div className="fixed inset-0 z-50 pointer-events-none">
                   <div
-                    className={`${bgCard} border ${borderColor} rounded-2xl shadow-xl w-full max-w-4xl max-h-[85vh] flex flex-col`}
+                    data-appointment-modal
+                    className={`${bgCard} border ${borderColor} rounded-2xl shadow-xl w-full max-w-4xl max-h-[85vh] flex flex-col pointer-events-auto`}
+                    style={{
+                      position: 'absolute',
+                      ...(appointmentModalPosition
+                        ? {
+                            left: `${appointmentModalPosition.x}px`,
+                            top: `${appointmentModalPosition.y}px`,
+                            transform: 'none',
+                          }
+                        : {
+                            left: '50%',
+                            top: '50%',
+                            transform: 'translate(-50%, -50%)',
+                          }),
+                    }}
                     onClick={(e) => e.stopPropagation()}
                   >
-                    {/* Header */}
-                    <div className="flex items-center justify-between px-6 py-4 border-b border-gray-600">
+                    {/* Header draggable */}
+                    <div
+                      className="flex items-center justify-between px-6 py-4 border-b border-gray-600 cursor-move select-none"
+                      onMouseDown={startDragModal}
+                    >
                       <h3 className={`text-xl font-bold ${textPrimary}`}>
                         {editingAppointment ? 'Modifier le rendez-vous' : 'Nouveau rendez-vous'}
                       </h3>
+                      <span className={`text-xs ${textSecondary}`}>Glisser pour déplacer</span>
                     </div>
 
                     {/* Contenu scrollable */}
@@ -1500,6 +2028,7 @@ export default function AdminPage() {
                               className={`w-full px-3 py-2 rounded border ${borderColor} ${inputBg} ${textMain} text-sm focus:outline-none focus:border-primary`}
                             >
                               <option value="">Sélectionner un type</option>
+                              <option value="game">Jeu privé/personnel</option>
                               <option value="birthday">Anniversaire</option>
                               <option value="bar_bat_mitzvah">Bar/Bat Mitzvah</option>
                               <option value="corporate">Corporate</option>
@@ -1507,6 +2036,24 @@ export default function AdminPage() {
                               <option value="other">Autre</option>
                             </select>
                           </div>
+
+                          {/* Sélection de salle d'anniversaire (seulement si ce n'est pas un "game") */}
+                          {appointmentEventType && appointmentEventType !== 'game' && (
+                            <div>
+                              <label className={`block text-sm mb-1 ${textSecondary}`}>Salle d'anniversaire</label>
+                              <select
+                                value={appointmentRoom || ''}
+                                onChange={(e) => setAppointmentRoom(e.target.value ? Number(e.target.value) : null)}
+                                className={`w-full px-3 py-2 rounded border ${borderColor} ${inputBg} ${textMain} text-sm focus:outline-none focus:border-primary`}
+                              >
+                                <option value="">Auto (trouver automatiquement)</option>
+                                <option value="1">Room 1</option>
+                                <option value="2">Room 2</option>
+                                <option value="3">Room 3</option>
+                                <option value="4">Room 4</option>
+                              </select>
+                            </div>
+                          )}
 
                           <div>
                             <label className={`block text-sm mb-1 ${textSecondary}`}>Date</label>
@@ -1522,20 +2069,33 @@ export default function AdminPage() {
                             <div>
                               <label className={`block text-sm mb-1 ${textSecondary}`}>Heure</label>
                               <select
-                                value={appointmentHour ?? ''}
-                                onChange={(e) => setAppointmentHour(Number(e.target.value))}
+                                value={appointmentHour !== null && appointmentMinute !== null ? `${appointmentHour * 100 + appointmentMinute}` : ''}
+                                onChange={(e) => {
+                                  const slotId = Number(e.target.value)
+                                  if (slotId) {
+                                    setAppointmentHour(Math.floor(slotId / 100))
+                                    setAppointmentMinute(slotId % 100)
+                                  } else {
+                                    setAppointmentHour(null)
+                                    setAppointmentMinute(0)
+                                  }
+                                }}
                                 className={`w-full px-3 py-2 rounded border ${borderColor} ${inputBg} ${textMain} text-sm focus:outline-none focus:border-primary`}
                               >
                                 <option value="">Sélectionner une heure</option>
                                 {timeSlots.map((slot) => (
-                                  <option key={slot.hour} value={slot.hour}>
+                                  <option key={slot.slotId} value={slot.slotId}>
                                     {slot.label}
                                   </option>
                                 ))}
                               </select>
                             </div>
                             <div>
-                              <label className={`block text-sm mb-1 ${textSecondary}`}>Durée (min)</label>
+                              <label className={`block text-sm mb-1 ${textSecondary}`}>
+                                {appointmentEventType && appointmentEventType !== 'game' 
+                                  ? 'Durée événement (min)' 
+                                  : 'Durée (min)'}
+                              </label>
                               <input
                                 type="number"
                                 min={15}
@@ -1545,9 +2105,30 @@ export default function AdminPage() {
                                   setAppointmentDuration(e.target.value ? Number(e.target.value) : null)
                                 }
                                 className={`w-full px-3 py-2 rounded border ${borderColor} ${inputBg} ${textMain} text-sm focus:outline-none focus:border-primary`}
+                                title={appointmentEventType && appointmentEventType !== 'game' 
+                                  ? 'Durée totale de l\'événement (bloque la salle d\'anniversaire)' 
+                                  : 'Durée de l\'événement'}
                               />
                             </div>
                           </div>
+                          
+                          {/* Durée du jeu (pour les slots) - seulement si ce n'est pas un "game" */}
+                          {appointmentEventType && appointmentEventType !== 'game' && (
+                            <div>
+                              <label className={`block text-sm mb-1 ${textSecondary}`}>Durée du jeu (min)</label>
+                              <input
+                                type="number"
+                                min={15}
+                                step={15}
+                                value={appointmentGameDuration ?? ''}
+                                onChange={(e) =>
+                                  setAppointmentGameDuration(e.target.value ? Number(e.target.value) : null)
+                                }
+                                className={`w-full px-3 py-2 rounded border ${borderColor} ${inputBg} ${textMain} text-sm focus:outline-none focus:border-primary`}
+                                title="Durée du jeu (bloque les slots)"
+                              />
+                            </div>
+                          )}
 
                           <div>
                             <label className={`block text-sm mb-1 ${textSecondary}`}>Titre / Nom de l'événement</label>
