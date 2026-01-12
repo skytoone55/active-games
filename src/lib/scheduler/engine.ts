@@ -455,31 +455,52 @@ export function placeGameBooking(
   
   // 3. Si toujours pas de place, vérifier surbooking
   // Compter les slots disponibles
-  let availableCount = 0
+  const availableSlots: number[] = []
   for (let slot = 1; slot <= TOTAL_SLOTS; slot++) {
     if (areSlotsFree(state, [slot], timeKeys, params.excludeBookingId)) {
-      availableCount++
+      availableSlots.push(slot)
+    }
+  }
+  const availableCount = availableSlots.length
+  
+  // Si allowSurbook est true (confirmation déjà donnée), placer avec les slots disponibles (surbooking)
+  if (allowSurbook && availableCount > 0) {
+    // Placer avec les slots disponibles (même si moins que nécessaire)
+    const slotsToAssign = availableSlots.slice(0, Math.min(availableCount, slotsNeeded)).sort((a, b) => a - b)
+    return {
+      success: true,
+      allocation: {
+        slotAllocation: {
+          slots: slotsToAssign,
+          isSplit: false
+        },
+        surbooked: slotsToAssign.length < slotsNeeded,
+        surbookedParticipants: slotsToAssign.length < slotsNeeded 
+          ? (slotsNeeded - slotsToAssign.length) * SLOTS_PER_PERSON
+          : 0
+      }
     }
   }
   
-  if (availableCount === 0) {
-    // FULL : tous les slots occupés
-    // Même si FULL, proposer surbook si allowSurbook (on peut quand même créer avec surbook)
-    if (allowSurbook) {
-      return {
-        success: false,
-        conflict: {
-          type: 'NEED_SURBOOK_CONFIRM',
-          message: `Tous les slots sont occupés (besoin de ${slotsNeeded} slot(s)). Autoriser surbooking ?`,
-          details: {
-            availableSlots: 0,
-            neededSlots: slotsNeeded,
-            excessParticipants: slotsNeeded * SLOTS_PER_PERSON
-          }
+  // Si allowSurbook est true mais aucun slot disponible (FULL), demander confirmation
+  if (allowSurbook && availableCount === 0) {
+    return {
+      success: false,
+      conflict: {
+        type: 'NEED_SURBOOK_CONFIRM',
+        message: `Tous les slots sont occupés (besoin de ${slotsNeeded} slot(s)). Autoriser surbooking ?`,
+        details: {
+          availableSlots: 0,
+          neededSlots: slotsNeeded,
+          excessParticipants: slotsNeeded * SLOTS_PER_PERSON
         }
       }
     }
-    
+  }
+  
+  // Si pas de surbooking autorisé, demander confirmation ou refuser
+  if (availableCount === 0) {
+    // FULL : tous les slots occupés
     return {
       success: false,
       conflict: {
@@ -493,31 +514,16 @@ export function placeGameBooking(
     }
   }
   
-  // Besoin de confirmation pour surbooking
-  if (allowSurbook) {
-    return {
-      success: false,
-      conflict: {
-        type: 'NEED_SURBOOK_CONFIRM',
-        message: `Seulement ${availableCount} slot(s) disponible(s), besoin de ${slotsNeeded}. Autoriser surbooking ?`,
-        details: {
-          availableSlots: availableCount,
-          neededSlots: slotsNeeded,
-          excessParticipants: (slotsNeeded - availableCount) * SLOTS_PER_PERSON
-        }
-      }
-    }
-  }
-  
-  // Refus
+  // Pas assez de slots mais certains disponibles : demander confirmation
   return {
     success: false,
     conflict: {
-      type: 'FULL',
-      message: `Pas assez de slots disponibles (${availableCount} disponible(s), ${slotsNeeded} nécessaire(s))`,
+      type: 'NEED_SURBOOK_CONFIRM',
+      message: `Seulement ${availableCount} slot(s) disponible(s), besoin de ${slotsNeeded}. Autoriser surbooking ?`,
       details: {
         availableSlots: availableCount,
-        neededSlots: slotsNeeded
+        neededSlots: slotsNeeded,
+        excessParticipants: (slotsNeeded - availableCount) * SLOTS_PER_PERSON
       }
     }
   }
