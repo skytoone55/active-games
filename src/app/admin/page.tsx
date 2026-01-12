@@ -1243,14 +1243,13 @@ export default function AdminPage() {
           a.id === editingAppointment.id ? updatedAppointment : a
         )
         
-        // Compacter les slots pour cette date (exclut le rendez-vous modifié)
-        // compactSlots déplacera automatiquement les blocs en conflit
-        const compacted = compactSlots(dateStr, updated, editingAppointment.id)
+        // Compacter les slots pour cette date
+        // compactSlots déplacera automatiquement les blocs en conflit et réassignera les slots
+        const compacted = compactSlots(dateStr, updated)
         const otherDates = updated.filter(a => a.date !== dateStr)
         
-        // IMPORTANT : Réintégrer le rendez-vous modifié après la compaction
-        // La compaction peut avoir déplacé d'autres rendez-vous, mais le rendez-vous modifié doit être inclus
-        return [...otherDates, ...compacted, updatedAppointment]
+        // Fusionner les rendez-vous compactés avec les autres dates
+        return [...otherDates, ...compacted]
       })
     } else {
       const newAppointment: SimpleAppointment = {
@@ -1316,6 +1315,10 @@ export default function AdminPage() {
     setAppointmentCustomerNotes('')
     setAppointmentGameDuration(60)
     setAppointmentParticipants(null)
+    // Fermer la modal de confirmation de chevauchement
+    setShowOverlapConfirm(false)
+    setOverlapInfo(null)
+    setPendingSave(null)
   }
 
   const saveAppointment = () => {
