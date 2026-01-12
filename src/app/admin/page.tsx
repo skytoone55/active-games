@@ -1671,7 +1671,20 @@ export default function AdminPage() {
           })
           setPendingSave(() => () => {
             // Réessayer avec surbook autorisé
-            const surbookResult = placeGameBooking(existingBookings, params, true, true)
+            // Utiliser le bon engine selon le type
+            let surbookResult
+            if (params.type === 'event') {
+              surbookResult = placeEventBooking(existingBookings, params, roomConfigs, false)
+              // Si toujours pas de place pour EVENT, essayer avec surbook des slots
+              if (!surbookResult.success && surbookResult.conflict?.type === 'FULL') {
+                // Pour EVENT, on ne peut pas surbooker les slots, refuser
+                alert('Impossible de créer cet événement : tous les slots sont occupés.')
+                return
+              }
+            } else {
+              surbookResult = placeGameBooking(existingBookings, params, true, true) // allowSplit + allowSurbook
+            }
+            
             if (surbookResult.success && surbookResult.allocation) {
               // Créer booking avec surbook
               // Calculer le nombre de participants en trop
