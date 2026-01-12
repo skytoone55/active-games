@@ -137,10 +137,14 @@ export function shiftBookingRight(
   const tempState = buildOccupancyState(updatedBookings, date)
   
   // Calculer les timeKeys pour ce booking
+  // IMPORTANT : Pour les EVENT, utiliser toujours 60 min pour le jeu (centré), pas durationMinutes
+  const bookingGameDuration = bookingToShift.type === 'event' 
+    ? 60 // Pour EVENT, jeu toujours 60 min centré
+    : (bookingToShift.gameDurationMinutes || bookingToShift.durationMinutes || 60)
   const gameTime = calculateCenteredGameTime(
     bookingToShift.hour,
     bookingToShift.minute,
-    bookingToShift.gameDurationMinutes || bookingToShift.durationMinutes || 60
+    bookingToShift.type === 'event' ? bookingToShift.durationMinutes || 120 : bookingGameDuration
   )
   const timeKeys = rangeToKeys(
     gameTime.gameStartHour,
@@ -160,10 +164,14 @@ export function shiftBookingRight(
       if (!other.assignedSlots || other.assignedSlots.length === 0) continue
       
       // Vérifier chevauchement temporel
+      // IMPORTANT : Pour les EVENT, utiliser toujours 60 min pour le jeu (centré), pas durationMinutes
+      const otherGameDuration = other.type === 'event' 
+        ? 60 // Pour EVENT, jeu toujours 60 min centré
+        : (other.gameDurationMinutes || other.durationMinutes || 60)
       const otherGameTime = calculateCenteredGameTime(
         other.hour,
         other.minute,
-        other.gameDurationMinutes || other.durationMinutes || 60
+        other.type === 'event' ? other.durationMinutes || 120 : otherGameDuration
       )
       const otherTimeKeys = rangeToKeys(
         otherGameTime.gameStartHour,
@@ -222,10 +230,14 @@ export function allocateLeftToRight(
   const slotsNeeded = calculateSlotsNeeded(params.participants)
   
   // Calculer les timeKeys pour le jeu
+  // IMPORTANT : Pour les EVENT, utiliser toujours 60 min pour le jeu (centré), pas durationMinutes
+  const gameDuration = params.type === 'event' 
+    ? 60 // Pour EVENT, jeu toujours 60 min centré
+    : (params.gameDurationMinutes || params.durationMinutes || 60)
   const gameTime = calculateCenteredGameTime(
     params.hour,
     params.minute,
-    params.gameDurationMinutes || params.durationMinutes || 60
+    params.type === 'event' ? params.durationMinutes || 120 : gameDuration
   )
   const timeKeys = rangeToKeys(
     gameTime.gameStartHour,
@@ -252,10 +264,14 @@ export function allocateLeftToRight(
     if (!booking.assignedSlots || booking.assignedSlots.length === 0) continue
     
     // Vérifier si ce booking chevauche temporellement
+    // IMPORTANT : Pour les EVENT, utiliser toujours 60 min pour le jeu (centré), pas durationMinutes
+    const bookingGameDuration = booking.type === 'event' 
+      ? 60 // Pour EVENT, jeu toujours 60 min centré
+      : (booking.gameDurationMinutes || booking.durationMinutes || 60)
     const bookingGameTime = calculateCenteredGameTime(
       booking.hour,
       booking.minute,
-      booking.gameDurationMinutes || booking.durationMinutes || 60
+      booking.type === 'event' ? booking.durationMinutes || 120 : bookingGameDuration
     )
     const bookingTimeKeys = rangeToKeys(
       bookingGameTime.gameStartHour,
@@ -319,10 +335,14 @@ export function validateNoOverlap(
     const b1 = dateBookings[i]
     if (!b1.assignedSlots || b1.assignedSlots.length === 0) continue
     
+    // IMPORTANT : Pour les EVENT, utiliser toujours 60 min pour le jeu (centré), pas durationMinutes
+    const b1GameDuration = b1.type === 'event' 
+      ? 60 // Pour EVENT, jeu toujours 60 min centré
+      : (b1.gameDurationMinutes || b1.durationMinutes || 60)
     const gameTime1 = calculateCenteredGameTime(
       b1.hour,
       b1.minute,
-      b1.gameDurationMinutes || b1.durationMinutes || 60
+      b1.type === 'event' ? b1.durationMinutes || 120 : b1GameDuration
     )
     const timeKeys1 = rangeToKeys(
       gameTime1.gameStartHour,
@@ -335,10 +355,14 @@ export function validateNoOverlap(
       const b2 = dateBookings[j]
       if (!b2.assignedSlots || b2.assignedSlots.length === 0) continue
       
+      // IMPORTANT : Pour les EVENT, utiliser toujours 60 min pour le jeu (centré), pas durationMinutes
+      const b2GameDuration = b2.type === 'event' 
+        ? 60 // Pour EVENT, jeu toujours 60 min centré
+        : (b2.gameDurationMinutes || b2.durationMinutes || 60)
       const gameTime2 = calculateCenteredGameTime(
         b2.hour,
         b2.minute,
-        b2.gameDurationMinutes || b2.durationMinutes || 60
+        b2.type === 'event' ? b2.durationMinutes || 120 : b2GameDuration
       )
       const timeKeys2 = rangeToKeys(
         gameTime2.gameStartHour,
