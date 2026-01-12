@@ -1369,43 +1369,7 @@ export default function AdminPage() {
       if (isAvailable) availableCount++
     }
 
-    // Si pas assez de slots disponibles, il y a un conflit - demander confirmation
-    if (availableCount < slotsNeeded) {
-      const maxParticipants = availableCount * 6
-      
-      // Si aucun slot disponible, refuser
-      if (availableCount === 0) {
-        alert(`Impossible de créer ce rendez-vous. Aucun slot disponible sur ce créneau.`)
-        return
-      }
-      
-      // Demander autorisation pour chevauchement (le système déplacera les autres blocs si possible)
-      setOverlapInfo({
-        slotsNeeded,
-        availableSlots: availableCount,
-        maxParticipants
-      })
-      
-      // Stocker la fonction de sauvegarde pour l'appeler après confirmation
-      // IMPORTANT : Utiliser les valeurs capturées dans le closure
-      const capturedDateStr = dateStr
-      const capturedStartMinutes = startMinutes
-      const capturedGameDurationMinutes = gameDurationMinutes
-      const capturedSlotsNeeded = slotsNeeded
-      const capturedAvailableCount = availableCount
-      const capturedEditingId = editingAppointment?.id
-      
-      setPendingSave(() => () => {
-        // Ne pas assigner de slots maintenant - laisser compactSlots les assigner automatiquement
-        // Cela garantit que compactSlots peut déplacer les autres rendez-vous correctement
-        saveAppointmentWithSlots([])
-      })
-      
-      setShowOverlapConfirm(true)
-      return
-    }
-    
-    // Si on a assez de slots disponibles, trouver les meilleurs slots et continuer
+    // Trouver les slots disponibles avec findAvailableSlots
     const availableSlots = findAvailableSlots(
       dateStr,
       startMinutes,
