@@ -1758,7 +1758,7 @@ export default function AdminPage() {
                 roomOvercapParticipants: result.conflict.details?.excessParticipants,
                 customerFirstName: appointmentCustomerFirstName || undefined,
                 customerLastName: appointmentCustomerLastName || undefined,
-                color: appointmentColor || (isEvent ? '#22c55e' : '#3b82f6') // Vert pour EVENT, bleu pour GAME
+                color: appointmentColor || (isEvent ? '#22c55e' : '#3b82f6'), // Vert pour EVENT, bleu pour GAME
               }
               const overcapAppointment = fromBooking(overcapBooking, editingAppointment || undefined)
               setAppointments(prev => {
