@@ -914,16 +914,15 @@ export default function AdminPage() {
       const overlaps = appStartMinutes < endMinutes && appEndMinutes > startMinutes
       if (!overlaps) return // Pas de chevauchement, on peut ignorer ce rendez-vous
       
-      // Pour chaque slot assigné, marquer comme occupé sur toute la durée du chevauchement
+      // Pour chaque slot assigné, marquer comme occupé sur TOUTE la durée du rendez-vous existant
+      // CRITIQUE : Si un rendez-vous chevauche, ses slots sont COMPLÈTEMENT occupés sur toute sa durée
       assignedSlots.forEach(slotIndex => {
         // S'assurer que le slot est valide
         if (slotIndex < 1 || slotIndex > TOTAL_SLOTS) return
         
-        // Marquer comme occupé seulement sur la partie qui chevauche
-        const overlapStart = Math.max(appStartMinutes, startMinutes)
-        const overlapEnd = Math.min(appEndMinutes, endMinutes)
-        // Marquer chaque créneau de 15 min comme occupé dans la zone de chevauchement
-        for (let min = overlapStart; min < overlapEnd; min += 15) {
+        // Marquer comme occupé sur TOUTE la durée du rendez-vous existant (pas seulement la partie qui chevauche)
+        // Si un rendez-vous de 11h à 12h occupe un slot, ce slot est occupé de 11h à 12h, même si on cherche 11h30-12h30
+        for (let min = appStartMinutes; min < appEndMinutes; min += 15) {
           // S'assurer que le slot existe et que le créneau est initialisé
           if (slotAvailability[slotIndex] && slotAvailability[slotIndex][min] !== undefined) {
             slotAvailability[slotIndex][min] = false
@@ -1246,13 +1245,43 @@ export default function AdminPage() {
           a.id === editingAppointment.id ? updatedAppointment : a
         )
         
-        // Compacter les slots pour cette date
-        // compactSlots déplacera automatiquement les blocs en conflit et réassignera les slots
-        const compacted = compactSlots(dateStr, updated)
-        const otherDates = updated.filter(a => a.date !== dateStr)
-        
-        // Fusionner les rendez-vous compactés avec les autres dates
-        return [...otherDates, ...compacted]
+        // IMPORTANT : Si slotsToUse est vide (chevauchement accepté), utiliser compactSlots
+        // Sinon, si on a des slots assignés, vérifier d'abord s'il y a des conflits
+        if (slotsToUse.length === 0) {
+          // Chevauchement accepté : compactSlots va déplacer les autres rendez-vous
+          const compacted = compactSlots(dateStr, updated)
+          const otherDates = updated.filter(a => a.date !== dateStr)
+          return [...otherDates, ...compacted]
+        } else {
+          // Pas de chevauchement : vérifier s'il y a des conflits avec les slots assignés
+          const appointmentStart = startMinutes
+          const appointmentGameDur = gameDurationMinutes
+          const hasConflict = updated.some(a => {
+            if (a.id === editingAppointment.id) return false
+            if (a.date !== dateStr) return false
+            const aStart = a.hour * 60 + (a.minute || 0)
+            const aGameDuration = a.gameDurationMinutes || 60
+            const aEnd = aStart + aGameDuration
+            const aSlots = a.assignedSlots || []
+            
+            // Vérifier chevauchement temporel
+            const timeOverlap = aStart < (appointmentStart + appointmentGameDur) && aEnd > appointmentStart
+            if (!timeOverlap) return false
+            
+            // Vérifier chevauchement de slots
+            return slotsToUse.some(slot => aSlots.includes(slot))
+          })
+          
+          if (hasConflict) {
+            // Il y a un conflit : utiliser compactSlots pour déplacer les autres
+            const compacted = compactSlots(dateStr, updated)
+            const otherDates = updated.filter(a => a.date !== dateStr)
+            return [...otherDates, ...compacted]
+          } else {
+            // Pas de conflit : garder les rendez-vous tels quels
+            return updated
+          }
+        }
       })
     } else {
       const newAppointment: SimpleAppointment = {
@@ -1282,21 +1311,47 @@ export default function AdminPage() {
       }
       
       setAppointments(prev => {
-        // Ajouter le nouveau rendez-vous SANS slots assignés d'abord
-        // compactSlots va les assigner automatiquement
-        const newAppointmentWithoutSlots = {
-          ...newAppointment,
-          assignedSlots: undefined
+        // IMPORTANT : Si slotsToUse est vide (chevauchement accepté), utiliser compactSlots
+        // Sinon, si on a des slots assignés, vérifier d'abord s'il y a des conflits
+        if (slotsToUse.length === 0) {
+          // Chevauchement accepté : compactSlots va déplacer les autres rendez-vous
+          const newAppointmentWithoutSlots = {
+            ...newAppointment,
+            assignedSlots: undefined
+          }
+          const withNew = [...prev, newAppointmentWithoutSlots]
+          const compacted = compactSlots(dateStr, withNew)
+          const otherDates = withNew.filter(a => a.date !== dateStr)
+          return [...otherDates, ...compacted]
+        } else {
+          // Pas de chevauchement : vérifier s'il y a des conflits avec les slots assignés
+          const withNew = [...prev, newAppointment]
+          const hasConflict = withNew.some(a => {
+            if (a.id === newAppointment.id) return false
+            if (a.date !== dateStr) return false
+            const aStart = a.hour * 60 + (a.minute || 0)
+            const aGameDuration = a.gameDurationMinutes || 60
+            const aEnd = aStart + aGameDuration
+            const aSlots = a.assignedSlots || []
+            
+            // Vérifier chevauchement temporel
+            const timeOverlap = aStart < (startMinutes + gameDurationMinutes) && aEnd > startMinutes
+            if (!timeOverlap) return false
+            
+            // Vérifier chevauchement de slots
+            return slotsToUse.some(slot => aSlots.includes(slot))
+          })
+          
+          if (hasConflict) {
+            // Il y a un conflit : utiliser compactSlots pour déplacer les autres
+            const compacted = compactSlots(dateStr, withNew)
+            const otherDates = withNew.filter(a => a.date !== dateStr)
+            return [...otherDates, ...compacted]
+          } else {
+            // Pas de conflit : garder les rendez-vous tels quels
+            return withNew
+          }
         }
-        const withNew = [...prev, newAppointmentWithoutSlots]
-        
-        // Compacter les slots pour cette date
-        // compactSlots déplacera automatiquement les blocs en conflit et assignera les slots
-        const compacted = compactSlots(dateStr, withNew)
-        const otherDates = withNew.filter(a => a.date !== dateStr)
-        
-        // Fusionner les rendez-vous compactés avec les autres dates
-        return [...otherDates, ...compacted]
       })
     }
 
