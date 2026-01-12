@@ -686,7 +686,6 @@ export function reorganizeAllBookingsForDate(
     }
 
     let result: AllocationResult | null = null
-    let allocatedSlots: number[] | null = null
 
     if (booking.type === 'event') {
       result = placeEventBooking(currentBookings, params, roomConfigs, allowRoomOvercap)
@@ -696,64 +695,43 @@ export function reorganizeAllBookingsForDate(
       const allocationResult = allocateLeftToRight(currentBookings, params, state)
       
       if (allocationResult) {
-        // Mettre à jour currentBookings avec les bookings déplacés (inclut le booking courant)
+        // Mettre à jour currentBookings avec les bookings déplacés (ne contient PAS le nouveau booking)
         currentBookings = allocationResult.updatedBookings
-        allocatedSlots = allocationResult.slots
         
-        // Trouver le booking dans les updatedBookings (peut avoir été déplacé)
-        const updatedBooking = currentBookings.find(b => b.id === booking.id) || booking
-        if (updatedBooking.id !== booking.id) {
-          // Le booking n'était pas dans currentBookings, l'ajouter avec les slots
-          const newBooking: Booking = {
-            ...booking,
-            assignedSlots: allocatedSlots
-          }
-          currentBookings.push(newBooking)
-        } else {
-          // Mettre à jour les slots du booking
-          const index = currentBookings.findIndex(b => b.id === booking.id)
-          if (index >= 0) {
-            currentBookings[index] = {
-              ...updatedBooking,
-              assignedSlots: allocatedSlots
-            }
-          }
-        }
-        // Marquer comme succès
+        // Créer le résultat avec les slots assignés
         result = {
           success: true,
           allocation: {
             slotAllocation: {
-              slots: allocatedSlots,
-              isSplit: false
+              slots: allocationResult.slots,
+              isSplit: false // allocateLeftToRight retourne toujours des slots contigus
             }
           }
         }
       } else {
         // Pas de place même après déplacement, essayer split/surbook
         result = placeGameBooking(currentBookings, params, allowSplit, allowSurbook)
-        if (result.success && result.allocation) {
-          // Ajouter le booking avec les slots assignés
-          const updatedBooking: Booking = {
-            ...booking,
-            assignedSlots: result.allocation.slotAllocation?.slots
-          }
-          currentBookings.push(updatedBooking)
-        }
       }
     }
 
     if (result && result.success && result.allocation) {
-      // Pour EVENT, ajouter le booking avec allocation
-      if (booking.type === 'event') {
-        const updatedBooking: Booking = {
-          ...booking,
-          assignedSlots: result.allocation.slotAllocation?.slots,
-          assignedRoom: result.allocation.roomAllocation?.roomId,
-        }
-        currentBookings.push(updatedBooking)
+      // Mettre à jour le booking avec la nouvelle allocation
+      const updatedBooking: Booking = {
+        ...booking,
+        assignedSlots: result.allocation.slotAllocation?.slots,
+        assignedRoom: result.allocation.roomAllocation?.roomId,
+        surbooked: result.allocation.surbooked || false,
+        surbookedParticipants: result.allocation.surbookedParticipants || 0,
+        roomOvercap: result.allocation.roomOvercap || false,
+        roomOvercapParticipants: result.allocation.roomOvercapParticipants || 0,
+        split: result.allocation.split || false,
+        splitParts: result.allocation.splitParts || 1,
+        splitIndex: result.allocation.splitIndex || 0,
       }
-      // Pour GAME, on a déjà géré dans le bloc précédent
+      
+      // Ajouter le booking avec les slots assignés
+      // (currentBookings contient déjà les bookings déplacés si on a utilisé allocateLeftToRight)
+      currentBookings.push(updatedBooking)
     } else if (result && !result.success) {
       // Échec : retourner conflit (pas de mutation)
       return {
