@@ -683,8 +683,8 @@ export default function AdminPage() {
       const startMinutes = appointment.hour * 60 + (appointment.minute || 0)
       const duration = appointment.gameDurationMinutes || appointment.durationMinutes || 60
       const endMinutes = startMinutes + duration
-      // Si assignedSlots est défini, utiliser sa longueur, sinon calculer à partir des participants
-      const slotsNeeded = appointment.assignedSlots?.length > 0 
+      // Si assignedSlots est défini et non vide, utiliser sa longueur, sinon calculer à partir des participants
+      const slotsNeeded = (appointment.assignedSlots && appointment.assignedSlots.length > 0)
         ? appointment.assignedSlots.length 
         : calculateSlotsNeeded(appointment.participants)
       
