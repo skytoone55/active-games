@@ -1155,6 +1155,160 @@ export default function AdminPage() {
     }
   }, [appointmentEventType, showAppointmentModal, editingAppointment, userChangedColor])
 
+  // Fonction interne pour sauvegarder avec des slots spécifiques
+  // DOIT être définie AVANT saveAppointment car elle est utilisée dans pendingSave
+  const saveAppointmentWithSlots = (slotsToUse: number[]) => {
+    if (!appointmentTitle.trim() || appointmentHour === null || !appointmentDate) {
+      return
+    }
+    const dateStr = appointmentDate
+
+    // Calculer les minutes de début
+    const startMinutes = appointmentHour * 60 + appointmentMinute
+    
+    // IMPORTANT : Deux durées différentes
+    const gameDurationMinutes = appointmentGameDuration ?? 60
+    const eventDurationMinutes = (appointmentEventType && appointmentEventType !== 'game') 
+      ? (appointmentDuration ?? 120)
+      : gameDurationMinutes
+
+    // Si ce n'est pas un "game", vérifier la disponibilité d'une salle d'anniversaire
+    let assignedRoom: number | undefined = undefined
+    if (appointmentEventType && appointmentEventType !== 'game') {
+      // Si une salle est déjà sélectionnée, vérifier qu'elle est disponible
+      if (appointmentRoom !== null) {
+        const roomAvailable = findAvailableRoom(
+          dateStr,
+          startMinutes,
+          eventDurationMinutes,
+          editingAppointment?.id
+        )
+        if (roomAvailable === appointmentRoom) {
+          assignedRoom = appointmentRoom
+        } else {
+          alert(`La salle ${appointmentRoom} n'est pas disponible sur ce créneau.`)
+          return
+        }
+      } else {
+        // Trouver automatiquement une salle disponible
+        const availableRoom = findAvailableRoom(
+          dateStr,
+          startMinutes,
+          eventDurationMinutes,
+          editingAppointment?.id
+        )
+        if (!availableRoom) {
+          alert(`Aucune salle d'anniversaire disponible sur ce créneau.`)
+          return
+        }
+        assignedRoom = availableRoom
+      }
+    }
+
+    if (editingAppointment) {
+      setAppointments(prev => {
+        // Mettre à jour le rendez-vous modifié
+        const updatedAppointment: SimpleAppointment = {
+          ...editingAppointment,
+          title: appointmentTitle.trim(),
+          hour: appointmentHour,
+          minute: appointmentMinute,
+          date: dateStr,
+          branch: appointmentBranch || undefined,
+          eventType: appointmentEventType || undefined,
+          // Pour les jeux standards, pas de durationMinutes (seulement gameDurationMinutes)
+          durationMinutes: (appointmentEventType && appointmentEventType !== 'game') 
+            ? (appointmentDuration ?? undefined) 
+            : undefined,
+          color: appointmentColor || '#3b82f6',
+          eventNotes: appointmentEventNotes || undefined,
+          customerFirstName: appointmentCustomerFirstName || undefined,
+          customerLastName: appointmentCustomerLastName || undefined,
+          customerPhone: appointmentCustomerPhone || undefined,
+          customerEmail: appointmentCustomerEmail || undefined,
+          customerNotes: appointmentCustomerNotes || undefined,
+          gameDurationMinutes: appointmentGameDuration ?? undefined,
+          participants: appointmentParticipants ?? undefined,
+          assignedSlots: slotsToUse,
+          assignedRoom: assignedRoom,
+        }
+        
+        // Mettre à jour tous les rendez-vous
+        const updated = prev.map(a =>
+          a.id === editingAppointment.id ? updatedAppointment : a
+        )
+        
+        // Compacter les slots pour cette date (exclut le rendez-vous modifié)
+        // compactSlots déplacera automatiquement les blocs en conflit
+        const compacted = compactSlots(dateStr, updated, editingAppointment.id)
+        const otherDates = updated.filter(a => a.date !== dateStr)
+        
+        // IMPORTANT : Réintégrer le rendez-vous modifié après la compaction
+        // La compaction peut avoir déplacé d'autres rendez-vous, mais le rendez-vous modifié doit être inclus
+        return [...otherDates, ...compacted, updatedAppointment]
+      })
+    } else {
+      const newAppointment: SimpleAppointment = {
+        id: `app-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        title: appointmentTitle.trim(),
+        hour: appointmentHour,
+        minute: appointmentMinute,
+        date: dateStr,
+        branch: appointmentBranch || undefined,
+        eventType: appointmentEventType || undefined,
+        // Pour les jeux standards, pas de durationMinutes (seulement gameDurationMinutes)
+        durationMinutes: (appointmentEventType && appointmentEventType !== 'game') 
+          ? (appointmentDuration ?? undefined) 
+          : undefined,
+        color: appointmentColor || '#3b82f6',
+        eventNotes: appointmentEventNotes || undefined,
+        customerFirstName: appointmentCustomerFirstName || undefined,
+        customerLastName: appointmentCustomerLastName || undefined,
+        customerPhone: appointmentCustomerPhone || undefined,
+        customerEmail: appointmentCustomerEmail || undefined,
+        customerNotes: appointmentCustomerNotes || undefined,
+        gameDurationMinutes: appointmentGameDuration ?? undefined,
+        participants: appointmentParticipants ?? undefined,
+        assignedSlots: slotsToUse,
+        assignedRoom: assignedRoom,
+      }
+      
+      setAppointments(prev => {
+        // Ajouter le nouveau rendez-vous
+        const withNew = [...prev, newAppointment]
+        
+        // Compacter les slots pour cette date
+        // compactSlots déplacera automatiquement les blocs en conflit
+        const compacted = compactSlots(dateStr, withNew)
+        const otherDates = withNew.filter(a => a.date !== dateStr)
+        
+        // Fusionner les rendez-vous compactés avec les autres dates
+        return [...otherDates, ...compacted]
+      })
+    }
+
+    setShowAppointmentModal(false)
+    setEditingAppointment(null)
+    setAppointmentTitle('')
+    setAppointmentHour(null)
+    setAppointmentMinute(0)
+    setAppointmentDate('')
+    setAppointmentBranch('')
+    setAppointmentEventType('')
+    setAppointmentDuration(60)
+    setAppointmentColor('#3b82f6')
+    setAppointmentEventNotes('')
+    setAppointmentCustomerFirstName('')
+    setAppointmentCustomerLastName('')
+    setAppointmentCustomerPhone('')
+    setAppointmentCustomerEmail('')
+    setAppointmentCustomerNotes('')
+    setAppointmentGameDuration(60)
+    setAppointmentParticipants(null)
+    setAppointmentToDelete(null)
+    setShowDeleteConfirm(false)
+  }
+
   const saveAppointment = () => {
     if (!appointmentTitle.trim() || appointmentHour === null || !appointmentDate) {
       return
@@ -1308,157 +1462,6 @@ export default function AdminPage() {
     } else {
       saveAppointmentWithSlots(availableSlots)
     }
-  }
-
-  // Fonction interne pour sauvegarder avec des slots spécifiques
-  const saveAppointmentWithSlots = (slotsToUse: number[]) => {
-    if (!appointmentTitle.trim() || appointmentHour === null || !appointmentDate) {
-      return
-    }
-    const dateStr = appointmentDate
-
-    // Calculer les minutes de début
-    const startMinutes = appointmentHour * 60 + appointmentMinute
-    
-    // IMPORTANT : Deux durées différentes
-    const gameDurationMinutes = appointmentGameDuration ?? 60
-    const eventDurationMinutes = (appointmentEventType && appointmentEventType !== 'game') 
-      ? (appointmentDuration ?? 120)
-      : gameDurationMinutes
-
-    // Si ce n'est pas un "game", vérifier la disponibilité d'une salle d'anniversaire
-    let assignedRoom: number | undefined = undefined
-    if (appointmentEventType && appointmentEventType !== 'game') {
-      // Si une salle est déjà sélectionnée, vérifier qu'elle est disponible
-      if (appointmentRoom !== null) {
-        const roomAvailable = findAvailableRoom(
-          dateStr,
-          startMinutes,
-          eventDurationMinutes,
-          editingAppointment?.id
-        )
-        if (roomAvailable === appointmentRoom) {
-          assignedRoom = appointmentRoom
-        } else {
-          alert(`La salle ${appointmentRoom} n'est pas disponible sur ce créneau.`)
-          return
-        }
-      } else {
-        // Trouver automatiquement une salle disponible
-        const availableRoom = findAvailableRoom(
-          dateStr,
-          startMinutes,
-          eventDurationMinutes,
-          editingAppointment?.id
-        )
-        if (!availableRoom) {
-          alert(`Aucune salle d'anniversaire disponible sur ce créneau.`)
-          return
-        }
-        assignedRoom = availableRoom
-      }
-    }
-
-    if (editingAppointment) {
-      setAppointments(prev => {
-        // Mettre à jour le rendez-vous modifié
-        const updatedAppointment: SimpleAppointment = {
-          ...editingAppointment,
-          title: appointmentTitle.trim(),
-          hour: appointmentHour,
-          minute: appointmentMinute,
-          date: dateStr,
-          branch: appointmentBranch || undefined,
-          eventType: appointmentEventType || undefined,
-          // Pour les jeux standards, pas de durationMinutes (seulement gameDurationMinutes)
-          durationMinutes: (appointmentEventType && appointmentEventType !== 'game') 
-            ? (appointmentDuration ?? undefined) 
-            : undefined,
-          color: appointmentColor || '#3b82f6',
-          eventNotes: appointmentEventNotes || undefined,
-          customerFirstName: appointmentCustomerFirstName || undefined,
-          customerLastName: appointmentCustomerLastName || undefined,
-          customerPhone: appointmentCustomerPhone || undefined,
-          customerEmail: appointmentCustomerEmail || undefined,
-          customerNotes: appointmentCustomerNotes || undefined,
-          gameDurationMinutes: appointmentGameDuration ?? undefined,
-          participants: appointmentParticipants ?? undefined,
-          assignedSlots: slotsToUse,
-          assignedRoom: assignedRoom,
-        }
-        
-        // Mettre à jour tous les rendez-vous
-        const updated = prev.map(a =>
-          a.id === editingAppointment.id ? updatedAppointment : a
-        )
-        
-        // Compacter les slots pour cette date (exclut le rendez-vous modifié)
-        // compactSlots déplacera automatiquement les blocs en conflit
-        const compacted = compactSlots(dateStr, updated, editingAppointment.id)
-        const otherDates = updated.filter(a => a.date !== dateStr)
-        
-        // IMPORTANT : Réintégrer le rendez-vous modifié après la compaction
-        // La compaction peut avoir déplacé d'autres rendez-vous, mais le rendez-vous modifié doit être inclus
-        return [...otherDates, ...compacted, updatedAppointment]
-      })
-    } else {
-      const newAppointment: SimpleAppointment = {
-        id: `app-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-        title: appointmentTitle.trim(),
-        hour: appointmentHour,
-        minute: appointmentMinute,
-        date: dateStr,
-        branch: appointmentBranch || undefined,
-        eventType: appointmentEventType || undefined,
-        // Pour les jeux standards, pas de durationMinutes (seulement gameDurationMinutes)
-        durationMinutes: (appointmentEventType && appointmentEventType !== 'game') 
-          ? (appointmentDuration ?? undefined) 
-          : undefined,
-        color: appointmentColor || '#3b82f6',
-        eventNotes: appointmentEventNotes || undefined,
-        customerFirstName: appointmentCustomerFirstName || undefined,
-        customerLastName: appointmentCustomerLastName || undefined,
-        customerPhone: appointmentCustomerPhone || undefined,
-        customerEmail: appointmentCustomerEmail || undefined,
-        customerNotes: appointmentCustomerNotes || undefined,
-        gameDurationMinutes: appointmentGameDuration ?? undefined,
-        participants: appointmentParticipants ?? undefined,
-        assignedSlots: slotsToUse,
-        assignedRoom: assignedRoom,
-      }
-      
-      setAppointments(prev => {
-        // Ajouter le nouveau rendez-vous
-        const withNew = [...prev, newAppointment]
-        
-        // Compacter les slots pour cette date
-        // compactSlots déplacera automatiquement les blocs en conflit
-        const compacted = compactSlots(dateStr, withNew)
-        const otherDates = withNew.filter(a => a.date !== dateStr)
-        
-        // Fusionner les rendez-vous compactés avec les autres dates
-        return [...otherDates, ...compacted]
-      })
-    }
-
-    setShowAppointmentModal(false)
-    setEditingAppointment(null)
-    setAppointmentTitle('')
-    setAppointmentHour(null)
-    setAppointmentMinute(0)
-    setAppointmentDate('')
-    setAppointmentBranch('')
-    setAppointmentEventType('')
-    setAppointmentDuration(60)
-    setAppointmentColor('#3b82f6')
-    setAppointmentEventNotes('')
-    setAppointmentCustomerFirstName('')
-    setAppointmentCustomerLastName('')
-    setAppointmentCustomerPhone('')
-    setAppointmentCustomerEmail('')
-    setAppointmentCustomerNotes('')
-    setAppointmentGameDuration(60)
-    setAppointmentParticipants(null)
   }
 
   // Afficher la pop-up de confirmation de suppression
