@@ -20,10 +20,12 @@ export default function Home() {
 
   useEffect(() => {
     // Check for saved locale preference
-    const savedLocale = localStorage.getItem('locale') as Locale
-    if (savedLocale && ['en', 'he'].includes(savedLocale)) {
-      setLocale(savedLocale)
-      setTranslations(getTranslations(savedLocale))
+    if (typeof window !== 'undefined') {
+      const savedLocale = localStorage.getItem('locale') as Locale
+      if (savedLocale && ['en', 'he'].includes(savedLocale)) {
+        setLocale(savedLocale)
+        setTranslations(getTranslations(savedLocale))
+      }
     }
   }, [])
 

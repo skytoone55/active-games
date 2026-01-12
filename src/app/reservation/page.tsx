@@ -54,10 +54,12 @@ export default function ReservationPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   useEffect(() => {
-    const savedLocale = localStorage.getItem('locale') as Locale
-    if (savedLocale && ['en', 'he'].includes(savedLocale)) {
-      setLocale(savedLocale)
-      setTranslations(getTranslations(savedLocale))
+    if (typeof window !== 'undefined') {
+      const savedLocale = localStorage.getItem('locale') as Locale
+      if (savedLocale && ['en', 'he'].includes(savedLocale)) {
+        setLocale(savedLocale)
+        setTranslations(getTranslations(savedLocale))
+      }
     }
   }, [])
 

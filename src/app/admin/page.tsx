@@ -115,6 +115,8 @@ export default function AdminPage() {
 
   // Vérifier si déjà authentifié, charger thème + rendez-vous simples + config modal
   useEffect(() => {
+    if (typeof window === 'undefined') return
+    
     const auth = localStorage.getItem('admin_authenticated')
     if (auth === 'true') {
       setAuthenticated(true)
@@ -158,6 +160,7 @@ export default function AdminPage() {
 
   // Sauvegarde position modal
   useEffect(() => {
+    if (typeof window === 'undefined') return
     if (appointmentModalPosition) {
       localStorage.setItem('admin_appointment_modal_position', JSON.stringify(appointmentModalPosition))
     }
@@ -165,6 +168,7 @@ export default function AdminPage() {
 
   // Sauvegarde des rendez-vous simples
   useEffect(() => {
+    if (typeof window === 'undefined') return
     localStorage.setItem('admin_simple_appointments', JSON.stringify(appointments))
   }, [appointments])
 
