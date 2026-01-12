@@ -1187,7 +1187,6 @@ export default function AdminPage() {
     )
 
     // Trouver les slots disponibles (exclure le rendez-vous en cours de modification)
-    // Utiliser la durée du jeu pour les slots
     const availableSlots = findAvailableSlots(
       dateStr,
       startMinutes,
@@ -1196,13 +1195,38 @@ export default function AdminPage() {
       editingAppointment?.id
     )
 
-    if (!availableSlots) {
-      // Compter combien de slots sont disponibles sur ce créneau
-      let availableCount = 0
+    // Vérifier s'il y a des conflits avec les rendez-vous existants
+    let hasConflict = false
+    let availableCount = 0
+    
+    if (availableSlots) {
+      // Vérifier si les slots trouvés sont vraiment sans conflit
+      for (const slot of availableSlots) {
+        let isAvailable = true
+        for (let min = startMinutes; min < startMinutes + gameDurationMinutes; min += 15) {
+          const isOccupied = appointments.some(a => {
+            if (a.id === editingAppointment?.id) return false
+            if (a.date !== dateStr) return false
+            const assignedSlots = a.assignedSlots || []
+            if (!assignedSlots.includes(slot)) return false
+            const aStart = a.hour * 60 + (a.minute || 0)
+            const aGameDuration = a.gameDurationMinutes || 60
+            const aEnd = aStart + aGameDuration
+            return aStart < min + 15 && aEnd > min
+          })
+          if (isOccupied) {
+            isAvailable = false
+            hasConflict = true
+            break
+          }
+        }
+        if (isAvailable) availableCount++
+      }
+    } else {
+      // Compter les slots vraiment disponibles (sans conflit)
       for (let slot = 1; slot <= TOTAL_SLOTS; slot++) {
         let isAvailable = true
         for (let min = startMinutes; min < startMinutes + gameDurationMinutes; min += 15) {
-          // Vérifier si ce slot est occupé à ce moment
           const isOccupied = appointments.some(a => {
             if (a.id === editingAppointment?.id) return false
             if (a.date !== dateStr) return false
@@ -1220,7 +1244,11 @@ export default function AdminPage() {
         }
         if (isAvailable) availableCount++
       }
-      
+      hasConflict = availableCount < slotsNeeded
+    }
+
+    // Si pas de slots trouvés OU si il y a un conflit, demander confirmation
+    if (!availableSlots || hasConflict || availableCount < slotsNeeded) {
       const maxParticipants = availableCount * 6
       
       // Si aucun slot disponible, refuser
@@ -1238,62 +1266,49 @@ export default function AdminPage() {
       
       // Stocker la fonction de sauvegarde pour l'appeler après confirmation
       setPendingSave(() => () => {
-        // Le système va essayer de trouver des slots en déplaçant les autres blocs
-        // On utilise findAvailableSlots qui peut trouver des slots non consécutifs
-        // et compactSlots déplacera automatiquement les blocs en conflit
-        const slotsToUse = findAvailableSlots(
-          dateStr,
-          startMinutes,
-          gameDurationMinutes,
-          slotsNeeded,
-          editingAppointment?.id
-        )
+        // Le système va utiliser compactSlots qui déplacera automatiquement les blocs en conflit
+        // On assigne d'abord les slots disponibles, compactSlots gérera le reste
+        const slotsToUse: number[] = []
         
-        // Si toujours pas de slots, utiliser les slots disponibles et laisser compactSlots gérer
-        if (!slotsToUse) {
-          // Prendre les slots disponibles de gauche à droite
-          const partialSlots: number[] = []
-          for (let slot = 1; slot <= TOTAL_SLOTS && partialSlots.length < availableCount; slot++) {
-            let isAvailable = true
-            for (let min = startMinutes; min < startMinutes + gameDurationMinutes; min += 15) {
-              const isOccupied = appointments.some(a => {
-                if (a.id === editingAppointment?.id) return false
-                if (a.date !== dateStr) return false
-                const assignedSlots = a.assignedSlots || []
-                if (!assignedSlots.includes(slot)) return false
-                const aStart = a.hour * 60 + (a.minute || 0)
-                const aGameDuration = a.gameDurationMinutes || 60
-                const aEnd = aStart + aGameDuration
-                return aStart < min + 15 && aEnd > min
-              })
-              if (isOccupied) {
-                isAvailable = false
-                break
-              }
-            }
-            if (isAvailable) {
-              partialSlots.push(slot)
+        // Prendre d'abord les slots vraiment disponibles
+        for (let slot = 1; slot <= TOTAL_SLOTS && slotsToUse.length < availableCount; slot++) {
+          let isAvailable = true
+          for (let min = startMinutes; min < startMinutes + gameDurationMinutes; min += 15) {
+            const isOccupied = appointments.some(a => {
+              if (a.id === editingAppointment?.id) return false
+              if (a.date !== dateStr) return false
+              const assignedSlots = a.assignedSlots || []
+              if (!assignedSlots.includes(slot)) return false
+              const aStart = a.hour * 60 + (a.minute || 0)
+              const aGameDuration = a.gameDurationMinutes || 60
+              const aEnd = aStart + aGameDuration
+              return aStart < min + 15 && aEnd > min
+            })
+            if (isOccupied) {
+              isAvailable = false
+              break
             }
           }
-          
-          // Compléter avec les slots manquants (seront gérés par compactSlots)
-          for (let slot = 1; slot <= TOTAL_SLOTS && partialSlots.length < slotsNeeded; slot++) {
-            if (!partialSlots.includes(slot)) {
-              partialSlots.push(slot)
-            }
+          if (isAvailable) {
+            slotsToUse.push(slot)
           }
-          
-          saveAppointmentWithSlots(partialSlots.slice(0, slotsNeeded))
-        } else {
-          saveAppointmentWithSlots(slotsToUse)
         }
+        
+        // Compléter avec les slots manquants (compactSlots les déplacera si nécessaire)
+        for (let slot = 1; slot <= TOTAL_SLOTS && slotsToUse.length < slotsNeeded; slot++) {
+          if (!slotsToUse.includes(slot)) {
+            slotsToUse.push(slot)
+          }
+        }
+        
+        saveAppointmentWithSlots(slotsToUse.slice(0, slotsNeeded))
       })
       
       setShowOverlapConfirm(true)
       return
     }
     
-    // Si on a des slots disponibles, continuer normalement
+    // Si on a des slots disponibles sans conflit, continuer normalement
     saveAppointmentWithSlots(availableSlots)
   }
 
