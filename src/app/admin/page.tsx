@@ -1305,8 +1305,6 @@ export default function AdminPage() {
     setAppointmentCustomerNotes('')
     setAppointmentGameDuration(60)
     setAppointmentParticipants(null)
-    setAppointmentToDelete(null)
-    setShowDeleteConfirm(false)
   }
 
   const saveAppointment = () => {
