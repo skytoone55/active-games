@@ -683,7 +683,10 @@ export default function AdminPage() {
       const startMinutes = appointment.hour * 60 + (appointment.minute || 0)
       const duration = appointment.gameDurationMinutes || appointment.durationMinutes || 60
       const endMinutes = startMinutes + duration
-      const slotsNeeded = appointment.assignedSlots?.length || calculateSlotsNeeded(appointment.participants)
+      // Si assignedSlots est défini, utiliser sa longueur, sinon calculer à partir des participants
+      const slotsNeeded = appointment.assignedSlots?.length > 0 
+        ? appointment.assignedSlots.length 
+        : calculateSlotsNeeded(appointment.participants)
       
       // Chercher les meilleurs slots pour le rendez-vous actuel (de gauche à droite)
       let bestSlots: number[] | null = null
@@ -1411,36 +1414,37 @@ export default function AdminPage() {
       editingAppointment?.id
     )
     
-    if (!availableSlots) {
-      // Si findAvailableSlots ne trouve rien mais qu'on a compté des slots disponibles,
-      // utiliser les premiers slots disponibles
-      const slotsToUse: number[] = []
-      for (let slot = 1; slot <= TOTAL_SLOTS && slotsToUse.length < slotsNeeded; slot++) {
-        let isAvailable = true
-        for (let min = startMinutes; min < startMinutes + gameDurationMinutes; min += 15) {
-          const isOccupied = appointments.some(a => {
-            if (a.id === editingAppointment?.id) return false
-            if (a.date !== dateStr) return false
-            const assignedSlots = a.assignedSlots || []
-            if (!assignedSlots.includes(slot)) return false
-            const aStart = a.hour * 60 + (a.minute || 0)
-            const aGameDuration = a.gameDurationMinutes || 60
-            const aEnd = aStart + aGameDuration
-            return aStart < min + 15 && aEnd > min
-          })
-          if (isOccupied) {
-            isAvailable = false
-            break
-          }
-        }
-        if (isAvailable) {
-          slotsToUse.push(slot)
-        }
+    // VÉRIFICATION CRITIQUE : Si findAvailableSlots ne trouve pas exactement slotsNeeded slots,
+    // ou si availableCount < slotsNeeded, il y a un chevauchement potentiel
+    if (!availableSlots || availableSlots.length < slotsNeeded || availableCount < slotsNeeded) {
+      // Il y a un chevauchement - demander confirmation
+      const maxParticipants = availableCount * 6
+      
+      // Si aucun slot disponible, refuser
+      if (availableCount === 0) {
+        alert(`Impossible de créer ce rendez-vous. Aucun slot disponible sur ce créneau.`)
+        return
       }
-      saveAppointmentWithSlots(slotsToUse)
-    } else {
-      saveAppointmentWithSlots(availableSlots)
+      
+      // Demander autorisation pour chevauchement (le système déplacera les autres blocs si possible)
+      setOverlapInfo({
+        slotsNeeded,
+        availableSlots: availableCount,
+        maxParticipants
+      })
+      
+      // Stocker la fonction de sauvegarde pour l'appeler après confirmation
+      setPendingSave(() => () => {
+        // Ne pas assigner de slots maintenant - laisser compactSlots les assigner automatiquement
+        saveAppointmentWithSlots([])
+      })
+      
+      setShowOverlapConfirm(true)
+      return
     }
+    
+    // Si on arrive ici, on a exactement slotsNeeded slots disponibles sans chevauchement
+    saveAppointmentWithSlots(availableSlots)
   }
 
   // Afficher la pop-up de confirmation de suppression
