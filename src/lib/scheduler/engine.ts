@@ -724,7 +724,93 @@ export function reorganizeAllBookingsForDate(
     let result: AllocationResult | null = null
 
     if (booking.type === 'event') {
-      result = placeEventBooking(currentBookings, params, roomConfigs, allowRoomOvercap, allowSurbook)
+      // Pour les EVENT, les slots de jeu doivent se déplacer EXACTEMENT comme pour les GAME
+      // 1. D'abord, essayer de placer les slots avec déplacement automatique (comme GAME)
+      const state = buildOccupancyState(currentBookings, params.date)
+      
+      // IMPORTANT : Pour les slots de jeu, utiliser gameDurationMinutes (60 min centré)
+      const gameParams: AllocationParams = {
+        ...params,
+        gameDurationMinutes: 60, // Toujours 60 min centré pour EVENT
+        type: 'game' // Traiter comme GAME pour l'allocation de slots
+      }
+      
+      const allocationResult = allocateLeftToRight(currentBookings, gameParams, state)
+      
+      if (allocationResult) {
+        // Mettre à jour currentBookings avec les bookings déplacés (propagation des déplacements)
+        currentBookings = allocationResult.updatedBookings
+        
+        // 2. Maintenant, placer la room (sans appeler placeGameBooking qui ne propage pas les déplacements)
+        const eventDuration = params.durationMinutes || 120
+        const timeKeys = rangeToKeys(
+          params.hour,
+          params.minute,
+          params.hour + Math.floor((params.minute + eventDuration) / 60),
+          (params.minute + eventDuration) % 60
+        )
+        
+        // Trouver une salle disponible
+        const roomResult = findSmallestFitRoom(
+          buildOccupancyState(currentBookings, params.date),
+          params.participants,
+          timeKeys,
+          roomConfigs,
+          params.excludeBookingId,
+          true // TOUJOURS chercher une salle disponible, même si capacité insuffisante
+        )
+        
+        if (!roomResult) {
+          // Aucune salle disponible
+          result = {
+            success: false,
+            conflict: {
+              type: 'NO_ROOM',
+              message: 'Aucune salle disponible à cet horaire',
+              details: {
+                participants: params.participants
+              }
+            }
+          }
+        } else if (roomResult.config.maxCapacity < params.participants && !allowRoomOvercap) {
+          // Demander confirmation pour room overcap
+          result = {
+            success: false,
+            conflict: {
+              type: 'NEED_ROOM_OVERCAP_CONFIRM',
+              message: `La salle ${roomResult.config.name} a une capacité de ${roomResult.config.maxCapacity} personnes, mais ${params.participants} sont demandées. Autoriser ?`,
+              details: {
+                roomId: roomResult.roomId,
+                roomCapacity: roomResult.config.maxCapacity,
+                participants: params.participants,
+                excessParticipants: params.participants - roomResult.config.maxCapacity
+              }
+            }
+          }
+        } else {
+          // Succès : slots déjà assignés via allocateLeftToRight, room trouvée
+          result = {
+            success: true,
+            allocation: {
+              roomAllocation: {
+                roomId: roomResult.roomId,
+                startTimeKey: toTimeKey(params.hour, params.minute),
+                endTimeKey: toTimeKey(
+                  params.hour + Math.floor((params.minute + eventDuration) / 60),
+                  (params.minute + eventDuration) % 60
+                )
+              },
+              slotAllocation: {
+                slots: allocationResult.slots,
+                isSplit: false
+              }
+            }
+          }
+        }
+      } else {
+        // Pas de place même après déplacement, essayer avec placeGameBooking (qui peut demander surbook)
+        result = placeEventBooking(currentBookings, params, roomConfigs, allowRoomOvercap, allowSurbook)
+      }
     } else {
       // Pour les GAME, utiliser directement allocateLeftToRight pour récupérer les déplacements
       const state = buildOccupancyState(currentBookings, params.date)
