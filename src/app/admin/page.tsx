@@ -1221,7 +1221,7 @@ export default function AdminPage() {
     const dateStr = appointmentDate
     const isEventType = appointmentEventType && appointmentEventType !== 'game' && appointmentEventType.trim() !== ''
     const eventDurationMinutes = isEventType 
-      ? (appointmentDuration ?? 120)
+      ? (appointmentDuration ?? 60)
       : (appointmentGameDuration ?? 60)
     
     // Pour les événements avec salle, le jeu dure toujours 1 heure et est centré
@@ -1338,7 +1338,7 @@ export default function AdminPage() {
     // IMPORTANT : Deux durées différentes
     const gameDurationMinutes = appointmentGameDuration ?? 60
     const eventDurationMinutes = (appointmentEventType && appointmentEventType !== 'game') 
-      ? (appointmentDuration ?? 120)
+      ? (appointmentDuration ?? 60)
       : gameDurationMinutes
 
     // Si ce n'est pas un "game", vérifier la disponibilité d'une salle d'anniversaire
@@ -1638,7 +1638,7 @@ export default function AdminPage() {
     // GAME (eventType === 'game' ou vide/null/undefined) = uniquement game-slots
     const isEvent = appointmentEventType && appointmentEventType !== 'game' && appointmentEventType.trim() !== ''
     const eventDurationMinutes = isEvent 
-      ? (appointmentDuration ?? 120)
+      ? (appointmentDuration ?? 60)
       : (appointmentGameDuration ?? 60)
     
     // Vérifier si on a un flag confirmedSurbook (depuis popup)
