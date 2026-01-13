@@ -1118,23 +1118,11 @@ export default function AdminPage() {
     setEditingAppointment(appointment)
     // Ne plus charger le titre, il sera généré automatiquement
     
-    // IMPORTANT : Pour les EVENT avec assignedSlots, utiliser l'heure du jeu (centré), pas l'heure de la room
-    // Le jeu est indépendant de la room une fois créé
-    const isEvent = appointment.eventType && appointment.eventType !== 'game' && appointment.eventType.trim() !== ''
-    if (isEvent && appointment.assignedSlots && appointment.assignedSlots.length > 0) {
-      // Pour EVENT avec slots, utiliser l'heure du jeu centré
-      const { gameStartMinutes, gameDurationMinutes } = calculateCenteredGameTime(appointment)
-      const gameStartHour = Math.floor(gameStartMinutes / 60)
-      const gameStartMinute = gameStartMinutes % 60
-      setAppointmentHour(gameStartHour)
-      setAppointmentMinute(gameStartMinute)
-      setAppointmentGameDuration(gameDurationMinutes)
-    } else {
-      // Pour GAME ou EVENT sans slots, utiliser l'heure normale
-      setAppointmentHour(appointment.hour)
-      setAppointmentMinute(appointment.minute || 0)
-      setAppointmentGameDuration(appointment.gameDurationMinutes ?? 60)
-    }
+    // IMPORTANT : Pour les EVENT avec room, utiliser TOUJOURS l'heure de la room (hour/minute)
+    // Ne PAS utiliser l'heure du jeu car hour/minute sont pour la room, pas pour le jeu
+    // Le jeu est calculé automatiquement à partir de l'heure de la room (centré)
+    setAppointmentHour(appointment.hour)
+    setAppointmentMinute(appointment.minute || 0)
     
     setAppointmentDate(appointment.date)
     setAppointmentBranch(appointment.branch || '')
