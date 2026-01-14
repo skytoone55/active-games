@@ -84,9 +84,10 @@ export async function PUT(
     // updated_at sera mis à jour automatiquement par le trigger
     updateData.updated_at = new Date().toISOString()
 
+    // @ts-ignore - Supabase typing issue with dynamic updates
     const { data: contact, error } = await supabase
       .from('contacts')
-      .update(updateData as any)
+      .update(updateData)
       .eq('id', id)
       .select()
       .single<Contact>()

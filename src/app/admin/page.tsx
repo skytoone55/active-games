@@ -1175,11 +1175,20 @@ export default function AdminPage() {
   const isDark = theme === 'dark'
 
   // Conversion userData vers format AuthUser pour AdminHeader
+  // Utiliser les branches complètes de useBranches pour avoir toutes les propriétés
+  const authUserBranches = branches.filter(b => 
+    userData?.branches.some(ub => ub.id === b.id)
+  )
+
   const authUser = userData ? {
     id: userData.id,
     email: userData.email,
     role: userData.role as any,
-    profile: userData.profile,
+    profile: userData.profile as any, // Cast pour compatibilité
+    branches: authUserBranches,
+    isSuperAdmin: userData.role === 'super_admin',
+    isBranchAdmin: userData.role === 'branch_admin',
+    isAgent: userData.role === 'agent',
   } : null
 
   // Récupérer les salles et settings de la branche sélectionnée

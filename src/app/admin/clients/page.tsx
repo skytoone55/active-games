@@ -184,6 +184,12 @@ export default function ClientsPage() {
     return parts.length > 0 ? parts.join(' ') : contact.phone
   }
 
+  const handleSignOut = async () => {
+    const supabase = createClient()
+    await supabase.auth.signOut()
+    router.push('/admin/login')
+  }
+
   if (!user || !selectedBranch) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-900">

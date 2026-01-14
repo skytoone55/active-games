@@ -103,9 +103,9 @@ export function MergeContactsModal({
               .single()
 
             if (!existing) {
-              // Transférer la liaison
-              await supabase
-                .from('booking_contacts')
+              // Transférer la liaison - mettre à jour contact_id
+              await (supabase
+                .from('booking_contacts') as any)
                 .update({ contact_id: primaryContact.id })
                 .eq('booking_id', bookingId)
                 .eq('contact_id', duplicate.id)
