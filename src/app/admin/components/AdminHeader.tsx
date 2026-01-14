@@ -1,8 +1,9 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { LogOut, User, Settings, ChevronDown, Sun, Moon, Users } from 'lucide-react'
+import { LogOut, User, Settings, ChevronDown, Sun, Moon, Users, Calendar, LayoutDashboard } from 'lucide-react'
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import type { AuthUser } from '@/hooks/useAuth'
 import type { Branch } from '@/lib/supabase/types'
 import { BranchSelector } from './BranchSelector'
@@ -26,28 +27,34 @@ export function AdminHeader({
   theme,
   onToggleTheme,
 }: AdminHeaderProps) {
+  const pathname = usePathname()
   const [showUserMenu, setShowUserMenu] = useState(false)
+  const [showNavMenu, setShowNavMenu] = useState(false)
   const [mounted, setMounted] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
+  const navMenuRef = useRef<HTMLDivElement>(null)
 
   // Éviter les problèmes d'hydratation
   useEffect(() => {
     setMounted(true)
   }, [])
 
-  // Fermer le menu quand on clique ailleurs
+  // Fermer les menus quand on clique ailleurs
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
         setShowUserMenu(false)
       }
+      if (navMenuRef.current && !navMenuRef.current.contains(event.target as Node)) {
+        setShowNavMenu(false)
+      }
     }
 
-    if (showUserMenu) {
+    if (showUserMenu || showNavMenu) {
       document.addEventListener('mousedown', handleClickOutside)
     }
     return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [showUserMenu])
+  }, [showUserMenu, showNavMenu])
 
   const getRoleBadge = () => {
     switch (user.role) {
@@ -94,15 +101,48 @@ export function AdminHeader({
 
         {/* Actions */}
         <div className="flex items-center gap-4">
-          {/* Lien Clients (CRM) */}
-          <Link
-            href="/admin/clients"
-            target="_blank"
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors flex items-center gap-2"
-          >
-            <Users className="w-4 h-4" />
-            <span className="hidden sm:inline">Clients</span>
-          </Link>
+          {/* Menu Navigation */}
+          <div ref={navMenuRef} className="relative">
+            <button
+              onClick={() => setShowNavMenu(!showNavMenu)}
+              className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg transition-colors flex items-center gap-2"
+            >
+              <LayoutDashboard className="w-4 h-4" />
+              <span className="hidden sm:inline">Navigation</span>
+              <ChevronDown className={`w-4 h-4 transition-transform ${showNavMenu ? 'rotate-180' : ''}`} />
+            </button>
+
+            {mounted && showNavMenu && (
+              <div className="absolute right-0 top-full mt-2 w-48 bg-gray-800 border border-gray-700 rounded-lg shadow-xl z-50 overflow-hidden">
+                <div className="py-2">
+                  <Link
+                    href="/admin"
+                    className={`w-full px-4 py-2 text-left flex items-center gap-2 transition-colors ${
+                      pathname === '/admin'
+                        ? 'bg-blue-600 text-white'
+                        : 'text-gray-300 hover:bg-gray-700'
+                    }`}
+                    onClick={() => setShowNavMenu(false)}
+                  >
+                    <Calendar className="w-4 h-4" />
+                    Agenda
+                  </Link>
+                  <Link
+                    href="/admin/clients"
+                    className={`w-full px-4 py-2 text-left flex items-center gap-2 transition-colors ${
+                      pathname === '/admin/clients'
+                        ? 'bg-blue-600 text-white'
+                        : 'text-gray-300 hover:bg-gray-700'
+                    }`}
+                    onClick={() => setShowNavMenu(false)}
+                  >
+                    <Users className="w-4 h-4" />
+                    Clients (CRM)
+                  </Link>
+                </div>
+              </div>
+            )}
+          </div>
 
           {/* Toggle thème */}
           <button

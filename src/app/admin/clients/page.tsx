@@ -57,8 +57,8 @@ export default function ClientsPage() {
       let sortedContacts = [...result.contacts]
       if (sortField === 'name') {
         sortedContacts.sort((a, b) => {
-          const nameA = getDisplayName(a).toLowerCase()
-          const nameB = getDisplayName(b).toLowerCase()
+          const nameA = `${a.first_name || ''} ${a.last_name || ''}`.trim().toLowerCase() || a.phone
+          const nameB = `${b.first_name || ''} ${b.last_name || ''}`.trim().toLowerCase() || b.phone
           return sortDirection === 'asc' 
             ? nameA.localeCompare(nameB)
             : nameB.localeCompare(nameA)
@@ -79,11 +79,13 @@ export default function ClientsPage() {
     } finally {
       setLoading(false)
     }
-  }, [searchQuery, includeArchived, page, selectedBranch, searchContacts, sortField, sortDirection])
+  }, [searchQuery, includeArchived, page, selectedBranch?.id, sortField, sortDirection])
 
   useEffect(() => {
-    performSearch()
-  }, [performSearch])
+    if (selectedBranch?.id) {
+      performSearch()
+    }
+  }, [performSearch, selectedBranch?.id])
 
   // Gérer l'archivage
   const handleArchive = async (contact: Contact) => {
