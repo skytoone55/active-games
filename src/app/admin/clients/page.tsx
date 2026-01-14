@@ -641,65 +641,105 @@ export default function ClientsPage() {
       {/* Modal détails (simplifié pour l'instant) */}
       {showDetailsModal && selectedContact && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-gray-800 rounded-lg border border-gray-700 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+          <div className={`rounded-lg border max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto ${
+            isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
+          }`}>
             <div className="p-6">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-bold">Détails du contact</h2>
+                <h2 className={`text-xl font-bold ${
+                  isDark ? 'text-white' : 'text-gray-900'
+                }`}>Détails du contact</h2>
                 <button
                   onClick={() => setShowDetailsModal(false)}
-                  className="p-2 hover:bg-gray-700 rounded-lg transition-colors"
+                  className={`p-2 rounded-lg transition-colors ${
+                    isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100'
+                  }`}
                 >
-                  <X className="w-5 h-5" />
+                  <X className={`w-5 h-5 ${
+                    isDark ? 'text-gray-300' : 'text-gray-700'
+                  }`} />
                 </button>
               </div>
               <div className="space-y-6">
                 {/* Informations de base */}
                 <div className="space-y-4">
                   <div>
-                    <label className="text-sm text-gray-400">Nom complet</label>
-                    <p className="text-white font-medium text-lg">{getDisplayName(selectedContact)}</p>
+                    <label className={`text-sm ${
+                      isDark ? 'text-gray-400' : 'text-gray-600'
+                    }`}>Nom complet</label>
+                    <p className={`font-medium text-lg ${
+                      isDark ? 'text-white' : 'text-gray-900'
+                    }`}>{getDisplayName(selectedContact)}</p>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="text-sm text-gray-400">Téléphone</label>
-                      <p className="text-white">{selectedContact.phone}</p>
+                      <label className={`text-sm ${
+                        isDark ? 'text-gray-400' : 'text-gray-600'
+                      }`}>Téléphone</label>
+                      <p className={isDark ? 'text-white' : 'text-gray-900'}>{selectedContact.phone}</p>
                     </div>
                     {selectedContact.email && (
                       <div>
-                        <label className="text-sm text-gray-400">Email</label>
-                        <p className="text-white">{selectedContact.email}</p>
+                        <label className={`text-sm ${
+                          isDark ? 'text-gray-400' : 'text-gray-600'
+                        }`}>Email</label>
+                        <p className={isDark ? 'text-white' : 'text-gray-900'}>{selectedContact.email}</p>
                       </div>
                     )}
                   </div>
                   {selectedContact.notes_client && (
                     <div>
-                      <label className="text-sm text-gray-400">Notes client</label>
-                      <p className="text-white whitespace-pre-wrap bg-gray-700/50 p-3 rounded-lg">{selectedContact.notes_client}</p>
+                      <label className={`text-sm ${
+                        isDark ? 'text-gray-400' : 'text-gray-600'
+                      }`}>Notes client</label>
+                      <p className={`whitespace-pre-wrap p-3 rounded-lg ${
+                        isDark
+                          ? 'text-white bg-gray-700/50'
+                          : 'text-gray-900 bg-gray-100'
+                      }`}>{selectedContact.notes_client}</p>
                     </div>
                   )}
                 </div>
 
                 {/* Statistiques */}
                 {contactStats && (
-                  <div className="pt-4 border-t border-gray-700">
-                    <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                  <div className={`pt-4 border-t ${
+                    isDark ? 'border-gray-700' : 'border-gray-200'
+                  }`}>
+                    <h3 className={`text-lg font-semibold mb-4 flex items-center gap-2 ${
+                      isDark ? 'text-white' : 'text-gray-900'
+                    }`}>
                       <TrendingUp className="w-5 h-5" />
                       Statistiques
                     </h3>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                      <div className="bg-gray-700/50 p-4 rounded-lg">
+                      <div className={`p-4 rounded-lg ${
+                        isDark ? 'bg-gray-700/50' : 'bg-gray-100'
+                      }`}>
                         <div className="text-2xl font-bold text-blue-400">{contactStats.totalBookings}</div>
-                        <div className="text-sm text-gray-400 mt-1">Réservations totales</div>
+                        <div className={`text-sm mt-1 ${
+                          isDark ? 'text-gray-400' : 'text-gray-600'
+                        }`}>Réservations totales</div>
                       </div>
-                      <div className="bg-gray-700/50 p-4 rounded-lg">
+                      <div className={`p-4 rounded-lg ${
+                        isDark ? 'bg-gray-700/50' : 'bg-gray-100'
+                      }`}>
                         <div className="text-2xl font-bold text-green-400">{contactStats.upcomingBookings}</div>
-                        <div className="text-sm text-gray-400 mt-1">À venir</div>
+                        <div className={`text-sm mt-1 ${
+                          isDark ? 'text-gray-400' : 'text-gray-600'
+                        }`}>À venir</div>
                       </div>
-                      <div className="bg-gray-700/50 p-4 rounded-lg">
+                      <div className={`p-4 rounded-lg ${
+                        isDark ? 'bg-gray-700/50' : 'bg-gray-100'
+                      }`}>
                         <div className="text-2xl font-bold text-purple-400">{contactStats.totalParticipants}</div>
-                        <div className="text-sm text-gray-400 mt-1">Participants totaux</div>
+                        <div className={`text-sm mt-1 ${
+                          isDark ? 'text-gray-400' : 'text-gray-600'
+                        }`}>Participants totaux</div>
                       </div>
-                      <div className="bg-gray-700/50 p-4 rounded-lg">
+                      <div className={`p-4 rounded-lg ${
+                        isDark ? 'bg-gray-700/50' : 'bg-gray-100'
+                      }`}>
                         <div className="flex items-center gap-2">
                           <div className="text-2xl font-bold text-yellow-400">{contactStats.gameBookings}</div>
                           <Gamepad2 className="w-5 h-5 text-blue-400" />
@@ -708,11 +748,15 @@ export default function ClientsPage() {
                           <div className="text-2xl font-bold text-green-400">{contactStats.eventBookings}</div>
                           <PartyPopper className="w-5 h-5 text-green-400" />
                         </div>
-                        <div className="text-sm text-gray-400 mt-1">Jeux / Événements</div>
+                        <div className={`text-sm mt-1 ${
+                          isDark ? 'text-gray-400' : 'text-gray-600'
+                        }`}>Jeux / Événements</div>
                       </div>
                     </div>
                     {contactStats.lastActivity && (
-                      <div className="mt-4 flex items-center gap-2 text-sm text-gray-400">
+                      <div className={`mt-4 flex items-center gap-2 text-sm ${
+                        isDark ? 'text-gray-400' : 'text-gray-600'
+                      }`}>
                         <Clock className="w-4 h-4" />
                         Dernière activité: {new Date(contactStats.lastActivity).toLocaleDateString('fr-FR', {
                           day: 'numeric',
@@ -728,17 +772,25 @@ export default function ClientsPage() {
               </div>
 
               {/* Réservations liées */}
-              <div className="mt-6 pt-6 border-t border-gray-700">
-                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+              <div className={`mt-6 pt-6 border-t ${
+                isDark ? 'border-gray-700' : 'border-gray-200'
+              }`}>
+                <h3 className={`text-lg font-semibold mb-4 flex items-center gap-2 ${
+                  isDark ? 'text-white' : 'text-gray-900'
+                }`}>
                   <Calendar className="w-5 h-5" />
                   Réservations liées ({linkedBookings.length})
                 </h3>
                 {loadingBookings ? (
                   <div className="flex items-center justify-center py-8">
-                    <Loader2 className="w-6 h-6 animate-spin text-blue-400" />
+                    <Loader2 className={`w-6 h-6 animate-spin ${
+                      isDark ? 'text-blue-400' : 'text-blue-600'
+                    }`} />
                   </div>
                 ) : linkedBookings.length === 0 ? (
-                  <p className="text-gray-400 text-sm">Aucune réservation liée à ce contact</p>
+                  <p className={`text-sm ${
+                    isDark ? 'text-gray-400' : 'text-gray-600'
+                  }`}>Aucune réservation liée à ce contact</p>
                 ) : (
                   <div className="space-y-2 max-h-96 overflow-y-auto">
                     {linkedBookings.map((booking) => {
@@ -756,7 +808,9 @@ export default function ClientsPage() {
                           }}
                           className={`p-3 rounded-lg border cursor-pointer transition-colors ${
                             isPast
-                              ? 'bg-gray-700/50 border-gray-600 hover:bg-gray-700'
+                              ? isDark
+                                ? 'bg-gray-700/50 border-gray-600 hover:bg-gray-700'
+                                : 'bg-gray-100 border-gray-300 hover:bg-gray-200'
                               : 'bg-blue-600/10 border-blue-600/30 hover:bg-blue-600/20'
                           }`}
                         >
@@ -768,10 +822,14 @@ export default function ClientsPage() {
                                 <Gamepad2 className={`w-5 h-5 flex-shrink-0 ${isPast ? 'text-gray-400' : 'text-blue-400'}`} />
                               )}
                               <div className="flex-1 min-w-0">
-                                <div className="font-medium text-white truncate">
+                                <div className={`font-medium truncate ${
+                                  isDark ? 'text-white' : 'text-gray-900'
+                                }`}>
                                   {booking.reference_code} - {booking.type === 'EVENT' ? 'Événement' : 'Jeu'}
                                 </div>
-                                <div className="text-sm text-gray-400">
+                                <div className={`text-sm ${
+                                  isDark ? 'text-gray-400' : 'text-gray-600'
+                                }`}>
                                   {bookingDate.toLocaleDateString('fr-FR', {
                                     weekday: 'short',
                                     day: 'numeric',
@@ -784,7 +842,9 @@ export default function ClientsPage() {
                               </div>
                             </div>
                             <div className="text-right flex-shrink-0 ml-3">
-                              <div className="text-sm font-medium text-white">
+                              <div className={`text-sm font-medium ${
+                                isDark ? 'text-white' : 'text-gray-900'
+                              }`}>
                                 {booking.participants_count} pers.
                               </div>
                               <div className={`text-xs ${
@@ -792,7 +852,9 @@ export default function ClientsPage() {
                                   ? 'text-red-400'
                                   : booking.status === 'CONFIRMED'
                                   ? 'text-green-400'
-                                  : 'text-gray-400'
+                                  : isDark
+                                  ? 'text-gray-400'
+                                  : 'text-gray-600'
                               }`}>
                                 {booking.status === 'CANCELLED' ? 'Annulé' : booking.status === 'CONFIRMED' ? 'Confirmé' : 'Brouillon'}
                               </div>
