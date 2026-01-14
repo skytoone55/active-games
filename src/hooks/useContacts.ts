@@ -8,6 +8,10 @@ export interface SearchContactsParams {
   query?: string
   branchId: string | null
   includeArchived?: boolean
+  status?: 'active' | 'archived'
+  source?: 'admin_agenda' | 'public_booking'
+  dateFrom?: string
+  dateTo?: string
   page?: number
   pageSize?: number
 }
@@ -63,9 +67,24 @@ export function useContacts(branchId: string | null) {
         .select('*', { count: 'exact' })
         .eq('branch_id_main', params.branchId)
 
-      // Filtrer par status si includeArchived = false
-      if (!params.includeArchived) {
+      // Filtrer par status
+      if (params.status) {
+        query = query.eq('status', params.status)
+      } else if (!params.includeArchived) {
         query = query.eq('status', 'active')
+      }
+
+      // Filtrer par source
+      if (params.source) {
+        query = query.eq('source', params.source)
+      }
+
+      // Filtrer par date de création
+      if (params.dateFrom) {
+        query = query.gte('created_at', params.dateFrom)
+      }
+      if (params.dateTo) {
+        query = query.lte('created_at', params.dateTo + 'T23:59:59')
       }
 
       // Recherche multi-champs si query fourni

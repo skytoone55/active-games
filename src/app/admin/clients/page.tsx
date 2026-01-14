@@ -36,6 +36,13 @@ export default function ClientsPage() {
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
   const [duplicatesToMerge, setDuplicatesToMerge] = useState<Contact[]>([])
   const [showMergeModal, setShowMergeModal] = useState(false)
+  
+  // Filtres avancés
+  const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'archived'>('all')
+  const [filterSource, setFilterSource] = useState<'all' | 'admin_agenda' | 'public_booking'>('all')
+  const [filterDateFrom, setFilterDateFrom] = useState<string>('')
+  const [filterDateTo, setFilterDateTo] = useState<string>('')
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
 
   const pageSize = 20
 
@@ -79,7 +86,7 @@ export default function ClientsPage() {
     } finally {
       setLoading(false)
     }
-  }, [searchQuery, includeArchived, page, selectedBranch?.id, sortField, sortDirection])
+  }, [searchQuery, includeArchived, page, selectedBranch?.id, sortField, sortDirection, filterStatus, filterSource, filterDateFrom, filterDateTo])
 
   useEffect(() => {
     if (selectedBranch?.id) {
