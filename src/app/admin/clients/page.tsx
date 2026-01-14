@@ -201,16 +201,34 @@ export default function ClientsPage() {
     router.push('/admin/login')
   }
 
+  // Gérer le thème (synchronisé avec localStorage)
+  const [theme, setTheme] = useState<'light' | 'dark'>('dark')
+  
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('admin_theme') as 'light' | 'dark' | null
+    if (savedTheme) {
+      setTheme(savedTheme)
+    }
+  }, [])
+
+  const toggleTheme = () => {
+    const newTheme = theme === 'light' ? 'dark' : 'light'
+    setTheme(newTheme)
+    localStorage.setItem('admin_theme', newTheme)
+  }
+
+  const isDark = theme === 'dark'
+
   if (!user || !selectedBranch) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-900">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-400" />
+      <div className={`min-h-screen flex items-center justify-center ${isDark ? 'bg-gray-900' : 'bg-gray-100'}`}>
+        <Loader2 className={`w-8 h-8 animate-spin ${isDark ? 'text-blue-400' : 'text-blue-600'}`} />
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white">
+    <div className={`min-h-screen ${isDark ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-900'}`}>
       {/* Header avec navigation */}
       <AdminHeader
         user={user}
@@ -218,12 +236,12 @@ export default function ClientsPage() {
         selectedBranch={selectedBranch}
         onBranchSelect={selectBranch}
         onSignOut={handleSignOut}
-        theme="dark"
-        onToggleTheme={() => {}}
+        theme={theme}
+        onToggleTheme={toggleTheme}
       />
 
       {/* Sous-header avec titre et actions */}
-      <div className="bg-gray-800 border-b border-gray-700 px-6 py-4">
+      <div className={`${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border-b px-6 py-4`}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <h1 className="text-2xl font-bold">Gestion des Clients</h1>
