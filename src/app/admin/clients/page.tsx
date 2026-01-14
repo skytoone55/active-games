@@ -879,7 +879,7 @@ export default function ClientsPage() {
           contact={editingContact}
           branchId={selectedBranch.id}
           onSave={performSearch}
-          isDark={true}
+          isDark={isDark}
         />
       )}
 
@@ -894,7 +894,7 @@ export default function ClientsPage() {
           contacts={duplicatesToMerge}
           onMergeComplete={performSearch}
           branchId={selectedBranch.id}
-          isDark={true}
+          isDark={isDark}
         />
       )}
     </div>
