@@ -2,17 +2,18 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { Search, Edit2, Archive, User, Phone, Mail, Loader2, Eye, Calendar, Gamepad2, PartyPopper, ChevronLeft, ChevronRight, X } from 'lucide-react'
+import { Search, Edit2, Archive, User, Phone, Mail, Loader2, Eye, Calendar, Gamepad2, PartyPopper, ChevronLeft, ChevronRight, X, Plus } from 'lucide-react'
 import { useContacts, type SearchContactsResult } from '@/hooks/useContacts'
 import { useBranches } from '@/hooks/useBranches'
 import { useAuth } from '@/hooks/useAuth'
+import { ClientModal } from './components/ClientModal'
 import type { Contact } from '@/lib/supabase/types'
 
 export default function ClientsPage() {
   const router = useRouter()
   const { user } = useAuth()
   const { branches, selectedBranch } = useBranches()
-  const { searchContacts, archiveContact, unarchiveContact } = useContacts(selectedBranch?.id || null)
+  const { searchContacts, archiveContact, unarchiveContact, getLinkedBookings } = useContacts(selectedBranch?.id || null)
 
   const [searchQuery, setSearchQuery] = useState('')
   const [includeArchived, setIncludeArchived] = useState(false)
@@ -23,6 +24,10 @@ export default function ClientsPage() {
   const [total, setTotal] = useState(0)
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null)
   const [showDetailsModal, setShowDetailsModal] = useState(false)
+  const [showClientModal, setShowClientModal] = useState(false)
+  const [editingContact, setEditingContact] = useState<Contact | null>(null)
+  const [linkedBookings, setLinkedBookings] = useState<any[]>([])
+  const [loadingBookings, setLoadingBookings] = useState(false)
 
   const pageSize = 20
 
@@ -73,9 +78,28 @@ export default function ClientsPage() {
   }
 
   // Ouvrir les détails
-  const handleViewDetails = (contact: Contact) => {
+  const handleViewDetails = async (contact: Contact) => {
     setSelectedContact(contact)
     setShowDetailsModal(true)
+    
+    // Charger les réservations liées
+    setLoadingBookings(true)
+    const bookings = await getLinkedBookings(contact.id)
+    setLinkedBookings(bookings || [])
+    setLoadingBookings(false)
+  }
+
+  // Ouvrir modal création/édition
+  const handleOpenEditModal = (contact: Contact | null = null) => {
+    setEditingContact(contact)
+    setShowClientModal(true)
+  }
+
+  // Fermer modal et rafraîchir
+  const handleCloseClientModal = () => {
+    setShowClientModal(false)
+    setEditingContact(null)
+    performSearch()
   }
 
   const getDisplayName = (contact: Contact) => {
@@ -108,6 +132,13 @@ export default function ClientsPage() {
               {selectedBranch.name}
             </span>
           </div>
+          <button
+            onClick={() => handleOpenEditModal(null)}
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors flex items-center gap-2"
+          >
+            <Plus className="w-4 h-4" />
+            Nouveau contact
+          </button>
         </div>
       </div>
 
@@ -205,7 +236,7 @@ export default function ClientsPage() {
                             <Eye className="w-4 h-4 text-blue-400" />
                           </button>
                           <button
-                            onClick={() => handleViewDetails(contact)}
+                            onClick={() => handleOpenEditModal(contact)}
                             className="p-2 hover:bg-gray-700 rounded-lg transition-colors"
                             title="Modifier"
                           >
@@ -300,9 +331,97 @@ export default function ClientsPage() {
                   </div>
                 )}
               </div>
+
+              {/* Réservations liées */}
+              <div className="mt-6 pt-6 border-t border-gray-700">
+                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                  <Calendar className="w-5 h-5" />
+                  Réservations liées
+                </h3>
+                {loadingBookings ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="w-6 h-6 animate-spin text-blue-400" />
+                  </div>
+                ) : linkedBookings.length === 0 ? (
+                  <p className="text-gray-400 text-sm">Aucune réservation liée</p>
+                ) : (
+                  <div className="space-y-2">
+                    {linkedBookings.map((booking) => {
+                      const bookingDate = new Date(booking.start_datetime)
+                      const isPast = bookingDate < new Date()
+                      
+                      return (
+                        <div
+                          key={booking.id}
+                          onClick={() => {
+                            router.push(`/admin?booking=${booking.id}`)
+                            setShowDetailsModal(false)
+                          }}
+                          className={`p-3 rounded-lg border cursor-pointer transition-colors ${
+                            isPast
+                              ? 'bg-gray-700/50 border-gray-600 hover:bg-gray-700'
+                              : 'bg-blue-600/10 border-blue-600/30 hover:bg-blue-600/20'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              {booking.type === 'EVENT' ? (
+                                <PartyPopper className={`w-5 h-5 ${isPast ? 'text-gray-400' : 'text-green-400'}`} />
+                              ) : (
+                                <Gamepad2 className={`w-5 h-5 ${isPast ? 'text-gray-400' : 'text-blue-400'}`} />
+                              )}
+                              <div>
+                                <div className="font-medium text-white">
+                                  {booking.reference_code} - {booking.type}
+                                </div>
+                                <div className="text-sm text-gray-400">
+                                  {bookingDate.toLocaleDateString('fr-FR', {
+                                    weekday: 'short',
+                                    day: 'numeric',
+                                    month: 'short',
+                                    year: 'numeric',
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                  })}
+                                </div>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <div className="text-sm font-medium text-white">
+                                {booking.participants_count} pers.
+                              </div>
+                              <div className={`text-xs ${
+                                booking.status === 'CANCELLED'
+                                  ? 'text-red-400'
+                                  : booking.status === 'CONFIRMED'
+                                  ? 'text-green-400'
+                                  : 'text-gray-400'
+                              }`}>
+                                {booking.status === 'CANCELLED' ? 'Annulé' : booking.status === 'CONFIRMED' ? 'Confirmé' : 'Brouillon'}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
+      )}
+
+      {/* Modal création/édition client */}
+      {showClientModal && selectedBranch && (
+        <ClientModal
+          isOpen={showClientModal}
+          onClose={handleCloseClientModal}
+          contact={editingContact}
+          branchId={selectedBranch.id}
+          onSave={performSearch}
+          isDark={true}
+        />
       )}
     </div>
   )

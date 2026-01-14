@@ -315,6 +315,46 @@ export function useContacts(branchId: string | null) {
     }
   }, [branchId])
 
+  // Récupérer les réservations liées à un contact
+  const getLinkedBookings = useCallback(async (contactId: string) => {
+    if (!branchId) {
+      return []
+    }
+
+    const supabase = getClient()
+
+    try {
+      // Récupérer les réservations via booking_contacts
+      const { data: bookingContacts, error: bookingContactsError } = await supabase
+        .from('booking_contacts')
+        .select('booking_id')
+        .eq('contact_id', contactId)
+
+      if (bookingContactsError) throw bookingContactsError
+
+      if (!bookingContacts || bookingContacts.length === 0) {
+        return []
+      }
+
+      const bookingIds = bookingContacts.map(bc => bc.booking_id)
+
+      // Récupérer les bookings
+      const { data: bookings, error: bookingsError } = await supabase
+        .from('bookings')
+        .select('id, reference_code, type, status, start_datetime, end_datetime, participants_count, created_at')
+        .in('id', bookingIds)
+        .eq('branch_id', branchId)
+        .order('start_datetime', { ascending: false })
+
+      if (bookingsError) throw bookingsError
+
+      return bookings || []
+    } catch (err) {
+      console.error('Error fetching linked bookings:', err)
+      return []
+    }
+  }, [branchId])
+
   return {
     contacts,
     loading,
@@ -326,5 +366,6 @@ export function useContacts(branchId: string | null) {
     archiveContact,
     unarchiveContact,
     checkDuplicates,
+    getLinkedBookings,
   }
 }

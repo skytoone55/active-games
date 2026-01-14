@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { X, Loader2, Users, Clock, User, Phone, Mail, MessageSquare, Gamepad2, PartyPopper, Palette, Home, Calendar, ChevronLeft, ChevronRight, Trash2, Edit2, RefreshCw, AlertTriangle } from 'lucide-react'
 import type { CreateBookingData, BookingWithSlots } from '@/hooks/useBookings'
 import { ContactSearch } from './ContactSearch'
+import { ClientModal } from '../clients/components/ClientModal'
 import { useContacts } from '@/hooks/useContacts'
 import type { Contact } from '@/lib/supabase/types'
 
@@ -144,29 +145,16 @@ export function BookingModal({
   }, [selectedContact])
 
   // CRM: Ouvrir modal de modification de contact
+  const [showClientModal, setShowClientModal] = useState(false)
+  
   const handleModifyClient = () => {
     if (!selectedContact) return
-    // Pour l'instant, on ouvre juste un prompt simple
-    // TODO: Créer un modal dédié pour modifier le contact
-    const newFirstName = prompt('Nouveau prénom:', selectedContact.first_name || '')
-    const newLastName = prompt('Nouveau nom:', selectedContact.last_name || '')
-    const newPhone = prompt('Nouveau téléphone:', selectedContact.phone || '')
-    const newEmail = prompt('Nouvel email:', selectedContact.email || '')
-    const newNotes = prompt('Nouvelles notes client:', selectedContact.notes_client || '')
+    setShowClientModal(true)
+  }
 
-    if (newFirstName !== null && newPhone !== null) {
-      updateContact(selectedContact.id, {
-        first_name: newFirstName.trim(),
-        last_name: newLastName?.trim() || null,
-        phone: newPhone.trim(),
-        email: newEmail?.trim() || null,
-        notes_client: newNotes?.trim() || null,
-      }).then((updated) => {
-        if (updated) {
-          setSelectedContact(updated)
-        }
-      })
-    }
+  const handleContactUpdated = (updatedContact: Contact) => {
+    setSelectedContact(updatedContact)
+    setShowClientModal(false)
   }
 
   // Fonction utilitaire pour formater une date en YYYY-MM-DD (sans conversion UTC)
@@ -1898,6 +1886,18 @@ export function BookingModal({
             </div>
           </div>
         </div>
+      )}
+
+      {/* Modal de modification de contact */}
+      {showClientModal && selectedContact && (
+        <ClientModal
+          isOpen={showClientModal}
+          onClose={() => setShowClientModal(false)}
+          contact={selectedContact}
+          branchId={branchId}
+          onSave={handleContactSaved}
+          isDark={isDark}
+        />
       )}
     </div>
   )
