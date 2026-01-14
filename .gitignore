@@ -1,6 +1,6 @@
 .next
 node_modules
 .env
-# .env.local  # Temporairement commenté pour le commit
+.env.local
 *.log
 data/
