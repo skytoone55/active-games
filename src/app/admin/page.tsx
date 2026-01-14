@@ -763,10 +763,11 @@ export default function AdminPage() {
     }
   }
 
-  // Générer les créneaux horaires (toutes les 30 minutes)
+  // Générer les créneaux horaires (toutes les 15 minutes pour la précision)
+  // Mais on affichera visuellement seulement les bordures de 30 minutes
   const timeSlots: { hour: number; minute: number; label: string }[] = []
   for (let h = 10; h <= 22; h++) {
-    for (const m of [0, 30]) {
+    for (const m of [0, 15, 30, 45]) {
       timeSlots.push({
         hour: h,
         minute: m,
@@ -1233,7 +1234,10 @@ export default function AdminPage() {
         )}
 
         {/* Grille de l'agenda */}
-        <div className={`rounded-xl border overflow-hidden relative ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`} style={{ position: 'relative' }}>
+        <div className={`rounded-xl overflow-hidden relative ${isDark ? 'bg-gray-800' : 'bg-white'}`} style={{ 
+          position: 'relative',
+          border: `2px solid ${isDark ? '#374151' : '#e5e7eb'}` // Même épaisseur que les cellules (2px)
+        }}>
           {/* Loader sur la grille */}
           {bookingsLoading && (
             <div className="absolute inset-0 bg-gray-900/50 flex items-center justify-center z-10">
@@ -1242,8 +1246,9 @@ export default function AdminPage() {
           )}
 
           {/* En-tête */}
-          <div className={`grid border-b ${isDark ? 'border-gray-700' : 'border-gray-200'}`} style={{
+          <div className={`grid ${isDark ? '' : ''}`} style={{
             gridTemplateColumns: `80px repeat(${TOTAL_SLOTS}, 1fr) repeat(${TOTAL_ROOMS}, 1fr)`,
+            borderBottom: `2px solid ${isDark ? '#374151' : '#e5e7eb'}` // Même épaisseur que les cellules (2px)
           }}>
             <div className={`p-3 text-center font-medium ${isDark ? 'text-gray-400 bg-gray-900' : 'text-gray-600 bg-gray-50'}`}>
               Heure
@@ -1269,18 +1274,46 @@ export default function AdminPage() {
           {/* Corps - Grille avec réservations intégrées */}
           <div className="grid" style={{
             gridTemplateColumns: `80px repeat(${TOTAL_SLOTS}, 1fr) repeat(${TOTAL_ROOMS}, 1fr)`,
-            gridTemplateRows: `repeat(${timeSlots.length}, 40px)`,
+            gridTemplateRows: `repeat(${timeSlots.length}, 20px)`, // Hauteur réduite car cases de 15 min
           }}>
             {/* Colonne Heure */}
-            {timeSlots.map((slot, timeIndex) => (
-              <div
-                key={`time-${timeIndex}`}
-                className={`p-2 text-center text-sm border-b ${isDark ? 'text-gray-500 border-gray-700' : 'text-gray-400 border-gray-200'}`}
-                style={{ gridColumn: '1', gridRow: timeIndex + 1 }}
-              >
-                {slot.minute === 0 ? slot.label : ''}
-              </div>
-            ))}
+            {timeSlots.map((slot, timeIndex) => {
+              // Pour avoir des lignes visibles à 10:00, 10:30, 11:00, etc. (créneaux de 30 minutes)
+              // La bordure borderBottom d'une case crée une ligne en bas de cette case
+              // Donc pour avoir une ligne à 10:30, il faut une bordure sur la case 10:15 (qui précède)
+              // Mais on veut aussi une ligne à 10:00, donc bordure sur la case 10:00
+              // En fait, on veut des bordures sur les cases de 30 minutes (0 et 30) ET sur les cases de 15 minutes qui précèdent (pour créer la ligne)
+              // Non, en fait : si on veut une ligne à 10:30, il faut une bordure sur la case 10:15 (qui est juste avant)
+              // Mais on ne veut pas de ligne à 10:15, donc pas de bordure sur 10:00
+              // Attendez, réfléchissons différemment :
+              // - Case 10:00 → bordure en bas → ligne entre 10:00 et 10:15 (on veut cette ligne ? Non, on veut ligne à 10:30)
+              // - Case 10:15 → bordure en bas → ligne entre 10:15 et 10:30 (on veut cette ligne ? Oui, c'est la ligne de 10:30)
+              // - Case 10:30 → bordure en bas → ligne entre 10:30 et 10:45 (on veut cette ligne ? Non)
+              // - Case 10:45 → bordure en bas → ligne entre 10:45 et 11:00 (on veut cette ligne ? Oui, c'est la ligne de 11:00)
+              
+              // Pour aligner avec les cellules : borderTop visible sur 0 et 30 dans les cellules
+              // Donc on utilise borderTop sur les cases de 30 minutes (0 et 30) dans la colonne des heures
+              const showBorder = (slot.minute === 0 || slot.minute === 30)
+              
+              return (
+                <div
+                  key={`time-${timeIndex}`}
+                  className={`p-2 text-center text-sm ${isDark ? 'text-gray-500' : 'text-gray-400'}`}
+                  style={{ 
+                    gridColumn: '1', 
+                    gridRow: timeIndex + 1,
+                    // Afficher borderTop sur les cases de 30 minutes pour aligner avec les cellules
+                    // Appliquer la même épaisseur que les cellules (2px solid)
+                    borderTop: showBorder ? `2px solid ${isDark ? '#374151' : '#e5e7eb'}` : 'none',
+                    borderBottom: 'none',
+                    borderLeft: 'none',
+                    borderRight: `2px solid ${isDark ? '#374151' : '#e5e7eb'}` // Bordure droite pour séparer de la grille
+                  }}
+                >
+                  {(slot.minute === 0 || slot.minute === 30) ? slot.label : ''}
+                </div>
+              )
+            })}
             
             {/* Cellules pour les slots et salles */}
             {timeSlots.map((slot, timeIndex) => {
@@ -1332,7 +1365,7 @@ export default function AdminPage() {
                       const gameStartMinutes = gameStartTime.getHours() * 60 + gameStartTime.getMinutes()
                       const gameEndMinutes = gameEndTime.getHours() * 60 + gameEndTime.getMinutes()
                       const durationMinutes = gameEndMinutes - gameStartMinutes
-                      rowSpan = Math.ceil(durationMinutes / 30)
+                      rowSpan = Math.ceil(durationMinutes / 15) // Cases de 15 minutes
                     }
                     
                     // Formater l'heure pour l'affichage
@@ -1358,8 +1391,10 @@ export default function AdminPage() {
                           gridColumn: booking ? `${gridColumn} / ${gridColumn + colSpan}` : gridColumn,
                           gridRow: booking ? `${gridRow} / ${gridRow + rowSpan}` : gridRow,
                           backgroundColor: booking ? (booking.color || (booking.type === 'EVENT' ? '#22c55e' : '#3b82f6')) : 'transparent',
-                          borderTop: `2px solid ${booking ? (booking.color || (booking.type === 'EVENT' ? (isDark ? '#4ade80' : '#16a34a') : (isDark ? '#60a5fa' : '#2563eb'))) : (isDark ? '#374151' : '#e5e7eb')}`,
-                          borderBottom: `2px solid ${booking ? (booking.color || (booking.type === 'EVENT' ? (isDark ? '#4ade80' : '#16a34a') : (isDark ? '#60a5fa' : '#2563eb'))) : (isDark ? '#374151' : '#e5e7eb')}`,
+                          // Afficher les bordures seulement sur les créneaux de 30 minutes (0 et 30)
+                          // Supprimer les bordures des créneaux de 15 minutes (15 et 45)
+                          borderTop: (slot.minute === 15 || slot.minute === 45) ? 'none' : `2px solid ${booking ? (booking.color || (booking.type === 'EVENT' ? (isDark ? '#4ade80' : '#16a34a') : (isDark ? '#60a5fa' : '#2563eb'))) : (isDark ? '#374151' : '#e5e7eb')}`,
+                          borderBottom: (slot.minute === 15 || slot.minute === 45 || (timeSlots[timeIndex + 1]?.minute === 15 || timeSlots[timeIndex + 1]?.minute === 45)) ? 'none' : `2px solid ${booking ? (booking.color || (booking.type === 'EVENT' ? (isDark ? '#4ade80' : '#16a34a') : (isDark ? '#60a5fa' : '#2563eb'))) : (isDark ? '#374151' : '#e5e7eb')}`,
                           borderLeft: `2px solid ${booking ? (booking.color || (booking.type === 'EVENT' ? (isDark ? '#4ade80' : '#16a34a') : (isDark ? '#60a5fa' : '#2563eb'))) : (isDark ? '#374151' : '#e5e7eb')}`,
                           borderRight: `2px solid ${booking ? (booking.color || (booking.type === 'EVENT' ? (isDark ? '#4ade80' : '#16a34a') : (isDark ? '#60a5fa' : '#2563eb'))) : (isDark ? '#374151' : '#e5e7eb')}`,
                         }}
@@ -1428,7 +1463,7 @@ export default function AdminPage() {
                       const bookingStartMinutes = startTime.getHours() * 60 + startTime.getMinutes()
                       const bookingEndMinutes = endTime.getHours() * 60 + endTime.getMinutes()
                       const durationMinutes = bookingEndMinutes - bookingStartMinutes
-                      rowSpan = Math.ceil(durationMinutes / 30)
+                      rowSpan = Math.ceil(durationMinutes / 15) // Cases de 15 minutes
                     }
                     
                     // Formater l'heure pour l'affichage
@@ -1448,8 +1483,10 @@ export default function AdminPage() {
                           gridColumn: booking ? `${gridColumn} / ${gridColumn + colSpan}` : gridColumn,
                           gridRow: booking ? `${gridRow} / ${gridRow + rowSpan}` : gridRow,
                           backgroundColor: booking ? (booking.color || '#22c55e') : 'transparent',
-                          borderTop: `2px solid ${booking ? (booking.color || (isDark ? '#4ade80' : '#16a34a')) : (isDark ? '#374151' : '#e5e7eb')}`,
-                          borderBottom: `2px solid ${booking ? (booking.color || (isDark ? '#4ade80' : '#16a34a')) : (isDark ? '#374151' : '#e5e7eb')}`,
+                          // Afficher les bordures seulement sur les créneaux de 30 minutes (0 et 30)
+                          // Supprimer les bordures des créneaux de 15 minutes (15 et 45)
+                          borderTop: (slot.minute === 15 || slot.minute === 45) ? 'none' : `2px solid ${booking ? (booking.color || (isDark ? '#4ade80' : '#16a34a')) : (isDark ? '#374151' : '#e5e7eb')}`,
+                          borderBottom: (slot.minute === 15 || slot.minute === 45 || (timeSlots[timeIndex + 1]?.minute === 15 || timeSlots[timeIndex + 1]?.minute === 45)) ? 'none' : `2px solid ${booking ? (booking.color || (isDark ? '#4ade80' : '#16a34a')) : (isDark ? '#374151' : '#e5e7eb')}`,
                           borderLeft: `2px solid ${booking ? (booking.color || (isDark ? '#4ade80' : '#16a34a')) : (isDark ? '#374151' : '#e5e7eb')}`,
                           borderRight: `2px solid ${booking ? (booking.color || (isDark ? '#4ade80' : '#16a34a')) : (isDark ? '#374151' : '#e5e7eb')}`,
                         }}
