@@ -48,7 +48,25 @@ export default function ClientsPage() {
         pageSize,
       })
 
-      setContacts(result.contacts)
+      // Appliquer le tri côté client
+      let sortedContacts = [...result.contacts]
+      if (sortField === 'name') {
+        sortedContacts.sort((a, b) => {
+          const nameA = getDisplayName(a).toLowerCase()
+          const nameB = getDisplayName(b).toLowerCase()
+          return sortDirection === 'asc' 
+            ? nameA.localeCompare(nameB)
+            : nameB.localeCompare(nameA)
+        })
+      } else if (sortField === 'created_at') {
+        sortedContacts.sort((a, b) => {
+          const dateA = new Date(a.created_at).getTime()
+          const dateB = new Date(b.created_at).getTime()
+          return sortDirection === 'asc' ? dateA - dateB : dateB - dateA
+        })
+      }
+
+      setContacts(sortedContacts)
       setTotalPages(result.totalPages)
       setTotal(result.total)
     } catch (error) {
@@ -56,7 +74,7 @@ export default function ClientsPage() {
     } finally {
       setLoading(false)
     }
-  }, [searchQuery, includeArchived, page, selectedBranch, searchContacts])
+  }, [searchQuery, includeArchived, page, selectedBranch, searchContacts, sortField, sortDirection])
 
   useEffect(() => {
     performSearch()
