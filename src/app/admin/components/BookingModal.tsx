@@ -1895,7 +1895,16 @@ export function BookingModal({
           onClose={() => setShowClientModal(false)}
           contact={selectedContact}
           branchId={branchId}
-          onSave={handleContactSaved}
+          onSave={async () => {
+            // Recharger le contact depuis la base après modification
+            if (selectedContact) {
+              const updated = await getContact(selectedContact.id)
+              if (updated) {
+                setSelectedContact(updated)
+              }
+            }
+            setShowClientModal(false)
+          }}
           isDark={isDark}
         />
       )}
