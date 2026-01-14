@@ -300,7 +300,9 @@ export default function ClientsPage() {
       }`}>
         <div className="flex items-center gap-4">
           <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <Search className={`absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 ${
+              isDark ? 'text-gray-400' : 'text-gray-500'
+            }`} />
             <input
               type="text"
               value={searchQuery}
@@ -309,7 +311,11 @@ export default function ClientsPage() {
                 setPage(1)
               }}
               placeholder="Rechercher par nom, téléphone, email..."
-              className="w-full pl-10 pr-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className={`w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                isDark
+                  ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-500'
+                  : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'
+              }`}
             />
           </div>
           <label className="flex items-center gap-2 cursor-pointer">
@@ -320,13 +326,23 @@ export default function ClientsPage() {
                 setIncludeArchived(e.target.checked)
                 setPage(1)
               }}
-              className="w-4 h-4 rounded border-gray-600 bg-gray-700 text-blue-600 focus:ring-blue-500"
+              className={`w-4 h-4 rounded text-blue-600 focus:ring-blue-500 ${
+                isDark
+                  ? 'border-gray-600 bg-gray-700'
+                  : 'border-gray-300 bg-white'
+              }`}
             />
-            <span className="text-sm text-gray-300">Inclure les archivés</span>
+            <span className={`text-sm ${
+              isDark ? 'text-gray-300' : 'text-gray-700'
+            }`}>Inclure les archivés</span>
           </label>
           <button
             onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
-            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors flex items-center gap-2"
+            className={`px-4 py-2 rounded-lg transition-colors flex items-center gap-2 ${
+              isDark
+                ? 'bg-gray-700 hover:bg-gray-600 text-white'
+                : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
+            }`}
           >
             <Settings className="w-4 h-4" />
             <span className="hidden sm:inline">Filtres avancés</span>
