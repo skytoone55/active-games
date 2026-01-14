@@ -14,6 +14,8 @@ export type Json =
 export type BookingType = 'GAME' | 'EVENT'
 export type BookingStatus = 'DRAFT' | 'CONFIRMED' | 'CANCELLED'
 export type UserRole = 'super_admin' | 'branch_admin' | 'agent'
+export type ContactStatus = 'active' | 'archived'
+export type ContactSource = 'admin_agenda' | 'public_booking'
 
 export interface Database {
   public: {
@@ -73,6 +75,44 @@ export interface Database {
         Insert: Omit<Database['public']['Tables']['event_rooms']['Row'], 'id' | 'created_at'>
         Update: Partial<Database['public']['Tables']['event_rooms']['Insert']>
       }
+      contacts: {
+        Row: {
+          id: string
+          branch_id_main: string
+          first_name: string
+          last_name: string | null
+          phone: string
+          email: string | null
+          notes_client: string | null
+          alias: string | null
+          status: ContactStatus
+          source: ContactSource
+          archived_at: string | null
+          archived_reason: string | null
+          deleted_at: string | null
+          created_at: string
+          updated_at: string
+          created_by: string | null
+          updated_by: string | null
+        }
+        Insert: Omit<Database['public']['Tables']['contacts']['Row'], 'id' | 'created_at' | 'updated_at' | 'status' | 'source'> & {
+          status?: ContactStatus
+          source?: ContactSource
+        }
+        Update: Partial<Database['public']['Tables']['contacts']['Insert']>
+      }
+      booking_contacts: {
+        Row: {
+          id: string
+          booking_id: string
+          contact_id: string
+          is_primary: boolean
+          role: string | null
+          created_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['booking_contacts']['Row'], 'id' | 'created_at'>
+        Update: Partial<Database['public']['Tables']['booking_contacts']['Insert']>
+      }
       bookings: {
         Row: {
           id: string
@@ -89,10 +129,12 @@ export interface Database {
           customer_last_name: string
           customer_phone: string
           customer_email: string | null
+          customer_notes_at_booking: string | null
           reference_code: string
           total_price: number | null
           notes: string | null
           color: string | null
+          primary_contact_id: string | null
           created_at: string
           updated_at: string
           cancelled_at: string | null
@@ -158,10 +200,24 @@ export interface Database {
 export type Branch = Database['public']['Tables']['branches']['Row']
 export type BranchSettings = Database['public']['Tables']['branch_settings']['Row']
 export type EventRoom = Database['public']['Tables']['event_rooms']['Row']
+export type Contact = Database['public']['Tables']['contacts']['Row']
+export type BookingContact = Database['public']['Tables']['booking_contacts']['Row']
 export type Booking = Database['public']['Tables']['bookings']['Row']
 export type BookingSlot = Database['public']['Tables']['booking_slots']['Row']
 export type Profile = Database['public']['Tables']['profiles']['Row']
 export type UserBranch = Database['public']['Tables']['user_branches']['Row']
+
+// Type étendu pour Booking avec relations contacts
+export interface BookingWithContacts extends Booking {
+  booking_contacts?: Array<{
+    id: string
+    contact: Contact
+    is_primary: boolean
+    role: string | null
+  }>
+  primaryContact?: Contact | null
+  allContacts?: Contact[]
+}
 
 // Type pour un utilisateur avec son profil et ses branches
 export interface UserWithProfile {
