@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { LogOut, User, Settings, ChevronDown, Sun, Moon, Users, Calendar, LayoutDashboard } from 'lucide-react'
+import { LogOut, User, Settings, ChevronDown, Sun, Moon, Users, Calendar } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import type { AuthUser } from '@/hooks/useAuth'
@@ -29,32 +29,27 @@ export function AdminHeader({
 }: AdminHeaderProps) {
   const pathname = usePathname()
   const [showUserMenu, setShowUserMenu] = useState(false)
-  const [showNavMenu, setShowNavMenu] = useState(false)
   const [mounted, setMounted] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
-  const navMenuRef = useRef<HTMLDivElement>(null)
 
   // Éviter les problèmes d'hydratation
   useEffect(() => {
     setMounted(true)
   }, [])
 
-  // Fermer les menus quand on clique ailleurs
+  // Fermer le menu quand on clique ailleurs
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
         setShowUserMenu(false)
       }
-      if (navMenuRef.current && !navMenuRef.current.contains(event.target as Node)) {
-        setShowNavMenu(false)
-      }
     }
 
-    if (showUserMenu || showNavMenu) {
+    if (showUserMenu) {
       document.addEventListener('mousedown', handleClickOutside)
     }
     return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [showUserMenu, showNavMenu])
+  }, [showUserMenu])
 
   const getRoleBadge = () => {
     switch (user.role) {
@@ -100,49 +95,30 @@ export function AdminHeader({
         </div>
 
         {/* Actions */}
-        <div className="flex items-center gap-4">
-          {/* Menu Navigation */}
-          <div ref={navMenuRef} className="relative">
-            <button
-              onClick={() => setShowNavMenu(!showNavMenu)}
-              className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg transition-colors flex items-center gap-2"
-            >
-              <LayoutDashboard className="w-4 h-4" />
-              <span className="hidden sm:inline">Navigation</span>
-              <ChevronDown className={`w-4 h-4 transition-transform ${showNavMenu ? 'rotate-180' : ''}`} />
-            </button>
-
-            {mounted && showNavMenu && (
-              <div className="absolute right-0 top-full mt-2 w-48 bg-gray-800 border border-gray-700 rounded-lg shadow-xl z-50 overflow-hidden">
-                <div className="py-2">
-                  <Link
-                    href="/admin"
-                    className={`w-full px-4 py-2 text-left flex items-center gap-2 transition-colors ${
-                      pathname === '/admin'
-                        ? 'bg-blue-600 text-white'
-                        : 'text-gray-300 hover:bg-gray-700'
-                    }`}
-                    onClick={() => setShowNavMenu(false)}
-                  >
-                    <Calendar className="w-4 h-4" />
-                    Agenda
-                  </Link>
-                  <Link
-                    href="/admin/clients"
-                    className={`w-full px-4 py-2 text-left flex items-center gap-2 transition-colors ${
-                      pathname === '/admin/clients'
-                        ? 'bg-blue-600 text-white'
-                        : 'text-gray-300 hover:bg-gray-700'
-                    }`}
-                    onClick={() => setShowNavMenu(false)}
-                  >
-                    <Users className="w-4 h-4" />
-                    Clients (CRM)
-                  </Link>
-                </div>
-              </div>
-            )}
-          </div>
+        <div className="flex items-center gap-3">
+          {/* Boutons Navigation - Agenda et CRM */}
+          <Link
+            href="/admin"
+            className={`px-4 py-2 rounded-lg transition-colors flex items-center gap-2 ${
+              pathname === '/admin'
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-800 hover:bg-gray-700 text-gray-300'
+            }`}
+          >
+            <Calendar className="w-4 h-4" />
+            <span className="hidden sm:inline">Agenda</span>
+          </Link>
+          <Link
+            href="/admin/clients"
+            className={`px-4 py-2 rounded-lg transition-colors flex items-center gap-2 ${
+              pathname === '/admin/clients'
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-800 hover:bg-gray-700 text-gray-300'
+            }`}
+          >
+            <Users className="w-4 h-4" />
+            <span className="hidden sm:inline">CRM</span>
+          </Link>
 
           {/* Toggle thème */}
           <button
