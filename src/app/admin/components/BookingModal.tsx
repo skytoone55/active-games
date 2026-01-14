@@ -433,7 +433,7 @@ export function BookingModal({
           : (notes.trim() || contactId
               ? `Contact ID: ${contactId}\n${notes.trim()}`.trim()
               : `Contact ID: ${contactId}`),
-        // color: color, // Désactivé temporairement jusqu'à ce que la colonne soit ajoutée dans la base de données
+        color: color,
         slots
       }
 
@@ -1300,8 +1300,8 @@ export function BookingModal({
               type="submit"
               onClick={handleSubmit}
               disabled={loading || isOverCapacity || parsedParticipants < 1}
-              className="px-6 py-2 rounded-lg text-white flex items-center gap-2 disabled:opacity-50 bg-blue-600 hover:bg-blue-700"
-              // style={{ backgroundColor: color }} // Désactivé temporairement - utilise la couleur par défaut
+              className="px-6 py-2 rounded-lg text-white flex items-center gap-2 disabled:opacity-50"
+              style={{ backgroundColor: color }}
             >
               {loading ? (
                 <>

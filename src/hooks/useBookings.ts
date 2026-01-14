@@ -151,10 +151,10 @@ export function useBookings(branchId: string | null, date?: string) {
         notes: data.notes,
       }
       
-      // Couleur désactivée temporairement jusqu'à ce que la colonne soit ajoutée dans la base de données
-      // if (data.color !== undefined && data.color !== null && data.color !== '') {
-      //   insertData.color = data.color
-      // }
+      // Couleur activée - la colonne existe dans la base de données
+      if (data.color !== undefined && data.color !== null && data.color !== '') {
+        insertData.color = data.color
+      }
       
       const { data: newBooking, error: bookingError } = await supabase
         .from('bookings')
@@ -176,65 +176,7 @@ export function useBookings(branchId: string | null, date?: string) {
         console.error('Full error object (JSON):', JSON.stringify(bookingError, null, 2))
         console.error('Insert data that was sent:', JSON.stringify(insertData, null, 2))
         
-        // Si on a un champ color et qu'une erreur se produit, réessayer automatiquement sans color
-        // (la colonne color peut ne pas exister dans la base de données)
-        if (insertData.color !== undefined) {
-          console.warn('⚠️ Error occurred with color field. Retrying without color field...')
-          console.log('insertData.color:', insertData.color)
-          const retryData = { ...insertData }
-          delete retryData.color
-          
-          const { data: retryBooking, error: retryError } = await supabase
-            .from('bookings')
-            .insert(retryData as any)
-            .select()
-            .single<Booking>()
-          
-          if (retryError) {
-            console.error('❌ Retry also failed:', retryError)
-            console.error('Retry error details:', JSON.stringify(retryError, null, 2))
-            throw new Error(`Supabase booking error: ${retryError.message || JSON.stringify(retryError)}`)
-          }
-          
-          console.log('✅ Retry successful! Booking created without color field.')
-          // Utiliser le résultat du retry
-          const finalBooking = retryBooking
-          // Créer les slots
-          if (data.slots && data.slots.length > 0) {
-            const slotsToInsert = data.slots.map(slot => ({
-              booking_id: finalBooking.id,
-              branch_id: finalBooking.branch_id,
-              slot_start: slot.slot_start,
-              slot_end: slot.slot_end,
-              participants_count: slot.participants_count,
-              slot_type: 'game_zone',
-            }))
-
-            const { data: newSlots, error: slotsError } = await supabase
-              .from('booking_slots')
-              .insert(slotsToInsert as any)
-              .select()
-              .returns<BookingSlot[]>()
-
-            if (slotsError) {
-              console.error('Slots insert error:', slotsError)
-              throw new Error(`Supabase slots error: ${slotsError.message} (code: ${slotsError.code})`)
-            }
-
-            const result: BookingWithSlots = {
-              ...finalBooking,
-              slots: newSlots || [],
-            }
-
-            await fetchBookings()
-            return result
-          }
-
-          await fetchBookings()
-          return { ...finalBooking, slots: [] }
-        }
-        
-        // Si pas de champ color, l'erreur vient d'autre chose
+        // L'erreur vient d'autre chose (la colonne color existe maintenant)
         const errorMessage = bookingError.message || 'Unknown error'
         const errorCode = bookingError.code || 'unknown'
         throw new Error(`Supabase booking error: ${errorMessage} (code: ${errorCode})`)
@@ -315,8 +257,8 @@ export function useBookings(branchId: string | null, date?: string) {
       if (data.customer_phone !== undefined) updateData.customer_phone = data.customer_phone
       if (data.customer_email !== undefined) updateData.customer_email = data.customer_email
       if (data.notes !== undefined) updateData.notes = data.notes
-      // Couleur désactivée temporairement jusqu'à ce que la colonne soit ajoutée dans la base de données
-      // if (data.color !== undefined) updateData.color = data.color
+      // Couleur activée - la colonne existe dans la base de données
+      if (data.color !== undefined) updateData.color = data.color
       updateData.updated_at = new Date().toISOString()
 
       const { data: updatedBooking, error: bookingError } = await supabase
