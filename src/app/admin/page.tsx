@@ -1169,8 +1169,18 @@ export default function AdminPage() {
     return null
   }
 
-  const selectedBranch = userData.branches.find(b => b.id === selectedBranchId)
+  const selectedBranchFromUserData = userData.branches.find(b => b.id === selectedBranchId)
+  // Récupérer le Branch complet depuis useBranches
+  const selectedBranch = branches.find(b => b.id === selectedBranchId) || null
   const isDark = theme === 'dark'
+
+  // Conversion userData vers format AuthUser pour AdminHeader
+  const authUser = userData ? {
+    id: userData.id,
+    email: userData.email,
+    role: userData.role as any,
+    profile: userData.profile,
+  } : null
 
   // Récupérer les salles et settings de la branche sélectionnée
   const branchWithDetails = branches.find(b => b.id === selectedBranchId)
@@ -1229,114 +1239,21 @@ export default function AdminPage() {
 
   return (
     <div className={`min-h-screen ${isDark ? 'bg-gray-900' : 'bg-gray-100'}`}>
-      {/* Header */}
-      <header className="bg-gray-900 border-b border-gray-800 px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-6">
-            <h1 className="text-xl font-bold text-white">
-              Active Games
-              <span className="text-blue-400 ml-2">Admin</span>
-            </h1>
-
-            {/* Sélecteur d'agence */}
-            {userData.branches.length > 0 && (
-              <div className="relative">
-                <button
-                  onClick={() => setShowBranchMenu(!showBranchMenu)}
-                  className="flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors text-white"
-                >
-                  <span>{selectedBranch?.name || 'Sélectionner'}</span>
-                  <ChevronDown className={`w-4 h-4 transition-transform ${showBranchMenu ? 'rotate-180' : ''}`} />
-                </button>
-
-                {showBranchMenu && (
-                  <div className="absolute top-full left-0 mt-2 w-56 bg-gray-800 border border-gray-700 rounded-lg shadow-xl z-50 overflow-hidden">
-                    {userData.branches.map((branch) => (
-                      <button
-                        key={branch.id}
-                        onClick={() => {
-                          setSelectedBranchId(branch.id)
-                          setShowBranchMenu(false)
-                        }}
-                        className={`w-full px-4 py-2 text-left hover:bg-gray-700 ${
-                          branch.id === selectedBranchId ? 'bg-blue-600 text-white' : 'text-gray-300'
-                        }`}
-                      >
-                        {branch.name}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-
-          <div className="flex items-center gap-4">
-            {/* Toggle thème */}
-            <button
-              onClick={toggleTheme}
-              className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg"
-            >
-              {theme === 'light' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
-            </button>
-
-            {/* Menu utilisateur */}
-            <div className="relative">
-              <button
-                onClick={() => setShowUserMenu(!showUserMenu)}
-                className="flex items-center gap-3 px-3 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg"
-              >
-                <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
-                  <User className="w-4 h-4 text-white" />
-                </div>
-                <div className="text-left hidden sm:block">
-                  <div className="text-sm text-white font-medium">
-                    {userData.profile?.full_name || userData.email}
-                  </div>
-                  <span className="px-2 py-0.5 bg-purple-500/20 text-purple-400 text-xs rounded-full">
-                    {userData.role === 'super_admin' ? 'Super Admin' :
-                     userData.role === 'branch_admin' ? 'Admin Agence' : 'Agent'}
-                  </span>
-                </div>
-                <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${showUserMenu ? 'rotate-180' : ''}`} />
-              </button>
-
-              {showUserMenu && (
-                <div className="absolute right-0 top-full mt-2 w-56 bg-gray-800 border border-gray-700 rounded-lg shadow-xl z-50 overflow-hidden">
-                  <div className="px-4 py-3 border-b border-gray-700">
-                    <div className="text-sm text-white font-medium">{userData.profile?.full_name || 'Utilisateur'}</div>
-                    <div className="text-xs text-gray-400">{userData.email}</div>
-                  </div>
-                  <button
-                    onClick={() => {
-                      setShowSettingsModal(true)
-                      setShowUserMenu(false)
-                    }}
-                    className="w-full px-4 py-2 text-left text-gray-300 hover:bg-gray-700 flex items-center gap-2 border-b border-gray-700"
-                  >
-                    <Settings className="w-4 h-4" />
-                    Paramètres
-                  </button>
-                  <button
-                    onClick={handleDeleteAllBookings}
-                    className="w-full px-4 py-2 text-left text-red-400 hover:bg-gray-700 flex items-center gap-2 border-b border-gray-700"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                    Supprimer toutes les réservations
-                  </button>
-                  <button
-                    onClick={handleSignOut}
-                    className="w-full px-4 py-2 text-left text-red-400 hover:bg-gray-700 flex items-center gap-2"
-                  >
-                    <LogOut className="w-4 h-4" />
-                    Déconnexion
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </header>
+      {/* Header avec navigation */}
+      {!loading && authUser && selectedBranch && (
+        <AdminHeader
+          user={authUser}
+          branches={branches}
+          selectedBranch={selectedBranch}
+          onBranchSelect={(branchId) => {
+            setSelectedBranchId(branchId)
+            setShowBranchMenu(false)
+          }}
+          onSignOut={handleSignOut}
+          theme={theme}
+          onToggleTheme={toggleTheme}
+        />
+      )}
 
       {/* Contenu principal */}
       <main className="p-6">

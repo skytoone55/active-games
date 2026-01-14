@@ -88,16 +88,17 @@ export function MergeContactsModal({
         // Récupérer les réservations liées
         const { data: bookingContacts } = await supabase
           .from('booking_contacts')
-          .select('booking_id')
+          .select('booking_id, contact_id')
           .eq('contact_id', duplicate.id)
 
         if (bookingContacts && bookingContacts.length > 0) {
           // Pour chaque réservation, vérifier si le contact principal est déjà lié
-          for (const bc of bookingContacts) {
+          for (const bc of bookingContacts as any[]) {
+            const bookingId = bc.booking_id
             const { data: existing } = await supabase
               .from('booking_contacts')
               .select('id')
-              .eq('booking_id', bc.booking_id)
+              .eq('booking_id', bookingId)
               .eq('contact_id', primaryContact.id)
               .single()
 
@@ -106,14 +107,14 @@ export function MergeContactsModal({
               await supabase
                 .from('booking_contacts')
                 .update({ contact_id: primaryContact.id })
-                .eq('booking_id', bc.booking_id)
+                .eq('booking_id', bookingId)
                 .eq('contact_id', duplicate.id)
             } else {
               // Supprimer la liaison dupliquée
               await supabase
                 .from('booking_contacts')
                 .delete()
-                .eq('booking_id', bc.booking_id)
+                .eq('booking_id', bookingId)
                 .eq('contact_id', duplicate.id)
             }
           }
