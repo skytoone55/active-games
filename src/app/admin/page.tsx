@@ -459,7 +459,13 @@ export default function AdminPage() {
         })
 
         if (branches.length > 0) {
-          setSelectedBranchId(branches[0].id)
+          // Sélectionner Rishon LeZion par défaut si disponible
+          const rishonBranch = branches.find(
+            b => b.slug === 'rishon-lezion' || 
+                 b.name.toLowerCase().includes('rishon') ||
+                 b.name.toLowerCase().includes('rly')
+          )
+          setSelectedBranchId(rishonBranch?.id || branches[0].id)
         }
       } catch (error) {
         console.error('Error loading user data:', error)
