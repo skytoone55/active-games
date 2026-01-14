@@ -3,7 +3,7 @@
  * Toutes les dates sont normalisées pour utiliser ce fuseau horaire
  */
 
-import { zonedTimeToUtc, utcToZonedTime, format } from 'date-fns-tz'
+import { fromZonedTime, toZonedTime, format } from 'date-fns-tz'
 
 const JERUSALEM_TIMEZONE = 'Asia/Jerusalem'
 
@@ -19,7 +19,7 @@ export function createJerusalemDate(date: Date, hour: number, minute: number): s
   const localDate = new Date(date.getFullYear(), date.getMonth(), date.getDate(), hour, minute, 0, 0)
   
   // Convertir cette date (considérée comme étant en heure de Jérusalem) en UTC
-  const utcDate = zonedTimeToUtc(localDate, JERUSALEM_TIMEZONE)
+  const utcDate = fromZonedTime(localDate, JERUSALEM_TIMEZONE)
   
   return utcDate.toISOString()
 }
@@ -33,7 +33,7 @@ export function parseJerusalemDate(isoString: string): { date: Date; hour: numbe
   const utcDate = new Date(isoString)
   
   // Convertir de UTC vers l'heure de Jérusalem
-  const jerusalemDate = utcToZonedTime(utcDate, JERUSALEM_TIMEZONE)
+  const jerusalemDate = toZonedTime(utcDate, JERUSALEM_TIMEZONE)
   
   return {
     date: new Date(jerusalemDate.getFullYear(), jerusalemDate.getMonth(), jerusalemDate.getDate()),
