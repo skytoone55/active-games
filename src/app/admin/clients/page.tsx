@@ -7,6 +7,7 @@ import { useContacts, type SearchContactsResult } from '@/hooks/useContacts'
 import { useBranches } from '@/hooks/useBranches'
 import { useAuth } from '@/hooks/useAuth'
 import { ClientModal } from './components/ClientModal'
+import { MergeContactsModal } from './components/MergeContactsModal'
 import type { Contact } from '@/lib/supabase/types'
 
 export default function ClientsPage() {
@@ -31,6 +32,8 @@ export default function ClientsPage() {
   const [contactStats, setContactStats] = useState<any>(null)
   const [sortField, setSortField] = useState<'name' | 'created_at' | 'last_activity'>('created_at')
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
+  const [duplicatesToMerge, setDuplicatesToMerge] = useState<Contact[]>([])
+  const [showMergeModal, setShowMergeModal] = useState(false)
   const [duplicatesToMerge, setDuplicatesToMerge] = useState<Contact[]>([])
   const [showMergeModal, setShowMergeModal] = useState(false)
 
