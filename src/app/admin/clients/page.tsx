@@ -36,8 +36,6 @@ export default function ClientsPage() {
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
   const [duplicatesToMerge, setDuplicatesToMerge] = useState<Contact[]>([])
   const [showMergeModal, setShowMergeModal] = useState(false)
-  const [duplicatesToMerge, setDuplicatesToMerge] = useState<Contact[]>([])
-  const [showMergeModal, setShowMergeModal] = useState(false)
 
   const pageSize = 20
 
