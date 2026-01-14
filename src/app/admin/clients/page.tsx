@@ -336,16 +336,16 @@ export default function ClientsPage() {
               <div className="mt-6 pt-6 border-t border-gray-700">
                 <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
                   <Calendar className="w-5 h-5" />
-                  Réservations liées
+                  Réservations liées ({linkedBookings.length})
                 </h3>
                 {loadingBookings ? (
                   <div className="flex items-center justify-center py-8">
                     <Loader2 className="w-6 h-6 animate-spin text-blue-400" />
                   </div>
                 ) : linkedBookings.length === 0 ? (
-                  <p className="text-gray-400 text-sm">Aucune réservation liée</p>
+                  <p className="text-gray-400 text-sm">Aucune réservation liée à ce contact</p>
                 ) : (
-                  <div className="space-y-2">
+                  <div className="space-y-2 max-h-96 overflow-y-auto">
                     {linkedBookings.map((booking) => {
                       const bookingDate = new Date(booking.start_datetime)
                       const isPast = bookingDate < new Date()
@@ -354,7 +354,9 @@ export default function ClientsPage() {
                         <div
                           key={booking.id}
                           onClick={() => {
-                            router.push(`/admin?booking=${booking.id}`)
+                            // Deep-link vers la réservation dans l'agenda
+                            const bookingDateStr = bookingDate.toISOString().split('T')[0]
+                            router.push(`/admin?date=${bookingDateStr}&booking=${booking.id}`)
                             setShowDetailsModal(false)
                           }}
                           className={`p-3 rounded-lg border cursor-pointer transition-colors ${
@@ -364,15 +366,15 @@ export default function ClientsPage() {
                           }`}
                         >
                           <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-3 flex-1 min-w-0">
                               {booking.type === 'EVENT' ? (
-                                <PartyPopper className={`w-5 h-5 ${isPast ? 'text-gray-400' : 'text-green-400'}`} />
+                                <PartyPopper className={`w-5 h-5 flex-shrink-0 ${isPast ? 'text-gray-400' : 'text-green-400'}`} />
                               ) : (
-                                <Gamepad2 className={`w-5 h-5 ${isPast ? 'text-gray-400' : 'text-blue-400'}`} />
+                                <Gamepad2 className={`w-5 h-5 flex-shrink-0 ${isPast ? 'text-gray-400' : 'text-blue-400'}`} />
                               )}
-                              <div>
-                                <div className="font-medium text-white">
-                                  {booking.reference_code} - {booking.type}
+                              <div className="flex-1 min-w-0">
+                                <div className="font-medium text-white truncate">
+                                  {booking.reference_code} - {booking.type === 'EVENT' ? 'Événement' : 'Jeu'}
                                 </div>
                                 <div className="text-sm text-gray-400">
                                   {bookingDate.toLocaleDateString('fr-FR', {
@@ -386,7 +388,7 @@ export default function ClientsPage() {
                                 </div>
                               </div>
                             </div>
-                            <div className="text-right">
+                            <div className="text-right flex-shrink-0 ml-3">
                               <div className="text-sm font-medium text-white">
                                 {booking.participants_count} pers.
                               </div>

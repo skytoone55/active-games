@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, Fragment } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Loader2, Plus, LogOut, User, ChevronDown, Sun, Moon, ChevronLeft, ChevronRight, Calendar, Users, PartyPopper, Gamepad2, Search, Trash2, Settings } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useBookings, type BookingWithSlots, type CreateBookingData } from '@/hooks/useBookings'
@@ -22,6 +22,7 @@ interface UserData {
 
 export default function AdminPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [loading, setLoading] = useState(true)
   const [userData, setUserData] = useState<UserData | null>(null)
   const [selectedBranchId, setSelectedBranchId] = useState<string | null>(null)
@@ -117,6 +118,64 @@ export default function AdminPage() {
     const bookingDate = extractLocalDateFromISO(b.start_datetime)
     return bookingDate === dateStr
   })
+
+  // CRM: Gérer les query params pour deep-link vers une réservation
+  useEffect(() => {
+    const bookingId = searchParams?.get('booking')
+    const dateParam = searchParams?.get('date')
+    
+    if (bookingId && allBookings.length > 0) {
+      // Trouver la réservation
+      const booking = allBookings.find(b => b.id === bookingId)
+      
+      if (booking) {
+        // Si une date est fournie, naviguer vers cette date
+        if (dateParam) {
+          const targetDate = new Date(dateParam)
+          setSelectedDate(targetDate)
+        } else {
+          // Sinon, utiliser la date de la réservation
+          const bookingDate = extractLocalDateFromISO(booking.start_datetime)
+          const targetDate = new Date(bookingDate)
+          setSelectedDate(targetDate)
+        }
+        
+        // Ouvrir le modal avec cette réservation
+        const startTime = booking.game_start_datetime ? new Date(booking.game_start_datetime) : new Date(booking.start_datetime)
+        setModalInitialHour(startTime.getHours())
+        setModalInitialMinute(startTime.getMinutes())
+        setEditingBooking(booking)
+        setModalDefaultBookingType(booking.type as 'GAME' | 'EVENT')
+        setShowBookingModal(true)
+        
+        // Nettoyer l'URL
+        router.replace('/admin')
+      }
+    }
+  }, [searchParams, allBookings, router])
+
+  // CRM: Helper pour obtenir les données du contact (live avec fallback snapshot)
+  const getContactDisplayData = (booking: BookingWithSlots) => {
+    // Utiliser les données live du contact si disponible
+    if (booking.primaryContact) {
+      return {
+        firstName: booking.primaryContact.first_name || '',
+        lastName: booking.primaryContact.last_name || '',
+        phone: booking.primaryContact.phone || '',
+        email: booking.primaryContact.email || '',
+        notes: booking.primaryContact.notes_client || '',
+      }
+    }
+    
+    // Fallback sur les snapshot si le contact n'est pas disponible (archivé ou non lié)
+    return {
+      firstName: booking.customer_first_name || '',
+      lastName: booking.customer_last_name || '',
+      phone: booking.customer_phone || '',
+      email: booking.customer_email || '',
+      notes: booking.customer_notes_at_booking || '',
+    }
+  }
 
   // Type pour un segment UI (uniquement pour l'affichage)
   interface UISegment {
@@ -749,13 +808,14 @@ export default function AdminPage() {
   const searchResults = agendaSearchQuery
     ? bookings.filter((b) => {
         const searchLower = agendaSearchQuery.toLowerCase()
-        const customerName = `${b.customer_first_name || ''} ${b.customer_last_name || ''}`.toLowerCase().trim()
+        const contactData = getContactDisplayData(b)
+        const customerName = `${contactData.firstName || ''} ${contactData.lastName || ''}`.toLowerCase().trim()
         const bookingDate = extractLocalDateFromISO(b.start_datetime)
         const startTime = new Date(b.start_datetime)
         const timeStr = `${String(startTime.getHours()).padStart(2, '0')}:${String(startTime.getMinutes()).padStart(2, '0')}`
         const notes = (b.notes || '').toLowerCase()
-        const customerPhone = (b.customer_phone || '').toLowerCase()
-        const customerEmail = (b.customer_email || '').toLowerCase()
+        const customerPhone = contactData.phone.toLowerCase()
+        const customerEmail = contactData.email.toLowerCase()
         const referenceCode = (b.reference_code || '').toLowerCase()
         
         return (
@@ -1307,7 +1367,8 @@ export default function AdminPage() {
                       year: 'numeric'
                     })
                     const timeFormatted = `${String(bookingDate.getHours()).padStart(2, '0')}:${String(bookingDate.getMinutes()).padStart(2, '0')}`
-                    const customerName = `${booking.customer_first_name || ''} ${booking.customer_last_name || ''}`.trim() || 'Sans nom'
+                    const contactData = getContactDisplayData(booking)
+                    const customerName = `${contactData.firstName || ''} ${contactData.lastName || ''}`.trim() || 'Sans nom'
                     
                     return (
                       <button
@@ -1809,12 +1870,18 @@ export default function AdminPage() {
                           borderLeft: `2px solid ${borderLeftColor}`,
                           borderRight: `2px solid ${borderRightColor}`,
                         }}
-                        title={booking ? `${booking.customer_first_name} ${booking.customer_last_name} - ${booking.participants_count} pers.` : ''}
+                        title={booking ? (() => {
+                          const contactData = getContactDisplayData(booking)
+                          return `${contactData.firstName} ${contactData.lastName || ''}`.trim() || 'Sans nom'
+                        })() + ` - ${booking.participants_count} pers.` : ''}
                       >
                         {/* Badge OB supprimé - la colonne OB est la source de vérité */}
                         {booking && showDetails && (
                           <div className={`${getTextSizeClass(displayTextSize)} ${getTextWeightClass(displayTextWeight)} leading-tight ${isDark ? 'text-white' : 'text-white'}`} style={{ textShadow: '0 1px 3px rgba(0,0,0,0.5)' }}>
-                            {booking.customer_first_name}{booking.participants_count}
+                            {(() => {
+                              const contactData = getContactDisplayData(booking)
+                              return contactData.firstName || 'Sans nom'
+                            })()}{booking.participants_count}
                           </div>
                         )}
                       </div>
@@ -2034,12 +2101,18 @@ export default function AdminPage() {
                           borderLeft: `2px solid ${borderLeftColor}`,
                           borderRight: `2px solid ${borderRightColor}`,
                         }}
-                        title={booking ? `${booking.customer_first_name} ${booking.customer_last_name} - ${booking.participants_count} pers.` : ''}
+                        title={booking ? (() => {
+                          const contactData = getContactDisplayData(booking)
+                          return `${contactData.firstName} ${contactData.lastName || ''}`.trim() || 'Sans nom'
+                        })() + ` - ${booking.participants_count} pers.` : ''}
                       >
                         {booking && (
                           <>
                             <div className={`${getTextSizeClass(displayTextSize)} ${getTextWeightClass(displayTextWeight)} leading-tight ${isDark ? 'text-white' : 'text-white'}`} style={{ textShadow: '0 1px 3px rgba(0,0,0,0.5)' }}>
-                              {booking.customer_first_name}
+                              {(() => {
+                                const contactData = getContactDisplayData(booking)
+                                return contactData.firstName || 'Sans nom'
+                              })()}
                             </div>
                             <div className={`${getTextSizeClass(displayTextSize)} ${getTextWeightClass(displayTextWeight)} leading-tight ${isDark ? 'text-white/95' : 'text-white/95'}`} style={{ textShadow: '0 1px 3px rgba(0,0,0,0.5)' }}>
                               {booking.participants_count} pers.

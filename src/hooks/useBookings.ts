@@ -2,11 +2,13 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { getClient } from '@/lib/supabase/client'
-import type { Booking, BookingSlot, BookingType, BookingStatus } from '@/lib/supabase/types'
+import type { Booking, BookingSlot, BookingType, BookingStatus, Contact } from '@/lib/supabase/types'
 
-// Type étendu avec les slots
+// Type étendu avec les slots et contacts
 export interface BookingWithSlots extends Booking {
   slots: BookingSlot[]
+  primaryContact?: Contact | null
+  allContacts?: Contact[]
 }
 
 // Données pour créer une réservation
@@ -97,11 +99,72 @@ export function useBookings(branchId: string | null, date?: string) {
         .order('slot_start')
         .returns<BookingSlot[]>()
 
-      // Associer les slots à chaque booking
-      const bookingsWithSlots: BookingWithSlots[] = bookingsData.map(booking => ({
-        ...booking,
-        slots: slotsData?.filter(s => s.booking_id === booking.id) || [],
-      }))
+      // CRM: Charger les contacts liés pour chaque booking
+      const { data: bookingContactsData } = await supabase
+        .from('booking_contacts')
+        .select('*, contact:contacts(*)')
+        .in('booking_id', bookingIds)
+
+      // Créer un map des contacts par booking_id
+      const contactsByBooking = new Map<string, { primary: Contact | null; all: Contact[] }>()
+      
+      bookingContactsData?.forEach((bc: any) => {
+        if (!bc.contact) return
+        
+        const contact = bc.contact as Contact
+        const bookingId = bc.booking_id
+        
+        if (!contactsByBooking.has(bookingId)) {
+          contactsByBooking.set(bookingId, { primary: null, all: [] })
+        }
+        
+        const contacts = contactsByBooking.get(bookingId)!
+        contacts.all.push(contact)
+        
+        if (bc.is_primary) {
+          contacts.primary = contact
+        }
+      })
+
+      // Charger les contacts principaux via primary_contact_id (fallback pour anciennes données)
+      const primaryContactIds = bookingsData
+        .filter(b => b.primary_contact_id && !contactsByBooking.has(b.id))
+        .map(b => b.primary_contact_id!)
+
+      let primaryContactsMap = new Map<string, Contact>()
+      if (primaryContactIds.length > 0) {
+        const { data: primaryContactsData } = await supabase
+          .from('contacts')
+          .select('*')
+          .in('id', primaryContactIds)
+          .eq('status', 'active')
+          .returns<Contact[]>()
+
+        primaryContactsData?.forEach(contact => {
+          primaryContactsMap.set(contact.id, contact)
+        })
+      }
+
+      // Associer les slots et contacts à chaque booking
+      const bookingsWithSlots: BookingWithSlots[] = bookingsData.map(booking => {
+        const slots = slotsData?.filter(s => s.booking_id === booking.id) || []
+        const contacts = contactsByBooking.get(booking.id)
+        
+        // Contact principal : depuis booking_contacts en priorité, sinon depuis primary_contact_id
+        let primaryContact: Contact | null = null
+        if (contacts?.primary) {
+          primaryContact = contacts.primary
+        } else if (booking.primary_contact_id) {
+          primaryContact = primaryContactsMap.get(booking.primary_contact_id) || null
+        }
+
+        return {
+          ...booking,
+          slots,
+          primaryContact,
+          allContacts: contacts?.all || (primaryContact ? [primaryContact] : []),
+        }
+      })
 
       setBookings(bookingsWithSlots)
     } catch (err) {
