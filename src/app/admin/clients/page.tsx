@@ -196,16 +196,23 @@ export default function ClientsPage() {
 
   return (
     <div className="min-h-screen bg-gray-900 text-white">
-      {/* Header */}
+      {/* Header avec navigation */}
+      <AdminHeader
+        user={user}
+        branches={branches}
+        selectedBranch={selectedBranch}
+        onBranchSelect={(branchId) => {
+          setSelectedBranchId(branchId)
+        }}
+        onSignOut={handleSignOut}
+        theme="dark"
+        onToggleTheme={() => {}}
+      />
+
+      {/* Sous-header avec titre et actions */}
       <div className="bg-gray-800 border-b border-gray-700 px-6 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <button
-              onClick={() => router.push('/admin')}
-              className="p-2 hover:bg-gray-700 rounded-lg transition-colors"
-            >
-              <ChevronLeft className="w-5 h-5" />
-            </button>
             <h1 className="text-2xl font-bold">Gestion des Clients</h1>
             <span className="px-3 py-1 bg-blue-600/20 text-blue-400 text-sm rounded-full">
               {selectedBranch.name}
