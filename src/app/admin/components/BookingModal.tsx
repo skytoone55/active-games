@@ -395,7 +395,7 @@ export function BookingModal({
         game_start_datetime: gameStartDate.toISOString(),
         game_end_datetime: gameEndDate.toISOString(),
         participants_count: parsedParticipants,
-        event_room_id: bookingType === 'EVENT' ? eventRoomId : undefined,
+        event_room_id: bookingType === 'EVENT' ? (eventRoomId ?? undefined) : undefined,
         customer_first_name: firstName.trim(),
         customer_last_name: lastName.trim() || '', // Nom optionnel, chaîne vide si non renseigné
         customer_phone: phone.trim(),
