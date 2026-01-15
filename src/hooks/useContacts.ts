@@ -213,12 +213,13 @@ export function useContacts(branchId: string | null) {
       // Toujours mettre à jour updated_at (via trigger, mais on peut le faire explicitement)
       updateData.updated_at = new Date().toISOString()
 
-      const { data: updatedContact, error: updateError } = await supabase
-        .from('contacts')
-        .update(updateData as any)
+      // @ts-ignore - Supabase typing issue with dynamic updates
+      const query = supabase.from('contacts') as any
+      const { data: updatedContact, error: updateError } = await query
+        .update(updateData)
         .eq('id', contactId)
         .select()
-        .single<Contact>()
+        .single()
 
       if (updateError) throw updateError
 
@@ -237,14 +238,15 @@ export function useContacts(branchId: string | null) {
     setError(null)
 
     try {
-      const { error: archiveError } = await supabase
-        .from('contacts')
+      // @ts-ignore - Supabase typing issue with dynamic updates
+      const archiveQuery = supabase.from('contacts') as any
+      const { error: archiveError } = await archiveQuery
         .update({
           status: 'archived',
           archived_at: new Date().toISOString(),
           archived_reason: reason?.trim() || null,
           updated_at: new Date().toISOString(),
-        } as any)
+        })
         .eq('id', contactId)
 
       if (archiveError) throw archiveError
@@ -264,14 +266,15 @@ export function useContacts(branchId: string | null) {
     setError(null)
 
     try {
-      const { error: unarchiveError } = await supabase
-        .from('contacts')
+      // @ts-ignore - Supabase typing issue with dynamic updates
+      const unarchiveQuery = supabase.from('contacts') as any
+      const { error: unarchiveError } = await unarchiveQuery
         .update({
           status: 'active',
           archived_at: null,
           archived_reason: null,
           updated_at: new Date().toISOString(),
-        } as any)
+        })
         .eq('id', contactId)
 
       if (unarchiveError) throw unarchiveError
@@ -355,7 +358,7 @@ export function useContacts(branchId: string | null) {
         return []
       }
 
-      const bookingIds = bookingContacts.map(bc => bc.booking_id)
+      const bookingIds = (bookingContacts as any[]).map((bc: any) => bc.booking_id)
 
       // Récupérer les bookings
       const { data: bookings, error: bookingsError } = await supabase
@@ -404,7 +407,7 @@ export function useContacts(branchId: string | null) {
         }
       }
 
-      const bookingIds = bookingContacts.map(bc => bc.booking_id)
+      const bookingIds = (bookingContacts as any[]).map((bc: any) => bc.booking_id)
       const now = new Date().toISOString()
 
       // Récupérer les bookings avec stats
@@ -416,24 +419,24 @@ export function useContacts(branchId: string | null) {
 
       if (bookingsError) throw bookingsError
 
-      const bookingsList = bookings || []
+      const bookingsList = (bookings || []) as any[]
       const totalBookings = bookingsList.length
-      const totalParticipants = bookingsList.reduce((sum, b) => sum + (b.participants_count || 0), 0)
+      const totalParticipants = bookingsList.reduce((sum: number, b: any) => sum + (b.participants_count || 0), 0)
       
-      const upcomingBookings = bookingsList.filter(b => b.start_datetime > now && b.status !== 'CANCELLED').length
-      const pastBookings = bookingsList.filter(b => b.start_datetime <= now || b.status === 'CANCELLED').length
+      const upcomingBookings = bookingsList.filter((b: any) => b.start_datetime > now && b.status !== 'CANCELLED').length
+      const pastBookings = bookingsList.filter((b: any) => b.start_datetime <= now || b.status === 'CANCELLED').length
       
-      const gameBookings = bookingsList.filter(b => b.type === 'GAME').length
-      const eventBookings = bookingsList.filter(b => b.type === 'EVENT').length
+      const gameBookings = bookingsList.filter((b: any) => b.type === 'GAME').length
+      const eventBookings = bookingsList.filter((b: any) => b.type === 'EVENT').length
 
       // Dernière activité (dernière réservation)
-      const sortedByDate = [...bookingsList].sort((a, b) => 
+      const sortedByDate = [...bookingsList].sort((a: any, b: any) => 
         new Date(b.start_datetime).getTime() - new Date(a.start_datetime).getTime()
       )
       const lastActivity = sortedByDate.length > 0 ? sortedByDate[0].start_datetime : null
       
       // Première réservation
-      const sortedByCreated = [...bookingsList].sort((a, b) => 
+      const sortedByCreated = [...bookingsList].sort((a: any, b: any) => 
         new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
       )
       const firstBooking = sortedByCreated.length > 0 ? sortedByCreated[0].created_at : null

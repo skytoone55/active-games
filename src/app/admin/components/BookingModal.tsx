@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { X, Loader2, Users, Clock, User, Phone, Mail, MessageSquare, Gamepad2, PartyPopper, Palette, Home, Calendar, ChevronLeft, ChevronRight, Trash2, Edit2, RefreshCw, AlertTriangle } from 'lucide-react'
 import type { CreateBookingData, BookingWithSlots } from '@/hooks/useBookings'
-import { ContactSearch } from './ContactSearch'
+import { ContactFieldAutocomplete } from './ContactFieldAutocomplete'
 import { ClientModal } from '../clients/components/ClientModal'
 import { useContacts } from '@/hooks/useContacts'
 import type { Contact } from '@/lib/supabase/types'
@@ -133,16 +133,35 @@ export function BookingModal({
     return nextId.toString()
   }
 
-  // CRM: Quand un contact est sélectionné, remplir automatiquement les champs
-  useEffect(() => {
+  // CRM: Quand un contact est sélectionné depuis n'importe quel champ, remplir tous les autres champs
+  const handleContactSelectedFromField = (contact: Contact) => {
+    setSelectedContact(contact)
+    setFirstName(contact.first_name || '')
+    setLastName(contact.last_name || '')
+    setPhone(contact.phone || '')
+    setEmail(contact.email || '')
+    setNotes(contact.notes_client || '')
+  }
+
+  // CRM: Désélectionner le contact si l'utilisateur modifie manuellement un champ
+  const handleFieldChange = (field: 'firstName' | 'lastName' | 'phone' | 'email', value: string) => {
+    // Si un contact était sélectionné et que l'utilisateur modifie manuellement, désélectionner
     if (selectedContact) {
-      setFirstName(selectedContact.first_name || '')
-      setLastName(selectedContact.last_name || '')
-      setPhone(selectedContact.phone || '')
-      setEmail(selectedContact.email || '')
-      setNotes(selectedContact.notes_client || '')
+      const currentValue = field === 'firstName' ? firstName : field === 'lastName' ? lastName : field === 'phone' ? phone : email
+      const contactValue = field === 'firstName' ? selectedContact.first_name : field === 'lastName' ? selectedContact.last_name : field === 'phone' ? selectedContact.phone : selectedContact.email
+      
+      // Si la valeur change et diffère de celle du contact sélectionné, désélectionner
+      if (value !== contactValue) {
+        setSelectedContact(null)
+      }
     }
-  }, [selectedContact])
+    
+    // Mettre à jour le champ
+    if (field === 'firstName') setFirstName(value)
+    else if (field === 'lastName') setLastName(value)
+    else if (field === 'phone') setPhone(value)
+    else if (field === 'email') setEmail(value)
+  }
 
   // CRM: Ouvrir modal de modification de contact
   const [showClientModal, setShowClientModal] = useState(false)
@@ -1286,91 +1305,75 @@ export function BookingModal({
             </div>
           )}
 
-          {/* CRM: Contact principal */}
+          {/* Informations du contact avec autocomplete sur chaque champ */}
           <div className="space-y-4">
-            <div>
-              <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                <User className="w-4 h-4 inline mr-1" />
-                Contact principal
-              </label>
-              <ContactSearch
-                branchId={branchId}
-                onSelectContact={setSelectedContact}
-                selectedContact={selectedContact}
-                isDark={isDark}
-                placeholder="Rechercher un contact existant (nom, téléphone, email)..."
-              />
-              {selectedContact && (
-                <div className="mt-2 flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={handleModifyClient}
-                    className={`px-3 py-1.5 text-xs rounded-lg flex items-center gap-1.5 transition-colors ${
-                      isDark
-                        ? 'bg-blue-600/20 text-blue-400 hover:bg-blue-600/30'
-                        : 'bg-blue-50 text-blue-600 hover:bg-blue-100'
-                    }`}
-                  >
-                    <Edit2 className="w-3 h-3" />
-                    Modifier client
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSelectedContact(null)
-                      setFirstName('')
-                      setLastName('')
-                      setPhone('')
-                      setEmail('')
-                      setNotes('')
-                    }}
-                    className={`px-3 py-1.5 text-xs rounded-lg flex items-center gap-1.5 transition-colors ${
-                      isDark
-                        ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    }`}
-                  >
-                    <RefreshCw className="w-3 h-3" />
-                    Changer contact
-                  </button>
-                </div>
-              )}
-            </div>
+            {selectedContact && (
+              <div className="flex items-center gap-2 mb-2">
+                <button
+                  type="button"
+                  onClick={handleModifyClient}
+                  className={`px-3 py-1.5 text-xs rounded-lg flex items-center gap-1.5 transition-colors ${
+                    isDark
+                      ? 'bg-blue-600/20 text-blue-400 hover:bg-blue-600/30'
+                      : 'bg-blue-50 text-blue-600 hover:bg-blue-100'
+                  }`}
+                >
+                  <Edit2 className="w-3 h-3" />
+                  Modifier client
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedContact(null)
+                    setFirstName('')
+                    setLastName('')
+                    setPhone('')
+                    setEmail('')
+                    setNotes('')
+                  }}
+                  className={`px-3 py-1.5 text-xs rounded-lg flex items-center gap-1.5 transition-colors ${
+                    isDark
+                      ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  <RefreshCw className="w-3 h-3" />
+                  Changer contact
+                </button>
+              </div>
+            )}
 
-            {/* Informations du contact (modifiables si contact sélectionné ou nouvelle saisie) */}
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
                   <User className="w-4 h-4 inline mr-1" />
                   Prénom *
                 </label>
-                <input
-                  type="text"
+                <ContactFieldAutocomplete
+                  branchId={branchId}
                   value={firstName}
-                  onChange={(e) => setFirstName(e.target.value)}
-                  required
-                  className={`w-full px-3 py-2 rounded-lg border ${
-                    isDark
-                      ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-500'
-                      : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'
-                  }`}
+                  onChange={(value) => handleFieldChange('firstName', value)}
+                  onSelectContact={handleContactSelectedFromField}
+                  fieldType="firstName"
                   placeholder="Prénom"
+                  required
+                  isDark={isDark}
+                  inputType="text"
                 />
               </div>
               <div>
                 <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
                   Nom
                 </label>
-                <input
-                  type="text"
+                <ContactFieldAutocomplete
+                  branchId={branchId}
                   value={lastName}
-                  onChange={(e) => setLastName(e.target.value)}
-                  className={`w-full px-3 py-2 rounded-lg border ${
-                    isDark
-                      ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-500'
-                      : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'
-                  }`}
+                  onChange={(value) => handleFieldChange('lastName', value)}
+                  onSelectContact={handleContactSelectedFromField}
+                  fieldType="lastName"
                   placeholder="Nom (optionnel)"
+                  isDark={isDark}
+                  inputType="text"
                 />
               </div>
             </div>
@@ -1381,17 +1384,16 @@ export function BookingModal({
                   <Phone className="w-4 h-4 inline mr-1" />
                   Téléphone *
                 </label>
-                <input
-                  type="tel"
+                <ContactFieldAutocomplete
+                  branchId={branchId}
                   value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  required
-                  className={`w-full px-3 py-2 rounded-lg border ${
-                    isDark
-                      ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-500'
-                      : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'
-                  }`}
+                  onChange={(value) => handleFieldChange('phone', value)}
+                  onSelectContact={handleContactSelectedFromField}
+                  fieldType="phone"
                   placeholder="05X XXX XXXX"
+                  required
+                  isDark={isDark}
+                  inputType="tel"
                 />
               </div>
               <div>
@@ -1399,16 +1401,15 @@ export function BookingModal({
                   <Mail className="w-4 h-4 inline mr-1" />
                   Email
                 </label>
-                <input
-                  type="email"
+                <ContactFieldAutocomplete
+                  branchId={branchId}
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className={`w-full px-3 py-2 rounded-lg border ${
-                    isDark
-                      ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-500'
-                      : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'
-                  }`}
+                  onChange={(value) => handleFieldChange('email', value)}
+                  onSelectContact={handleContactSelectedFromField}
+                  fieldType="email"
                   placeholder="email@exemple.com"
+                  isDark={isDark}
+                  inputType="email"
                 />
               </div>
             </div>

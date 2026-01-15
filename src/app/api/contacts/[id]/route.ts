@@ -85,8 +85,8 @@ export async function PUT(
     updateData.updated_at = new Date().toISOString()
 
     // @ts-ignore - Supabase typing issue with dynamic updates
-    const { data: contact, error } = await supabase
-      .from('contacts')
+    const { data: contact, error } = await (supabase
+      .from('contacts') as any)
       .update(updateData)
       .eq('id', id)
       .select()
@@ -129,13 +129,13 @@ export async function DELETE(
     const { id } = await params
 
     // Soft delete = archivage (pas de hard delete via UI en v1)
-    const { error } = await supabase
-      .from('contacts')
+    const { error } = await (supabase
+      .from('contacts') as any)
       .update({
         status: 'archived',
         archived_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
-      } as any)
+      })
       .eq('id', id)
 
     if (error) {

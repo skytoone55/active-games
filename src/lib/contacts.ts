@@ -130,12 +130,13 @@ export async function updateContact(
     if (updates.notes !== undefined) updateData.notes_client = updates.notes?.trim() || null
     if (updates.branch !== undefined) updateData.branch_id_main = updates.branch || null
 
-    const { data: updatedContact, error } = await supabase
-      .from('contacts')
-      .update(updateData as any)
+    // @ts-ignore - Supabase typing issue with dynamic updates
+    const query = supabase.from('contacts') as any
+    const { data: updatedContact, error } = await query
+      .update(updateData)
       .eq('id', id)
       .select()
-      .single<Contact>()
+      .single()
 
     if (error) throw error
     if (!updatedContact) throw new Error('Contact not found after update')
@@ -154,12 +155,13 @@ export async function deleteContact(id: string): Promise<boolean> {
   try {
     const supabase = await createClient()
 
-    const { error } = await supabase
-      .from('contacts')
+    // @ts-ignore - Supabase typing issue with dynamic updates
+    const query = supabase.from('contacts') as any
+    const { error } = await query
       .update({
         status: 'archived' as ContactStatus,
         archived_at: new Date().toISOString(),
-      } as any)
+      })
       .eq('id', id)
 
     if (error) throw error
