@@ -808,9 +808,9 @@ export default function AdminPage() {
 
   const stats = calculateStats()
 
-  // Filtrer les résultats de recherche
+  // Rechercher dans TOUTES les réservations (pas seulement le jour sélectionné)
   const searchResults = agendaSearchQuery
-    ? bookings.filter((b) => {
+    ? allBookings.filter((b) => {
         const searchLower = agendaSearchQuery.toLowerCase()
         const contactData = getContactDisplayData(b)
         const customerName = `${contactData.firstName || ''} ${contactData.lastName || ''}`.toLowerCase().trim()
