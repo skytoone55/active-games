@@ -10,7 +10,7 @@ interface ClientModalProps {
   onClose: () => void
   contact: Contact | null // null = création, non-null = édition
   branchId: string
-  onSave: () => void
+  onSave: (updatedContact?: Contact) => void | Promise<void>
   isDark: boolean
 }
 
@@ -83,7 +83,7 @@ export function ClientModal({
         })
 
         if (updated) {
-          onSave()
+          await onSave(updated)
           onClose()
         } else {
           setError('Erreur lors de la mise à jour du contact')
@@ -101,7 +101,7 @@ export function ClientModal({
         })
 
         if (newContact) {
-          onSave()
+          await onSave(newContact)
           onClose()
         } else {
           setError('Erreur lors de la création du contact')

@@ -1927,18 +1927,24 @@ export function BookingModal({
       {showClientModal && selectedContact && (
         <ClientModal
           isOpen={showClientModal}
-          onClose={() => setShowClientModal(false)}
+          onClose={() => {
+            setShowClientModal(false)
+            // Désactiver le mode édition quand on ferme sans sauvegarder
+            setIsEditingContact(false)
+          }}
           contact={selectedContact}
           branchId={branchId}
-          onSave={async () => {
-            // Recharger le contact depuis la base après modification
-            if (selectedContact) {
-              const updated = await getContact(selectedContact.id)
-              if (updated) {
-                setSelectedContact(updated)
-              }
-            }
+          onSave={async (updatedContact: Contact) => {
+            // Mettre à jour le contact et tous les champs avec les nouvelles données
+            setSelectedContact(updatedContact)
+            setFirstName(updatedContact.first_name || '')
+            setLastName(updatedContact.last_name || '')
+            setPhone(updatedContact.phone || '')
+            setEmail(updatedContact.email || '')
+            setNotes(updatedContact.notes_client || '')
             setShowClientModal(false)
+            // Garder le mode édition activé pour permettre les modifications supplémentaires
+            setIsEditingContact(true)
           }}
           isDark={isDark}
         />
