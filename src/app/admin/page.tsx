@@ -6,7 +6,6 @@ import { Loader2, Plus, LogOut, User, ChevronDown, Sun, Moon, ChevronLeft, Chevr
 import { createClient } from '@/lib/supabase/client'
 import { useBookings, type BookingWithSlots, type CreateBookingData } from '@/hooks/useBookings'
 import { BookingModal } from './components/BookingModal'
-import { SettingsModal } from './components/SettingsModal'
 import { AdminHeader } from './components/AdminHeader'
 import { useBranches } from '@/hooks/useBranches'
 import { useAuth } from '@/hooks/useAuth'
@@ -55,7 +54,6 @@ export default function AdminPage() {
   const [showCalendarModal, setShowCalendarModal] = useState(false)
   const [calendarMonth, setCalendarMonth] = useState(new Date().getMonth())
   const [calendarYear, setCalendarYear] = useState(new Date().getFullYear())
-  const [showSettingsModal, setShowSettingsModal] = useState(false)
   
   // Paramètres d'affichage du texte (chargés depuis localStorage)
   const [displayTextSize, setDisplayTextSize] = useState<'xs' | 'sm' | 'base' | 'lg'>('sm')
