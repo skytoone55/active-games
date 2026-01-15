@@ -2009,13 +2009,15 @@ export default function AdminPage() {
                       : (isDark ? '#374151' : '#e5e7eb') // Toujours gris entre les salles
                     
                     // Bordures horizontales : SALLES - lignes SEULEMENT à 0 et 30 (comme OB avant)
-                    // Ne jamais afficher les lignes de 15 min, même entre réservations différentes
-                    // IMPORTANT: Pour les cellules vides, ne pas afficher de bordures à 15/45
-                    // Pour les cellules avec réservation, les bordures sont gérées par le rowSpan
+                    // Ne jamais afficher les lignes de 15 min
+                    // Pour les cellules vides : bordures seulement à 0 et 30
+                    // Pour les cellules avec réservation : bordures seulement au début (0 ou 30) et à la fin (0 ou 30)
                     const isSlotAtHalfHour = (slot.minute === 0 || slot.minute === 30)
+                    
+                    // Top border : seulement si c'est à 0 ou 30
                     const shouldShowTopBorder = isSlotAtHalfHour
-                    // Pour borderBottom: seulement si c'est le dernier slot d'une réservation ET que c'est à 0 ou 30
-                    // OU si c'est une cellule vide à 0 ou 30
+                    
+                    // Bottom border : seulement si c'est à 0 ou 30 ET que c'est soit une cellule vide, soit la fin d'un segment
                     const isLastSlotOfSegment = segment && (
                       timeIndex === timeSlots.length - 1 ||
                       getSegmentForCellRooms(timeSlots[timeIndex + 1].hour, timeSlots[timeIndex + 1].minute, roomIndex)?.segmentId !== segment.segmentId
