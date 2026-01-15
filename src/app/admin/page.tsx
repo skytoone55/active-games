@@ -841,7 +841,8 @@ export default function AdminPage() {
   const findBestAvailableRoom = (
     participants: number,
     startDateTime: Date,
-    endDateTime: Date
+    endDateTime: Date,
+    excludeBookingId?: string
   ): string | null => {
     if (!branchRooms || branchRooms.length === 0) return null
 
@@ -868,6 +869,9 @@ export default function AdminPage() {
       let isAvailable = true
 
       for (const booking of bookings) {
+        // Exclure le booking en cours de modification
+        if (excludeBookingId && booking.id === excludeBookingId) continue
+        
         // Ne vérifier que les événements qui utilisent cette salle
         if (booking.type === 'EVENT' && booking.event_room_id === room.id) {
           const bookingStart = new Date(booking.start_datetime)
@@ -898,7 +902,8 @@ export default function AdminPage() {
   const findRoomAvailability = (
     participants: number,
     startDateTime: Date,
-    endDateTime: Date
+    endDateTime: Date,
+    excludeBookingId?: string
   ): { bestRoomId: string | null; availableRoomWithLowerCapacity: { id: string; capacity: number } | null; hasAnyAvailableRoom: boolean } => {
     if (!branchRooms || branchRooms.length === 0) {
       return { bestRoomId: null, availableRoomWithLowerCapacity: null, hasAnyAvailableRoom: false }
@@ -917,6 +922,9 @@ export default function AdminPage() {
     // Fonction pour vérifier si une salle est disponible
     const isRoomAvailable = (roomId: string): boolean => {
       for (const booking of bookings) {
+        // Exclure le booking en cours de modification
+        if (excludeBookingId && booking.id === excludeBookingId) continue
+        
         if (booking.type === 'EVENT' && booking.event_room_id === roomId) {
           const bookingStart = new Date(booking.start_datetime)
           const bookingEnd = new Date(booking.end_datetime)

@@ -26,8 +26,8 @@ interface BookingModalProps {
   editingBooking?: BookingWithSlots | null
   isDark: boolean
   defaultBookingType?: BookingType // Type par défaut selon où on clique
-  findBestAvailableRoom?: (participants: number, startDateTime: Date, endDateTime: Date) => string | null
-  findRoomAvailability?: (participants: number, startDateTime: Date, endDateTime: Date) => { bestRoomId: string | null; availableRoomWithLowerCapacity: { id: string; capacity: number } | null; hasAnyAvailableRoom: boolean }
+  findBestAvailableRoom?: (participants: number, startDateTime: Date, endDateTime: Date, excludeBookingId?: string) => string | null
+  findRoomAvailability?: (participants: number, startDateTime: Date, endDateTime: Date, excludeBookingId?: string) => { bestRoomId: string | null; availableRoomWithLowerCapacity: { id: string; capacity: number } | null; hasAnyAvailableRoom: boolean }
   calculateOverbooking?: (participants: number, startDateTime: Date, endDateTime: Date, excludeBookingId?: string) => OverbookingInfo
 }
 
@@ -736,7 +736,8 @@ export function BookingModal({
       const roomEndDate = new Date(localDate)
       roomEndDate.setHours(roomEndHour, roomEndMinute, 0, 0)
 
-      const bestRoomId = findBestAvailableRoom(parsedParticipants, roomStartDate, roomEndDate)
+      // Exclure le booking en cours de modification pour qu'il ne se bloque pas lui-même
+      const bestRoomId = findBestAvailableRoom(parsedParticipants, roomStartDate, roomEndDate, editingBooking?.id)
       
       if (!bestRoomId) {
         // Aucune salle disponible - over capacity
