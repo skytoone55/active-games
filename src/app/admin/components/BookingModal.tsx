@@ -547,7 +547,7 @@ export function BookingModal({
           
           // Pas de doublon, créer le contact
           const newContact = await createContact({
-            branch_id_main: branchId,
+            branch_id_main: bookingBranchId, // Utiliser la branche de la réservation
             first_name: firstName.trim(),
             last_name: lastName.trim() || null,
             phone: phone.trim(),
@@ -565,7 +565,7 @@ export function BookingModal({
         // skipDuplicateCheck = true : créer directement sans vérifier (après confirmation doublon)
         if (phone.trim()) {
           const newContact = await createContact({
-            branch_id_main: branchId,
+            branch_id_main: bookingBranchId, // Utiliser la branche de la réservation
             first_name: firstName.trim(),
             last_name: lastName.trim() || null,
             phone: phone.trim(),
