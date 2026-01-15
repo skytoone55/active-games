@@ -11,9 +11,23 @@ interface BranchWithDetails extends Branch {
 
 export function useBranches() {
   const [branches, setBranches] = useState<BranchWithDetails[]>([])
-  const [selectedBranchId, setSelectedBranchId] = useState<string | null>(null)
+  // Charger la branche sélectionnée depuis localStorage pour persister entre les pages
+  const [selectedBranchId, setSelectedBranchId] = useState<string | null>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('selectedBranchId')
+      return saved || null
+    }
+    return null
+  })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  
+  // Persister la branche sélectionnée dans localStorage
+  useEffect(() => {
+    if (selectedBranchId) {
+      localStorage.setItem('selectedBranchId', selectedBranchId)
+    }
+  }, [selectedBranchId])
 
   // Charger les branches avec leurs détails
   const fetchBranches = useCallback(async () => {
