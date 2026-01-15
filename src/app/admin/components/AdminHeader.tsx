@@ -5,7 +5,7 @@ import { LogOut, User, Settings, ChevronDown, Sun, Moon, Users, Calendar } from 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import type { AuthUser } from '@/hooks/useAuth'
-import type { Branch } from '@/lib/supabase/types'
+import type { Branch, EventRoom, BranchSettings } from '@/lib/supabase/types'
 import { BranchSelector } from './BranchSelector'
 import { SettingsModal } from './SettingsModal'
 
@@ -17,6 +17,9 @@ interface AdminHeaderProps {
   onSignOut: () => void
   theme: 'light' | 'dark'
   onToggleTheme: () => void
+  rooms?: EventRoom[]
+  branchSettings?: BranchSettings | null
+  onSettingsUpdate?: () => Promise<void>
 }
 
 export function AdminHeader({
@@ -27,6 +30,9 @@ export function AdminHeader({
   onSignOut,
   theme,
   onToggleTheme,
+  rooms = [],
+  branchSettings = null,
+  onSettingsUpdate = async () => {},
 }: AdminHeaderProps) {
   const pathname = usePathname()
   const [showUserMenu, setShowUserMenu] = useState(false)
@@ -243,11 +249,15 @@ export function AdminHeader({
       </div>
 
       {/* Modal Paramètres */}
-      {showSettingsModal && (
+      {showSettingsModal && selectedBranch && (
         <SettingsModal
           isOpen={showSettingsModal}
           onClose={() => setShowSettingsModal(false)}
-          theme={theme}
+          branchId={selectedBranch.id}
+          rooms={rooms}
+          settings={branchSettings}
+          onUpdate={onSettingsUpdate}
+          isDark={theme === 'dark'}
         />
       )}
     </header>

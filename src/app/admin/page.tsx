@@ -1261,6 +1261,15 @@ export default function AdminPage() {
           onSignOut={handleSignOut}
           theme={theme}
           onToggleTheme={toggleTheme}
+          rooms={branchRooms}
+          branchSettings={branchSettings}
+          onSettingsUpdate={async () => {
+            // Rafraîchir les données de la branche après mise à jour des paramètres
+            if (selectedBranchId) {
+              // Réinitialiser pour forcer le rechargement
+              await fetchBranchDetails(selectedBranchId)
+            }
+          }}
         />
       )}
 
