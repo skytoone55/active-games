@@ -872,9 +872,9 @@ export default function ClientsPage() {
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-3 flex-1 min-w-0">
                               {booking.type === 'EVENT' ? (
-                                <PartyPopper className={`w-5 h-5 flex-shrink-0 ${isPast ? 'text-gray-400' : 'text-green-400'}`} />
+                                <PartyPopper className="w-5 h-5 flex-shrink-0 text-green-400" />
                               ) : (
-                                <Gamepad2 className={`w-5 h-5 flex-shrink-0 ${isPast ? 'text-gray-400' : 'text-blue-400'}`} />
+                                <Gamepad2 className="w-5 h-5 flex-shrink-0 text-blue-400" />
                               )}
                               <div className="flex-1 min-w-0">
                                 <div className={`font-medium truncate ${
