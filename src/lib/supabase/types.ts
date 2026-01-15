@@ -16,6 +16,7 @@ export type BookingStatus = 'DRAFT' | 'CONFIRMED' | 'CANCELLED'
 export type UserRole = 'super_admin' | 'branch_admin' | 'agent'
 export type ContactStatus = 'active' | 'archived'
 export type ContactSource = 'admin_agenda' | 'public_booking'
+export type GameArea = 'ACTIVE' | 'LASER'
 
 export interface Database {
   public: {
@@ -56,6 +57,8 @@ export interface Database {
           event_price_15_29: number
           event_price_30_plus: number
           opening_hours: Json
+          laser_total_vests: number | null
+          laser_enabled: boolean | null
           created_at: string
           updated_at: string
         }
@@ -76,6 +79,36 @@ export interface Database {
         }
         Insert: Omit<Database['public']['Tables']['event_rooms']['Row'], 'id' | 'created_at'>
         Update: Partial<Database['public']['Tables']['event_rooms']['Insert']>
+      }
+      laser_rooms: {
+        Row: {
+          id: string
+          branch_id: string | null
+          slug: string
+          name: string
+          name_en: string | null
+          capacity: number
+          sort_order: number
+          is_active: boolean
+          created_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['laser_rooms']['Row'], 'id' | 'created_at'>
+        Update: Partial<Database['public']['Tables']['laser_rooms']['Insert']>
+      }
+      game_sessions: {
+        Row: {
+          id: string
+          booking_id: string
+          game_area: GameArea
+          start_datetime: string
+          end_datetime: string
+          laser_room_id: string | null
+          session_order: number
+          pause_before_minutes: number
+          created_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['game_sessions']['Row'], 'id' | 'created_at'>
+        Update: Partial<Database['public']['Tables']['game_sessions']['Insert']>
       }
       contacts: {
         Row: {
@@ -202,6 +235,8 @@ export interface Database {
 export type Branch = Database['public']['Tables']['branches']['Row']
 export type BranchSettings = Database['public']['Tables']['branch_settings']['Row']
 export type EventRoom = Database['public']['Tables']['event_rooms']['Row']
+export type LaserRoom = Database['public']['Tables']['laser_rooms']['Row']
+export type GameSession = Database['public']['Tables']['game_sessions']['Row']
 export type Contact = Database['public']['Tables']['contacts']['Row']
 export type BookingContact = Database['public']['Tables']['booking_contacts']['Row']
 export type Booking = Database['public']['Tables']['bookings']['Row']

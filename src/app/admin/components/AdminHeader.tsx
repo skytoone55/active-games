@@ -102,12 +102,22 @@ export function AdminHeader({
   return (
     <header className={`${theme === 'dark' ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'} border-b px-4 sm:px-6 py-4`}>
       <div className="flex items-center justify-between">
-        {/* Logo - À gauche */}
-        <div className="flex items-center min-w-0 flex-shrink-0">
+        {/* Logos - À gauche */}
+        <div className="flex items-center min-w-0 flex-shrink-0 gap-3">
           <Link href="/admin" className="flex items-center">
             <Image
               src="/images/logo-activegames.png"
               alt="Active Games"
+              width={142}
+              height={54}
+              className="h-14 w-auto object-contain"
+              priority
+            />
+          </Link>
+          <Link href="/admin" className="flex items-center">
+            <Image
+              src="/images/logo_laser_city.png"
+              alt="Laser City"
               width={142}
               height={54}
               className="h-14 w-auto object-contain"

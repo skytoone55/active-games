@@ -654,8 +654,8 @@ export function placeEventBooking(
   if (!gameResult.success) {
     // Si pas de slots pour le jeu, retourner le conflit (peut être NEED_SURBOOK_CONFIRM)
     if (gameResult.conflict) {
-      return {
-        success: false,
+    return {
+      success: false,
         conflict: gameResult.conflict
       }
     }

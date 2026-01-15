@@ -1485,33 +1485,54 @@ export default function AdminPage() {
     const targetRoom = sortedLaserRooms[roomIndex]
     
     // Chercher les bookings avec sessions LASER qui utilisent cette salle
+    // IMPORTANT : Détecter les réservations multi-salles et les fusionner
     for (let i = bookings.length - 1; i >= 0; i--) {
       const booking = bookings[i]
       
       // Vérifier si le booking a des game_sessions LASER
       if (booking.game_sessions && booking.game_sessions.length > 0) {
-        for (const session of booking.game_sessions) {
-          if (session.game_area !== 'LASER') continue
-          if (session.laser_room_id !== targetRoom.id) continue
-          
+        // Trouver toutes les sessions LASER de ce booking qui chevauchent ce créneau
+        const overlappingSessions = booking.game_sessions.filter(session => {
+          if (session.game_area !== 'LASER') return false
           const sessionStart = new Date(session.start_datetime)
           const sessionEnd = new Date(session.end_datetime)
-          
-          // Vérifier si ce créneau de 15 minutes chevauche la session
-          if (sessionStart < cellDateEnd && sessionEnd > cellDate) {
-            // Retourner un segment factice pour les laser rooms (pour compatibilité avec UISegment)
-            return {
-              segmentId: `${booking.id}-laser-${roomIndex}-${session.id}`,
-              bookingId: booking.id,
-              booking,
-              start: sessionStart,
-              end: sessionEnd,
-              slotStart: roomIndex,
-              slotEnd: roomIndex + 1,
-              slotsKey: `laser-${roomIndex}`,
-              isOverbooked: false // Laser n'a pas d'overbooking
-            }
-          }
+          return sessionStart < cellDateEnd && sessionEnd > cellDate
+        })
+        
+        if (overlappingSessions.length === 0) continue
+        
+        // Vérifier si une de ces sessions utilise la salle cible
+        const sessionForThisRoom = overlappingSessions.find(s => s.laser_room_id === targetRoom.id)
+        if (!sessionForThisRoom) continue
+        
+        // Trouver toutes les salles utilisées par ce booking pour ce créneau
+        const usedRoomIds = new Set(overlappingSessions.map(s => s.laser_room_id).filter(Boolean))
+        const usedRooms = sortedLaserRooms.filter(r => usedRoomIds.has(r.id))
+        
+        if (usedRooms.length === 0) continue
+        
+        // Trier les salles utilisées par sort_order pour déterminer slotStart et slotEnd
+        usedRooms.sort((a, b) => a.sort_order - b.sort_order)
+        const firstRoomIndex = sortedLaserRooms.findIndex(r => r.id === usedRooms[0].id)
+        const lastRoomIndex = sortedLaserRooms.findIndex(r => r.id === usedRooms[usedRooms.length - 1].id)
+        
+        // Utiliser la première session pour les dates (toutes les sessions ont les mêmes dates pour une même réservation)
+        const sessionStart = new Date(sessionForThisRoom.start_datetime)
+        const sessionEnd = new Date(sessionForThisRoom.end_datetime)
+        
+        // Retourner le segment fusionné pour toutes les salles du groupe
+        // Le segment s'étend de firstRoomIndex à lastRoomIndex
+        // Mais on ne rend que la cellule de la première salle (isSegmentStart)
+        return {
+          segmentId: `${booking.id}-laser-merged-${firstRoomIndex}-${lastRoomIndex}`,
+          bookingId: booking.id,
+          booking,
+          start: sessionStart,
+          end: sessionEnd,
+          slotStart: firstRoomIndex,
+          slotEnd: lastRoomIndex + 1, // +1 car slotEnd est exclusif
+          slotsKey: `laser-${firstRoomIndex}-${lastRoomIndex}`,
+          isOverbooked: false // Laser n'a pas d'overbooking
         }
       }
     }
@@ -2411,13 +2432,13 @@ export default function AdminPage() {
                               timeIndex === 0 ||
                               getSegmentForCellLaser(timeSlots[timeIndex - 1].hour, timeSlots[timeIndex - 1].minute, roomIndex)?.segmentId !== laserSegment.segmentId
                             )
+                            // Pour les segments fusionnés, isSegmentStart est vrai seulement si roomIndex === slotStart
                             const isSegmentStart = laserSegment && (
-                              roomIndex === 0 || 
-                              getSegmentForCellLaser(slot.hour, slot.minute, roomIndex - 1)?.segmentId !== laserSegment.segmentId
+                              roomIndex === laserSegment.slotStart
                             )
+                            // Pour les segments fusionnés, isSegmentEnd est vrai seulement si roomIndex === slotEnd - 1
                             const isSegmentEnd = laserSegment && (
-                              roomIndex === TOTAL_LASER_ROOMS - 1 || 
-                              getSegmentForCellLaser(slot.hour, slot.minute, roomIndex + 1)?.segmentId !== laserSegment.segmentId
+                              roomIndex === laserSegment.slotEnd - 1
                             )
                             const isSegmentBottom = laserSegment && (
                               timeIndex === timeSlots.length - 1 ||

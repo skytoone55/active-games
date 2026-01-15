@@ -2,11 +2,12 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { getClient } from '@/lib/supabase/client'
-import type { Booking, BookingSlot, BookingType, BookingStatus, Contact } from '@/lib/supabase/types'
+import type { Booking, BookingSlot, BookingType, BookingStatus, Contact, GameSession } from '@/lib/supabase/types'
 
-// Type étendu avec les slots et contacts
+// Type étendu avec les slots, contacts et game_sessions
 export interface BookingWithSlots extends Booking {
   slots: BookingSlot[]
+  game_sessions?: GameSession[]
   primaryContact?: Contact | null
   allContacts?: Contact[]
 }
@@ -33,6 +34,14 @@ export interface CreateBookingData {
     slot_start: string
     slot_end: string
     participants_count: number
+  }[]
+  game_sessions?: {
+    game_area: 'ACTIVE' | 'LASER'
+    start_datetime: string
+    end_datetime: string
+    laser_room_id?: string | null
+    session_order: number
+    pause_before_minutes: number
   }[]
 }
 
@@ -90,14 +99,38 @@ export function useBookings(branchId: string | null, date?: string) {
         return
       }
 
-      // Charger les slots pour chaque booking
+      // Charger les slots et game_sessions pour chaque booking
       const bookingIds = bookingsData.map(b => b.id)
-      const { data: slotsData } = await supabase
-        .from('booking_slots')
-        .select('*')
-        .in('booking_id', bookingIds)
-        .order('slot_start')
-        .returns<BookingSlot[]>()
+      const [slotsResult, sessionsResult] = await Promise.all([
+        supabase
+          .from('booking_slots')
+          .select('*')
+          .in('booking_id', bookingIds)
+          .order('slot_start')
+          .returns<BookingSlot[]>(),
+        supabase
+          .from('game_sessions')
+          .select('*')
+          .in('booking_id', bookingIds)
+          .order('session_order')
+          .returns<GameSession[]>()
+      ])
+
+      const { data: slotsData, error: slotsError } = slotsResult
+      const { data: sessionsData, error: sessionsError } = sessionsResult
+      
+      // Gérer les erreurs silencieusement si les tables n'existent pas encore
+      if (slotsError) {
+        console.warn('Error loading slots (table may not exist yet):', slotsError)
+      }
+      if (sessionsError) {
+        // Code 42P01 = table does not exist
+        if (sessionsError.code === '42P01' || sessionsError.message?.includes('does not exist') || sessionsError.message?.includes('n\'existe pas')) {
+          console.warn('Table game_sessions does not exist yet. Please run migration 006_add_laser_support.sql')
+        } else {
+          console.warn('Error loading game_sessions:', sessionsError)
+        }
+      }
 
       // CRM: Charger les contacts liés pour chaque booking
       const { data: bookingContactsData } = await supabase
@@ -145,9 +178,10 @@ export function useBookings(branchId: string | null, date?: string) {
         })
       }
 
-      // Associer les slots et contacts à chaque booking
+      // Associer les slots, game_sessions et contacts à chaque booking
       const bookingsWithSlots: BookingWithSlots[] = bookingsData.map(booking => {
         const slots = slotsData?.filter(s => s.booking_id === booking.id) || []
+        const game_sessions = sessionsData?.filter(s => s.booking_id === booking.id) || []
         const contacts = contactsByBooking.get(booking.id)
         
         // Contact principal : depuis booking_contacts en priorité, sinon depuis primary_contact_id
@@ -161,6 +195,7 @@ export function useBookings(branchId: string | null, date?: string) {
         return {
           ...booking,
           slots,
+          game_sessions,
           primaryContact,
           allContacts: contacts?.all || (primaryContact ? [primaryContact] : []),
         }
@@ -267,6 +302,7 @@ export function useBookings(branchId: string | null, date?: string) {
       }
 
       // Créer les slots
+      let newSlots: BookingSlot[] = []
       if (data.slots.length > 0) {
         const slotsToInsert = data.slots.map(slot => ({
           booking_id: newBooking.id,
@@ -277,7 +313,7 @@ export function useBookings(branchId: string | null, date?: string) {
           slot_type: 'game_zone',
         }))
 
-        const { data: newSlots, error: slotsError } = await supabase
+        const { data: insertedSlots, error: slotsError } = await supabase
           .from('booking_slots')
           .insert(slotsToInsert as any)
           .select()
@@ -293,18 +329,50 @@ export function useBookings(branchId: string | null, date?: string) {
           throw new Error(`Supabase slots error: ${slotsError.message} (code: ${slotsError.code})`)
         }
 
-        const result: BookingWithSlots = {
-          ...newBooking,
-          slots: newSlots || [],
-        }
-
-        // Rafraîchir la liste
-        await fetchBookings()
-        return result
+        newSlots = insertedSlots || []
       }
 
+      // Créer les game_sessions
+      let newSessions: GameSession[] = []
+      if (data.game_sessions && data.game_sessions.length > 0) {
+        const sessionsToInsert = data.game_sessions.map(session => ({
+          booking_id: newBooking.id,
+          game_area: session.game_area,
+          start_datetime: session.start_datetime,
+          end_datetime: session.end_datetime,
+          laser_room_id: session.laser_room_id || null,
+          session_order: session.session_order,
+          pause_before_minutes: session.pause_before_minutes,
+        }))
+
+        const { data: insertedSessions, error: sessionsError } = await supabase
+          .from('game_sessions')
+          .insert(sessionsToInsert as any)
+          .select()
+          .returns<GameSession[]>()
+
+        if (sessionsError) {
+          console.error('Game sessions insert error details:', {
+            message: sessionsError.message,
+            code: sessionsError.code,
+            details: sessionsError.details,
+            hint: sessionsError.hint,
+          })
+          throw new Error(`Supabase game_sessions error: ${sessionsError.message} (code: ${sessionsError.code})`)
+        }
+
+        newSessions = insertedSessions || []
+      }
+
+      const result: BookingWithSlots = {
+        ...newBooking,
+        slots: newSlots,
+        game_sessions: newSessions,
+      }
+
+      // Rafraîchir la liste
       await fetchBookings()
-      return { ...newBooking, slots: [] }
+      return result
     } catch (err: unknown) {
       // Meilleure capture d'erreur Supabase
       const errorMessage = err instanceof Error
@@ -400,6 +468,7 @@ export function useBookings(branchId: string | null, date?: string) {
       }
 
       // Si des slots sont fournis, les recréer
+      let updatedSlots: BookingSlot[] = []
       if (data.slots) {
         // Supprimer les anciens slots
         await supabase
@@ -418,14 +487,53 @@ export function useBookings(branchId: string | null, date?: string) {
             slot_type: 'game_zone',
           }))
 
-          await supabase
+          const { data: insertedSlots } = await supabase
             .from('booking_slots')
             .insert(slotsToInsert as any)
+            .select()
+            .returns<BookingSlot[]>()
+
+          updatedSlots = insertedSlots || []
+        }
+      }
+
+      // Si des game_sessions sont fournies, les recréer
+      let updatedSessions: GameSession[] = []
+      if (data.game_sessions) {
+        // Supprimer les anciennes sessions (ON DELETE CASCADE gère déjà ça, mais on le fait explicitement pour être sûr)
+        await supabase
+          .from('game_sessions')
+          .delete()
+          .eq('booking_id', id)
+
+        // Créer les nouvelles sessions
+        if (data.game_sessions.length > 0) {
+          const sessionsToInsert = data.game_sessions.map(session => ({
+            booking_id: id,
+            game_area: session.game_area,
+            start_datetime: session.start_datetime,
+            end_datetime: session.end_datetime,
+            laser_room_id: session.laser_room_id || null,
+            session_order: session.session_order,
+            pause_before_minutes: session.pause_before_minutes,
+          }))
+
+          const { data: insertedSessions } = await supabase
+            .from('game_sessions')
+            .insert(sessionsToInsert as any)
+            .select()
+            .returns<GameSession[]>()
+
+          updatedSessions = insertedSessions || []
         }
       }
 
       await fetchBookings()
-      return { ...updatedBooking, slots: [] }
+      return { 
+        ...updatedBooking, 
+        slots: updatedSlots,
+        game_sessions: updatedSessions,
+      }
     } catch (err) {
       console.error('Error updating booking:', err)
       setError('Erreur lors de la mise à jour de la réservation')

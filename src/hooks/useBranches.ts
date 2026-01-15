@@ -2,11 +2,12 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { getClient } from '@/lib/supabase/client'
-import type { Branch, BranchSettings, EventRoom } from '@/lib/supabase/types'
+import type { Branch, BranchSettings, EventRoom, LaserRoom } from '@/lib/supabase/types'
 
 interface BranchWithDetails extends Branch {
   settings: BranchSettings | null
   rooms: EventRoom[]
+  laserRooms: LaserRoom[]
 }
 
 export function useBranches() {
@@ -71,10 +72,20 @@ export function useBranches() {
             .order('sort_order')
             .returns<EventRoom[]>()
 
+          // Laser Rooms
+          const { data: laserRooms } = await supabase
+            .from('laser_rooms')
+            .select('*')
+            .eq('branch_id', branch.id)
+            .eq('is_active', true)
+            .order('sort_order')
+            .returns<LaserRoom[]>()
+
           return {
             ...branch,
             settings: settings || null,
             rooms: rooms || [],
+            laserRooms: laserRooms || [],
           }
         })
       )

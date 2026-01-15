@@ -388,16 +388,19 @@ export function BookingModal({
             const roomDurationMinutes = Math.round(roomDurationMs / (1000 * 60))
             setRoomDurationMinutes(String(roomDurationMinutes))
             
-            // Pour les EVENT, calculer l'heure de la salle à partir de l'heure du jeu - 15 minutes
-            if (editingBooking.type === 'EVENT' && editingBooking.game_start_datetime) {
-              const gameStart = new Date(editingBooking.game_start_datetime)
-              const gameStartMinutes = gameStart.getHours() * 60 + gameStart.getMinutes()
-              const roomStartMinutes = Math.max(0, gameStartMinutes - 15)
-              setRoomStartHour(Math.floor(roomStartMinutes / 60))
-              setRoomStartMinute(roomStartMinutes % 60)
-              // L'heure du premier jeu est déjà dans game_start_datetime
-              setEventFirstGameStartHour(gameStart.getHours())
-              setEventFirstGameStartMinute(gameStart.getMinutes())
+            // Pour les EVENT, utiliser directement l'heure de start_datetime (comme pour GAME)
+            // C'est l'heure de début de la salle, pas besoin de la calculer depuis game_start_datetime
+            if (editingBooking.type === 'EVENT') {
+              // Utiliser directement l'heure de start_datetime pour la salle
+              setRoomStartHour(roomStart.getHours())
+              setRoomStartMinute(roomStart.getMinutes())
+              
+              // Pour l'heure du premier jeu, utiliser game_start_datetime si disponible
+              if (editingBooking.game_start_datetime) {
+                const gameStart = new Date(editingBooking.game_start_datetime)
+                setEventFirstGameStartHour(gameStart.getHours())
+                setEventFirstGameStartMinute(gameStart.getMinutes())
+              }
             } else {
               // Pour les autres cas, utiliser l'heure de start_datetime
               setRoomStartHour(roomStart.getHours())
@@ -887,9 +890,12 @@ export function BookingModal({
   const calculateRoomEndTime = () => {
     const startMinutes = roomStartHour * 60 + roomStartMinute
     const endMinutes = startMinutes + parsedRoomDuration
+    // Gérer correctement les heures qui dépassent minuit (modulo 24)
+    const endHour = Math.floor(endMinutes / 60) % 24
+    const endMinute = endMinutes % 60
     return {
-      endHour: Math.floor(endMinutes / 60),
-      endMinute: endMinutes % 60
+      endHour,
+      endMinute
     }
   }
 
@@ -988,22 +994,32 @@ export function BookingModal({
       const gameEndDate = new Date(localDate)
       gameEndDate.setHours(gameEndHour, gameEndMinute, 0, 0)
 
-      // Dates globales (jeu par défaut, ou salle si elle est plus large)
-      let startDate = gameStartDate
-      let endDate = gameEndDate
+      // Dates globales
+      let startDate: Date
+      let endDate: Date
 
-      // Si événement, calculer les dates de la salle (automatique pour EVENT)
+      // Si événement, utiliser directement les dates de la salle (comme pour GAME qui utilise les dates du jeu)
       if (bookingType === 'EVENT') {
         const roomStartDate = new Date(localDate)
         roomStartDate.setHours(roomStartHour, roomStartMinute, 0, 0)
 
-        const { endHour: roomEndHour, endMinute: roomEndMinute } = calculateRoomEndTime()
+        // IMPORTANT : Calculer l'heure de fin en utilisant la durée fixe (parsedRoomDuration)
+        // Exactement comme pour GAME : début + durée = fin
+        const roomStartMinutes = roomStartHour * 60 + roomStartMinute
+        const roomEndMinutes = roomStartMinutes + parsedRoomDuration
+        const roomEndHour = Math.floor(roomEndMinutes / 60)
+        const roomEndMinute = roomEndMinutes % 60
+        
         const roomEndDate = new Date(localDate)
         roomEndDate.setHours(roomEndHour, roomEndMinute, 0, 0)
 
-        // Prendre les dates les plus larges
-        if (roomStartDate < gameStartDate) startDate = roomStartDate
-        if (roomEndDate > gameEndDate) endDate = roomEndDate
+        // Pour EVENT, utiliser directement les dates de la salle (comme GAME utilise les dates du jeu)
+        startDate = roomStartDate
+        endDate = roomEndDate
+      } else {
+        // Pour GAME, utiliser les dates du jeu
+        startDate = gameStartDate
+        endDate = gameEndDate
       }
 
       // Construire les slots (version simple - un seul slot continu)
@@ -1421,6 +1437,7 @@ export function BookingModal({
 
     // Validation Laser : contrainte hard vests pour EVENT avec sessions Laser
     // Vérifier chaque session LASER individuellement (pas la durée totale de la salle)
+    // IMPORTANT : Toujours exclure editingBooking?.id pour éviter de compter la réservation en cours de modification
     if (bookingType === 'EVENT' && checkLaserVestsConstraint) {
       // Calculer les sessions LASER qui seront créées
       const laserSessions: Array<{ start: Date; end: Date }> = []
@@ -1471,12 +1488,16 @@ export function BookingModal({
       }
       
       // Vérifier chaque session LASER individuellement
+      // IMPORTANT : Pour chaque session, vérifier la contrainte en excluant la réservation en cours de modification
+      // Si on modifie un événement, editingBooking?.id doit être défini pour exclure toutes ses sessions
+      const excludeBookingId = editingBooking?.id || undefined
+      
       for (const session of laserSessions) {
         const vestsCheck = await checkLaserVestsConstraint(
           parsedParticipants,
           session.start,
           session.end,
-          editingBooking?.id, // Exclure la réservation en cours de modification
+          excludeBookingId, // Exclure la réservation en cours de modification (toutes ses sessions)
           bookingBranchId
         )
 

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { X, Save, Loader2 } from 'lucide-react'
 import { getClient } from '@/lib/supabase/client'
-import type { EventRoom, BranchSettings } from '@/lib/supabase/types'
+import type { EventRoom, BranchSettings, LaserRoom } from '@/lib/supabase/types'
 
 interface SettingsModalProps {
   isOpen: boolean
@@ -32,6 +32,13 @@ export function SettingsModal({
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
   
+  // États pour les laser rooms
+  const [laserRooms, setLaserRooms] = useState<LaserRoom[]>([])
+  const [laserTotalVests, setLaserTotalVests] = useState<number>(0)
+  const [laserEnabled, setLaserEnabled] = useState<boolean>(false)
+  const [newLaserRoomName, setNewLaserRoomName] = useState('')
+  const [newLaserRoomCapacity, setNewLaserRoomCapacity] = useState(15)
+  
   // Paramètres d'affichage du texte dans les cellules
   const [textSize, setTextSize] = useState<'xs' | 'sm' | 'base' | 'lg'>('sm')
   const [textWeight, setTextWeight] = useState<'normal' | 'semibold' | 'bold'>('bold')
@@ -58,11 +65,83 @@ export function SettingsModal({
       setPlayersPerSlot(settings.max_players_per_slot || 6)
       // Utiliser total_slots depuis branch_settings, ou valeur par défaut
       setTotalSlots(settings.total_slots || 14)
+      // Paramètres Laser
+      setLaserTotalVests(settings.laser_total_vests || 0)
+      setLaserEnabled(settings.laser_enabled || false)
     } else {
       setPlayersPerSlot(6) // Valeur par défaut si pas de settings
       setTotalSlots(14) // Valeur par défaut si pas de settings
+      setLaserTotalVests(0)
+      setLaserEnabled(false)
     }
   }, [settings, branchId]) // Recharger quand branchId change pour avoir les bons paramètres
+
+  // Charger les laser rooms
+  useEffect(() => {
+    const loadLaserRooms = async () => {
+      if (!branchId) {
+        setLaserRooms([])
+        return
+      }
+
+      const supabase = getClient()
+      try {
+        const { data, error } = await supabase
+          .from('laser_rooms')
+          .select('*')
+          .eq('branch_id', branchId)
+          .order('sort_order')
+          .returns<LaserRoom[]>()
+
+        // Si la table n'existe pas, retourner un tableau vide silencieusement
+        if (error) {
+          const errorCode = (error as any)?.code || ''
+          const errorMessage = String((error as any)?.message || error || '')
+          const isEmptyError = (
+            !errorMessage || 
+            errorMessage === '{}' || 
+            errorMessage === '[object Object]' ||
+            (typeof error === 'object' && error !== null && Object.keys(error).length === 0)
+          )
+          const isTableNotExist = 
+            isEmptyError ||
+            errorCode === '42P01' || 
+            errorMessage.toLowerCase().includes('does not exist') || 
+            errorMessage.toLowerCase().includes('n\'existe pas')
+          
+          if (isTableNotExist) {
+            setLaserRooms([])
+            return
+          }
+          throw error
+        }
+
+        setLaserRooms(data || [])
+      } catch (err) {
+        // Ne pas logger si c'est juste que la table n'existe pas
+        const errorObj = err as any
+        const errorCode = String(errorObj?.code || '')
+        const errorMessage = String(errorObj?.message || errorObj || '')
+        const isEmptyError = (
+          !errorMessage || 
+          errorMessage === '{}' || 
+          errorMessage === '[object Object]' ||
+          (typeof err === 'object' && err !== null && Object.keys(err).length === 0)
+        )
+        const isTableNotExist = 
+          isEmptyError ||
+          errorCode === '42P01' || 
+          errorMessage.toLowerCase().includes('does not exist')
+        
+        if (!isTableNotExist) {
+          console.error('Error loading laser rooms:', err)
+        }
+        setLaserRooms([])
+      }
+    }
+
+    loadLaserRooms()
+  }, [branchId])
 
   // Charger les paramètres d'affichage depuis localStorage
   useEffect(() => {
@@ -132,11 +211,38 @@ export function SettingsModal({
         .update({ 
           total_slots: totalSlots,
           max_players_per_slot: playersPerSlot,
-          max_concurrent_players: maxConcurrentPlayers
+          max_concurrent_players: maxConcurrentPlayers,
+          laser_total_vests: laserTotalVests,
+          laser_enabled: laserEnabled
         })
         .eq('branch_id', branchId)
 
       if (settingsError) throw settingsError
+
+      // Mettre à jour les laser rooms (noms et capacités)
+      for (const laserRoom of laserRooms) {
+        const { error: laserRoomError } = await supabase
+          .from('laser_rooms')
+          // @ts-expect-error
+          .update({
+            name: laserRoom.name,
+            capacity: laserRoom.capacity
+          })
+          .eq('id', laserRoom.id)
+        
+        if (laserRoomError) {
+          // Si la table n'existe pas, ignorer silencieusement
+          const errorCode = (laserRoomError as any)?.code || ''
+          const errorMessage = String((laserRoomError as any)?.message || laserRoomError || '')
+          const isTableNotExist = 
+            errorCode === '42P01' || 
+            errorMessage.toLowerCase().includes('does not exist')
+          
+          if (!isTableNotExist) {
+            throw laserRoomError
+          }
+        }
+      }
 
       // Sauvegarder les paramètres d'affichage dans localStorage
       if (branchId) {
@@ -352,6 +458,224 @@ export function SettingsModal({
               </p>
             </div>
           </div>
+
+          {/* Activation Laser */}
+          <div>
+            <h3 className={`text-lg font-semibold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+              Activation Laser
+            </h3>
+            <div className={`flex items-center justify-between p-4 rounded-lg ${isDark ? 'bg-gray-700/50' : 'bg-gray-50'}`}>
+              <label className={`text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                Activer les salles Laser pour cette branche
+              </label>
+              <input
+                type="checkbox"
+                checked={laserEnabled}
+                onChange={(e) => setLaserEnabled(e.target.checked)}
+                className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              />
+            </div>
+            <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+              Activez cette option pour permettre les réservations Laser dans cette branche.
+            </p>
+          </div>
+
+          {/* Gestion des salles Laser */}
+          {laserEnabled && (
+            <div>
+              <h3 className={`text-lg font-semibold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                Gestion des salles Laser
+              </h3>
+              <div className="space-y-4">
+                {/* Nombre total de vestes */}
+                <div className={`flex items-center justify-between p-4 rounded-lg ${isDark ? 'bg-gray-700/50' : 'bg-gray-50'}`}>
+                  <label className={`text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                    Nombre total de vestes disponibles
+                  </label>
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={laserTotalVests}
+                      onChange={(e) => {
+                        const value = parseInt(e.target.value) || 0
+                        setLaserTotalVests(value)
+                      }}
+                      className={`w-24 px-3 py-2 rounded-lg border ${
+                        isDark
+                          ? 'bg-gray-800 border-gray-600 text-white'
+                          : 'bg-white border-gray-300 text-gray-900'
+                      } focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                    />
+                    <span className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                      vestes
+                    </span>
+                  </div>
+                </div>
+                <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                  Limite maximale de vestes disponibles pour toutes les salles Laser combinées.
+                </p>
+
+                {/* Liste des salles Laser */}
+                <div className="space-y-3">
+                  {laserRooms.map((room, index) => (
+                    <div
+                      key={room.id}
+                      className={`space-y-3 p-4 rounded-lg ${
+                        isDark ? 'bg-gray-700/50' : 'bg-gray-50'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <label className={`text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                          Nom de la salle
+                        </label>
+                        <input
+                          type="text"
+                          value={room.name || `L${index + 1}`}
+                          onChange={async (e) => {
+                            const newName = e.target.value
+                            const updatedRooms = laserRooms.map(r => 
+                              r.id === room.id ? { ...r, name: newName } : r
+                            )
+                            setLaserRooms(updatedRooms)
+                          }}
+                          className={`flex-1 max-w-xs px-3 py-2 rounded-lg border ${
+                            isDark
+                              ? 'bg-gray-800 border-gray-600 text-white'
+                              : 'bg-white border-gray-300 text-gray-900'
+                          } focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                        />
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <label className={`text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                          Capacité
+                        </label>
+                        <div className="flex items-center gap-3">
+                          <input
+                            type="number"
+                            min="1"
+                            max="50"
+                            value={room.capacity}
+                            onChange={async (e) => {
+                              const newCapacity = parseInt(e.target.value) || 1
+                              const updatedRooms = laserRooms.map(r => 
+                                r.id === room.id ? { ...r, capacity: newCapacity } : r
+                              )
+                              setLaserRooms(updatedRooms)
+                            }}
+                            className={`w-24 px-3 py-2 rounded-lg border ${
+                              isDark
+                                ? 'bg-gray-800 border-gray-600 text-white'
+                                : 'bg-white border-gray-300 text-gray-900'
+                            } focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                          />
+                          <span className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                            personnes
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Ajouter une nouvelle salle Laser */}
+                <div className={`p-4 rounded-lg border-2 border-dashed ${
+                  isDark ? 'border-gray-600 bg-gray-700/30' : 'border-gray-300 bg-gray-50'
+                }`}>
+                  <h4 className={`text-sm font-medium mb-3 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                    Ajouter une nouvelle salle Laser
+                  </h4>
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="text"
+                        placeholder="Nom (ex: L3)"
+                        value={newLaserRoomName}
+                        onChange={(e) => setNewLaserRoomName(e.target.value)}
+                        className={`flex-1 px-3 py-2 rounded-lg border ${
+                          isDark
+                            ? 'bg-gray-800 border-gray-600 text-white'
+                            : 'bg-white border-gray-300 text-gray-900'
+                        } focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                      />
+                      <input
+                        type="number"
+                        min="1"
+                        max="50"
+                        placeholder="Capacité"
+                        value={newLaserRoomCapacity}
+                        onChange={(e) => setNewLaserRoomCapacity(parseInt(e.target.value) || 15)}
+                        className={`w-24 px-3 py-2 rounded-lg border ${
+                          isDark
+                            ? 'bg-gray-800 border-gray-600 text-white'
+                            : 'bg-white border-gray-300 text-gray-900'
+                        } focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                      />
+                      <button
+                        onClick={async () => {
+                          if (!newLaserRoomName || !branchId) return
+                          
+                          const supabase = getClient()
+                          try {
+                            const maxSortOrder = laserRooms.length > 0 
+                              ? Math.max(...laserRooms.map(r => r.sort_order || 0))
+                              : -1
+                            
+                            const { data, error } = await supabase
+                              .from('laser_rooms')
+                              // @ts-expect-error
+                              .insert({
+                                branch_id: branchId,
+                                slug: newLaserRoomName.toLowerCase().replace(/\s+/g, '-'),
+                                name: newLaserRoomName,
+                                capacity: newLaserRoomCapacity,
+                                sort_order: maxSortOrder + 1,
+                                is_active: true
+                              })
+                              .select()
+                              .single()
+                              .returns<LaserRoom>()
+
+                            if (error) {
+                              const errorCode = (error as any)?.code || ''
+                              const errorMessage = String((error as any)?.message || error || '')
+                              const isTableNotExist = 
+                                errorCode === '42P01' || 
+                                errorMessage.toLowerCase().includes('does not exist')
+                              
+                              if (!isTableNotExist) {
+                                throw error
+                              }
+                              return
+                            }
+
+                            if (data) {
+                              setLaserRooms([...laserRooms, data])
+                              setNewLaserRoomName('')
+                              setNewLaserRoomCapacity(15)
+                            }
+                          } catch (err) {
+                            console.error('Error adding laser room:', err)
+                          }
+                        }}
+                        disabled={!newLaserRoomName}
+                        className={`px-4 py-2 rounded-lg transition-colors ${
+                          !newLaserRoomName
+                            ? isDark
+                              ? 'bg-gray-700 text-gray-500 cursor-not-allowed'
+                              : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                            : 'bg-blue-600 hover:bg-blue-700 text-white'
+                        }`}
+                      >
+                        Ajouter
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Configuration de l'affichage du texte */}
           <div>
