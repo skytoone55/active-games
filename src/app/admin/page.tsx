@@ -1265,8 +1265,8 @@ export default function AdminPage() {
           branchSettings={branchSettings}
           onSettingsUpdate={async () => {
             // Rafraîchir les données de la branche après mise à jour des paramètres
-            // Les données seront automatiquement rafraîchies via useBranches
-            window.location.reload() // Simple reload pour rafraîchir toutes les données
+            await refreshBranches()
+            await refreshAllBookings()
           }}
         />
       )}
