@@ -116,7 +116,7 @@ export function BranchSelector({
               }`}
             >
               <div className="font-medium">{branch.name}</div>
-              {branch.name_en && (
+              {branch.name_en && branch.name_en !== branch.name && (
                 <div className={`text-sm ${
                   isDark ? 'text-gray-400' : 'text-gray-600'
                 }`}>{branch.name_en}</div>

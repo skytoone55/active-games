@@ -330,6 +330,7 @@ export function useBookings(branchId: string | null, date?: string) {
       // Mettre à jour le booking
       const updateData: Record<string, unknown> = {}
       if (data.type) updateData.type = data.type
+      if (data.branch_id !== undefined) updateData.branch_id = data.branch_id // CORRECTION: Mettre à jour branch_id
       if (data.start_datetime !== undefined) updateData.start_datetime = data.start_datetime
       if (data.end_datetime !== undefined) updateData.end_datetime = data.end_datetime
       if (data.game_start_datetime !== undefined) updateData.game_start_datetime = data.game_start_datetime
