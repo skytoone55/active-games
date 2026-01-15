@@ -1051,6 +1051,35 @@ export function BookingModal({
                 </>
               )}
               </div>
+              
+              {/* Branche - au milieu avec espacement */}
+              {isEditingBranch && branches.length > 0 ? (
+                <select
+                  value={bookingBranchId}
+                  onChange={(e) => setBookingBranchId(e.target.value)}
+                  onBlur={() => setIsEditingBranch(false)}
+                  className={`text-sm px-2 py-1 rounded-lg border ${isDark ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'}`}
+                  autoFocus
+                >
+                  {branches.map(branch => (
+                    <option key={branch.id} value={branch.id}>{branch.name}</option>
+                  ))}
+                </select>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <span className={`text-xs px-2 py-1 rounded ${isDark ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-700'}`}>
+                    {branches.find(b => b.id === bookingBranchId)?.name || 'Branche'}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setIsEditingBranch(true)}
+                    className={`p-1 rounded ${isDark ? 'hover:bg-gray-700 text-gray-400' : 'hover:bg-gray-100 text-gray-500'}`}
+                    title="Modifier la branche"
+                  >
+                    <Edit2 className="w-3 h-3" />
+                  </button>
+                </div>
+              )}
             </div>
           </div>
           <button
