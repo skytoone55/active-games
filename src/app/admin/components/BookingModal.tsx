@@ -498,6 +498,8 @@ export function BookingModal({
           })
           if (updated) {
             contactIdToLink = updated.id
+            // Mettre à jour le contact dans l'état pour refléter les changements
+            setSelectedContact(updated)
           }
         }
       } else if (!skipDuplicateCheck) {
