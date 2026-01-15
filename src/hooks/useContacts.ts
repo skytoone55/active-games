@@ -90,6 +90,7 @@ export function useContacts(branchId: string | null) {
       // Recherche multi-champs si query fourni
       if (params.query && params.query.trim().length > 0) {
         const searchQuery = params.query.trim()
+        // Utiliser or() avec la syntaxe correcte pour Supabase
         query = query.or(`first_name.ilike.%${searchQuery}%,last_name.ilike.%${searchQuery}%,phone.ilike.%${searchQuery}%,email.ilike.%${searchQuery}%`)
       }
 
@@ -99,9 +100,12 @@ export function useContacts(branchId: string | null) {
       // Pagination
       query = query.range(from, to)
 
-      const { data, error: searchError, count } = await query.returns<Contact[]>()
+      const { data, error: searchError, count } = await query
 
-      if (searchError) throw searchError
+      if (searchError) {
+        console.error('Supabase search error:', searchError)
+        throw new Error(searchError.message || 'Erreur lors de la recherche')
+      }
 
       const contactsList = data || []
       const total = count || 0
@@ -116,7 +120,18 @@ export function useContacts(branchId: string | null) {
       }
     } catch (err) {
       console.error('Error searching contacts:', err)
-      const errorMessage = err instanceof Error ? err.message : 'Erreur lors de la recherche des contacts'
+      // Améliorer l'affichage de l'erreur
+      let errorMessage = 'Erreur lors de la recherche des contacts'
+      if (err instanceof Error) {
+        errorMessage = err.message
+      } else if (err && typeof err === 'object') {
+        // Si c'est un objet d'erreur Supabase
+        if ('message' in err) {
+          errorMessage = String(err.message)
+        } else {
+          errorMessage = JSON.stringify(err)
+        }
+      }
       setError(errorMessage)
       return { contacts: [], total: 0, page: params.page || 1, pageSize: params.pageSize || 50, totalPages: 0 }
     } finally {
