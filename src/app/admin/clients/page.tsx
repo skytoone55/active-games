@@ -134,12 +134,13 @@ export default function ClientsPage() {
 
   // Export CSV
   const handleExportCSV = () => {
-    const headers = ['Prénom', 'Nom', 'Téléphone', 'Email', 'Source', 'Statut', 'Créé le', 'Dernière mise à jour']
+    const headers = ['Prénom', 'Nom', 'Téléphone', 'Email', 'Notes', 'Source', 'Statut', 'Créé le', 'Dernière mise à jour']
     const rows = contacts.map(contact => [
       contact.first_name || '',
       contact.last_name || '',
       contact.phone || '',
       contact.email || '',
+      contact.notes_client || '',
       contact.source === 'admin_agenda' ? 'Agenda' : 'Public',
       contact.status === 'active' ? 'Actif' : 'Archivé',
       new Date(contact.created_at).toLocaleDateString('fr-FR'),
