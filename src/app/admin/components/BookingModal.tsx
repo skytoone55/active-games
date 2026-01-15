@@ -1908,34 +1908,6 @@ export function BookingModal({
         </div>
       )}
 
-      {/* Modal de modification de contact */}
-      {showClientModal && selectedContact && (
-        <ClientModal
-          isOpen={showClientModal}
-          onClose={() => {
-            setShowClientModal(false)
-            // Désactiver le mode édition quand on ferme sans sauvegarder
-            setIsEditingContact(false)
-          }}
-          contact={selectedContact}
-          branchId={branchId}
-          onSave={async (updatedContact?: Contact) => {
-            // Mettre à jour le contact et tous les champs avec les nouvelles données
-            if (updatedContact) {
-              setSelectedContact(updatedContact)
-              setFirstName(updatedContact.first_name || '')
-              setLastName(updatedContact.last_name || '')
-              setPhone(updatedContact.phone || '')
-              setEmail(updatedContact.email || '')
-              setNotes(updatedContact.notes_client || '')
-            }
-            setShowClientModal(false)
-            // Garder le mode édition activé pour permettre les modifications supplémentaires
-            setIsEditingContact(true)
-          }}
-          isDark={isDark}
-        />
-      )}
     </div>
   )
 }
