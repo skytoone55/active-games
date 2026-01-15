@@ -1423,7 +1423,7 @@ export function BookingModal({
                   Prénom *
                 </label>
                 <ContactFieldAutocomplete
-                  branchId={branchId}
+                  branchId={bookingBranchId}
                   value={firstName}
                   onChange={(value) => handleFieldChange('firstName', value)}
                   onSelectContact={handleContactSelectedFromField}
@@ -1440,7 +1440,7 @@ export function BookingModal({
                   Nom
                 </label>
                 <ContactFieldAutocomplete
-                  branchId={branchId}
+                  branchId={bookingBranchId}
                   value={lastName}
                   onChange={(value) => handleFieldChange('lastName', value)}
                   onSelectContact={handleContactSelectedFromField}
@@ -1460,7 +1460,7 @@ export function BookingModal({
                   Téléphone *
                 </label>
                 <ContactFieldAutocomplete
-                  branchId={branchId}
+                  branchId={bookingBranchId}
                   value={phone}
                   onChange={(value) => handleFieldChange('phone', value)}
                   onSelectContact={handleContactSelectedFromField}
@@ -1478,7 +1478,7 @@ export function BookingModal({
                   Email
                 </label>
                 <ContactFieldAutocomplete
-                  branchId={branchId}
+                  branchId={bookingBranchId}
                   value={email}
                   onChange={(value) => handleFieldChange('email', value)}
                   onSelectContact={handleContactSelectedFromField}
