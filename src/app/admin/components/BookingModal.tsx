@@ -330,6 +330,9 @@ export function BookingModal({
         setPhone('')
         setEmail('')
         setError(null)
+        // CRM: Réinitialiser le contact et le mode édition pour une nouvelle réservation
+        setSelectedContact(null)
+        setIsEditingContact(false)
         // Couleur par défaut selon le type
         setColor(defaultBookingType === 'GAME' ? COLORS[0].value : COLORS[1].value)
       }
