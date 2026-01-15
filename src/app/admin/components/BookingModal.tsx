@@ -73,7 +73,9 @@ export function BookingModal({
   defaultBookingType = 'GAME',
   findBestAvailableRoom,
   findRoomAvailability,
-  calculateOverbooking
+  calculateOverbooking,
+  branches = [],
+  selectedBranchId = null
 }: BookingModalProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -108,6 +110,10 @@ export function BookingModal({
   const [notes, setNotes] = useState('')
   const [contactId, setContactId] = useState('') // ID unique du contact (auto-généré)
   const [color, setColor] = useState(COLORS[0].value) // Couleur par défaut bleu
+  
+  // Branche de la réservation (peut être différente de branchId si on modifie)
+  const [bookingBranchId, setBookingBranchId] = useState<string>(branchId)
+  const [isEditingBranch, setIsEditingBranch] = useState(false)
   
   // CRM: Contact sélectionné
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null)
@@ -203,6 +209,14 @@ export function BookingModal({
     prevIsOpenRef.current = isOpen
     
     if (justOpened) {
+      // Initialiser la branche de la réservation
+      if (editingBooking) {
+        setBookingBranchId(editingBooking.branch_id || branchId)
+      } else {
+        setBookingBranchId(branchId)
+      }
+      setIsEditingBranch(false)
+      
       if (editingBooking) {
         // Mode édition : pré-remplir avec les données de la réservation
         const bookingStartDate = extractLocalDateFromISO(editingBooking.game_start_datetime || editingBooking.start_datetime)
@@ -615,7 +629,7 @@ export function BookingModal({
         : notes.trim()
 
       const bookingData: CreateBookingData = {
-        branch_id: branchId,
+        branch_id: bookingBranchId, // Utiliser la branche de la réservation (peut être modifiée)
         type: bookingType,
         start_datetime: startDate.toISOString(),
         end_datetime: endDate.toISOString(),
