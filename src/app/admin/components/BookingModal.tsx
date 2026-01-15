@@ -4,7 +4,6 @@ import { useState, useEffect, useRef } from 'react'
 import { X, Loader2, Users, Clock, User, Phone, Mail, MessageSquare, Gamepad2, PartyPopper, Palette, Home, Calendar, ChevronLeft, ChevronRight, Trash2, Edit2, RefreshCw, AlertTriangle } from 'lucide-react'
 import type { CreateBookingData, BookingWithSlots } from '@/hooks/useBookings'
 import { ContactFieldAutocomplete } from './ContactFieldAutocomplete'
-import { ClientModal } from '../clients/components/ClientModal'
 import { useContacts } from '@/hooks/useContacts'
 import type { Contact } from '@/lib/supabase/types'
 
@@ -162,26 +161,12 @@ export function BookingModal({
     else if (field === 'email') setEmail(value)
   }
 
-  // CRM: Ouvrir modal de modification de contact
-  const [showClientModal, setShowClientModal] = useState(false)
-  
+  // CRM: Activer le mode modification de contact
   const handleModifyClient = () => {
     if (!selectedContact) return
-    // Activer le mode édition pour permettre la modification des champs
+    // Activer le mode édition pour permettre la modification des champs directement dans le formulaire
+    // Pas besoin de pop-up, les champs sont débloqués et la sauvegarde de la réservation mettra à jour le contact
     setIsEditingContact(true)
-    setShowClientModal(true)
-  }
-
-  const handleContactUpdated = (updatedContact: Contact) => {
-    setSelectedContact(updatedContact)
-    // Mettre à jour les champs avec les nouvelles données
-    setFirstName(updatedContact.first_name || '')
-    setLastName(updatedContact.last_name || '')
-    setPhone(updatedContact.phone || '')
-    setEmail(updatedContact.email || '')
-    setNotes(updatedContact.notes_client || '')
-    setShowClientModal(false)
-    // Garder le mode édition activé pour permettre les modifications
   }
 
   // CRM: Changer de contact (réinitialiser et permettre nouveau contact)
