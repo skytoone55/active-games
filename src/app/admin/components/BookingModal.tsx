@@ -110,10 +110,14 @@ export function BookingModal({
   
   // CRM: Contact sélectionné
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null)
+  const [isEditingContact, setIsEditingContact] = useState(false) // Mode modification activé par "modifier client"
   const [showDuplicateWarning, setShowDuplicateWarning] = useState(false)
   const [pendingContactData, setPendingContactData] = useState<{ phone: string; email: string | null } | null>(null)
   const [pendingEventRoomId, setPendingEventRoomId] = useState<string | null | undefined>(null)
   const { createContact, checkDuplicates, updateContact, getContact } = useContacts(branchId)
+  
+  // Les champs sont gelés si un contact est sélectionné ET qu'on n'est pas en mode édition
+  const areFieldsFrozen = selectedContact !== null && !isEditingContact
 
   // Pour les événements avec salle (automatique pour EVENT)
   const [roomStartHour, setRoomStartHour] = useState(initialHour)
@@ -141,19 +145,14 @@ export function BookingModal({
     setPhone(contact.phone || '')
     setEmail(contact.email || '')
     setNotes(contact.notes_client || '')
+    setIsEditingContact(false) // Désactiver le mode édition quand on sélectionne un nouveau contact
   }
 
-  // CRM: Désélectionner le contact si l'utilisateur modifie manuellement un champ
+  // CRM: Mettre à jour un champ (seulement si en mode édition)
   const handleFieldChange = (field: 'firstName' | 'lastName' | 'phone' | 'email', value: string) => {
-    // Si un contact était sélectionné et que l'utilisateur modifie manuellement, désélectionner
-    if (selectedContact) {
-      const currentValue = field === 'firstName' ? firstName : field === 'lastName' ? lastName : field === 'phone' ? phone : email
-      const contactValue = field === 'firstName' ? selectedContact.first_name : field === 'lastName' ? selectedContact.last_name : field === 'phone' ? selectedContact.phone : selectedContact.email
-      
-      // Si la valeur change et diffère de celle du contact sélectionné, désélectionner
-      if (value !== contactValue) {
-        setSelectedContact(null)
-      }
+    // Si les champs sont gelés, ne rien faire
+    if (areFieldsFrozen) {
+      return
     }
     
     // Mettre à jour le champ
@@ -168,12 +167,32 @@ export function BookingModal({
   
   const handleModifyClient = () => {
     if (!selectedContact) return
+    // Activer le mode édition pour permettre la modification des champs
+    setIsEditingContact(true)
     setShowClientModal(true)
   }
 
   const handleContactUpdated = (updatedContact: Contact) => {
     setSelectedContact(updatedContact)
+    // Mettre à jour les champs avec les nouvelles données
+    setFirstName(updatedContact.first_name || '')
+    setLastName(updatedContact.last_name || '')
+    setPhone(updatedContact.phone || '')
+    setEmail(updatedContact.email || '')
+    setNotes(updatedContact.notes_client || '')
     setShowClientModal(false)
+    // Garder le mode édition activé pour permettre les modifications
+  }
+
+  // CRM: Changer de contact (réinitialiser et permettre nouveau contact)
+  const handleChangeContact = () => {
+    setSelectedContact(null)
+    setIsEditingContact(false)
+    setFirstName('')
+    setLastName('')
+    setPhone('')
+    setEmail('')
+    setNotes('')
   }
 
   // Fonction utilitaire pour formater une date en YYYY-MM-DD (sans conversion UTC)
@@ -279,6 +298,7 @@ export function BookingModal({
           getContact(editingBooking.primary_contact_id).then((contact) => {
             if (contact) {
               setSelectedContact(contact)
+              setIsEditingContact(false) // Les champs doivent être gelés pour une réservation existante
               // Ne pas écraser les champs si le contact existe (on garde les snapshot)
               // Mais on peut les pré-remplir avec les infos du contact si les snapshot sont vides
               if (!editingBooking.customer_first_name && contact.first_name) {
@@ -614,16 +634,23 @@ export function BookingModal({
       const success = await onSubmit(bookingData)
 
       if (success) {
-        // Reset et fermer
-        setFirstName('')
-        setLastName('')
-        setPhone('')
-        setEmail('')
-        setNotes('')
-        setEventNotes('')
-        setParticipants('1')
-        setDurationMinutes('60')
-        onClose()
+        // Si c'était une nouvelle réservation (pas d'édition), reset et fermer
+        if (!editingBooking) {
+          setFirstName('')
+          setLastName('')
+          setPhone('')
+          setEmail('')
+          setNotes('')
+          setEventNotes('')
+          setParticipants('1')
+          setDurationMinutes('60')
+          setSelectedContact(null)
+          setIsEditingContact(false)
+          onClose()
+        } else {
+          // Pour une édition, garder les données mais s'assurer que les champs sont gelés
+          setIsEditingContact(false)
+        }
       } else {
         setError('Erreur lors de la création de la réservation')
       }
@@ -1323,14 +1350,7 @@ export function BookingModal({
                 </button>
                 <button
                   type="button"
-                  onClick={() => {
-                    setSelectedContact(null)
-                    setFirstName('')
-                    setLastName('')
-                    setPhone('')
-                    setEmail('')
-                    setNotes('')
-                  }}
+                  onClick={handleChangeContact}
                   className={`px-3 py-1.5 text-xs rounded-lg flex items-center gap-1.5 transition-colors ${
                     isDark
                       ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
@@ -1359,6 +1379,7 @@ export function BookingModal({
                   required
                   isDark={isDark}
                   inputType="text"
+                  disabled={areFieldsFrozen}
                 />
               </div>
               <div>
@@ -1374,6 +1395,7 @@ export function BookingModal({
                   placeholder="Nom (optionnel)"
                   isDark={isDark}
                   inputType="text"
+                  disabled={areFieldsFrozen}
                 />
               </div>
             </div>
@@ -1394,6 +1416,7 @@ export function BookingModal({
                   required
                   isDark={isDark}
                   inputType="tel"
+                  disabled={areFieldsFrozen}
                 />
               </div>
               <div>
@@ -1410,6 +1433,7 @@ export function BookingModal({
                   placeholder="email@exemple.com"
                   isDark={isDark}
                   inputType="email"
+                  disabled={areFieldsFrozen}
                 />
               </div>
             </div>

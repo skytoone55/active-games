@@ -15,6 +15,8 @@ interface ContactFieldAutocompleteProps {
   required?: boolean
   isDark: boolean
   inputType?: 'text' | 'tel' | 'email'
+  disabled?: boolean // Désactive la recherche et rend le champ readonly
+  isFocused?: boolean // Indique si ce champ a le focus (pour ne lancer la recherche que sur le champ actif)
 }
 
 export function ContactFieldAutocomplete({
@@ -27,18 +29,29 @@ export function ContactFieldAutocomplete({
   required = false,
   isDark,
   inputType = 'text',
+  disabled = false,
+  isFocused = false,
 }: ContactFieldAutocompleteProps) {
   const [showResults, setShowResults] = useState(false)
   const [searchResults, setSearchResults] = useState<Contact[]>([])
   const [isSearching, setIsSearching] = useState(false)
+  const [hasFocus, setHasFocus] = useState(false)
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const { searchContacts } = useContacts(branchId)
 
-  // Recherche avec debounce
+  // Recherche avec debounce - SEULEMENT si le champ a le focus ET n'est pas désactivé
   useEffect(() => {
-    if (!branchId) {
+    // Ne pas lancer de recherche si :
+    // - Le champ est désactivé
+    // - Le champ n'a pas le focus
+    // - Pas de branchId
+    if (disabled || !hasFocus || !branchId) {
       setSearchResults([])
+      setShowResults(false)
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current)
+      }
       return
     }
 
@@ -81,7 +94,7 @@ export function ContactFieldAutocomplete({
         clearTimeout(searchTimeoutRef.current)
       }
     }
-  }, [value, branchId, searchContacts])
+  }, [value, branchId, searchContacts, disabled, hasFocus])
 
   // Fermer les résultats si on clique en dehors
   useEffect(() => {
@@ -120,22 +133,36 @@ export function ContactFieldAutocomplete({
           type={inputType}
           value={value}
           onChange={(e) => {
-            onChange(e.target.value)
-            if (e.target.value.trim()) {
-              setShowResults(true)
+            if (!disabled) {
+              onChange(e.target.value)
             }
           }}
           onFocus={() => {
-            if (value.trim() && searchResults.length > 0) {
-              setShowResults(true)
+            if (!disabled) {
+              setHasFocus(true)
+              if (value.trim() && searchResults.length > 0) {
+                setShowResults(true)
+              }
             }
+          }}
+          onBlur={() => {
+            // Ne pas fermer immédiatement pour permettre le clic sur un résultat
+            setTimeout(() => {
+              setHasFocus(false)
+            }, 200)
           }}
           required={required}
           placeholder={placeholder}
+          disabled={disabled}
+          readOnly={disabled}
           className={`w-full px-3 py-2 rounded-lg border ${
-            isDark
-              ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-500'
-              : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'
+            disabled
+              ? isDark
+                ? 'bg-gray-800 border-gray-700 text-gray-500 cursor-not-allowed'
+                : 'bg-gray-100 border-gray-300 text-gray-500 cursor-not-allowed'
+              : isDark
+                ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-500'
+                : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'
           } focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
         />
         {isSearching && (
