@@ -26,9 +26,9 @@ interface BookingModalProps {
   editingBooking?: BookingWithSlots | null
   isDark: boolean
   defaultBookingType?: BookingType // Type par défaut selon où on clique
-  findBestAvailableRoom?: (participants: number, startDateTime: Date, endDateTime: Date, excludeBookingId?: string) => string | null
-  findRoomAvailability?: (participants: number, startDateTime: Date, endDateTime: Date, excludeBookingId?: string) => { bestRoomId: string | null; availableRoomWithLowerCapacity: { id: string; capacity: number } | null; hasAnyAvailableRoom: boolean }
-  calculateOverbooking?: (participants: number, startDateTime: Date, endDateTime: Date, excludeBookingId?: string) => OverbookingInfo
+  findBestAvailableRoom?: (participants: number, startDateTime: Date, endDateTime: Date, excludeBookingId?: string, targetBranchId?: string | null) => string | null
+  findRoomAvailability?: (participants: number, startDateTime: Date, endDateTime: Date, excludeBookingId?: string, targetBranchId?: string | null) => { bestRoomId: string | null; availableRoomWithLowerCapacity: { id: string; capacity: number } | null; hasAnyAvailableRoom: boolean }
+  calculateOverbooking?: (participants: number, startDateTime: Date, endDateTime: Date, excludeBookingId?: string, targetBranchId?: string | null) => OverbookingInfo
   branches?: Array<{ id: string; name: string; slug: string }> // Liste des branches pour permettre le changement
   selectedBranchId?: string | null // ID de la branche sélectionnée
 }
@@ -90,6 +90,8 @@ export function BookingModal({
   
   // Référence pour suivre si le modal vient de s'ouvrir (pour éviter de réinitialiser le type quand l'utilisateur le change)
   const prevIsOpenRef = useRef(false)
+  // Référence pour suivre la branche précédente et détecter les changements
+  const prevBookingBranchIdRef = useRef<string | null>(null)
 
   // Date locale (modifiable)
   const [localDate, setLocalDate] = useState(selectedDate)
@@ -227,11 +229,10 @@ export function BookingModal({
     
     if (justOpened) {
       // Initialiser la branche de la réservation
-      if (editingBooking) {
-        setBookingBranchId(editingBooking.branch_id || branchId)
-      } else {
-        setBookingBranchId(branchId)
-      }
+      const initialBranchId = editingBooking ? (editingBooking.branch_id || branchId) : branchId
+      setBookingBranchId(initialBranchId)
+      // Initialiser la référence pour éviter de déclencher la validation au premier chargement
+      prevBookingBranchIdRef.current = initialBranchId
       // Pour les réservations existantes, geler la branche par défaut
       setIsEditingBranch(false)
       setShowBranchDropdown(false)
@@ -478,6 +479,119 @@ export function BookingModal({
     }
   }, [bookingType, hour, minute, roomStartHour, roomStartMinute])
 
+  // Valider les disponibilités dans la nouvelle branche quand bookingBranchId change
+  useEffect(() => {
+    // Ne valider que si le modal est ouvert
+    if (!isOpen || !bookingBranchId) {
+      // Réinitialiser la référence quand le modal se ferme
+      if (!isOpen) {
+        prevBookingBranchIdRef.current = null
+      }
+      return
+    }
+    
+    // Ne valider que si la branche a vraiment changé (pas au premier chargement)
+    if (prevBookingBranchIdRef.current === bookingBranchId) return
+    
+    // Mettre à jour la référence AVANT la validation pour éviter les boucles
+    const previousBranchId = prevBookingBranchIdRef.current
+    prevBookingBranchIdRef.current = bookingBranchId
+    
+    // Ne pas valider au premier chargement (quand previousBranchId est null)
+    if (previousBranchId === null) return
+    
+    // Attendre un peu pour laisser le temps au cache de se charger si nécessaire
+    const timeoutId = setTimeout(() => {
+      // Calculer parsedParticipants directement ici
+      const currentParsedParticipants = parseInt(participants) || 0
+      const currentParsedDuration = parseInt(durationMinutes) || 60
+      const currentParsedRoomDuration = parseInt(roomDurationMinutes) || 120
+      
+      // Ne valider que si on a des données de réservation valides
+      if (!currentParsedParticipants || currentParsedParticipants <= 0) return
+      
+      // Calculer les dates de la réservation
+      const gameStartDate = new Date(localDate)
+      gameStartDate.setHours(hour, minute, 0, 0)
+      
+      // Calculer l'heure de fin du jeu
+      const startMinutes = hour * 60 + minute
+      const endMinutes = startMinutes + currentParsedDuration
+      const gameEndHour = Math.floor(endMinutes / 60)
+      const gameEndMinute = endMinutes % 60
+      const gameEndDate = new Date(localDate)
+      gameEndDate.setHours(gameEndHour, gameEndMinute, 0, 0)
+      
+      // Pour les événements, utiliser les dates de la salle
+      let startDateTime = gameStartDate
+      let endDateTime = gameEndDate
+      
+      if (bookingType === 'EVENT') {
+        const roomStartDate = new Date(localDate)
+        roomStartDate.setHours(roomStartHour, roomStartMinute, 0, 0)
+        
+        // Calculer l'heure de fin de la salle
+        const roomStartMinutes = roomStartHour * 60 + roomStartMinute
+        const roomEndMinutes = roomStartMinutes + currentParsedRoomDuration
+        const roomEndHour = Math.floor(roomEndMinutes / 60)
+        const roomEndMinute = roomEndMinutes % 60
+        const roomEndDate = new Date(localDate)
+        roomEndDate.setHours(roomEndHour, roomEndMinute, 0, 0)
+        
+        // Prendre les dates les plus larges
+        if (roomStartDate < gameStartDate) startDateTime = roomStartDate
+        if (roomEndDate > gameEndDate) endDateTime = roomEndDate
+      }
+      
+      // Vérifier l'overbooking dans la nouvelle branche
+      if (calculateOverbooking) {
+        const overbookingInfo = calculateOverbooking(
+          currentParsedParticipants,
+          startDateTime,
+          endDateTime,
+          editingBooking?.id,
+          bookingBranchId // Passer la branche cible
+        )
+        
+        if (overbookingInfo.willCauseOverbooking) {
+          setOverbookingInfo(overbookingInfo)
+          setShowOverbookingWarning(true)
+        } else {
+          // Réinitialiser si pas d'overbooking
+          setOverbookingInfo(null)
+          setShowOverbookingWarning(false)
+        }
+      }
+      
+      // Pour les événements, vérifier la disponibilité des salles dans la nouvelle branche
+      if (bookingType === 'EVENT' && findRoomAvailability) {
+        const roomAvailability = findRoomAvailability(
+          currentParsedParticipants,
+          startDateTime,
+          endDateTime,
+          editingBooking?.id,
+          bookingBranchId // Passer la branche cible
+        )
+        
+        if (!roomAvailability.bestRoomId && !roomAvailability.hasAnyAvailableRoom) {
+          // Aucune salle disponible dans la nouvelle branche
+          setShowNoRoomAvailable(true)
+        } else if (!roomAvailability.bestRoomId && roomAvailability.availableRoomWithLowerCapacity) {
+          // Salle disponible mais capacité insuffisante
+          setLowerCapacityRoomInfo(roomAvailability.availableRoomWithLowerCapacity)
+          setShowLowerCapacityRoom(true)
+        } else {
+          // Réinitialiser si tout est OK
+          setShowNoRoomAvailable(false)
+          setLowerCapacityRoomInfo(null)
+          setShowLowerCapacityRoom(false)
+        }
+      }
+    }, 300) // Délai pour laisser le cache se charger
+
+    return () => clearTimeout(timeoutId)
+  }, [bookingBranchId, bookingType, participants, hour, minute, localDate, roomStartHour, roomStartMinute, durationMinutes, roomDurationMinutes, isOpen, branchId, editingBooking?.id, calculateOverbooking, findRoomAvailability])
+
   // Générer les options d'heures
   const hourOptions = []
   for (let h = OPENING_HOUR; h < CLOSING_HOUR; h++) {
@@ -708,6 +822,12 @@ export function BookingModal({
     e.preventDefault()
     setError(null)
 
+    // Bloquer la soumission si un avertissement d'overbooking est actif
+    if (showOverbookingWarning && overbookingInfo) {
+      // Le pop-up d'overbooking doit être confirmé avant de pouvoir soumettre
+      return
+    }
+
     // Validations
     if (!firstName.trim()) {
       setError('Le prénom est requis')
@@ -743,7 +863,7 @@ export function BookingModal({
       roomEndDate.setHours(roomEndHour, roomEndMinute, 0, 0)
 
       // Exclure le booking en cours de modification pour qu'il ne se bloque pas lui-même
-      const roomAvailability = findRoomAvailability(parsedParticipants, roomStartDate, roomEndDate, editingBooking?.id)
+      const roomAvailability = findRoomAvailability(parsedParticipants, roomStartDate, roomEndDate, editingBooking?.id, bookingBranchId)
       
       if (roomAvailability.bestRoomId) {
         // Une salle avec capacité suffisante est disponible
@@ -772,7 +892,7 @@ export function BookingModal({
       roomEndDate.setHours(roomEndHour, roomEndMinute, 0, 0)
 
       // Exclure le booking en cours de modification pour qu'il ne se bloque pas lui-même
-      const bestRoomId = findBestAvailableRoom(parsedParticipants, roomStartDate, roomEndDate, editingBooking?.id)
+      const bestRoomId = findBestAvailableRoom(parsedParticipants, roomStartDate, roomEndDate, editingBooking?.id, bookingBranchId)
       
       if (!bestRoomId) {
         // Aucune salle disponible - over capacity
@@ -798,7 +918,8 @@ export function BookingModal({
         parsedParticipants,
         gameStartDate,
         gameEndDate,
-        editingBooking?.id
+        editingBooking?.id,
+        bookingBranchId
       )
 
       if (obInfo.willCauseOverbooking) {
@@ -832,7 +953,8 @@ export function BookingModal({
         parsedParticipants,
         gameStartDate,
         gameEndDate,
-        editingBooking?.id
+        editingBooking?.id,
+        bookingBranchId
       )
 
       if (obInfo.willCauseOverbooking) {
@@ -1125,8 +1247,14 @@ export function BookingModal({
                         key={branch.id}
                         type="button"
                         onClick={() => {
+                          // Changer la branche - cela déclenchera la validation dans le useEffect
                           setBookingBranchId(branch.id)
                           setShowBranchDropdown(false)
+                          // Réinitialiser les états d'avertissement pour forcer la re-vérification
+                          setShowOverbookingWarning(false)
+                          setOverbookingInfo(null)
+                          setShowNoRoomAvailable(false)
+                          setShowLowerCapacityRoom(false)
                         }}
                         className={`w-full px-4 py-2.5 text-left transition-colors text-sm ${
                           bookingBranchId === branch.id
@@ -1920,7 +2048,12 @@ export function BookingModal({
               </h3>
               <div className={`mb-6 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
                 <p className="mb-4">
-                  Cette réservation va créer un <strong>overbooking</strong> :
+                  {bookingBranchId && bookingBranchId !== branchId && (
+                    <span className="block mb-2">
+                      <strong>Branche de destination :</strong> {branches.find(b => b.id === bookingBranchId)?.name || 'Branche inconnue'}
+                    </span>
+                  )}
+                  Cette réservation va créer un <strong>overbooking</strong> dans la branche de destination :
                 </p>
                 <div className={`p-4 rounded-lg ${isDark ? 'bg-red-900/30 border border-red-700' : 'bg-red-50 border border-red-200'}`}>
                   <div className="space-y-2">

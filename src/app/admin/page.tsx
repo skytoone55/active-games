@@ -838,17 +838,116 @@ export default function AdminPage() {
 
   const calendarDays = getCalendarDays()
 
+  // Cache pour les réservations des autres branches (pour éviter de recharger à chaque fois)
+  const [bookingsCache, setBookingsCache] = useState<Map<string, BookingWithSlots[]>>(new Map())
+
+  // Fonction pour charger les réservations d'une branche spécifique (synchrone avec cache)
+  const getBookingsForBranch = (branchId: string | null, date: Date): BookingWithSlots[] => {
+    if (!branchId) return []
+    
+    // Si c'est la branche actuelle, utiliser allBookings
+    if (branchId === selectedBranchId) {
+      const dateStr = formatDateToString(date)
+      return allBookings.filter(b => {
+        const bookingDate = extractLocalDateFromISO(b.start_datetime)
+        return bookingDate === dateStr
+      })
+    }
+
+    // Vérifier le cache
+    const cacheKey = `${branchId}-${formatDateToString(date)}`
+    if (bookingsCache.has(cacheKey)) {
+      return bookingsCache.get(cacheKey)!
+    }
+
+    // Si pas dans le cache, charger de manière asynchrone (mais retourner vide pour l'instant)
+    // Le chargement se fera dans un useEffect séparé
+    loadBookingsForBranchAsync(branchId, date)
+    return []
+  }
+
+  // Fonction asynchrone pour charger les réservations d'une branche spécifique
+  const loadBookingsForBranchAsync = async (branchId: string, date: Date) => {
+    const cacheKey = `${branchId}-${formatDateToString(date)}`
+    
+    // Ne pas recharger si déjà en cache
+    if (bookingsCache.has(cacheKey)) return
+
+    const supabase = createClient()
+    const dateStr = formatDateToString(date)
+    const startOfDay = `${dateStr}T00:00:00.000Z`
+    const endOfDay = `${dateStr}T23:59:59.999Z`
+
+    try {
+      const { data: bookingsData, error } = await supabase
+        .from('bookings')
+        .select('*')
+        .eq('branch_id', branchId)
+        .neq('status', 'CANCELLED')
+        .gte('start_datetime', startOfDay)
+        .lte('start_datetime', endOfDay)
+        .order('start_datetime', { ascending: true })
+
+      if (error) throw error
+
+      // Charger les slots et contacts comme dans useBookings
+      const bookingIds = (bookingsData || []).map((b: any) => b.id)
+      if (bookingIds.length > 0) {
+        const { data: slotsData } = await supabase
+          .from('booking_slots')
+          .select('*')
+          .in('booking_id', bookingIds)
+          .order('slot_start')
+
+        const { data: bookingContactsData } = await supabase
+          .from('booking_contacts')
+          .select('*, contact:contacts(*)')
+          .in('booking_id', bookingIds)
+
+        // Construire les bookings avec slots et contacts (simplifié)
+        const bookingsWithDetails: BookingWithSlots[] = (bookingsData || []).map((b: any) => {
+          const primaryContactData = (bookingContactsData as any[])?.find((bc: any) => bc.booking_id === b.id && bc.is_primary)
+          return {
+            ...b,
+            slots: (slotsData || []).filter((s: any) => s.booking_id === b.id),
+            primaryContact: primaryContactData?.contact || null,
+          }
+        })
+
+        setBookingsCache(new Map(bookingsCache.set(cacheKey, bookingsWithDetails)))
+      } else {
+        setBookingsCache(new Map(bookingsCache.set(cacheKey, [])))
+      }
+    } catch (err) {
+      console.error('Error loading bookings for branch:', err)
+      setBookingsCache(new Map(bookingsCache.set(cacheKey, [])))
+    }
+  }
+
   // Fonction pour trouver la meilleure salle disponible pour un événement
   const findBestAvailableRoom = (
     participants: number,
     startDateTime: Date,
     endDateTime: Date,
-    excludeBookingId?: string
+    excludeBookingId?: string,
+    targetBranchId?: string | null
   ): string | null => {
-    if (!branchRooms || branchRooms.length === 0) return null
+    // Utiliser la branche cible si fournie, sinon la branche actuelle
+    const branchIdToUse = targetBranchId || selectedBranchId
+    const targetBranch = branches.find(b => b.id === branchIdToUse)
+    const targetRooms = targetBranch?.rooms || []
+    
+    if (!targetRooms || targetRooms.length === 0) return null
+
+    // Obtenir les bookings de la branche cible (utilise le cache)
+    const bookingsForBranch = getBookingsForBranch(branchIdToUse, startDateTime)
+    // Déclencher le chargement asynchrone si nécessaire
+    if (targetBranchId && targetBranchId !== selectedBranchId) {
+      loadBookingsForBranchAsync(targetBranchId, startDateTime)
+    }
 
     // Trier les salles par capacité croissante (plus petite salle en premier)
-    const sortedRooms = [...branchRooms]
+    const sortedRooms = [...targetRooms]
       .filter(room => room.is_active)
       .sort((a, b) => {
         // D'abord par capacité (croissant)
@@ -869,7 +968,7 @@ export default function AdminPage() {
       // Vérifier si la salle est disponible pendant cette période
       let isAvailable = true
 
-      for (const booking of bookings) {
+      for (const booking of bookingsForBranch) {
         // Exclure le booking en cours de modification
         if (excludeBookingId && booking.id === excludeBookingId) continue
         
@@ -904,14 +1003,27 @@ export default function AdminPage() {
     participants: number,
     startDateTime: Date,
     endDateTime: Date,
-    excludeBookingId?: string
+    excludeBookingId?: string,
+    targetBranchId?: string | null
   ): { bestRoomId: string | null; availableRoomWithLowerCapacity: { id: string; capacity: number } | null; hasAnyAvailableRoom: boolean } => {
-    if (!branchRooms || branchRooms.length === 0) {
+    // Utiliser la branche cible si fournie, sinon la branche actuelle
+    const branchIdToUse = targetBranchId || selectedBranchId
+    const targetBranch = branches.find(b => b.id === branchIdToUse)
+    const targetRooms = targetBranch?.rooms || []
+    
+    if (!targetRooms || targetRooms.length === 0) {
       return { bestRoomId: null, availableRoomWithLowerCapacity: null, hasAnyAvailableRoom: false }
     }
 
+    // Obtenir les bookings de la branche cible (utilise le cache)
+    const bookingsForBranch = getBookingsForBranch(branchIdToUse, startDateTime)
+    // Déclencher le chargement asynchrone si nécessaire
+    if (targetBranchId && targetBranchId !== selectedBranchId) {
+      loadBookingsForBranchAsync(targetBranchId, startDateTime)
+    }
+
     // Trier les salles par capacité croissante
-    const sortedRooms = [...branchRooms]
+    const sortedRooms = [...targetRooms]
       .filter(room => room.is_active)
       .sort((a, b) => {
         if (a.capacity !== b.capacity) {
@@ -922,7 +1034,7 @@ export default function AdminPage() {
 
     // Fonction pour vérifier si une salle est disponible
     const isRoomAvailable = (roomId: string): boolean => {
-      for (const booking of bookings) {
+      for (const booking of bookingsForBranch) {
         // Exclure le booking en cours de modification
         if (excludeBookingId && booking.id === excludeBookingId) continue
         
@@ -986,12 +1098,21 @@ export default function AdminPage() {
     participants: number,
     startDateTime: Date,
     endDateTime: Date,
-    excludeBookingId?: string
+    excludeBookingId?: string,
+    targetBranchId?: string | null
   ): { willCauseOverbooking: boolean; maxOverbookedCount: number; maxOverbookedSlots: number; affectedTimeSlots: Array<{ time: string; overbookedCount: number; overbookedSlots: number; totalParticipants: number; capacity: number }> } => {
     const CAPACITY = TOTAL_SLOTS * MAX_PLAYERS_PER_SLOT
     const affectedTimeSlots: Array<{ time: string; overbookedCount: number; overbookedSlots: number; totalParticipants: number; capacity: number }> = []
     let maxOverbookedCount = 0
     let maxOverbookedSlots = 0
+
+    // Obtenir les bookings de la branche cible (utilise le cache)
+    const branchIdToUse = targetBranchId || selectedBranchId
+    const bookingsForBranch = getBookingsForBranch(branchIdToUse, startDateTime)
+    // Déclencher le chargement asynchrone si nécessaire
+    if (targetBranchId && targetBranchId !== selectedBranchId) {
+      loadBookingsForBranchAsync(targetBranchId, startDateTime)
+    }
 
     // Générer toutes les tranches de 15 minutes couvertes par cette réservation
     const bookingTimeSlots: Date[] = []
@@ -1015,7 +1136,7 @@ export default function AdminPage() {
 
       // Calculer totalParticipants = somme des participants actifs sur cette tranche (sans exclure le booking en cours de modification)
       let totalParticipants = participants // Inclure la nouvelle réservation
-      for (const booking of bookings) {
+      for (const booking of bookingsForBranch) {
         if (booking.id === excludeBookingId) continue // Exclure le booking en cours de modification
         if (booking.type !== 'GAME' && booking.type !== 'EVENT') continue
         const bookingStart = booking.game_start_datetime ? new Date(booking.game_start_datetime) : new Date(booking.start_datetime)
@@ -1079,6 +1200,9 @@ export default function AdminPage() {
   // Vérifier si un créneau contient un segment pour GRID ROOMS (rooms uniquement)
   const getSegmentForCellRooms = (hour: number, minute: number, roomIndex: number): UISegment | null => {
     const cellTime = hour * 60 + minute
+    const selectedBranch = branches.find(b => b.id === selectedBranchId)
+    const branchRooms = selectedBranch?.rooms || []
+    
     for (let i = bookings.length - 1; i >= 0; i--) {
       const booking = bookings[i]
       // RÈGLE BÉTON : Rooms = uniquement EVENT
