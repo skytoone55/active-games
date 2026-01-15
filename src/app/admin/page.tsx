@@ -275,7 +275,8 @@ export default function AdminPage() {
       const timeSlotEnd = new Date(timeSlotStart)
       timeSlotEnd.setMinutes(timeSlotEnd.getMinutes() + SLOT_DURATION)
 
-      // Trier les bookings par ordre chronologique
+      // Trier les bookings par ordre d'arrivée (created_at) pour maintenir la stabilité des slots
+      // Une réservation qui arrive en premier garde ses slots, les nouvelles se placent après
       const relevantBookings = bookings
         .filter(b => {
           if (b.type !== 'GAME' && b.type !== 'EVENT') return false
@@ -285,12 +286,15 @@ export default function AdminPage() {
           return bookingStart < timeSlotEnd && bookingEnd > timeSlotStart
         })
         .sort((a, b) => {
-          const dateA = a.game_start_datetime ? new Date(a.game_start_datetime) : new Date(a.start_datetime)
-          const dateB = b.game_start_datetime ? new Date(b.game_start_datetime) : new Date(b.start_datetime)
-          if (dateA.getTime() !== dateB.getTime()) {
-            return dateA.getTime() - dateB.getTime()
+          // Trier par ordre d'arrivée (created_at) pour maintenir la stabilité
+          // Les réservations existantes gardent leurs slots, les nouvelles se placent après
+          const createdA = new Date(a.created_at || 0).getTime()
+          const createdB = new Date(b.created_at || 0).getTime()
+          if (createdA !== createdB) {
+            return createdA - createdB
           }
-          return new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime()
+          // En cas d'égalité, utiliser l'ID pour un tri stable
+          return a.id.localeCompare(b.id)
         })
 
       // Assigner les slots de gauche à droite
