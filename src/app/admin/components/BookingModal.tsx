@@ -427,23 +427,22 @@ export function BookingModal({
     }
   }, [bookingType, editingBooking])
 
-  // Pour les EVENT : synchroniser automatiquement l'heure du jeu avec l'heure de la salle + 15 minutes
+  // Pour les EVENT : synchroniser automatiquement l'heure de la salle avec l'heure du jeu - 15 minutes
   useEffect(() => {
-    if (bookingType === 'EVENT' && !editingBooking) {
-      // Calculer l'heure du jeu = heure de la salle + 15 minutes
-      const roomStartMinutes = roomStartHour * 60 + roomStartMinute
-      const gameStartMinutes = roomStartMinutes + 15
-      const newGameHour = Math.floor(gameStartMinutes / 60)
-      const newGameMinute = gameStartMinutes % 60
+    if (bookingType === 'EVENT') {
+      // Calculer l'heure de la salle = heure du jeu - 15 minutes
+      const gameStartMinutes = hour * 60 + minute
+      const roomStartMinutes = Math.max(0, gameStartMinutes - 15) // Ne pas aller en négatif
+      const newRoomHour = Math.floor(roomStartMinutes / 60)
+      const newRoomMinute = roomStartMinutes % 60
       
       // Mettre à jour seulement si différent (éviter les boucles infinies)
-      // Ne pas inclure hour et minute dans les dépendances pour éviter les boucles
-      if (hour !== newGameHour || minute !== newGameMinute) {
-        setHour(newGameHour)
-        setMinute(newGameMinute)
+      if (roomStartHour !== newRoomHour || roomStartMinute !== newRoomMinute) {
+        setRoomStartHour(newRoomHour)
+        setRoomStartMinute(newRoomMinute)
       }
     }
-  }, [bookingType, roomStartHour, roomStartMinute, editingBooking, hour, minute])
+  }, [bookingType, hour, minute, roomStartHour, roomStartMinute])
 
   // Générer les options d'heures
   const hourOptions = []
