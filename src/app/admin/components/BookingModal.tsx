@@ -243,8 +243,18 @@ export function BookingModal({
             const roomDurationMinutes = Math.round(roomDurationMs / (1000 * 60))
             setRoomDurationMinutes(String(roomDurationMinutes))
             
-            setRoomStartHour(roomStart.getHours())
-            setRoomStartMinute(roomStart.getMinutes())
+            // Pour les EVENT, calculer l'heure de la salle à partir de l'heure du jeu - 15 minutes
+            if (editingBooking.type === 'EVENT' && editingBooking.game_start_datetime) {
+              const gameStart = new Date(editingBooking.game_start_datetime)
+              const gameStartMinutes = gameStart.getHours() * 60 + gameStart.getMinutes()
+              const roomStartMinutes = Math.max(0, gameStartMinutes - 15)
+              setRoomStartHour(Math.floor(roomStartMinutes / 60))
+              setRoomStartMinute(roomStartMinutes % 60)
+            } else {
+              // Pour les autres cas, utiliser l'heure de start_datetime
+              setRoomStartHour(roomStart.getHours())
+              setRoomStartMinute(roomStart.getMinutes())
+            }
           }
           
           // Calculer la durée du jeu
@@ -397,15 +407,20 @@ export function BookingModal({
   }
 
   // Changer la couleur par défaut quand on change de type (uniquement lors de la création)
-  // Si l'utilisateur a déjà choisi une couleur, on ne l'écrase pas
+  // Changer la couleur automatiquement selon le type (création ET édition)
   useEffect(() => {
-    // Ne changer la couleur que si on est en mode création (pas d'édition)
-    // et que la couleur actuelle est une couleur par défaut
-    if (!editingBooking) {
-      const currentDefaultColor = bookingType === 'GAME' ? COLORS[0].value : COLORS[1].value
-      const oppositeDefaultColor = bookingType === 'GAME' ? COLORS[1].value : COLORS[0].value
-      
-      // Si la couleur actuelle est la couleur par défaut de l'autre type, on la change
+    const currentDefaultColor = bookingType === 'GAME' ? COLORS[0].value : COLORS[1].value
+    const oppositeDefaultColor = bookingType === 'GAME' ? COLORS[1].value : COLORS[0].value
+    
+    // Si la couleur actuelle est la couleur par défaut de l'autre type, on la change
+    // En mode édition, on change seulement si c'est une couleur par défaut
+    if (editingBooking) {
+      // En mode édition : changer seulement si c'est une couleur par défaut
+      if (color === oppositeDefaultColor || color === COLORS[0].value || color === COLORS[1].value) {
+        setColor(currentDefaultColor)
+      }
+    } else {
+      // En mode création : changer si c'est la couleur opposée
       if (color === oppositeDefaultColor) {
         setColor(currentDefaultColor)
       }
