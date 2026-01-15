@@ -411,7 +411,7 @@ export function useBookings(branchId: string | null, date?: string) {
         if (data.slots.length > 0) {
           const slotsToInsert = data.slots.map(slot => ({
             booking_id: id,
-            branch_id: updatedBooking.branch_id,
+            branch_id: data.branch_id || updatedBooking.branch_id, // CORRECTION: Utiliser la nouvelle branch_id si fournie
             slot_start: slot.slot_start,
             slot_end: slot.slot_end,
             participants_count: slot.participants_count,
