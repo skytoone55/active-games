@@ -121,7 +121,8 @@ export function BookingModal({
   const [showDuplicateWarning, setShowDuplicateWarning] = useState(false)
   const [pendingContactData, setPendingContactData] = useState<{ phone: string; email: string | null } | null>(null)
   const [pendingEventRoomId, setPendingEventRoomId] = useState<string | null | undefined>(null)
-  const { createContact, checkDuplicates, updateContact, getContact } = useContacts(branchId)
+  // Utiliser bookingBranchId pour les opérations sur les contacts (peut changer si on modifie la branche)
+  const { createContact, checkDuplicates, updateContact, getContact } = useContacts(bookingBranchId)
   
   // Les champs sont gelés si un contact est sélectionné ET qu'on n'est pas en mode édition
   const areFieldsFrozen = selectedContact !== null && !isEditingContact
@@ -1798,7 +1799,7 @@ export function BookingModal({
                     
                     // Créer le contact malgré le doublon
                     const newContact = await createContact({
-                      branch_id_main: branchId,
+                      branch_id_main: bookingBranchId, // Utiliser la branche de la réservation
                       first_name: firstName.trim(),
                       last_name: lastName.trim() || null,
                       phone: pendingContactData.phone,
