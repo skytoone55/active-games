@@ -1055,12 +1055,16 @@ export function BookingModal({
             }
           }
         } else if (gameArea === 'LASER') {
-          // LASER : créer des sessions pour chaque jeu (30 min fixes)
+          // LASER : créer des sessions pour chaque jeu
+          // Utiliser la durée saisie par l'utilisateur (par défaut 30 min)
           // Ne pas forcer l'alignement - garder l'heure exacte (x:15 ou x:45 peuvent rester)
           let currentStart = new Date(gameStartDate)
           
           for (let i = 0; i < numberOfGames; i++) {
-            const gameDuration = 30 // Laser = 30 min fixe
+            // Si un seul jeu, utiliser durationMinutes, sinon utiliser gameDurations[i]
+            const gameDuration = numberOfGames === 1 
+              ? (parseInt(durationMinutes) || 30) 
+              : (parseInt(gameDurations[i] || '30', 10))
             const sessionStart = new Date(currentStart)
             // Ne pas forcer l'alignement - garder l'heure exacte
             
@@ -2479,6 +2483,7 @@ export function BookingModal({
                     setNumberOfGames(2)
                     setGameDurations(['30', '30'])
                     setGamePauses([30]) // Pause après le premier jeu (30 min par défaut pour Laser)
+                    setDurationMinutes('30') // Durée par défaut pour un jeu LASER simple
                   }}
                   className={`p-3 rounded-xl border-2 transition-all flex items-center gap-3 ${
                     gameArea === 'LASER'
@@ -2524,7 +2529,7 @@ export function BookingModal({
                 <Gamepad2 className="w-5 h-5 text-blue-400" />
                 <span className={`font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>Temps de jeu</span>
               </div>
-              <div className={`grid gap-3 ${gameArea === 'CUSTOM' ? 'grid-cols-2' : 'grid-cols-3'}`}>
+              <div className={`grid gap-3 ${gameArea === 'CUSTOM' ? 'grid-cols-2' : (numberOfGames === 1 && gameArea !== 'CUSTOM' ? 'grid-cols-3' : 'grid-cols-2')}`}>
                 <div>
                   <label className={`block text-xs mb-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
                     Début
@@ -2558,8 +2563,8 @@ export function BookingModal({
                     </select>
                   </div>
                 </div>
-                {/* Durée uniquement si pas de laser rooms ou si ACTIVE sans laser rooms configurées, et pas en mode sur mesure */}
-                {gameArea !== 'CUSTOM' && (!laserRooms.length || (gameArea === 'ACTIVE' && !laserRooms.length)) && (
+                {/* Durée - uniquement affichée pour 1 jeu (pas pour 2, 3, 4 jeux où on utilise les durées individuelles) */}
+                {gameArea !== 'CUSTOM' && numberOfGames === 1 && (
                   <div>
                     <label className={`block text-xs mb-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
                       Durée (min)
@@ -2575,7 +2580,7 @@ export function BookingModal({
                           ? 'bg-gray-700 border-gray-600 text-white'
                           : 'bg-white border-gray-300 text-gray-900'
                       }`}
-                      placeholder="60"
+                      placeholder={gameArea === 'LASER' ? '30' : '60'}
                     />
                   </div>
                 )}
