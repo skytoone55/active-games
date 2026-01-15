@@ -594,7 +594,12 @@ export function BookingModal({
         setEventNotes('')
         setNotes('')
         setContactId(generateContactId())
-        setDurationMinutes('60')
+        // Initialiser la durée selon le type de jeu
+        if (defaultBookingType === 'GAME' && defaultGameArea === 'LASER') {
+          setDurationMinutes('30') // 30 min par défaut pour LASER
+        } else {
+          setDurationMinutes('60') // 60 min par défaut pour ACTIVE ou autres
+        }
         setRoomDurationMinutes('120')
         // Initialiser les pauses pour les événements
         if (defaultBookingType === 'EVENT') {
@@ -1029,9 +1034,13 @@ export function BookingModal({
         // GAME : créer des sessions selon game_area et nombre de jeux
         if (gameArea === 'ACTIVE') {
           // ACTIVE : créer des sessions pour chaque jeu
+          // Utiliser la durée saisie par l'utilisateur
           let currentStart = new Date(gameStartDate)
           for (let i = 0; i < numberOfGames; i++) {
-            const gameDuration = parseInt(gameDurations[i] || '30', 10)
+            // Si un seul jeu, utiliser durationMinutes, sinon utiliser gameDurations[i]
+            const gameDuration = numberOfGames === 1 
+              ? (parseInt(durationMinutes) || 60) 
+              : (parseInt(gameDurations[i] || '30', 10))
             const sessionStart = new Date(currentStart)
             const sessionEnd = new Date(sessionStart)
             sessionEnd.setMinutes(sessionEnd.getMinutes() + gameDuration)
@@ -1411,20 +1420,63 @@ export function BookingModal({
     }
 
     // Validation Laser : contrainte hard vests pour EVENT avec sessions Laser
+    // Vérifier chaque session LASER individuellement (pas la durée totale de la salle)
     if (bookingType === 'EVENT' && checkLaserVestsConstraint) {
-      const hasLaserSession = eventGamePlan === 'LL' || eventGamePlan === 'AL' || eventGamePlan === 'LA'
-      if (hasLaserSession) {
-        const roomStartDate = new Date(localDate)
-        roomStartDate.setHours(roomStartHour, roomStartMinute, 0, 0)
-        const { endHour: roomEndHour, endMinute: roomEndMinute } = calculateRoomEndTime()
-        const roomEndDate = new Date(localDate)
-        roomEndDate.setHours(roomEndHour, roomEndMinute, 0, 0)
-
+      // Calculer les sessions LASER qui seront créées
+      const laserSessions: Array<{ start: Date; end: Date }> = []
+      
+      if (eventGamePlanType !== 'CUSTOM') {
+        // Plan prédéfini : calculer les sessions selon le plan
+        const areas = getQuickPlanAreas(eventQuickPlan)
+        let currentStart = new Date(localDate)
+        currentStart.setHours(eventFirstGameStartHour, eventFirstGameStartMinute, 0, 0)
+        
+        for (let i = 0; i < areas.length; i++) {
+          if (areas[i] === 'LASER') {
+            const duration = parseInt(eventGameDurations[i] || '30', 10)
+            const sessionStart = new Date(currentStart)
+            const sessionEnd = new Date(sessionStart)
+            sessionEnd.setMinutes(sessionEnd.getMinutes() + duration)
+            laserSessions.push({ start: sessionStart, end: sessionEnd })
+          }
+          
+          // Préparer le début du prochain jeu
+          if (i < areas.length - 1) {
+            const duration = parseInt(eventGameDurations[i] || '30', 10)
+            currentStart = new Date(currentStart)
+            currentStart.setMinutes(currentStart.getMinutes() + duration + (eventGamePauses[i] || 0))
+          }
+        }
+      } else {
+        // Plan sur mesure : calculer les sessions selon la configuration
+        let currentStart = new Date(localDate)
+        currentStart.setHours(eventFirstGameStartHour, eventFirstGameStartMinute, 0, 0)
+        
+        for (let i = 0; i < eventCustomNumberOfGames; i++) {
+          if (eventCustomGameArea[i] === 'LASER') {
+            const duration = parseInt(eventCustomGameDurations[i] || '30', 10)
+            const sessionStart = new Date(currentStart)
+            const sessionEnd = new Date(sessionStart)
+            sessionEnd.setMinutes(sessionEnd.getMinutes() + duration)
+            laserSessions.push({ start: sessionStart, end: sessionEnd })
+          }
+          
+          // Préparer le début du prochain jeu
+          if (i < eventCustomNumberOfGames - 1) {
+            const duration = parseInt(eventCustomGameDurations[i] || '30', 10)
+            currentStart = new Date(currentStart)
+            currentStart.setMinutes(currentStart.getMinutes() + duration + (eventCustomGamePauses[i] || 0))
+          }
+        }
+      }
+      
+      // Vérifier chaque session LASER individuellement
+      for (const session of laserSessions) {
         const vestsCheck = await checkLaserVestsConstraint(
           parsedParticipants,
-          roomStartDate,
-          roomEndDate,
-          editingBooking?.id,
+          session.start,
+          session.end,
+          editingBooking?.id, // Exclure la réservation en cours de modification
           bookingBranchId
         )
 
@@ -2463,6 +2515,7 @@ export function BookingModal({
                         setNumberOfGames(2)
                         setGameDurations(['30', '30'])
                         setGamePauses([0]) // Pause après le premier jeu (0 par défaut)
+                        setDurationMinutes('60') // Durée par défaut pour un jeu ACTIVE simple (60 min)
                       }}
                   className={`p-3 rounded-xl border-2 transition-all flex items-center gap-3 ${
                     gameArea === 'ACTIVE'
@@ -2483,7 +2536,7 @@ export function BookingModal({
                     setNumberOfGames(2)
                     setGameDurations(['30', '30'])
                     setGamePauses([30]) // Pause après le premier jeu (30 min par défaut pour Laser)
-                    setDurationMinutes('30') // Durée par défaut pour un jeu LASER simple
+                    setDurationMinutes('30') // Durée par défaut pour un jeu LASER simple (30 min)
                   }}
                   className={`p-3 rounded-xl border-2 transition-all flex items-center gap-3 ${
                     gameArea === 'LASER'

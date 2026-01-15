@@ -1325,34 +1325,47 @@ export default function AdminPage() {
 
     if (targetLaserRooms.length === 0) return null
 
-    // Trier les salles par capacité décroissante
+    // Trier les salles par capacité décroissante, puis par sort_order
     const sortedRooms = [...targetLaserRooms].sort((a, b) => {
       if (a.capacity !== b.capacity) {
-        return b.capacity - a.capacity // Décroissant
+        return b.capacity - a.capacity // Décroissant (L2=20 en premier, puis L1=15)
       }
       return a.sort_order - b.sort_order
     })
 
     // Logique d'allocation selon nombre de participants
+    // L1 : capacité 15, L2 : capacité 20
+    // <= 15 : L1 (capacité 15)
+    // > 15 && <= 20 : L2 (capacité 20)
+    // > 20 : L1 + L2 (capacité totale 35)
+    
+    const l1 = sortedRooms.find(r => {
+      const slug = r.slug?.toUpperCase()
+      const name = r.name?.toUpperCase() || ''
+      return slug === 'L1' || name.includes('L1') || name.includes('LASER 1') || name.includes('LASER1')
+    })
+    
+    const l2 = sortedRooms.find(r => {
+      const slug = r.slug?.toUpperCase()
+      const name = r.name?.toUpperCase() || ''
+      return slug === 'L2' || name.includes('L2') || name.includes('LASER 2') || name.includes('LASER2')
+    })
+    
     if (participants <= 15) {
-      // Proposer L1 par défaut (mais L2 possible)
-      const l1 = sortedRooms.find(r => r.slug === 'L1' || r.name.includes('L1'))
+      // participants <= 15 : utiliser L1 (capacité 15)
       if (l1) {
-        // Vérifier disponibilité (sera fait de manière asynchrone dans BookingModal)
         return { roomIds: [l1.id], requiresTwoRooms: false }
       }
-      // Fallback : première salle disponible
+      // Fallback : première salle disponible (par capacité décroissante)
       if (sortedRooms.length > 0) {
         return { roomIds: [sortedRooms[0].id], requiresTwoRooms: false }
       }
     } else if (participants > 15 && participants <= 20) {
-      // Proposer L2 par défaut (mais L1 possible)
-      const l2 = sortedRooms.find(r => r.slug === 'L2' || r.name.includes('L2'))
+      // participants > 15 && <= 20 : utiliser L2 (capacité 20)
       if (l2) {
         return { roomIds: [l2.id], requiresTwoRooms: false }
       }
-      // Fallback : L1 si L2 n'existe pas
-      const l1 = sortedRooms.find(r => r.slug === 'L1' || r.name.includes('L1'))
+      // Fallback : L1 si L2 n'existe pas (mais attention, capacité insuffisante)
       if (l1) {
         return { roomIds: [l1.id], requiresTwoRooms: false }
       }
@@ -1361,10 +1374,7 @@ export default function AdminPage() {
         return { roomIds: [sortedRooms[0].id], requiresTwoRooms: false }
       }
     } else {
-      // participants > 20 : nécessite L1+L2 (2 salles en même temps)
-      const l1 = sortedRooms.find(r => r.slug === 'L1' || r.name.includes('L1'))
-      const l2 = sortedRooms.find(r => r.slug === 'L2' || r.name.includes('L2'))
-      
+      // participants > 20 : nécessite L1 + L2 (capacité totale 35)
       if (l1 && l2) {
         return { roomIds: [l1.id, l2.id], requiresTwoRooms: true }
       }
