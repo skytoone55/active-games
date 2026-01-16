@@ -85,6 +85,7 @@ async function findOrCreateContact(
   }
   
   // Créer un nouveau contact
+  // Note: on utilise 'public_booking' car c'est une valeur existante dans l'enum
   const { data: newContact, error } = await supabase
     .from('contacts')
     .insert({
@@ -94,15 +95,15 @@ async function findOrCreateContact(
       phone: phone,
       email: email,
       notes: formattedNotes,
-      source: 'website',
+      source: 'public_booking',
       status: 'active',
     })
     .select('id')
     .single()
   
   if (error) {
-    console.error('Error creating contact:', error)
-    throw new Error('Failed to create contact')
+    console.error('Error creating contact:', error.message, error.details, error.hint)
+    throw new Error(`Failed to create contact: ${error.message}`)
   }
   
   return newContact.id

@@ -622,7 +622,7 @@ export default function ReservationPage() {
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                    {/* Active Games */}
+                    {/* Active Games - Zap bleu comme dans l'admin */}
                     <motion.button
                       onClick={() => handleGameAreaSelect('ACTIVE')}
                       className={`border-2 rounded-xl p-6 text-center transition-all duration-300 ${
@@ -633,39 +633,39 @@ export default function ReservationPage() {
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
                     >
-                      <Gamepad2 className="w-12 h-12 mx-auto mb-3 text-blue-500" />
+                      <Zap className="w-12 h-12 mx-auto mb-3 text-blue-500" />
                       <h3 className="text-xl font-bold mb-2">Active Games</h3>
                       <p className="text-gray-400 text-sm">Jeux interactifs et challenges</p>
                     </motion.button>
 
-                    {/* Laser */}
+                    {/* Laser - Target violet comme dans l'admin */}
                     <motion.button
                       onClick={() => handleGameAreaSelect('LASER')}
                       className={`border-2 rounded-xl p-6 text-center transition-all duration-300 ${
                         bookingData.gameArea === 'LASER'
-                          ? 'bg-dark-200 border-cyan-500/70 shadow-[0_0_20px_rgba(6,182,212,0.3)]'
-                          : 'bg-dark-200/50 border-primary/30 hover:border-cyan-500/70 hover:shadow-[0_0_20px_rgba(6,182,212,0.3)]'
-                      }`}
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                    >
-                      <Target className="w-12 h-12 mx-auto mb-3 text-cyan-500" />
-                      <h3 className="text-xl font-bold mb-2">Laser City</h3>
-                      <p className="text-gray-400 text-sm">Labyrinthe laser</p>
-                    </motion.button>
-
-                    {/* Mix */}
-                    <motion.button
-                      onClick={() => handleGameAreaSelect('MIX')}
-                      className={`border-2 rounded-xl p-6 text-center transition-all duration-300 ${
-                        bookingData.gameArea === 'MIX'
                           ? 'bg-dark-200 border-purple-500/70 shadow-[0_0_20px_rgba(168,85,247,0.3)]'
                           : 'bg-dark-200/50 border-primary/30 hover:border-purple-500/70 hover:shadow-[0_0_20px_rgba(168,85,247,0.3)]'
                       }`}
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
                     >
-                      <Zap className="w-12 h-12 mx-auto mb-3 text-purple-500" />
+                      <Target className="w-12 h-12 mx-auto mb-3 text-purple-500" />
+                      <h3 className="text-xl font-bold mb-2">Laser City</h3>
+                      <p className="text-gray-400 text-sm">Labyrinthe laser</p>
+                    </motion.button>
+
+                    {/* Mix/Sur mesure - Gamepad2 cyan */}
+                    <motion.button
+                      onClick={() => handleGameAreaSelect('MIX')}
+                      className={`border-2 rounded-xl p-6 text-center transition-all duration-300 ${
+                        bookingData.gameArea === 'MIX'
+                          ? 'bg-dark-200 border-cyan-500/70 shadow-[0_0_20px_rgba(6,182,212,0.3)]'
+                          : 'bg-dark-200/50 border-primary/30 hover:border-cyan-500/70 hover:shadow-[0_0_20px_rgba(6,182,212,0.3)]'
+                      }`}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      <Gamepad2 className="w-12 h-12 mx-auto mb-3 text-cyan-500" />
                       <h3 className="text-xl font-bold mb-2">Sur mesure</h3>
                       <p className="text-gray-400 text-sm">Combinaison Active + Laser</p>
                     </motion.button>
@@ -775,7 +775,7 @@ export default function ReservationPage() {
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                    {/* Active Games 1h */}
+                    {/* Active Games 1h - Zap bleu comme dans l'admin */}
                     <motion.button
                       onClick={() => {
                         setBookingData({ ...bookingData, gameArea: 'ACTIVE', numberOfGames: 2, eventType: 'event_active' })
@@ -788,43 +788,43 @@ export default function ReservationPage() {
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
                     >
-                      <Gamepad2 className="w-12 h-12 mx-auto mb-3 text-blue-500" />
+                      <Zap className="w-12 h-12 mx-auto mb-3 text-blue-500" />
                       <h3 className="text-xl font-bold mb-2">Active Games</h3>
                       <p className="text-gray-400 text-sm">1 heure de jeux</p>
                     </motion.button>
 
-                    {/* Laser 2 parties */}
+                    {/* Laser 2 parties - Target violet comme dans l'admin */}
                     <motion.button
                       onClick={() => {
                         setBookingData({ ...bookingData, gameArea: 'LASER', numberOfGames: 2, eventType: 'event_laser' })
                       }}
                       className={`border-2 rounded-xl p-6 text-center transition-all duration-300 ${
                         bookingData.gameArea === 'LASER'
-                          ? 'bg-dark-200 border-cyan-500/70 shadow-[0_0_20px_rgba(6,182,212,0.3)]'
-                          : 'bg-dark-200/50 border-primary/30 hover:border-cyan-500/70 hover:shadow-[0_0_20px_rgba(6,182,212,0.3)]'
-                      }`}
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                    >
-                      <Target className="w-12 h-12 mx-auto mb-3 text-cyan-500" />
-                      <h3 className="text-xl font-bold mb-2">Laser City</h3>
-                      <p className="text-gray-400 text-sm">2 parties de laser</p>
-                    </motion.button>
-
-                    {/* Mix */}
-                    <motion.button
-                      onClick={() => {
-                        setBookingData({ ...bookingData, gameArea: 'MIX', numberOfGames: 2, eventType: 'event_mix' })
-                      }}
-                      className={`border-2 rounded-xl p-6 text-center transition-all duration-300 ${
-                        bookingData.gameArea === 'MIX'
                           ? 'bg-dark-200 border-purple-500/70 shadow-[0_0_20px_rgba(168,85,247,0.3)]'
                           : 'bg-dark-200/50 border-primary/30 hover:border-purple-500/70 hover:shadow-[0_0_20px_rgba(168,85,247,0.3)]'
                       }`}
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
                     >
-                      <Zap className="w-12 h-12 mx-auto mb-3 text-purple-500" />
+                      <Target className="w-12 h-12 mx-auto mb-3 text-purple-500" />
+                      <h3 className="text-xl font-bold mb-2">Laser City</h3>
+                      <p className="text-gray-400 text-sm">2 parties de laser</p>
+                    </motion.button>
+
+                    {/* Mix - Gamepad2 cyan */}
+                    <motion.button
+                      onClick={() => {
+                        setBookingData({ ...bookingData, gameArea: 'MIX', numberOfGames: 2, eventType: 'event_mix' })
+                      }}
+                      className={`border-2 rounded-xl p-6 text-center transition-all duration-300 ${
+                        bookingData.gameArea === 'MIX'
+                          ? 'bg-dark-200 border-cyan-500/70 shadow-[0_0_20px_rgba(6,182,212,0.3)]'
+                          : 'bg-dark-200/50 border-primary/30 hover:border-cyan-500/70 hover:shadow-[0_0_20px_rgba(6,182,212,0.3)]'
+                      }`}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      <Gamepad2 className="w-12 h-12 mx-auto mb-3 text-cyan-500" />
                       <h3 className="text-xl font-bold mb-2">Mix</h3>
                       <p className="text-gray-400 text-sm">30min Active + 1 Laser</p>
                     </motion.button>
