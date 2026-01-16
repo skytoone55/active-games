@@ -1,9 +1,11 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { X, Save, Loader2 } from 'lucide-react'
+import { X, Save, Loader2, Settings, Gamepad2, Target, Cake, DollarSign } from 'lucide-react'
 import { getClient } from '@/lib/supabase/client'
 import type { EventRoom, BranchSettings, LaserRoom } from '@/lib/supabase/types'
+
+type SettingsTab = 'general' | 'active' | 'laser' | 'rooms' | 'pricing'
 
 interface SettingsModalProps {
   isOpen: boolean
@@ -46,6 +48,9 @@ export function SettingsModal({
   const [textSize, setTextSize] = useState<'xs' | 'sm' | 'base' | 'lg'>('sm')
   const [textWeight, setTextWeight] = useState<'normal' | 'semibold' | 'bold'>('bold')
   const [textAlign, setTextAlign] = useState<'left' | 'center' | 'right'>('left')
+  
+  // Onglet actif
+  const [activeTab, setActiveTab] = useState<SettingsTab>('general')
 
   // Initialiser les capacités et noms des salles
   useEffect(() => {
@@ -285,10 +290,18 @@ export function SettingsModal({
 
   const sortedRooms = [...rooms].sort((a, b) => a.sort_order - b.sort_order)
 
+  const tabs = [
+    { id: 'general' as SettingsTab, label: 'Général', icon: Settings },
+    { id: 'active' as SettingsTab, label: 'Active Games', icon: Gamepad2 },
+    { id: 'laser' as SettingsTab, label: 'Laser', icon: Target },
+    { id: 'rooms' as SettingsTab, label: 'Salles Anniversaire', icon: Cake },
+    { id: 'pricing' as SettingsTab, label: 'Tarifs', icon: DollarSign },
+  ]
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
       <div
-        className={`w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-lg shadow-xl ${
+        className={`w-full max-w-6xl max-h-[90vh] flex flex-col rounded-lg shadow-xl ${
           isDark ? 'bg-gray-800' : 'bg-white'
         }`}
       >
@@ -313,8 +326,38 @@ export function SettingsModal({
           </button>
         </div>
 
+        {/* Tabs */}
+        <div className={`border-b ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
+          <div className="flex space-x-1 p-2">
+            {tabs.map((tab) => {
+              const Icon = tab.icon
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition-all ${
+                    activeTab === tab.id
+                      ? isDark
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-blue-500 text-white'
+                      : isDark
+                        ? 'text-gray-400 hover:bg-gray-700 hover:text-white'
+                        : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                  }`}
+                >
+                  <Icon className="w-4 h-4" />
+                  {tab.label}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
         {/* Content */}
-        <div className="p-6 space-y-8">
+        <div className="flex-1 overflow-y-auto p-6 space-y-8">
+          {/* ONGLET: Salles Anniversaire */}
+          {activeTab === 'rooms' && (
+          <div>
           {/* Capacités des salles */}
           <div>
             <h3 className={`text-lg font-semibold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>
@@ -393,7 +436,12 @@ export function SettingsModal({
               ))}
             </div>
           </div>
+          </div>
+          )}
 
+          {/* ONGLET: Active Games */}
+          {activeTab === 'active' && (
+          <div>
           {/* Configuration des slots */}
           <div>
             <h3 className={`text-lg font-semibold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>
@@ -469,7 +517,12 @@ export function SettingsModal({
               </p>
             </div>
           </div>
+          </div>
+          )}
 
+          {/* ONGLET: Laser */}
+          {activeTab === 'laser' && (
+          <div>
           {/* Activation Laser */}
           <div>
             <h3 className={`text-lg font-semibold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>
@@ -777,7 +830,12 @@ export function SettingsModal({
               </div>
             </div>
           )}
+          </div>
+          )}
 
+          {/* ONGLET: Général */}
+          {activeTab === 'general' && (
+          <div>
           {/* Configuration de l'affichage du texte */}
           <div>
             <h3 className={`text-lg font-semibold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>
@@ -846,6 +904,23 @@ export function SettingsModal({
               </div>
             </div>
           </div>
+          </div>
+          )}
+
+          {/* ONGLET: Tarifs */}
+          {activeTab === 'pricing' && (
+          <div>
+            <div className={`p-8 text-center rounded-lg ${isDark ? 'bg-gray-700/30' : 'bg-gray-50'}`}>
+              <DollarSign className={`w-12 h-12 mx-auto mb-4 ${isDark ? 'text-gray-500' : 'text-gray-400'}`} />
+              <h3 className={`text-lg font-semibold mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                Gestion des tarifs
+              </h3>
+              <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                Section en cours de développement. Les tarifs seront configurables prochainement.
+              </p>
+            </div>
+          </div>
+          )}
 
           {/* Messages d'erreur/succès */}
           {error && (
