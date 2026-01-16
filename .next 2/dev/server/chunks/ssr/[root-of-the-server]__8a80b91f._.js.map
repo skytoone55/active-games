@@ -1,7 +1,0 @@
-{
-  "version": 3,
-  "sources": [],
-  "sections": [
-    {"offset": {"line": 14, "column": 0}, "map": {"version":3,"sources":["file:///Users/jeremy/Desktop/cursor/activegames/lib/i18n.ts"],"sourcesContent":["export type Locale = 'en' | 'he';\n\nexport const defaultLocale: Locale = 'en';\nexport const locales: Locale[] = ['en', 'he'];\n\nexport const localeNames: Record<Locale, string> = {\n  en: 'English',\n  he: 'עברית',\n};\n"],"names":[],"mappings":";;;;;;;;AAEO,MAAM,gBAAwB;AAC9B,MAAM,UAAoB;IAAC;IAAM;CAAK;AAEtC,MAAM,cAAsC;IACjD,IAAI;IACJ,IAAI;AACN"}},
-    {"offset": {"line": 35, "column": 0}, "map": {"version":3,"sources":["file:///Users/jeremy/Desktop/cursor/activegames/app/page.tsx"],"sourcesContent":["import { redirect } from 'next/navigation';\nimport { defaultLocale } from '@/lib/i18n';\n\nexport default function RootPage() {\n  redirect(`/${defaultLocale}`);\n}\n"],"names":[],"mappings":";;;;AAAA;AAAA;AACA;;;AAEe,SAAS;IACtB,IAAA,iMAAQ,EAAC,CAAC,CAAC,EAAE,4HAAa,EAAE;AAC9B"}}]
-}
