@@ -1387,8 +1387,11 @@ export default function AdminPage() {
       const room = targetLaserRooms.find(r => r.id === roomId)
       if (!room) return 0
       
-      // Trouver toutes les réservations LASER qui chevauchent le créneau (n'importe quelle salle)
+      // CRITIQUE : Filtrer UNIQUEMENT les bookings de la branche cible
+      // Chaque branche doit avoir ses salles laser totalement indépendantes
       const overlappingLaserBookings = allBookings.filter(b => {
+        // FILTRE PAR BRANCHE : Exclure les bookings des autres branches
+        if (b.branch_id !== branchIdToUse) return false
         if (excludeBookingId && b.id === excludeBookingId) return false
         if (!b.game_sessions || b.game_sessions.length === 0) return false
         
