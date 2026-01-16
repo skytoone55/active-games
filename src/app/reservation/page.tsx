@@ -200,11 +200,6 @@ export default function ReservationPage() {
     }
   }
 
-  // Sélection du type d'événement (pour Event uniquement)
-  const handleEventTypeSelect = (eventType: string) => {
-    setBookingData({ ...bookingData, eventType })
-    // Ne pas changer d'étape - on attend confirmation
-  }
 
   const handleDateSelect = (date: string) => {
     setBookingData({ ...bookingData, date })
@@ -228,12 +223,8 @@ export default function ReservationPage() {
     }
   }
 
-  const handleContactInfoChange = (field: 'firstName' | 'lastName' | 'phone' | 'email' | 'specialRequest' | 'eventType', value: string | number) => {
+  const handleContactInfoChange = (field: 'firstName' | 'lastName' | 'phone' | 'email' | 'specialRequest', value: string | number) => {
     setBookingData({ ...bookingData, [field]: value })
-  }
-  
-  const handleEventAgeChange = (age: number | null) => {
-    setBookingData({ ...bookingData, eventAge: age })
   }
 
   // État pour le message de confirmation
@@ -1201,92 +1192,6 @@ export default function ReservationPage() {
                   </div>
                 </div>
 
-                {/* Event Specific Fields - Only for Event type */}
-                {bookingData.type === 'event' && (
-                  <>
-                    {/* Event Type and Age (on same line) */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div>
-                        <label className="block text-white mb-2 text-sm font-medium" style={{ fontFamily: 'Poppins, sans-serif' }}>
-                          {translations.booking?.contact?.event_type || 'Event Type'}
-                          <span className="text-primary ml-1">*</span>
-                        </label>
-                        <div className="relative">
-                          <Cake className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-primary pointer-events-none" style={{ zIndex: 1 }} />
-                          <select
-                            value={bookingData.eventType || ''}
-                            onChange={(e) => {
-                              const value = e.target.value
-                              setBookingData({ ...bookingData, eventType: value })
-                            }}
-                            className="w-full border border-primary/30 rounded-lg pl-12 pr-10 py-3 font-medium hover:border-primary/70 transition-all backdrop-blur-sm cursor-pointer"
-                            style={{ 
-                              fontFamily: 'Poppins, sans-serif',
-                              backgroundColor: 'rgba(50, 50, 70, 0.7)',
-                              color: '#00f0ff',
-                              outline: 'none',
-                              appearance: 'none',
-                              WebkitAppearance: 'none',
-                              MozAppearance: 'none',
-                              position: 'relative',
-                              zIndex: 20
-                            }}
-                            required
-                          >
-                            <option value="" style={{ backgroundColor: 'rgba(26, 26, 46, 0.98)', color: '#00f0ff' }}>
-                              {translations.booking?.contact?.event_type_placeholder || 'Select event type'}
-                            </option>
-                            <option value="birthday" style={{ backgroundColor: 'rgba(26, 26, 46, 0.98)', color: '#00f0ff' }}>
-                              {translations.booking?.contact?.event_type_birthday || 'Birthday'}
-                            </option>
-                            <option value="bar_mitzvah" style={{ backgroundColor: 'rgba(26, 26, 46, 0.98)', color: '#00f0ff' }}>
-                              {translations.booking?.contact?.event_type_bar_mitzvah || 'Bar/Bat Mitzvah'}
-                            </option>
-                            <option value="corporate" style={{ backgroundColor: 'rgba(26, 26, 46, 0.98)', color: '#00f0ff' }}>
-                              {translations.booking?.contact?.event_type_corporate || 'Corporate'}
-                            </option>
-                            <option value="party" style={{ backgroundColor: 'rgba(26, 26, 46, 0.98)', color: '#00f0ff' }}>
-                              {translations.booking?.contact?.event_type_party || 'Party'}
-                            </option>
-                            <option value="other" style={{ backgroundColor: 'rgba(26, 26, 46, 0.98)', color: '#00f0ff' }}>
-                              {translations.booking?.contact?.event_type_other || 'Other'}
-                            </option>
-                          </select>
-                          <div 
-                            className="absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none"
-                            style={{ color: '#00f0ff', zIndex: 1 }}
-                          >
-                            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
-                              <path d="M6 9L1 4h10z" fill="currentColor" />
-                            </svg>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Age field - For all event types */}
-                      <div>
-                        <label className="block text-white mb-2 text-sm font-medium" style={{ fontFamily: 'Poppins, sans-serif' }}>
-                          {translations.booking?.contact?.event_age || 'Age'}
-                        </label>
-                        <input
-                          type="number"
-                          min="1"
-                          max="120"
-                          value={bookingData.eventAge || ''}
-                          onChange={(e) => handleEventAgeChange(e.target.value ? parseInt(e.target.value) : null)}
-                          placeholder={translations.booking?.contact?.event_age_placeholder || 'Age (optional)'}
-                          className="w-full border border-primary/30 rounded-lg px-4 py-3 font-medium hover:border-primary/70 transition-all backdrop-blur-sm"
-                          style={{ 
-                            fontFamily: 'Poppins, sans-serif',
-                            backgroundColor: 'rgba(50, 50, 70, 0.7)',
-                            color: '#00f0ff',
-                            outline: 'none'
-                          }}
-                        />
-                      </div>
-                    </div>
-                  </>
-                )}
 
                 {/* Special Request - Optional */}
                 <div>
@@ -1380,24 +1285,6 @@ export default function ReservationPage() {
                     <span className="text-gray-400">{translations.booking?.summary?.time || 'Time:'}</span>
                     <span className="font-bold">{bookingData.time}</span>
                   </div>
-                  {bookingData.type === 'event' && bookingData.eventType && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-400">{translations.booking?.summary?.event_type || 'Event Type:'}</span>
-                      <span className="font-bold">
-                        {bookingData.eventType === 'birthday' && (translations.booking?.contact?.event_type_birthday || 'Birthday')}
-                        {bookingData.eventType === 'bar_mitzvah' && (translations.booking?.contact?.event_type_bar_mitzvah || 'Bar/Bat Mitzvah')}
-                        {bookingData.eventType === 'corporate' && (translations.booking?.contact?.event_type_corporate || 'Corporate')}
-                        {bookingData.eventType === 'party' && (translations.booking?.contact?.event_type_party || 'Party')}
-                        {bookingData.eventType === 'other' && (translations.booking?.contact?.event_type_other || 'Other')}
-                      </span>
-                    </div>
-                  )}
-                  {bookingData.type === 'event' && bookingData.eventAge && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-400">{translations.booking?.summary?.event_age || 'Age:'}</span>
-                      <span className="font-bold">{bookingData.eventAge}</span>
-                    </div>
-                  )}
                 </div>
               </motion.div>
             </motion.div>
@@ -1597,16 +1484,14 @@ export default function ReservationPage() {
                 !bookingData.firstName || 
                 !bookingData.lastName || 
                 !bookingData.phone || 
-                !bookingData.termsAccepted ||
-                (bookingData.type === 'event' && !bookingData.eventType)
+                !bookingData.termsAccepted
               }
               className={`inline-flex items-center gap-2 px-6 py-3 rounded-xl transition-all duration-300 ${
                 !isSubmitting &&
                 bookingData.firstName && 
                 bookingData.lastName && 
                 bookingData.phone && 
-                bookingData.termsAccepted &&
-                (bookingData.type !== 'event' || bookingData.eventType)
+                bookingData.termsAccepted
                   ? 'glow-button'
                   : 'bg-dark-200 border-2 border-primary/30 text-gray-300 cursor-not-allowed hover:border-primary/40'
               }`}
@@ -1615,8 +1500,7 @@ export default function ReservationPage() {
                   bookingData.firstName && 
                   bookingData.lastName && 
                   bookingData.phone && 
-                  bookingData.termsAccepted &&
-                  (bookingData.type !== 'event' || bookingData.eventType)
+                  bookingData.termsAccepted
                 ) ? 1 : 0.75
               }}
             >
