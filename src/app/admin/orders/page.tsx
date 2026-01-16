@@ -19,8 +19,17 @@ import { AdminHeader } from '../components/AdminHeader'
 import { OrdersTable } from './components/OrdersTable'
 import { OrderDetailModal } from './components/OrderDetailModal'
 import { ContactDetailsModal } from '../components/ContactDetailsModal'
+import { ConfirmationModal } from '../components/ConfirmationModal'
 import { createClient } from '@/lib/supabase/client'
 import type { OrderWithRelations } from '@/lib/supabase/types'
+
+interface ConfirmModalState {
+  isOpen: boolean
+  title: string
+  message: string
+  type: 'warning' | 'info' | 'success'
+  onConfirm: () => void
+}
 
 type Theme = 'light' | 'dark'
 
@@ -36,6 +45,13 @@ export default function OrdersPage() {
   const [theme, setTheme] = useState<Theme>('light')
   const [selectedOrder, setSelectedOrder] = useState<OrderWithRelations | null>(null)
   const [selectedContactId, setSelectedContactId] = useState<string | null>(null)
+  const [confirmModal, setConfirmModal] = useState<ConfirmModalState>({
+    isOpen: false,
+    title: '',
+    message: '',
+    type: 'warning',
+    onConfirm: () => {}
+  })
   
   const { 
     orders, 
@@ -166,16 +182,30 @@ export default function OrdersPage() {
     return Gamepad2
   }
 
-  const handleConfirm = async (orderId: string) => {
-    if (confirm('Confirmer cette commande et créer la réservation ?')) {
-      await confirmOrder(orderId)
-    }
+  const handleConfirm = (orderId: string) => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Confirmer la commande',
+      message: 'Voulez-vous confirmer cette commande et créer la réservation ?',
+      type: 'success',
+      onConfirm: async () => {
+        await confirmOrder(orderId)
+        closeOrderModal()
+      }
+    })
   }
 
-  const handleCancel = async (orderId: string) => {
-    if (confirm('Annuler cette commande ?')) {
-      await cancelOrder(orderId)
-    }
+  const handleCancel = (orderId: string) => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Annuler la commande',
+      message: 'Voulez-vous vraiment annuler cette commande ? Cette action est réversible.',
+      type: 'warning',
+      onConfirm: async () => {
+        await cancelOrder(orderId)
+        closeOrderModal()
+      }
+    })
   }
 
   const handleViewOrder = (order: OrderWithRelations) => {
@@ -210,30 +240,46 @@ export default function OrdersPage() {
     router.push(`/admin/clients?contact=${contactId}`)
   }
 
-  // Recréer une réservation annulée
-  const handleRecreate = async (orderId: string) => {
-    if (confirm('Voulez-vous recréer cette réservation ? Une nouvelle réservation sera créée avec les mêmes informations.')) {
-      try {
-        const response = await fetch(`/api/orders/${orderId}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'recreate' })
+  // Recréer une réservation annulée - redirige vers l'agenda avec les données pré-remplies
+  const handleRecreate = (orderId: string) => {
+    const order = orders.find(o => o.id === orderId)
+    if (!order) return
+    
+    setConfirmModal({
+      isOpen: true,
+      title: 'Recréer la réservation',
+      message: 'Vous allez être redirigé vers l\'agenda avec les informations de cette commande pré-remplies. Vous pourrez modifier les détails avant de confirmer.',
+      type: 'success',
+      onConfirm: () => {
+        // Construire les query params avec les données de la commande
+        const params = new URLSearchParams({
+          recreate: 'true',
+          date: order.requested_date,
+          time: order.requested_time,
+          type: order.order_type,
+          participants: order.participants_count.toString(),
+          firstName: order.customer_first_name,
+          lastName: order.customer_last_name || '',
+          phone: order.customer_phone,
+          email: order.customer_email || '',
+          orderId: order.id,
+          reference: order.booking?.reference_code || order.request_reference
         })
         
-        const data = await response.json()
-        if (data.success) {
-          alert('Réservation recréée avec succès !')
-          closeOrderModal()
-          // Rafraîchir la liste
-          window.location.reload()
-        } else {
-          alert(`Erreur: ${data.error}`)
+        if (order.game_area) {
+          params.set('gameArea', order.game_area)
         }
-      } catch (err) {
-        console.error('Error recreating order:', err)
-        alert('Erreur lors de la recréation')
+        if (order.number_of_games) {
+          params.set('numberOfGames', order.number_of_games.toString())
+        }
+        if (order.contact_id) {
+          params.set('contactId', order.contact_id)
+        }
+        
+        closeOrderModal()
+        router.push(`/admin?${params.toString()}`)
       }
-    }
+    })
   }
 
   const isDark = theme === 'dark'
@@ -434,6 +480,17 @@ export default function OrdersPage() {
           isDark={isDark}
         />
       )}
+
+      {/* Modal de confirmation stylisée */}
+      <ConfirmationModal
+        isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+        onConfirm={confirmModal.onConfirm}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        type={confirmModal.type}
+        isDark={isDark}
+      />
     </div>
   )
 }

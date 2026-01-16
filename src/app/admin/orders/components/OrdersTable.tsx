@@ -112,12 +112,13 @@ function FilterDropdown({
   )
 }
 
-const ITEMS_PER_PAGE = 50
+const PAGE_SIZE_OPTIONS = [10, 20, 50, 100, 200, 500, 1000]
 
 export function OrdersTable({ orders, isDark, onConfirm, onCancel, onViewOrder, onViewClient }: OrdersTableProps) {
   const [sortField, setSortField] = useState<SortField>('created')
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
   const [currentPage, setCurrentPage] = useState(1)
+  const [itemsPerPage, setItemsPerPage] = useState(50)
   
   // Filtres
   const [typeFilter, setTypeFilter] = useState<string>('all')
@@ -180,16 +181,16 @@ export function OrdersTable({ orders, isDark, onConfirm, onCancel, onViewOrder, 
   }, [filteredOrders, sortField, sortDirection])
 
   // Pagination
-  const totalPages = Math.ceil(sortedOrders.length / ITEMS_PER_PAGE)
+  const totalPages = Math.ceil(sortedOrders.length / itemsPerPage)
   const paginatedOrders = useMemo(() => {
-    const start = (currentPage - 1) * ITEMS_PER_PAGE
-    return sortedOrders.slice(start, start + ITEMS_PER_PAGE)
-  }, [sortedOrders, currentPage])
+    const start = (currentPage - 1) * itemsPerPage
+    return sortedOrders.slice(start, start + itemsPerPage)
+  }, [sortedOrders, currentPage, itemsPerPage])
 
   // Reset page when filters change
   React.useEffect(() => {
     setCurrentPage(1)
-  }, [typeFilter, statusFilter, gameAreaFilter, sourceFilter])
+  }, [typeFilter, statusFilter, gameAreaFilter, sourceFilter, itemsPerPage])
 
   const SortIcon = ({ field }: { field: SortField }) => {
     if (sortField !== field) return null
@@ -510,11 +511,35 @@ export function OrdersTable({ orders, isDark, onConfirm, onCancel, onViewOrder, 
       </div>
 
       {/* Pagination */}
-      {totalPages > 1 && (
-        <div className={`flex items-center justify-between px-4 py-3 border-t ${isDark ? 'border-gray-700 bg-gray-900' : 'border-gray-200 bg-gray-50'}`}>
+      <div className={`flex items-center justify-between px-4 py-3 border-t ${isDark ? 'border-gray-700 bg-gray-900' : 'border-gray-200 bg-gray-50'}`}>
+        <div className="flex items-center gap-4">
           <div className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-            Page {currentPage} sur {totalPages} ({sortedOrders.length} commandes)
+            {sortedOrders.length} commande{sortedOrders.length !== 1 ? 's' : ''}
+            {totalPages > 1 && ` • Page ${currentPage}/${totalPages}`}
           </div>
+          
+          {/* Sélecteur nombre de lignes */}
+          <div className="flex items-center gap-2">
+            <span className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>Afficher</span>
+            <select
+              value={itemsPerPage}
+              onChange={(e) => setItemsPerPage(Number(e.target.value))}
+              className={`px-2 py-1 rounded text-sm border ${
+                isDark 
+                  ? 'bg-gray-800 border-gray-700 text-gray-300' 
+                  : 'bg-white border-gray-300 text-gray-700'
+              }`}
+            >
+              {PAGE_SIZE_OPTIONS.map(size => (
+                <option key={size} value={size}>{size}</option>
+              ))}
+            </select>
+            <span className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>lignes</span>
+          </div>
+        </div>
+        
+        {/* Navigation pages */}
+        {totalPages > 1 && (
           <div className="flex items-center gap-2">
             <button
               onClick={() => setCurrentPage(1)}
@@ -556,8 +581,8 @@ export function OrdersTable({ orders, isDark, onConfirm, onCancel, onViewOrder, 
               »»
             </button>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   )
 }
