@@ -557,10 +557,10 @@ export async function POST(request: NextRequest) {
       }
     }, { status: 201 })
     
-  } catch (error) {
-    console.error('Error processing order:', error)
+  } catch (error: any) {
+    console.error('Error processing order:', error?.message || error)
     return NextResponse.json(
-      { success: false, error: 'Internal server error' },
+      { success: false, error: error?.message || 'Internal server error' },
       { status: 500 }
     )
   }

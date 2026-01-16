@@ -195,9 +195,7 @@ export default function ReservationPage() {
 
   // Continuer vers la date (étape 3 → 4)
   const handleContinueToDate = () => {
-    if (bookingData.type === 'game' && bookingData.gameArea) {
-      setTimeout(() => setStep(4), 300)
-    } else if (bookingData.type === 'event' && bookingData.eventType) {
+    if (bookingData.gameArea) {
       setTimeout(() => setStep(4), 300)
     }
   }
@@ -265,7 +263,8 @@ export default function ReservationPage() {
       let gameArea: 'ACTIVE' | 'LASER' | null = null
       let customerNotes = bookingData.specialRequest || ''
       
-      if (bookingData.type === 'game' && bookingData.gameArea) {
+      // Pour Game et Event, on a maintenant toujours un gameArea sélectionné
+      if (bookingData.gameArea) {
         if (bookingData.gameArea === 'MIX') {
           // Si "Mix", on envoie ACTIVE par défaut et on note la demande
           gameArea = 'ACTIVE'
@@ -570,15 +569,15 @@ export default function ReservationPage() {
                           </svg>
                         </button>
                       </div>
-                      {/* Info text below input */}
-                      {bookingData.type === 'event' && (
-                        <p className="mt-2 text-xs text-gray-400" style={{ fontFamily: 'Poppins, sans-serif' }}>
-                          {translations.booking?.type?.players?.info_event || 'Minimum 15 players required'}
-                        </p>
-                      )}
                     </div>
                     <div></div>
                   </div>
+                  {/* Info text below input - en dehors du wrapper relatif */}
+                  {bookingData.type === 'event' && (
+                    <p className="mt-2 text-xs text-gray-400 text-center" style={{ fontFamily: 'Poppins, sans-serif' }}>
+                      {translations.booking?.type?.players?.info_event || 'Minimum 15 players required'}
+                    </p>
+                  )}
                   
                   {/* Continue button */}
                   {bookingData.players && bookingData.players >= (bookingData.type === 'event' ? 15 : 1) && (
@@ -672,36 +671,83 @@ export default function ReservationPage() {
                     </motion.button>
                   </div>
 
-                  {/* Nombre de jeux - apparaît après sélection du type */}
+                  {/* Durée/Parties - apparaît après sélection du type */}
                   {bookingData.gameArea && (
                     <motion.div
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
                       className="border-t border-primary/20 pt-6"
                     >
-                      <h3 className="text-lg font-bold text-center mb-4">Nombre de parties</h3>
-                      <div className="flex justify-center gap-4 mb-6">
-                        {[1, 2, 3, 4].map((num) => (
-                          <motion.button
-                            key={num}
-                            onClick={() => handleNumberOfGamesChange(num)}
-                            className={`w-16 h-16 rounded-xl border-2 text-xl font-bold transition-all ${
-                              bookingData.numberOfGames === num
-                                ? 'bg-primary text-dark border-primary shadow-[0_0_15px_rgba(0,240,255,0.5)]'
-                                : 'bg-dark-200/50 border-primary/30 text-white hover:border-primary/70'
-                            }`}
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                          >
-                            {num}
-                          </motion.button>
-                        ))}
-                      </div>
-                      <p className="text-center text-gray-400 text-sm mb-6">
-                        {bookingData.gameArea === 'ACTIVE' && `${bookingData.numberOfGames} partie(s) de 30 minutes`}
-                        {bookingData.gameArea === 'LASER' && `${bookingData.numberOfGames} partie(s) de laser`}
-                        {bookingData.gameArea === 'MIX' && `Mix personnalisé - nous vous contacterons pour les détails`}
-                      </p>
+                      {/* Active Games = durée en heures */}
+                      {bookingData.gameArea === 'ACTIVE' && (
+                        <>
+                          <h3 className="text-lg font-bold text-center mb-4">Durée de jeu</h3>
+                          <div className="flex justify-center gap-4 mb-6">
+                            {[
+                              { value: 2, label: '1h' },
+                              { value: 3, label: '1h30' },
+                              { value: 4, label: '2h' },
+                            ].map((option) => (
+                              <motion.button
+                                key={option.value}
+                                onClick={() => handleNumberOfGamesChange(option.value)}
+                                className={`px-6 py-4 rounded-xl border-2 text-xl font-bold transition-all ${
+                                  bookingData.numberOfGames === option.value
+                                    ? 'bg-primary text-dark border-primary shadow-[0_0_15px_rgba(0,240,255,0.5)]'
+                                    : 'bg-dark-200/50 border-primary/30 text-white hover:border-primary/70'
+                                }`}
+                                whileHover={{ scale: 1.05 }}
+                                whileTap={{ scale: 0.95 }}
+                              >
+                                {option.label}
+                              </motion.button>
+                            ))}
+                          </div>
+                          <p className="text-center text-gray-400 text-sm mb-6">
+                            Jeux illimités pendant la durée choisie
+                          </p>
+                        </>
+                      )}
+
+                      {/* Laser = nombre de parties */}
+                      {bookingData.gameArea === 'LASER' && (
+                        <>
+                          <h3 className="text-lg font-bold text-center mb-4">Nombre de parties</h3>
+                          <div className="flex justify-center gap-4 mb-6">
+                            {[1, 2, 3].map((num) => (
+                              <motion.button
+                                key={num}
+                                onClick={() => handleNumberOfGamesChange(num)}
+                                className={`w-16 h-16 rounded-xl border-2 text-xl font-bold transition-all ${
+                                  bookingData.numberOfGames === num
+                                    ? 'bg-primary text-dark border-primary shadow-[0_0_15px_rgba(0,240,255,0.5)]'
+                                    : 'bg-dark-200/50 border-primary/30 text-white hover:border-primary/70'
+                                }`}
+                                whileHover={{ scale: 1.05 }}
+                                whileTap={{ scale: 0.95 }}
+                              >
+                                {num}
+                              </motion.button>
+                            ))}
+                          </div>
+                          <p className="text-center text-gray-400 text-sm mb-6">
+                            {bookingData.numberOfGames} partie{bookingData.numberOfGames > 1 ? 's' : ''} de laser
+                          </p>
+                        </>
+                      )}
+
+                      {/* Mix = message explicatif */}
+                      {bookingData.gameArea === 'MIX' && (
+                        <>
+                          <h3 className="text-lg font-bold text-center mb-4">Formule Sur Mesure</h3>
+                          <div className={`p-4 rounded-xl bg-purple-500/10 border border-purple-500/30 mb-6`}>
+                            <p className="text-center text-purple-300">
+                              Combinaison Active Games + Laser City<br/>
+                              <span className="text-sm text-gray-400">Nous vous contacterons pour personnaliser votre expérience</span>
+                            </p>
+                          </div>
+                        </>
+                      )}
                       
                       <div className="text-center">
                         <button
@@ -717,107 +763,75 @@ export default function ReservationPage() {
                 </>
               )}
 
-              {/* Pour les EVENTS */}
+              {/* Pour les EVENTS - Choix du type de jeu */}
               {bookingData.type === 'event' && (
                 <>
                   <div className="text-center mb-8">
                     <Cake className="w-16 h-16 text-primary mx-auto mb-4" />
                     <h2 className="text-2xl font-bold mb-2" style={{ fontFamily: 'Orbitron, sans-serif' }}>
-                      Type d'événement
+                      Type de jeux
                     </h2>
-                    <p className="text-gray-400">Quel événement souhaitez-vous célébrer ?</p>
+                    <p className="text-gray-400">Quelle activité pour votre événement ?</p>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                    {/* Anniversaire */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                    {/* Active Games 1h */}
                     <motion.button
-                      onClick={() => handleEventTypeSelect('birthday')}
-                      className={`border-2 rounded-xl p-6 text-left transition-all duration-300 ${
-                        bookingData.eventType === 'birthday'
-                          ? 'bg-dark-200 border-pink-500/70 shadow-[0_0_20px_rgba(236,72,153,0.3)]'
-                          : 'bg-dark-200/50 border-primary/30 hover:border-pink-500/70'
-                      }`}
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                    >
-                      <Cake className="w-10 h-10 mb-3 text-pink-500" />
-                      <h3 className="text-xl font-bold mb-1">Anniversaire</h3>
-                      <p className="text-gray-400 text-sm">Fête d'anniversaire enfant ou adulte</p>
-                    </motion.button>
-
-                    {/* Bar/Bat Mitzvah */}
-                    <motion.button
-                      onClick={() => handleEventTypeSelect('bar_mitzvah')}
-                      className={`border-2 rounded-xl p-6 text-left transition-all duration-300 ${
-                        bookingData.eventType === 'bar_mitzvah'
-                          ? 'bg-dark-200 border-amber-500/70 shadow-[0_0_20px_rgba(245,158,11,0.3)]'
-                          : 'bg-dark-200/50 border-primary/30 hover:border-amber-500/70'
-                      }`}
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                    >
-                      <Users className="w-10 h-10 mb-3 text-amber-500" />
-                      <h3 className="text-xl font-bold mb-1">Bar / Bat Mitzvah</h3>
-                      <p className="text-gray-400 text-sm">Célébration de Bar ou Bat Mitzvah</p>
-                    </motion.button>
-
-                    {/* Entreprise */}
-                    <motion.button
-                      onClick={() => handleEventTypeSelect('corporate')}
-                      className={`border-2 rounded-xl p-6 text-left transition-all duration-300 ${
-                        bookingData.eventType === 'corporate'
+                      onClick={() => {
+                        setBookingData({ ...bookingData, gameArea: 'ACTIVE', numberOfGames: 2, eventType: 'event_active' })
+                      }}
+                      className={`border-2 rounded-xl p-6 text-center transition-all duration-300 ${
+                        bookingData.gameArea === 'ACTIVE'
                           ? 'bg-dark-200 border-blue-500/70 shadow-[0_0_20px_rgba(59,130,246,0.3)]'
-                          : 'bg-dark-200/50 border-primary/30 hover:border-blue-500/70'
+                          : 'bg-dark-200/50 border-primary/30 hover:border-blue-500/70 hover:shadow-[0_0_20px_rgba(59,130,246,0.3)]'
                       }`}
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
                     >
-                      <Gamepad2 className="w-10 h-10 mb-3 text-blue-500" />
-                      <h3 className="text-xl font-bold mb-1">Team Building</h3>
-                      <p className="text-gray-400 text-sm">Événement d'entreprise</p>
+                      <Gamepad2 className="w-12 h-12 mx-auto mb-3 text-blue-500" />
+                      <h3 className="text-xl font-bold mb-2">Active Games</h3>
+                      <p className="text-gray-400 text-sm">1 heure de jeux</p>
                     </motion.button>
 
-                    {/* Autre */}
+                    {/* Laser 2 parties */}
                     <motion.button
-                      onClick={() => handleEventTypeSelect('other')}
-                      className={`border-2 rounded-xl p-6 text-left transition-all duration-300 ${
-                        bookingData.eventType === 'other'
-                          ? 'bg-dark-200 border-green-500/70 shadow-[0_0_20px_rgba(34,197,94,0.3)]'
-                          : 'bg-dark-200/50 border-primary/30 hover:border-green-500/70'
+                      onClick={() => {
+                        setBookingData({ ...bookingData, gameArea: 'LASER', numberOfGames: 2, eventType: 'event_laser' })
+                      }}
+                      className={`border-2 rounded-xl p-6 text-center transition-all duration-300 ${
+                        bookingData.gameArea === 'LASER'
+                          ? 'bg-dark-200 border-cyan-500/70 shadow-[0_0_20px_rgba(6,182,212,0.3)]'
+                          : 'bg-dark-200/50 border-primary/30 hover:border-cyan-500/70 hover:shadow-[0_0_20px_rgba(6,182,212,0.3)]'
                       }`}
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
                     >
-                      <Zap className="w-10 h-10 mb-3 text-green-500" />
-                      <h3 className="text-xl font-bold mb-1">Autre événement</h3>
-                      <p className="text-gray-400 text-sm">Fête privée, EVJF/EVG, etc.</p>
+                      <Target className="w-12 h-12 mx-auto mb-3 text-cyan-500" />
+                      <h3 className="text-xl font-bold mb-2">Laser City</h3>
+                      <p className="text-gray-400 text-sm">2 parties de laser</p>
+                    </motion.button>
+
+                    {/* Mix */}
+                    <motion.button
+                      onClick={() => {
+                        setBookingData({ ...bookingData, gameArea: 'MIX', numberOfGames: 2, eventType: 'event_mix' })
+                      }}
+                      className={`border-2 rounded-xl p-6 text-center transition-all duration-300 ${
+                        bookingData.gameArea === 'MIX'
+                          ? 'bg-dark-200 border-purple-500/70 shadow-[0_0_20px_rgba(168,85,247,0.3)]'
+                          : 'bg-dark-200/50 border-primary/30 hover:border-purple-500/70 hover:shadow-[0_0_20px_rgba(168,85,247,0.3)]'
+                      }`}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      <Zap className="w-12 h-12 mx-auto mb-3 text-purple-500" />
+                      <h3 className="text-xl font-bold mb-2">Mix</h3>
+                      <p className="text-gray-400 text-sm">30min Active + 1 Laser</p>
                     </motion.button>
                   </div>
-
-                  {/* Âge (pour anniversaire et bar mitzvah) */}
-                  {(bookingData.eventType === 'birthday' || bookingData.eventType === 'bar_mitzvah') && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="mb-6"
-                    >
-                      <label className="block text-white mb-2 text-sm">
-                        Âge du célébrant (optionnel)
-                      </label>
-                      <input
-                        type="number"
-                        min="1"
-                        max="120"
-                        value={bookingData.eventAge || ''}
-                        onChange={(e) => setBookingData({ ...bookingData, eventAge: parseInt(e.target.value) || null })}
-                        placeholder="Ex: 10"
-                        className="w-32 border border-primary/30 rounded-lg px-4 py-2 bg-dark-200/50 text-white"
-                      />
-                    </motion.div>
-                  )}
 
                   {/* Bouton Continuer */}
-                  {bookingData.eventType && (
+                  {bookingData.gameArea && (
                     <motion.div
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
@@ -1481,7 +1495,7 @@ export default function ReservationPage() {
                         <span className="font-bold text-white">{bookingData.players}</span>
                       </div>
                     )}
-                    {bookingData.type === 'game' && bookingData.gameArea && (
+                    {bookingData.gameArea && (
                       <>
                         <div className="flex justify-between">
                           <span className="text-gray-400">Type de jeu:</span>
@@ -1492,8 +1506,18 @@ export default function ReservationPage() {
                           </span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-gray-400">Nombre de parties:</span>
-                          <span className="font-bold text-white">{bookingData.numberOfGames}</span>
+                          <span className="text-gray-400">
+                            {bookingData.gameArea === 'ACTIVE' ? 'Durée:' : 'Parties:'}
+                          </span>
+                          <span className="font-bold text-white">
+                            {bookingData.gameArea === 'ACTIVE' && (
+                              bookingData.numberOfGames === 2 ? '1h' :
+                              bookingData.numberOfGames === 3 ? '1h30' :
+                              bookingData.numberOfGames === 4 ? '2h' : `${bookingData.numberOfGames} parties`
+                            )}
+                            {bookingData.gameArea === 'LASER' && `${bookingData.numberOfGames} partie${bookingData.numberOfGames > 1 ? 's' : ''}`}
+                            {bookingData.gameArea === 'MIX' && '30min Active + 1 Laser'}
+                          </span>
                         </div>
                       </>
                     )}
@@ -1517,24 +1541,6 @@ export default function ReservationPage() {
                       <div className="flex justify-between">
                         <span className="text-gray-400">Email:</span>
                         <span className="font-bold text-white">{bookingData.email}</span>
-                      </div>
-                    )}
-                    {bookingData.type === 'event' && bookingData.eventType && (
-                      <div className="flex justify-between">
-                        <span className="text-gray-400">{translations.booking?.summary?.event_type || 'Event Type:'}</span>
-                        <span className="font-bold text-white">
-                          {bookingData.eventType === 'birthday' && (translations.booking?.contact?.event_type_birthday || 'Birthday')}
-                          {bookingData.eventType === 'bar_mitzvah' && (translations.booking?.contact?.event_type_bar_mitzvah || 'Bar/Bat Mitzvah')}
-                          {bookingData.eventType === 'corporate' && (translations.booking?.contact?.event_type_corporate || 'Corporate')}
-                          {bookingData.eventType === 'party' && (translations.booking?.contact?.event_type_party || 'Party')}
-                          {bookingData.eventType === 'other' && (translations.booking?.contact?.event_type_other || 'Other')}
-                        </span>
-                      </div>
-                    )}
-                    {bookingData.type === 'event' && bookingData.eventAge && (
-                      <div className="flex justify-between">
-                        <span className="text-gray-400">{translations.booking?.summary?.event_age || 'Age:'}</span>
-                        <span className="font-bold text-white">{bookingData.eventAge}</span>
                       </div>
                     )}
                   </div>
