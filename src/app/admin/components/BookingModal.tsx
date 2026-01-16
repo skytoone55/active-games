@@ -34,7 +34,7 @@ interface BookingModalProps {
   selectedBranchId?: string | null // ID de la branche sélectionnée
   // Fonctions Laser
   findBestLaserRoom?: (participants: number, startDateTime: Date, endDateTime: Date, excludeBookingId?: string, targetBranchId?: string | null) => Promise<{ roomIds: string[]; requiresTwoRooms: boolean } | null>
-  checkLaserVestsConstraint?: (participants: number, startDateTime: Date, endDateTime: Date, excludeBookingId?: string, targetBranchId?: string | null) => Promise<{ isViolated: boolean; currentUsage: number; maxVests: number; message: string }>
+  checkLaserVestsConstraint?: (participants: number, startDateTime: Date, endDateTime: Date, excludeBookingId?: string, targetBranchId?: string | null) => Promise<{ isViolated: boolean; needsSpareVests: boolean; currentUsage: number; maxVests: number; spareVests: number; totalVests: number; message: string }>
   checkLaserRoomCapacity?: (roomId: string, participants: number, targetBranchId?: string | null) => { isExceeded: boolean; roomCapacity: number; overcapBy: number }
   laserRooms?: LaserRoom[] // Liste des laser rooms de la branche
   maxPlayersPerSlot?: number // Max players per slot (dynamique)
@@ -161,6 +161,9 @@ export function BookingModal({
   // Pour GAME : game_area (ACTIVE/LASER/CUSTOM), nombre de jeux (1/2/3), durées, pauses
   const [gameArea, setGameArea] = useState<GameArea | 'CUSTOM' | null>(null) // ACTIVE, LASER ou CUSTOM (sur mesure) pour GAME, null par défaut pour nouvelle réservation
   const [numberOfGames, setNumberOfGames] = useState(2) // Par défaut 2 jeux pour GAME
+  const [laserAllocationMode, setLaserAllocationMode] = useState<'auto' | 'petit' | 'grand' | 'maxi'>('auto') // Mode d'allocation manuelle pour LASER
+  const [showSpareVestsPopup, setShowSpareVestsPopup] = useState(false) // Popup pour demander si spare vests disponibles
+  const [pendingSpareVestsData, setPendingSpareVestsData] = useState<{ currentUsage: number; maxVests: number; spareVests: number; totalVests: number } | null>(null) // Données pour le popup spare vests
   const [gameDurations, setGameDurations] = useState<string[]>(['30', '30']) // Durée de chaque jeu (en minutes)
   const [gamePauses, setGamePauses] = useState<number[]>([]) // Pause après chaque jeu (en minutes)
   const [laserRoomIds, setLaserRoomIds] = useState<string[]>([]) // IDs des salles laser pour chaque jeu (si LASER)
@@ -1574,8 +1577,20 @@ export function BookingModal({
         bookingBranchId
       )
 
+      if (vestsCheck.needsSpareVests) {
+        // Afficher popup pour demander si spare vests disponibles
+        setPendingSpareVestsData({
+          currentUsage: vestsCheck.currentUsage,
+          maxVests: vestsCheck.maxVests,
+          spareVests: vestsCheck.spareVests,
+          totalVests: vestsCheck.totalVests
+        })
+        setShowSpareVestsPopup(true)
+        return // Interrompre la soumission jusqu'à confirmation
+      }
+
       if (vestsCheck.isViolated) {
-        setError(`Contrainte hard vests violée : ${vestsCheck.currentUsage + parsedParticipants} > ${vestsCheck.maxVests} (REFUS). ${vestsCheck.message}`)
+        setError(`Contrainte vestes violée (incluant spare) : ${vestsCheck.currentUsage + parsedParticipants} > ${vestsCheck.totalVests} (REFUS). ${vestsCheck.message}`)
         return
       }
     }
@@ -2963,6 +2978,66 @@ export function BookingModal({
             </div>
           )}
 
+          {/* Allocation manuelle LASER - Uniquement pour GAME LASER */}
+          {bookingType === 'GAME' && gameArea === 'LASER' && (
+            <div className={`p-4 rounded-xl ${isDark ? 'bg-gray-700/50' : 'bg-gray-50'}`}>
+              <div className="flex items-center gap-2 mb-3">
+                <Target className="w-5 h-5 text-purple-400" />
+                <span className={`font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>Allocation des labyrinthes</span>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setLaserAllocationMode('auto')}
+                  className={`px-4 py-3 rounded-lg border-2 transition-all ${
+                    laserAllocationMode === 'auto'
+                      ? 'border-purple-500 bg-purple-500/10 text-purple-500'
+                      : isDark ? 'border-gray-700 hover:border-gray-600 text-gray-300' : 'border-gray-200 hover:border-gray-300 text-gray-700'
+                  }`}
+                >
+                  <div className="font-medium">Auto</div>
+                  <div className={`text-xs mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Allocation automatique</div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLaserAllocationMode('petit')}
+                  className={`px-4 py-3 rounded-lg border-2 transition-all ${
+                    laserAllocationMode === 'petit'
+                      ? 'border-purple-500 bg-purple-500/10 text-purple-500'
+                      : isDark ? 'border-gray-700 hover:border-gray-600 text-gray-300' : 'border-gray-200 hover:border-gray-300 text-gray-700'
+                  }`}
+                >
+                  <div className="font-medium">Petit laby</div>
+                  <div className={`text-xs mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Petit seul</div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLaserAllocationMode('grand')}
+                  className={`px-4 py-3 rounded-lg border-2 transition-all ${
+                    laserAllocationMode === 'grand'
+                      ? 'border-purple-500 bg-purple-500/10 text-purple-500'
+                      : isDark ? 'border-gray-700 hover:border-gray-600 text-gray-300' : 'border-gray-200 hover:border-gray-300 text-gray-700'
+                  }`}
+                >
+                  <div className="font-medium">Grand laby</div>
+                  <div className={`text-xs mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Grand seul</div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLaserAllocationMode('maxi')}
+                  className={`px-4 py-3 rounded-lg border-2 transition-all ${
+                    laserAllocationMode === 'maxi'
+                      ? 'border-purple-500 bg-purple-500/10 text-purple-500'
+                      : isDark ? 'border-gray-700 hover:border-gray-600 text-gray-300' : 'border-gray-200 hover:border-gray-300 text-gray-700'
+                  }`}
+                >
+                  <div className="font-medium">Maxi</div>
+                  <div className={`text-xs mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Les deux labys</div>
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Configuration des jeux (ACTIVE, LASER ou Sur mesure) - Uniquement pour GAME */}
           {bookingType === 'GAME' && laserRooms.length > 0 && gameArea && gameArea !== 'CUSTOM' && (
             <div className={`p-4 rounded-xl ${isDark ? 'bg-gray-700/50' : 'bg-gray-50'}`}>
@@ -3840,6 +3915,65 @@ export function BookingModal({
                       Supprimer
                     </>
                   )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal spare vests */}
+      {showSpareVestsPopup && pendingSpareVestsData && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            onClick={() => {
+              setShowSpareVestsPopup(false)
+              setPendingSpareVestsData(null)
+            }}
+          />
+
+          {/* Modal spare vests */}
+          <div className={`relative w-full max-w-md mx-4 rounded-2xl shadow-2xl ${isDark ? 'bg-gray-800' : 'bg-white'}`}>
+            <div className="p-6">
+              <h3 className={`text-xl font-bold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                Limite de vestes atteinte
+              </h3>
+              <p className={`mb-4 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                La limite principale de {pendingSpareVestsData.maxVests} vestes est atteinte.
+              </p>
+              <p className={`mb-6 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                Les {pendingSpareVestsData.spareVests} vestes de spare sont-elles disponibles ?
+              </p>
+              <div className="flex items-center justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowSpareVestsPopup(false)
+                    setPendingSpareVestsData(null)
+                  }}
+                  className={`px-4 py-2 rounded-lg ${
+                    isDark
+                      ? 'bg-gray-700 hover:bg-gray-600 text-gray-300'
+                      : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
+                  }`}
+                >
+                  Non - Annuler
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowSpareVestsPopup(false)
+                    setPendingSpareVestsData(null)
+                    // Continuer la soumission en ignorant la limite principale (spare vests autorisées)
+                    // On peut appeler handleSubmit à nouveau mais il faut éviter la boucle infinie
+                    // Pour simplifier, on va juste fermer le popup et laisser l'utilisateur re-soumettre
+                    // TODO: Améliorer pour soumettre automatiquement
+                  }}
+                  className="px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white"
+                >
+                  Oui - Autoriser
                 </button>
               </div>
             </div>

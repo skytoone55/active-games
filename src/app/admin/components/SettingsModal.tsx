@@ -35,6 +35,8 @@ export function SettingsModal({
   // États pour les laser rooms
   const [laserRooms, setLaserRooms] = useState<LaserRoom[]>([])
   const [laserTotalVests, setLaserTotalVests] = useState<number>(0)
+  const [laserSpareVests, setLaserSpareVests] = useState<number>(0)
+  const [laserSingleGroupThreshold, setLaserSingleGroupThreshold] = useState<number>(8)
   const [laserEnabled, setLaserEnabled] = useState<boolean>(false)
   const [newLaserRoomName, setNewLaserRoomName] = useState('')
   const [newLaserRoomCapacity, setNewLaserRoomCapacity] = useState(15)
@@ -67,11 +69,15 @@ export function SettingsModal({
       setTotalSlots(settings.total_slots || 14)
       // Paramètres Laser
       setLaserTotalVests(settings.laser_total_vests || 0)
+      setLaserSpareVests(settings.laser_spare_vests || 0)
+      setLaserSingleGroupThreshold(settings.laser_single_group_threshold || 8)
       setLaserEnabled(settings.laser_enabled || false)
     } else {
       setPlayersPerSlot(6) // Valeur par défaut si pas de settings
       setTotalSlots(14) // Valeur par défaut si pas de settings
       setLaserTotalVests(0)
+      setLaserSpareVests(0)
+      setLaserSingleGroupThreshold(8)
       setLaserEnabled(false)
     }
   }, [settings, branchId]) // Recharger quand branchId change pour avoir les bons paramètres
@@ -213,6 +219,8 @@ export function SettingsModal({
           max_players_per_slot: playersPerSlot,
           max_concurrent_players: maxConcurrentPlayers,
           laser_total_vests: laserTotalVests,
+          laser_spare_vests: laserSpareVests,
+          laser_single_group_threshold: laserSingleGroupThreshold,
           laser_enabled: laserEnabled
         })
         .eq('branch_id', branchId)
@@ -514,7 +522,67 @@ export function SettingsModal({
                   </div>
                 </div>
                 <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                  Limite maximale de vestes disponibles pour toutes les salles Laser combinées.
+                  Limite principale de vestes disponibles pour toutes les salles Laser combinées.
+                </p>
+
+                {/* Vestes de spare */}
+                <div className={`flex items-center justify-between p-4 rounded-lg ${isDark ? 'bg-gray-700/50' : 'bg-gray-50'}`}>
+                  <label className={`text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                    Vestes de spare
+                  </label>
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="number"
+                      min="0"
+                      max="50"
+                      value={laserSpareVests}
+                      onChange={(e) => {
+                        const value = parseInt(e.target.value) || 0
+                        setLaserSpareVests(value)
+                      }}
+                      className={`w-24 px-3 py-2 rounded-lg border ${
+                        isDark
+                          ? 'bg-gray-800 border-gray-600 text-white'
+                          : 'bg-white border-gray-300 text-gray-900'
+                      } focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                    />
+                    <span className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                      vestes
+                    </span>
+                  </div>
+                </div>
+                <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                  Vestes supplémentaires disponibles en cas de besoin (peuvent être activées lors de la réservation).
+                </p>
+
+                {/* Seuil groupe seul */}
+                <div className={`flex items-center justify-between p-4 rounded-lg ${isDark ? 'bg-gray-700/50' : 'bg-gray-50'}`}>
+                  <label className={`text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                    Seuil pour groupe seul
+                  </label>
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="number"
+                      min="1"
+                      max="50"
+                      value={laserSingleGroupThreshold}
+                      onChange={(e) => {
+                        const value = parseInt(e.target.value) || 8
+                        setLaserSingleGroupThreshold(value)
+                      }}
+                      className={`w-24 px-3 py-2 rounded-lg border ${
+                        isDark
+                          ? 'bg-gray-800 border-gray-600 text-white'
+                          : 'bg-white border-gray-300 text-gray-900'
+                      } focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                    />
+                    <span className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                      personnes
+                    </span>
+                  </div>
+                </div>
+                <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                  Nombre minimum de participants pour qu'un groupe joue seul dans un labyrinthe (allocation automatique).
                 </p>
 
                 {/* Liste des salles Laser */}

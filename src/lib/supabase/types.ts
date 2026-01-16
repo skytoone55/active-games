@@ -58,6 +58,8 @@ export interface Database {
           event_price_30_plus: number
           opening_hours: Json
           laser_total_vests: number | null
+          laser_spare_vests: number | null
+          laser_single_group_threshold: number | null
           laser_enabled: boolean | null
           created_at: string
           updated_at: string

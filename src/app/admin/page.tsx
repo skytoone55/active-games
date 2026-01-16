@@ -70,6 +70,22 @@ export default function AdminPage() {
   const [displayTextWeight, setDisplayTextWeight] = useState<'normal' | 'semibold' | 'bold'>('bold')
   const [displayTextAlign, setDisplayTextAlign] = useState<'left' | 'center' | 'right'>('left')
   
+  // État pour gérer la visibilité des grilles
+  const [visibleGrids, setVisibleGrids] = useState({
+    active: true,
+    laser: true,
+    rooms: true
+  })
+  
+  // État pour gérer les dimensions des grilles
+  const [showGridSettingsModal, setShowGridSettingsModal] = useState(false)
+  const [gridWidths, setGridWidths] = useState({
+    active: 100,  // Pourcentage par défaut
+    laser: 100,
+    rooms: 100
+  })
+  const [rowHeight, setRowHeight] = useState(20) // Hauteur des lignes en px (défaut 20px)
+  
   // Modal de confirmation
   const [confirmationModal, setConfirmationModal] = useState<{
     isOpen: boolean
@@ -98,6 +114,19 @@ export default function AdminPage() {
           if (parsed.textAlign) setDisplayTextAlign(parsed.textAlign)
         } catch (e) {
           console.error('Error loading display settings:', e)
+        }
+      }
+      
+      // Charger les paramètres de grille
+      const gridStorageKey = `gridSettings_${selectedBranchId}`
+      const savedGrid = localStorage.getItem(gridStorageKey)
+      if (savedGrid) {
+        try {
+          const parsed = JSON.parse(savedGrid)
+          if (parsed.gridWidths) setGridWidths(parsed.gridWidths)
+          if (parsed.rowHeight) setRowHeight(parsed.rowHeight)
+        } catch (e) {
+          console.error('Error loading grid settings:', e)
         }
       }
     }
@@ -1338,13 +1367,16 @@ export default function AdminPage() {
     const branchIdToUse = targetBranchId || selectedBranchId
     const targetBranch = branches.find(b => b.id === branchIdToUse)
     const targetLaserRooms = targetBranch?.laserRooms?.filter(r => r.is_active) || []
+    
+    // Récupérer le seuil de groupe seul depuis les settings
+    const threshold = targetBranch?.settings?.laser_single_group_threshold || 8
 
     if (targetLaserRooms.length === 0) return null
 
-    // Trier les salles par capacité décroissante, puis par sort_order
-    const sortedRooms = [...targetLaserRooms].sort((a, b) => {
+    // Trier les salles par capacité croissante pour optimiser l'espace (plus petite salle suffisante en premier)
+    const sortedRoomsByCapacity = [...targetLaserRooms].sort((a, b) => {
       if (a.capacity !== b.capacity) {
-        return b.capacity - a.capacity // Décroissant (L2=20 en premier, puis L1=15)
+        return a.capacity - b.capacity // Croissant (L1=15 en premier, puis L2=20)
       }
       return a.sort_order - b.sort_order
     })
@@ -1368,106 +1400,118 @@ export default function AdminPage() {
       return await checkLaserRoomAvailability(roomId, startDateTime, endDateTime, excludeBookingId)
     }
     
-    // Logique d'allocation selon nombre de participants
-    // L1 : capacité 15, L2 : capacité 20
-    // <= 15 : préférer L1, si L1 occupée essayer L2 (on ne mélange pas dans la même salle au même créneau)
-    // > 15 && <= 20 : utiliser L2, si L2 occupée refuser (L1 n'a pas la capacité)
-    // >= 21 : L1 + L2 (capacité totale 35) - les deux doivent être disponibles
+    // Identifier L1 et L2 (trier par capacité décroissante pour identifier les salles)
+    const sortedRooms = [...targetLaserRooms].sort((a, b) => {
+      if (a.capacity !== b.capacity) {
+        return b.capacity - a.capacity // Décroissant (L2=20 en premier, puis L1=15)
+      }
+      return a.sort_order - b.sort_order
+    })
     
-    if (participants <= 15) {
-      // participants <= 15 : préférer L1 (capacité 15)
-      if (l1) {
-        const l1Available = await isRoomAvailable(l1.id)
-        if (l1Available) {
-          return { roomIds: [l1.id], requiresTwoRooms: false }
+    // Logique d'allocation selon nombre de participants et seuil
+    // Si participants >= threshold : chercher une salle entière (priorité à la plus petite suffisante)
+    // Si participants < threshold : partager possible (pour l'instant, même logique mais pourra être étendu)
+    
+    // Calculer capacité totale disponible
+    const totalCapacity = targetLaserRooms.reduce((sum, room) => sum + room.capacity, 0)
+    
+    // Si le groupe nécessite toutes les salles combinées
+    if (participants > Math.max(...targetLaserRooms.map(r => r.capacity))) {
+      // Vérifier si toutes les salles sont disponibles
+      const allAvailable = await Promise.all(targetLaserRooms.map(r => isRoomAvailable(r.id)))
+      if (allAvailable.every(available => available)) {
+        return { 
+          roomIds: targetLaserRooms.map(r => r.id), 
+          requiresTwoRooms: targetLaserRooms.length > 1 
         }
-        // Si L1 est occupée, essayer L2 (on ne mélange pas dans la même salle au même créneau)
-        if (l2) {
-          const l2Available = await isRoomAvailable(l2.id)
-          if (l2Available) {
-            return { roomIds: [l2.id], requiresTwoRooms: false }
+      }
+      return null
+    }
+    
+    // Groupe >= threshold : chercher la plus petite salle suffisante et disponible
+    if (participants >= threshold) {
+      for (const room of sortedRoomsByCapacity) {
+        if (room.capacity >= participants) {
+          const available = await isRoomAvailable(room.id)
+          if (available) {
+            return { roomIds: [room.id], requiresTwoRooms: false }
           }
         }
-        // L1 et L2 sont occupées, pas de salle disponible
-        return null
       }
-      // Fallback : première salle disponible (par capacité décroissante) si L1 n'existe pas
-      for (const room of sortedRooms) {
+      return null
+    }
+    
+    // Groupe < threshold : chercher une salle avec espace disponible (partage possible)
+    // Pour l'instant, même logique simple : chercher la plus petite salle suffisante
+    for (const room of sortedRoomsByCapacity) {
+      if (room.capacity >= participants) {
         const available = await isRoomAvailable(room.id)
         if (available) {
           return { roomIds: [room.id], requiresTwoRooms: false }
         }
       }
-      return null
-    } else if (participants > 15 && participants <= 20) {
-      // participants > 15 && <= 20 : utiliser L2 (capacité 20)
-      // Si L2 est occupée, on refuse (L1 n'a pas la capacité suffisante)
-      if (l2) {
-        const l2Available = await isRoomAvailable(l2.id)
-        if (l2Available) {
-          return { roomIds: [l2.id], requiresTwoRooms: false }
-        }
-        // L2 est occupée, pas de salle disponible
-        return null
-      }
-      // Fallback : L1 si L2 n'existe pas (mais attention, capacité insuffisante)
-      if (l1) {
-        const l1Available = await isRoomAvailable(l1.id)
-        if (l1Available) {
-          return { roomIds: [l1.id], requiresTwoRooms: false }
-        }
-      }
-      return null
-    } else if (participants >= 21) {
-      // participants >= 21 : nécessite L1 + L2 (capacité totale 35)
-      // Les deux salles doivent être disponibles
-      if (l1 && l2) {
-        const l1Available = await isRoomAvailable(l1.id)
-        const l2Available = await isRoomAvailable(l2.id)
-        if (l1Available && l2Available) {
-          return { roomIds: [l1.id, l2.id], requiresTwoRooms: true }
-        }
-        // Si une des deux salles est occupée, pas de solution
-        return null
-      }
-      // Si seulement 1 salle disponible, retourner null (sera géré par popup dans BookingModal)
-      return null
     }
     
-    // Cas par défaut : retourner null
+    // Aucune salle disponible
     return null
   }
 
-  // Vérifier contrainte hard vests
+  // Vérifier contrainte hard vests avec gestion des spare vests
   const checkLaserVestsConstraint = async (
     participants: number,
     startDateTime: Date,
     endDateTime: Date,
     excludeBookingId?: string,
     targetBranchId?: string | null
-  ): Promise<{ isViolated: boolean; currentUsage: number; maxVests: number; message: string }> => {
+  ): Promise<{ 
+    isViolated: boolean; 
+    needsSpareVests: boolean;
+    currentUsage: number; 
+    maxVests: number; 
+    spareVests: number;
+    totalVests: number;
+    message: string 
+  }> => {
     const branchIdToUse = targetBranchId || selectedBranchId
     const targetBranch = branches.find(b => b.id === branchIdToUse)
     const maxVests = targetBranch?.settings?.laser_total_vests || 0
+    const spareVests = targetBranch?.settings?.laser_spare_vests || 0
+    const totalVests = maxVests + spareVests
 
     if (maxVests === 0) {
       // Si pas de contrainte configurée, autoriser
-      return { isViolated: false, currentUsage: 0, maxVests: 0, message: '' }
+      return { 
+        isViolated: false, 
+        needsSpareVests: false,
+        currentUsage: 0, 
+        maxVests: 0, 
+        spareVests: 0,
+        totalVests: 0,
+        message: '' 
+      }
     }
 
     // Calculer l'utilisation actuelle sur ce créneau (filtrer par branche)
     const currentUsage = await calculateVestsUsage(startDateTime, endDateTime, excludeBookingId, branchIdToUse)
     const totalWithNew = currentUsage + participants
 
-    const isViolated = totalWithNew > maxVests
+    // Vérifier si on dépasse la limite principale
+    const exceedsMain = totalWithNew > maxVests
+    // Vérifier si on dépasse la limite totale (principale + spare)
+    const exceedsTotal = totalWithNew > totalVests
 
     return {
-      isViolated,
+      isViolated: exceedsTotal, // Bloque seulement si on dépasse la limite totale
+      needsSpareVests: exceedsMain && !exceedsTotal, // Demande spare si on dépasse principale mais pas totale
       currentUsage,
       maxVests,
-      message: isViolated
-        ? `Dépassement de la contrainte hard vests : ${totalWithNew} > ${maxVests} (REFUS)`
-        : ''
+      spareVests,
+      totalVests,
+      message: exceedsTotal
+        ? `Dépassement de la contrainte vestes (incluant spare) : ${totalWithNew} > ${totalVests} (REFUS)`
+        : exceedsMain
+          ? `Limite principale atteinte (${maxVests} vestes). ${spareVests} vestes spare disponibles.`
+          : ''
     }
   }
 
@@ -2008,56 +2052,69 @@ export default function AdminPage() {
 
         {/* Navigation de date */}
         <div className="flex items-center justify-between mb-6 gap-4">
-          {/* GAUCHE : Jours de la semaine avec navigation semaine */}
-          <div className="flex items-center gap-2">
-            {/* Flèche gauche : semaine précédente */}
+          {/* GAUCHE : Bouton Paramètres + Boutons de rétractation */}
+          <div className="flex gap-2">
+            {/* Bouton Paramètres */}
             <button
-              onClick={handlePreviousWeek}
-              className={`p-2 ${isDark ? 'bg-gray-800 hover:bg-gray-700' : 'bg-gray-200 hover:bg-gray-300'} border ${isDark ? 'border-gray-700' : 'border-gray-300'} rounded-lg transition-all`}
-              title="Semaine précédente"
+              onClick={() => setShowGridSettingsModal(true)}
+              className={`p-2 rounded-lg transition-colors ${
+                isDark
+                  ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              }`}
+              title="Paramètres de la grille"
             >
-              <ChevronLeft className={`w-5 h-5 ${isDark ? 'text-white' : 'text-gray-900'}`} />
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
             </button>
             
-            {/* Jours de la semaine */}
-            <div className="flex gap-2">
-              {getWeekDays().map((day, index) => {
-                const isToday = day.toDateString() === new Date().toDateString()
-                const isSelected = day.toDateString() === selectedDate.toDateString()
-                return (
-                  <button
-                    key={index}
-                    onClick={() => handleWeekDayClick(day)}
-                    className={`px-3 py-2 rounded-lg border text-sm font-medium transition-all ${
-                      isSelected
-                        ? `${isDark ? 'bg-blue-600/20 border-blue-500' : 'bg-blue-100 border-blue-500'} ${isDark ? 'text-blue-400' : 'text-blue-600'} font-bold`
-                        : isToday
-                        ? `${isDark ? 'bg-blue-500/10 border-blue-500/30' : 'bg-blue-50 border-blue-300'} ${isDark ? 'text-blue-400' : 'text-blue-600'}`
-                        : `${isDark ? 'bg-gray-800 border-gray-700 text-white hover:bg-gray-700' : 'bg-gray-200 border-gray-300 text-gray-900 hover:bg-gray-300'}`
-                    }`}
-                  >
-                    <div className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'} leading-tight`}>
-                      {day.toLocaleDateString('fr-FR', { weekday: 'short' })}
-                    </div>
-                    <div className={`text-sm font-bold leading-tight ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                      {day.getDate()}
-                    </div>
-                  </button>
-                )
-              })}
-            </div>
-            
-            {/* Flèche droite : semaine suivante */}
             <button
-              onClick={handleNextWeek}
-              className={`p-2 ${isDark ? 'bg-gray-800 hover:bg-gray-700' : 'bg-gray-200 hover:bg-gray-300'} border ${isDark ? 'border-gray-700' : 'border-gray-300'} rounded-lg transition-all`}
-              title="Semaine suivante"
+              onClick={() => setVisibleGrids(prev => ({ ...prev, active: !prev.active }))}
+              className={`px-3 py-2 rounded-lg font-medium text-sm transition-colors ${
+                visibleGrids.active
+                  ? isDark
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-blue-500 text-white'
+                  : isDark
+                    ? 'bg-gray-700 text-gray-400 hover:bg-gray-600'
+                    : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+              }`}
             >
-              <ChevronRight className={`w-5 h-5 ${isDark ? 'text-white' : 'text-gray-900'}`} />
+              ACTIVE
+            </button>
+            <button
+              onClick={() => setVisibleGrids(prev => ({ ...prev, laser: !prev.laser }))}
+              className={`px-3 py-2 rounded-lg font-medium text-sm transition-colors ${
+                visibleGrids.laser
+                  ? isDark
+                    ? 'bg-purple-600 text-white'
+                    : 'bg-purple-500 text-white'
+                  : isDark
+                    ? 'bg-gray-700 text-gray-400 hover:bg-gray-600'
+                    : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+              }`}
+            >
+              LASER
+            </button>
+            <button
+              onClick={() => setVisibleGrids(prev => ({ ...prev, rooms: !prev.rooms }))}
+              className={`px-3 py-2 rounded-lg font-medium text-sm transition-colors ${
+                visibleGrids.rooms
+                  ? isDark
+                    ? 'bg-green-600 text-white'
+                    : 'bg-green-500 text-white'
+                  : isDark
+                    ? 'bg-gray-700 text-gray-400 hover:bg-gray-600'
+                    : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+              }`}
+            >
+              ROOMS
             </button>
           </div>
 
-          {/* MILIEU : Date sélectionnée avec flèches jour précédent/suivant + bouton Aujourd'hui + Icône calendrier */}
+          {/* CENTRE : Date sélectionnée avec flèches jour précédent/suivant + bouton Aujourd'hui + Icône calendrier */}
           <div className="flex items-center gap-2 flex-1 justify-center">
             {/* Icône calendrier */}
             <div className="relative">
@@ -2186,14 +2243,54 @@ export default function AdminPage() {
             </button>
           </div>
 
-          {/* DROITE : Nouvelle réservation */}
-          <button
-            onClick={() => openBookingModal(undefined, undefined, undefined, 'GAME')}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
-          >
-            <Plus className="w-5 h-5" />
-            Nouvelle réservation
-          </button>
+          {/* DROITE : Jours de la semaine avec navigation semaine */}
+          <div className="flex items-center gap-2">
+            {/* Flèche gauche : semaine précédente */}
+            <button
+              onClick={handlePreviousWeek}
+              className={`p-2 ${isDark ? 'bg-gray-800 hover:bg-gray-700' : 'bg-gray-200 hover:bg-gray-300'} border ${isDark ? 'border-gray-700' : 'border-gray-300'} rounded-lg transition-all`}
+              title="Semaine précédente"
+            >
+              <ChevronLeft className={`w-5 h-5 ${isDark ? 'text-white' : 'text-gray-900'}`} />
+            </button>
+            
+            {/* Jours de la semaine */}
+            <div className="flex gap-2">
+              {getWeekDays().map((day, index) => {
+                const isToday = day.toDateString() === new Date().toDateString()
+                const isSelected = day.toDateString() === selectedDate.toDateString()
+                return (
+                  <button
+                    key={index}
+                    onClick={() => handleWeekDayClick(day)}
+                    className={`px-3 py-2 rounded-lg border text-sm font-medium transition-all ${
+                      isSelected
+                        ? `${isDark ? 'bg-blue-600/20 border-blue-500' : 'bg-blue-100 border-blue-500'} ${isDark ? 'text-blue-400' : 'text-blue-600'} font-bold`
+                        : isToday
+                        ? `${isDark ? 'bg-blue-500/10 border-blue-500/30' : 'bg-blue-50 border-blue-300'} ${isDark ? 'text-blue-400' : 'text-blue-600'}`
+                        : `${isDark ? 'bg-gray-800 border-gray-700 text-white hover:bg-gray-700' : 'bg-gray-200 border-gray-300 text-gray-900 hover:bg-gray-300'}`
+                    }`}
+                  >
+                    <div className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'} leading-tight`}>
+                      {day.toLocaleDateString('fr-FR', { weekday: 'short' })}
+                    </div>
+                    <div className={`text-sm font-bold leading-tight ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                      {day.getDate()}
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+            
+            {/* Flèche droite : semaine suivante */}
+            <button
+              onClick={handleNextWeek}
+              className={`p-2 ${isDark ? 'bg-gray-800 hover:bg-gray-700' : 'bg-gray-200 hover:bg-gray-300'} border ${isDark ? 'border-gray-700' : 'border-gray-300'} rounded-lg transition-all`}
+              title="Semaine suivante"
+            >
+              <ChevronRight className={`w-5 h-5 ${isDark ? 'text-white' : 'text-gray-900'}`} />
+            </button>
+          </div>
         </div>
 
         {/* Erreur */}
@@ -2220,7 +2317,8 @@ export default function AdminPage() {
           {/* 3 Grilles séparées côte à côte */}
           <div className="flex gap-0" style={{ width: '100%', minWidth: 0, overflowX: 'auto' }}>
             {/* GRID GAME - Heure + S1-S14 */}
-            <div style={{ flex: '1 1 auto', flexShrink: 0, minWidth: `calc(80px + ${TOTAL_SLOTS} * 30px)`, borderRight: `2px solid ${isDark ? '#374151' : '#e5e7eb'}` }}>
+            {visibleGrids.active && (
+            <div style={{ flexGrow: gridWidths.active / 100, flexShrink: 1, flexBasis: `${gridWidths.active}%`, minWidth: `${Math.max(100, 80 + TOTAL_SLOTS * 30 * gridWidths.active / 100)}px`, borderRight: `2px solid ${isDark ? '#374151' : '#e5e7eb'}` }}>
               {/* En-tête GRID GAME */}
               <div className={`grid ${isDark ? '' : ''}`} style={{
                 gridTemplateColumns: `80px repeat(${TOTAL_SLOTS}, minmax(30px, 1fr))`,
@@ -2239,7 +2337,7 @@ export default function AdminPage() {
               {/* Corps GRID GAME */}
               <div className="grid" style={{
                 gridTemplateColumns: `80px repeat(${TOTAL_SLOTS}, minmax(30px, 1fr))`,
-                gridTemplateRows: `repeat(${timeSlots.length}, 20px)`,
+                gridTemplateRows: `repeat(${timeSlots.length}, ${rowHeight}px)`,
                 minWidth: 0
               }}>
             {/* Colonne Heure */}
@@ -2426,8 +2524,10 @@ export default function AdminPage() {
             })}
               </div>
             </div>
+            )}
 
-            {/* GRID OB - 1 colonne métrique */}
+            {/* GRID OB - 1 colonne métrique (affiché avec ACTIVE) */}
+            {visibleGrids.active && (
             <div style={{ flex: '0 0 80px', borderRight: `2px solid ${isDark ? '#374151' : '#e5e7eb'}` }}>
               {/* En-tête GRID OB */}
               <div className={`grid ${isDark ? '' : ''}`} style={{
@@ -2442,7 +2542,7 @@ export default function AdminPage() {
               {/* Corps GRID OB - Métrique pure, jamais de getSegmentForCell */}
               <div className="grid" style={{
                 gridTemplateColumns: `1fr`,
-                gridTemplateRows: `repeat(${timeSlots.length}, 20px)`,
+                gridTemplateRows: `repeat(${timeSlots.length}, ${rowHeight}px)`,
               }}>
                 {timeSlots.map((slot, timeIndex) => {
                   // Convertir slot en Date pour calculer timeKey
@@ -2490,13 +2590,14 @@ export default function AdminPage() {
                 })}
               </div>
             </div>
+            )}
 
             {/* GRID LASER - Avec colonne Heure à droite */}
-            {laserRooms.length > 0 && (
-              <div style={{ flex: '1 1 auto', flexShrink: 0, minWidth: `calc(80px + ${TOTAL_LASER_ROOMS} * 30px)`, borderRight: `2px solid ${isDark ? '#374151' : '#e5e7eb'}` }}>
+            {visibleGrids.laser && laserRooms.length > 0 && (
+              <div style={{ flexGrow: gridWidths.laser / 100, flexShrink: 1, flexBasis: `${gridWidths.laser}%`, minWidth: `${Math.max(100, 80 + TOTAL_LASER_ROOMS * 30 * gridWidths.laser / 100)}px`, borderRight: `2px solid ${isDark ? '#374151' : '#e5e7eb'}` }}>
                 {/* En-tête GRID LASER */}
                 <div className={`grid ${isDark ? '' : ''}`} style={{
-                  gridTemplateColumns: `repeat(${TOTAL_LASER_ROOMS}, minmax(30px, 1fr)) 80px`,
+                  gridTemplateColumns: `repeat(${TOTAL_LASER_ROOMS}, minmax(30px, 1fr))`,
                   borderBottom: `2px solid ${isDark ? '#374151' : '#e5e7eb'}`,
                   minWidth: 0
                 }}>
@@ -2511,15 +2612,12 @@ export default function AdminPage() {
                         </div>
                       )
                     })}
-                  <div className={`p-3 text-center font-medium ${isDark ? 'text-gray-400 bg-gray-900 border-l' : 'text-gray-600 bg-gray-50 border-l'} ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
-                    Heure
-                  </div>
                 </div>
 
-                {/* Corps GRID LASER - Avec colonne Heure à droite */}
+                {/* Corps GRID LASER */}
                 <div className="grid" style={{
-                  gridTemplateColumns: `repeat(${TOTAL_LASER_ROOMS}, minmax(30px, 1fr)) 80px`,
-                  gridTemplateRows: `repeat(${timeSlots.length}, 20px)`,
+                  gridTemplateColumns: `repeat(${TOTAL_LASER_ROOMS}, minmax(30px, 1fr))`,
+                  gridTemplateRows: `repeat(${timeSlots.length}, ${rowHeight}px)`,
                   minWidth: 0
                 }}>
                   {/* Laser rooms - Afficher toutes les cases de 15 min comme les salles */}
@@ -2533,14 +2631,13 @@ export default function AdminPage() {
                             // Obtenir TOUS les segments qui chevauchent ce créneau
                             const allSegments = getSegmentsForCellLaser(slot.hour, slot.minute, roomIndex)
                             
-                            // Si plusieurs segments, les diviser horizontalement
-                            // Sinon, utiliser la logique existante
+                            const gridColumn = roomIndex + 1
+                            const gridRow = timeIndex + 1
+                            const shouldShowTopBorder = (slot.minute === 0 || slot.minute === 30)
+                            const grayBorderColor = isDark ? '#6b7280' : '#9ca3af'
+                            
+                            // Cellule vide
                             if (allSegments.length === 0) {
-                              // Cellule vide
-                              const gridColumn = roomIndex + 1
-                              const gridRow = timeIndex + 1
-                              const shouldShowTopBorder = (slot.minute === 0 || slot.minute === 30)
-                              
                               return (
                                 <div
                                   key={`laser-cell-${timeIndex}-${roomIndex}`}
@@ -2558,203 +2655,65 @@ export default function AdminPage() {
                                 />
                               )
                             }
+
                             
-                            // Si plusieurs segments dans la même cellule, les diviser horizontalement
-                            if (allSegments.length > 1) {
-                              // Pour chaque segment, vérifier s'il doit être rendu à cette cellule
-                              // Un segment doit être rendu si c'est le début horizontal (première salle) ET le début vertical (première tranche de 15 min)
-                              const prevSegments = timeIndex > 0 
-                                ? getSegmentsForCellLaser(timeSlots[timeIndex - 1].hour, timeSlots[timeIndex - 1].minute, roomIndex)
-                                : []
-                              
-                              // Filtrer les segments qui commencent à cette cellule
-                              const startingSegments = allSegments.filter(segment => {
-                                // Vérifier si c'est le début vertical (pas présent dans la cellule précédente)
-                                const isSegmentTop = !prevSegments.some(s => s.segmentId === segment.segmentId)
-                                // Vérifier si c'est le début horizontal (première salle du segment fusionné)
-                                const isSegmentStart = roomIndex === segment.slotStart
-                                return isSegmentStart && isSegmentTop
-                              })
-                              
-                              // Si aucun segment ne commence ici, vérifier si on doit rendre quand même
-                              // (cas où les segments commencent tous avant mais se chevauchent ici)
-                              if (startingSegments.length === 0) {
-                                // Ne pas rendre si tous les segments continuent depuis une cellule précédente
-                                // Mais si certains segments ont commencé ailleurs et chevauchent ici, il faut les afficher
-                                // Pour l'instant, on ne rend que les segments qui commencent à cette cellule
-                                return null
-                              }
-                              
-                              // Calculer les rowSpan pour tous les segments (ils devraient être identiques pour le même créneau)
-                              const firstSegment = startingSegments[0]
-                              const firstBooking = firstSegment.booking
-                              const segmentStartMinutes = firstSegment.start.getHours() * 60 + firstSegment.start.getMinutes()
-                              const segmentEndMinutes = firstSegment.end.getHours() * 60 + firstSegment.end.getMinutes()
-                              const durationMinutes = segmentEndMinutes - segmentStartMinutes
-                              const rowSpan = Math.max(1, Math.ceil(durationMinutes / 15))
-                              
-                              const gridColumn = roomIndex + 1
-                              const gridRow = timeIndex + 1
-                              
-                              // ColSpan pour segments multi-salles
-                              const maxColSpan = Math.max(...startingSegments.map(s => s.slotEnd - s.slotStart))
-                              
-                              // Contour gris autour de chaque réservation LASER
-                              const bookingColor = firstBooking ? (firstBooking.color || '#a855f7') : '#a855f7'
-                              const grayBorderColor = isDark ? '#6b7280' : '#9ca3af' // Couleur grise pour le contour
-                              
-                              return (
-                                <div
-                                  key={`laser-cell-multi-${timeIndex}-${roomIndex}`}
-                                  className="relative flex cursor-pointer"
-                                  style={{
-                                    gridColumn: `${gridColumn} / ${gridColumn + maxColSpan}`,
-                                    gridRow: `${gridRow} / ${gridRow + rowSpan}`,
-                                    backgroundColor: firstBooking ? bookingColor : 'transparent',
-                                    // Contour gris complet autour de chaque réservation
-                                    border: `2px solid ${grayBorderColor}`,
-                                  }}
-                                >
-                                  {startingSegments.map((segment, segmentIndex) => {
-                                    const booking = segment.booking
-                                    const segmentWidth = `calc(100% / ${startingSegments.length})`
-                                    
-                                    return (
-                                      <div
-                                        key={`laser-segment-${segment.segmentId}`}
-                                        onClick={(e) => {
-                                          e.stopPropagation()
-                                          openBookingModal(slot.hour, slot.minute, booking)
-                                        }}
-                                        className="flex items-center justify-center p-2 text-center relative"
-                                        style={{
-                                          width: segmentWidth,
-                                          backgroundColor: booking.color || '#a855f7',
-                                          borderRight: segmentIndex < startingSegments.length - 1 ? `1px solid ${isDark ? '#1f2937' : '#f3f4f6'}` : 'none',
-                                          minHeight: '100%',
-                                        }}
-                                        title={(() => {
-                                          const contactData = getContactDisplayData(booking)
-                                          return `${contactData.firstName} ${contactData.lastName || ''}`.trim() || 'Sans nom'
-                                        })() + ` - ${booking.participants_count} pers.`}
-                                      >
-                                        <div className={`text-xs font-semibold leading-tight text-white whitespace-nowrap overflow-hidden text-ellipsis`} style={{ textShadow: '0 1px 3px rgba(0,0,0,0.5)' }}>
-                                          {(() => {
-                                            const contactData = getContactDisplayData(booking)
-                                            const name = contactData.firstName || 'Sans nom'
-                                            return `${name}-${booking.participants_count}`
-                                          })()}
-                                        </div>
-                                      </div>
-                                    )
-                                  })}
-                                </div>
-                              )
-                            }
-                            
-                            // Un seul segment - utiliser la même logique que ACTIVE
-                            const laserSegment = allSegments[0]
-                            const booking = laserSegment.booking
-                            
-                            // Déterminer si cette cellule est le début d'un segment (top-left corner)
-                            const prevSegments = timeIndex > 0 
-                              ? getSegmentsForCellLaser(timeSlots[timeIndex - 1].hour, timeSlots[timeIndex - 1].minute, roomIndex)
-                              : []
-                            const isSegmentTop = !prevSegments.some(s => s.segmentId === laserSegment.segmentId)
-                            
-                            // Pour les segments fusionnés, isSegmentStart est vrai seulement si roomIndex === slotStart
-                            const isSegmentStart = roomIndex === laserSegment.slotStart
-                            // Pour les segments fusionnés, isSegmentEnd est vrai seulement si roomIndex === slotEnd - 1
-                            const isSegmentEnd = roomIndex === laserSegment.slotEnd - 1
-                            
-                            const nextSegments = timeIndex < timeSlots.length - 1
-                              ? getSegmentsForCellLaser(timeSlots[timeIndex + 1].hour, timeSlots[timeIndex + 1].minute, roomIndex)
-                              : []
-                            const isSegmentBottom = !nextSegments.some(s => s.segmentId === laserSegment.segmentId)
-                            
-                            // Si cette cellule fait partie d'un segment mais n'est pas le début, ne pas la rendre
-                            const isPartOfSegment = !(isSegmentStart && isSegmentTop)
-                            if (isPartOfSegment) return null
-                            
-                            const gridColumn = roomIndex + 1 // Colonne Laser (avant la colonne Heure)
-                            const gridRow = timeIndex + 1
-                            
-                            // Calculer les spans pour les segments
-                            let colSpan = 1
-                            let rowSpan = 1
-                            colSpan = laserSegment.slotEnd - laserSegment.slotStart
-                            
-                            // rowSpan basé sur la durée du segment (même logique que les salles)
-                            const segmentStartMinutes = laserSegment.start.getHours() * 60 + laserSegment.start.getMinutes()
-                            const segmentEndMinutes = laserSegment.end.getHours() * 60 + laserSegment.end.getMinutes()
-                            const durationMinutes = segmentEndMinutes - segmentStartMinutes
-                            rowSpan = Math.ceil(durationMinutes / 15) // Cases de 15 minutes
-                            
-                            // S'assurer que rowSpan est au moins 1
-                            if (rowSpan < 1) rowSpan = 1
-                            
-                            // Contour gris autour de chaque réservation LASER
-                            const bookingColor = booking ? (booking.color || '#a855f7') : 'transparent'
-                            const grayBorderColor = isDark ? '#6b7280' : '#9ca3af' // Couleur grise pour le contour
-                            
-                            // Afficher les détails uniquement sur le premier segment du booking
-                            const isFirstSegmentOfBooking = isSegmentStart && isSegmentTop
-                            const showDetails = isFirstSegmentOfBooking
-                            
+                            // Affichage simplifié côte à côte : toutes les réservations dans cette cellule
                             return (
                               <div
                                 key={`laser-cell-${timeIndex}-${roomIndex}`}
-                                onClick={() => booking ? openBookingModal(slot.hour, slot.minute, booking) : openBookingModal(slot.hour, slot.minute, undefined, 'GAME', 'LASER')}
-                                className={`cursor-pointer relative ${
-                                  booking
-                                    ? `flex items-center justify-center p-2 text-center`
-                                    : `p-2 ${isDark ? 'hover:bg-gray-700/50' : 'hover:bg-gray-50'}`
-                                }`}
+                                className="relative flex cursor-pointer"
                                 style={{
-                                  gridColumn: booking ? `${gridColumn} / ${gridColumn + colSpan}` : gridColumn,
-                                  gridRow: booking ? `${gridRow} / ${gridRow + rowSpan}` : gridRow,
-                                  backgroundColor: bookingColor,
-                                  // Contour gris complet autour de chaque réservation
-                                  border: booking ? `2px solid ${grayBorderColor}` : 'none',
+                                  gridColumn,
+                                  gridRow,
+                                  backgroundColor: 'transparent',
+                                  borderTop: shouldShowTopBorder ? `2px solid ${isDark ? '#374151' : '#e5e7eb'}` : 'none',
+                                  borderBottom: 'none',
+                                  borderLeft: `2px solid ${isDark ? '#374151' : '#e5e7eb'}`,
+                                  borderRight: `2px solid ${isDark ? '#374151' : '#e5e7eb'}`,
                                 }}
-                                title={booking ? (() => {
-                                  const contactData = getContactDisplayData(booking)
-                                  return `${contactData.firstName} ${contactData.lastName || ''}`.trim() || 'Sans nom'
-                                })() + ` - ${booking.participants_count} pers.` : ''}
                               >
-                                {booking && showDetails && (
-                                  <div className={`${getTextSizeClass(displayTextSize)} ${getTextWeightClass(displayTextWeight)} leading-tight ${isDark ? 'text-white' : 'text-white'}`} style={{ textShadow: '0 1px 3px rgba(0,0,0,0.5)' }}>
-                                    {(() => {
-                                      const contactData = getContactDisplayData(booking)
-                                      const name = contactData.firstName || 'Sans nom'
-                                      return `${name}-${booking.participants_count}`
-                                    })()}
-                                  </div>
-                                )}
+                                {allSegments.map((segment, segmentIndex) => {
+                                  const booking = segment.booking
+                                  const segmentWidth = `calc(100% / ${allSegments.length})`
+                                  const bookingColor = booking.color || '#a855f7'
+                                  
+                                  return (
+                                    <div
+                                      key={`laser-segment-${segment.segmentId}-${segmentIndex}`}
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        openBookingModal(slot.hour, slot.minute, booking)
+                                      }}
+                                      className="flex items-center justify-center text-center relative"
+                                      style={{
+                                        width: segmentWidth,
+                                        backgroundColor: bookingColor,
+                                        border: `2px solid ${grayBorderColor}`,
+                                        borderRight: segmentIndex < allSegments.length - 1 ? `1px solid ${isDark ? '#1f2937' : '#f3f4f6'}` : `2px solid ${grayBorderColor}`,
+                                        minHeight: '100%',
+                                      }}
+                                      title={(() => {
+                                        const contactData = getContactDisplayData(booking)
+                                        return `${contactData.firstName} ${contactData.lastName || ''}`.trim() || 'Sans nom'
+                                      })() + ` - ${booking.participants_count} pers.`}
+                                    >
+                                      <div 
+                                        className={`${getTextSizeClass(displayTextSize)} ${getTextWeightClass(displayTextWeight)} leading-tight text-white whitespace-nowrap overflow-hidden text-ellipsis px-1`}
+                                        style={{ textShadow: '0 1px 3px rgba(0,0,0,0.5)' }}
+                                      >
+                                        {(() => {
+                                          const contactData = getContactDisplayData(booking)
+                                          const name = contactData.firstName || 'Sans nom'
+                                          return `${name}-${booking.participants_count}`
+                                        })()}
+                                      </div>
+                                    </div>
+                                  )
+                                })}
                               </div>
                             )
                           })}
                       </Fragment>
-                    )
-                  })}
-                  
-                  {/* Colonne Heure pour LASER (à droite) */}
-                  {timeSlots.map((slot, timeIndex) => {
-                    const showBorder = (slot.minute === 0 || slot.minute === 30)
-                    return (
-                      <div
-                        key={`time-laser-${timeIndex}`}
-                        onClick={() => openBookingModal(slot.hour, slot.minute, undefined, 'GAME', 'LASER')}
-                        className={`p-2 text-center text-sm cursor-pointer ${isDark ? 'text-gray-500 hover:text-gray-300 hover:bg-gray-800/50' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'}`}
-                        style={{
-                          gridColumn: TOTAL_LASER_ROOMS + 1,
-                          gridRow: timeIndex + 1,
-                          borderTop: showBorder ? `2px solid ${isDark ? '#374151' : '#e5e7eb'}` : 'none',
-                          borderLeft: `2px solid ${isDark ? '#374151' : '#e5e7eb'}`,
-                        }}
-                      >
-                        {(slot.minute === 0 || slot.minute === 30) ? slot.label : ''}
-                      </div>
                     )
                   })}
                 </div>
@@ -2762,7 +2721,8 @@ export default function AdminPage() {
             )}
 
             {/* GRID ROOMS - Heure + Room A-D */}
-            <div style={{ flex: '1 1 auto', flexShrink: 0, minWidth: `calc(80px + ${TOTAL_ROOMS} * 100px)` }}>
+            {visibleGrids.rooms && (
+            <div style={{ flexGrow: gridWidths.rooms / 100, flexShrink: 1, flexBasis: `${gridWidths.rooms}%`, minWidth: `${Math.max(100, 80 + TOTAL_ROOMS * 100 * gridWidths.rooms / 100)}px` }}>
               {/* En-tête GRID ROOMS */}
               <div className={`grid ${isDark ? '' : ''}`} style={{
                 gridTemplateColumns: `80px repeat(${TOTAL_ROOMS}, minmax(100px, 1fr))`,
@@ -2787,7 +2747,7 @@ export default function AdminPage() {
               {/* Corps GRID ROOMS */}
               <div className="grid" style={{
                 gridTemplateColumns: `80px repeat(${TOTAL_ROOMS}, minmax(100px, 1fr))`,
-                gridTemplateRows: `repeat(${timeSlots.length}, 20px)`,
+                gridTemplateRows: `repeat(${timeSlots.length}, ${rowHeight}px)`,
               }}>
                 {/* Colonne Heure pour ROOMS */}
                 {timeSlots.map((slot, timeIndex) => {
@@ -2949,10 +2909,183 @@ export default function AdminPage() {
             })}
               </div>
             </div>
+            )}
           </div>
         </div>
       </main>
 
+      {/* Popup Paramètres de grille - petit popup non-bloquant */}
+      {showGridSettingsModal && (
+        <>
+          {/* Zone cliquable transparente pour fermer */}
+          <div 
+            className="fixed inset-0 z-40"
+            onClick={() => setShowGridSettingsModal(false)}
+          />
+          <div className="fixed top-20 left-4 z-50 w-80">
+            <div className={`rounded-xl shadow-2xl border-2 ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-300'}`}>
+              <div className="p-4">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                    Paramètres
+                  </h3>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setShowGridSettingsModal(false)
+                    }}
+                    className={`p-1 rounded-lg ${isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              
+              {/* Largeur ACTIVE */}
+              <div className="mb-3">
+                <label className={`block text-xs font-medium mb-1 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                  Largeur ACTIVE: {gridWidths.active}%
+                </label>
+                <input
+                  type="range"
+                  min="5"
+                  max="500"
+                  step="5"
+                  value={gridWidths.active}
+                  onChange={(e) => {
+                    const newValue = parseInt(e.target.value)
+                    setGridWidths(prev => ({ ...prev, active: newValue }))
+                    // Sauvegarde automatique
+                    if (selectedBranchId) {
+                      localStorage.setItem(`gridSettings_${selectedBranchId}`, JSON.stringify({ 
+                        gridWidths: { ...gridWidths, active: newValue }, 
+                        rowHeight 
+                      }))
+                    }
+                  }}
+                  className="w-full h-2 bg-blue-200 rounded-lg appearance-none cursor-pointer"
+                />
+                <div className={`flex justify-between text-xs mt-1 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                  <span>5%</span>
+                  <span>100% (normal)</span>
+                  <span>500%</span>
+                </div>
+              </div>
+              
+              {/* Largeur LASER */}
+              <div className="mb-3">
+                <label className={`block text-xs font-medium mb-1 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                  Largeur LASER: {gridWidths.laser}%
+                </label>
+                <input
+                  type="range"
+                  min="5"
+                  max="800"
+                  step="5"
+                  value={gridWidths.laser}
+                  onChange={(e) => {
+                    const newValue = parseInt(e.target.value)
+                    setGridWidths(prev => ({ ...prev, laser: newValue }))
+                    // Sauvegarde automatique
+                    if (selectedBranchId) {
+                      localStorage.setItem(`gridSettings_${selectedBranchId}`, JSON.stringify({ 
+                        gridWidths: { ...gridWidths, laser: newValue }, 
+                        rowHeight 
+                      }))
+                    }
+                  }}
+                  className="w-full h-2 bg-purple-200 rounded-lg appearance-none cursor-pointer"
+                />
+                <div className={`flex justify-between text-xs mt-1 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                  <span>5%</span>
+                  <span>100% (normal)</span>
+                  <span>800%</span>
+                </div>
+              </div>
+              
+              {/* Largeur ROOMS */}
+              <div className="mb-3">
+                <label className={`block text-xs font-medium mb-1 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                  Largeur ROOMS: {gridWidths.rooms}%
+                </label>
+                <input
+                  type="range"
+                  min="5"
+                  max="500"
+                  step="5"
+                  value={gridWidths.rooms}
+                  onChange={(e) => {
+                    const newValue = parseInt(e.target.value)
+                    setGridWidths(prev => ({ ...prev, rooms: newValue }))
+                    // Sauvegarde automatique
+                    if (selectedBranchId) {
+                      localStorage.setItem(`gridSettings_${selectedBranchId}`, JSON.stringify({ 
+                        gridWidths: { ...gridWidths, rooms: newValue }, 
+                        rowHeight 
+                      }))
+                    }
+                  }}
+                  className="w-full h-2 bg-green-200 rounded-lg appearance-none cursor-pointer"
+                />
+                <div className={`flex justify-between text-xs mt-1 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                  <span>5%</span>
+                  <span>100% (normal)</span>
+                  <span>500%</span>
+                </div>
+              </div>
+              
+              {/* Hauteur des lignes */}
+              <div className="mb-4">
+                <label className={`block text-xs font-medium mb-1 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                  Hauteur lignes: {rowHeight}px
+                </label>
+                <input
+                  type="range"
+                  min="10"
+                  max="50"
+                  value={rowHeight}
+                  onChange={(e) => {
+                    const newValue = parseInt(e.target.value)
+                    setRowHeight(newValue)
+                    // Sauvegarde automatique
+                    if (selectedBranchId) {
+                      localStorage.setItem(`gridSettings_${selectedBranchId}`, JSON.stringify({ 
+                        gridWidths, 
+                        rowHeight: newValue 
+                      }))
+                    }
+                  }}
+                  className="w-full h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer"
+                />
+              </div>
+              
+              {/* Bouton Réinitialiser */}
+              <button
+                onClick={() => {
+                  setGridWidths({ active: 100, laser: 100, rooms: 100 })
+                  setRowHeight(20)
+                  // Sauvegarder les valeurs par défaut
+                  if (selectedBranchId) {
+                    localStorage.setItem(`gridSettings_${selectedBranchId}`, JSON.stringify({ 
+                      gridWidths: { active: 100, laser: 100, rooms: 100 }, 
+                      rowHeight: 20 
+                    }))
+                  }
+                }}
+                className={`w-full px-3 py-2 rounded-lg text-sm ${
+                  isDark
+                    ? 'bg-gray-700 hover:bg-gray-600 text-gray-300'
+                    : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
+                }`}
+              >
+                Réinitialiser
+              </button>
+            </div>
+          </div>
+        </div>
+        </>
+      )}
 
       {/* Modal de réservation */}
       {selectedBranchId && (
