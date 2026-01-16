@@ -1387,22 +1387,52 @@ export default function AdminPage() {
       const room = targetLaserRooms.find(r => r.id === roomId)
       if (!room) return 0
       
-      // Trouver toutes les réservations qui chevauchent le créneau
-      const overlappingBookings = allBookings.filter(b => {
+      // Trouver toutes les réservations LASER qui chevauchent le créneau (n'importe quelle salle)
+      const overlappingLaserBookings = allBookings.filter(b => {
         if (excludeBookingId && b.id === excludeBookingId) return false
         if (!b.game_sessions || b.game_sessions.length === 0) return false
         
         return b.game_sessions.some(s => {
           if (s.game_area !== 'LASER') return false
-          if (s.laser_room_id !== roomId) return false
           const sessionStart = new Date(s.start_datetime)
           const sessionEnd = new Date(s.end_datetime)
           return sessionStart < endDateTime && sessionEnd > startDateTime
         })
       })
       
-      // Calculer le total de participants déjà dans cette salle
-      const currentParticipants = overlappingBookings.reduce((sum, b) => sum + b.participants_count, 0)
+      // RÈGLE 1 : Vérifier si une résa utilise mode MAXI (2 salles ou plus)
+      // Si oui, TOUT le laser est bloqué pour ce créneau
+      const hasMaxiMode = overlappingLaserBookings.some(b => {
+        const laserRoomIds = b.game_sessions
+          ?.filter(s => s.game_area === 'LASER')
+          .map(s => s.laser_room_id)
+          .filter((id): id is string => id !== null) || []
+        const uniqueRoomIds = [...new Set(laserRoomIds)]
+        return uniqueRoomIds.length > 1 // Mode Maxi = utilise plusieurs salles
+      })
+      
+      if (hasMaxiMode) {
+        return 0 // Créneau entier bloqué
+      }
+      
+      // RÈGLE 2 : Vérifier si cette salle spécifique contient une résa de 10+ personnes
+      // Si oui, la salle est EXCLUSIVE (fermée, personne d'autre ne peut s'ajouter)
+      const hasExclusiveBooking = overlappingLaserBookings.some(b => {
+        const isInThisRoom = b.game_sessions?.some(s => 
+          s.game_area === 'LASER' && s.laser_room_id === roomId
+        )
+        return isInThisRoom && b.participants_count >= 10
+      })
+      
+      if (hasExclusiveBooking) {
+        return 0 // Salle exclusive, groupe joue seul
+      }
+      
+      // RÈGLE 3 : Calcul normal de capacité restante (seulement pour résas < 10 qui peuvent partager)
+      const bookingsInThisRoom = overlappingLaserBookings.filter(b => 
+        b.game_sessions?.some(s => s.game_area === 'LASER' && s.laser_room_id === roomId)
+      )
+      const currentParticipants = bookingsInThisRoom.reduce((sum, b) => sum + b.participants_count, 0)
       return room.capacity - currentParticipants
     }
     
