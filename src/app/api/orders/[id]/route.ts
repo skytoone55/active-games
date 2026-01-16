@@ -89,8 +89,8 @@ export async function PATCH(
         )
       }
       
-      // Créer le booking manuellement
-      const bookingReference = Math.random().toString(36).substring(2, 8).toUpperCase()
+      // Utiliser la MÊME référence que l'order (pas de nouvelle génération)
+      const bookingReference = order.request_reference
       
       // Récupérer les settings
       const { data: settings } = await supabase

@@ -13,8 +13,13 @@ const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.
 // Client avec service role pour bypass RLS
 const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
-// Générer un numéro de référence pour les demandes
-async function generateRequestReference(): Promise<string> {
+// Générer un numéro de référence court (format XXXXXX) - même format pour order et booking
+function generateShortReference(): string {
+  return Math.random().toString(36).substring(2, 8).toUpperCase()
+}
+
+// Ancienne fonction conservée pour compatibilité (non utilisée)
+async function generateRequestReferenceLegacy(): Promise<string> {
   const today = new Date()
   const dateStr = today.toISOString().slice(0, 10).replace(/-/g, '')
   
@@ -31,10 +36,7 @@ async function generateRequestReference(): Promise<string> {
   return `REQ-${dateStr}-${seqNum.toString().padStart(4, '0')}`
 }
 
-// Générer un code de référence pour les bookings
-function generateBookingReference(): string {
-  return Math.random().toString(36).substring(2, 8).toUpperCase()
-}
+// generateBookingReference supprimé - on utilise generateShortReference à la place
 
 // Trouver ou créer un contact
 async function findOrCreateContact(
@@ -275,7 +277,7 @@ async function checkAvailability(
   return { available: true }
 }
 
-// Créer un booking
+// Créer un booking avec la référence fournie
 async function createBooking(
   branchId: string,
   orderType: 'GAME' | 'EVENT',
@@ -290,6 +292,7 @@ async function createBooking(
   notes: string | null,
   gameArea: 'ACTIVE' | 'LASER' | null,
   numberOfGames: number,
+  referenceCode: string, // Référence passée en paramètre
   eventRoomId?: string,
   laserRoomIds?: string[]
 ): Promise<{ bookingId: string; referenceCode: string }> {
@@ -322,9 +325,7 @@ async function createBooking(
     gameEndDateTime = endDateTime
   }
   
-  const referenceCode = generateBookingReference()
-  
-  // Créer le booking
+  // Créer le booking (avec la référence passée en paramètre)
   const { data: booking, error: bookingError } = await supabase
     .from('bookings')
     .insert({
@@ -453,8 +454,8 @@ export async function POST(request: NextRequest) {
       event_celebrant_age,
     } = body
     
-    // Générer le numéro de référence temporaire
-    const requestReference = await generateRequestReference()
+    // Générer le numéro de référence UNIQUE (même format pour order et booking)
+    const referenceCode = generateShortReference()
     
     // Créer ou trouver le contact (avec les notes)
     const contactId = await findOrCreateContact(
@@ -482,7 +483,7 @@ export async function POST(request: NextRequest) {
     let bookingReference: string | null = null
     
     if (availability.available) {
-      // Créer le booking
+      // Créer le booking avec la MÊME référence que l'order
       const bookingResult = await createBooking(
         branch_id,
         order_type,
@@ -497,6 +498,7 @@ export async function POST(request: NextRequest) {
         customer_notes,
         game_area || null,
         number_of_games || 1,
+        referenceCode, // Utilise la même référence que l'order
         availability.eventRoomId,
         availability.laserRoomIds
       )
@@ -516,7 +518,7 @@ export async function POST(request: NextRequest) {
         status: orderStatus,
         booking_id: bookingId,
         contact_id: contactId,
-        request_reference: requestReference,
+        request_reference: referenceCode, // Même référence que le booking
         customer_first_name,
         customer_last_name: customer_last_name || null,
         customer_phone,
@@ -550,8 +552,8 @@ export async function POST(request: NextRequest) {
       order: {
         id: order.id,
         status: orderStatus,
-        request_reference: requestReference,
-        booking_reference: bookingReference,
+        request_reference: referenceCode,
+        booking_reference: bookingReference || referenceCode, // Toujours la même référence
         message: orderStatus === 'auto_confirmed' 
           ? 'Your reservation has been confirmed!'
           : 'Your request has been received. We will contact you shortly to confirm your reservation.'
