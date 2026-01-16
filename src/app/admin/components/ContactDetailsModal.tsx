@@ -20,6 +20,7 @@ interface ContactDetailsModalProps {
   contactId: string
   onClose: () => void
   isDark: boolean
+  branchId?: string // Optionnel - pour filtrer par branche si fourni
 }
 
 interface ContactStats {
@@ -70,24 +71,32 @@ export function ContactDetailsModal({
       const bookingIds = new Set<string>()
       
       // Méthode 1: Via booking_contacts (relation explicite)
-      const { data: bookingContactsData } = await supabase
+      const { data: bookingContactsData, error: bcError } = await supabase
         .from('booking_contacts')
         .select('booking_id')
         .eq('contact_id', contactId)
 
+      if (bcError) {
+        console.error('Error fetching booking_contacts:', bcError)
+      }
       if (bookingContactsData) {
+        console.log('booking_contacts found:', bookingContactsData.length)
         bookingContactsData.forEach((bc: any) => {
           if (bc.booking_id) bookingIds.add(bc.booking_id)
         })
       }
       
       // Méthode 2: Via primary_contact_id (relation directe)
-      const { data: directBookingsData } = await supabase
+      const { data: directBookingsData, error: directError } = await supabase
         .from('bookings')
         .select('id')
         .eq('primary_contact_id', contactId)
 
+      if (directError) {
+        console.error('Error fetching bookings by primary_contact_id:', directError)
+      }
       if (directBookingsData) {
+        console.log('bookings by primary_contact_id found:', directBookingsData.length)
         directBookingsData.forEach((b: any) => {
           if (b.id) bookingIds.add(b.id)
         })
@@ -95,17 +104,23 @@ export function ContactDetailsModal({
       
       // Méthode 3: Via numéro de téléphone (fallback pour anciennes réservations)
       if (contactData.phone) {
-        const { data: phoneBookingsData } = await supabase
+        const { data: phoneBookingsData, error: phoneError } = await supabase
           .from('bookings')
           .select('id')
           .eq('customer_phone', contactData.phone)
 
+        if (phoneError) {
+          console.error('Error fetching bookings by phone:', phoneError)
+        }
         if (phoneBookingsData) {
+          console.log('bookings by phone found:', phoneBookingsData.length)
           phoneBookingsData.forEach((b: any) => {
             if (b.id) bookingIds.add(b.id)
           })
         }
       }
+      
+      console.log('Total unique booking IDs found:', bookingIds.size)
       
       // Charger tous les bookings trouvés
       if (bookingIds.size > 0) {
