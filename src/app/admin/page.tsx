@@ -1369,8 +1369,7 @@ export default function AdminPage() {
     const targetBranch = branches.find(b => b.id === branchIdToUse)
     const targetLaserRooms = targetBranch?.laserRooms?.filter(r => r.is_active) || []
     
-    // Récupérer les seuils depuis les settings
-    const threshold = targetBranch?.settings?.laser_single_group_threshold || 8
+    // Récupérer le seuil exclusif depuis les settings
     const exclusiveThreshold = targetBranch?.settings?.laser_exclusive_threshold || 10
 
     if (targetLaserRooms.length === 0) return null
@@ -1485,8 +1484,9 @@ export default function AdminPage() {
       return null // Vraiment plein
     }
     
-    // Groupe >= threshold : PRÉFÈRE une salle seule, mais peut partager si nécessaire
-    if (participants >= threshold) {
+    // Groupe >= exclusiveThreshold : PRÉFÈRE une salle vide seule, mais peut partager si nécessaire
+    // Si >= exclusiveThreshold, la salle deviendra exclusive (bloquée aux autres) après allocation
+    if (participants >= exclusiveThreshold) {
       // D'abord chercher une salle vide avec capacité suffisante
       for (const room of sortedRoomsByCapacity) {
         const remaining = getRoomRemainingCapacity(room.id)

@@ -38,7 +38,6 @@ export function SettingsModal({
   const [laserRooms, setLaserRooms] = useState<LaserRoom[]>([])
   const [laserTotalVests, setLaserTotalVests] = useState<number>(0)
   const [laserSpareVests, setLaserSpareVests] = useState<number>(0)
-  const [laserSingleGroupThreshold, setLaserSingleGroupThreshold] = useState<number>(8)
   const [laserExclusiveThreshold, setLaserExclusiveThreshold] = useState<number>(10)
   const [laserEnabled, setLaserEnabled] = useState<boolean>(false)
   const [newLaserRoomName, setNewLaserRoomName] = useState('')
@@ -76,7 +75,6 @@ export function SettingsModal({
       // Paramètres Laser
       setLaserTotalVests(settings.laser_total_vests || 0)
       setLaserSpareVests(settings.laser_spare_vests || 0)
-      setLaserSingleGroupThreshold(settings.laser_single_group_threshold || 8)
       setLaserExclusiveThreshold(settings.laser_exclusive_threshold || 10)
       setLaserEnabled(settings.laser_enabled || false)
     } else {
@@ -227,7 +225,6 @@ export function SettingsModal({
           max_concurrent_players: maxConcurrentPlayers,
           laser_total_vests: laserTotalVests,
           laser_spare_vests: laserSpareVests,
-          laser_single_group_threshold: laserSingleGroupThreshold,
           laser_exclusive_threshold: laserExclusiveThreshold,
           laser_enabled: laserEnabled
         })
@@ -611,40 +608,10 @@ export function SettingsModal({
                   Vestes supplémentaires disponibles en cas de besoin (peuvent être activées lors de la réservation).
                 </p>
 
-                {/* Seuil groupe seul */}
-                <div className={`flex items-center justify-between p-4 rounded-lg ${isDark ? 'bg-gray-700/50' : 'bg-gray-50'}`}>
-                  <label className={`text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                    Seuil pour groupe seul
-                  </label>
-                  <div className="flex items-center gap-3">
-                    <input
-                      type="number"
-                      min="1"
-                      max="50"
-                      value={laserSingleGroupThreshold}
-                      onChange={(e) => {
-                        const value = parseInt(e.target.value) || 8
-                        setLaserSingleGroupThreshold(value)
-                      }}
-                      className={`w-24 px-3 py-2 rounded-lg border ${
-                        isDark
-                          ? 'bg-gray-800 border-gray-600 text-white'
-                          : 'bg-white border-gray-300 text-gray-900'
-                      } focus:outline-none focus:ring-2 focus:ring-blue-500`}
-                    />
-                    <span className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                      personnes
-                    </span>
-                  </div>
-                </div>
-                <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                  Nombre minimum de participants pour qu'un groupe joue seul dans un labyrinthe (allocation automatique).
-                </p>
-
                 {/* Seuil salle exclusive */}
                 <div>
                   <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                    Seuil salle exclusive (partie privée)
+                    Seuil salle exclusive
                   </label>
                   <div className="flex items-center gap-3">
                     <input
@@ -668,7 +635,7 @@ export function SettingsModal({
                   </div>
                 </div>
                 <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                  À partir de ce nombre, la salle devient EXCLUSIVE (bloquée, le groupe joue seul). Plus personne ne peut s'ajouter.
+                  À partir de ce nombre de participants, le groupe doit avoir une salle vide pour lui seul ET la salle devient exclusive (bloquée aux autres groupes). Utilisé pour l'allocation automatique et le blocage de capacité.
                 </p>
 
                 {/* Liste des salles Laser */}
