@@ -160,7 +160,7 @@ export function BookingModal({
   // Gestion Laser et game_sessions
   // Pour GAME : game_area (ACTIVE/LASER/CUSTOM), nombre de jeux (1/2/3), durées, pauses
   const [gameArea, setGameArea] = useState<GameArea | 'CUSTOM' | null>(null) // ACTIVE, LASER ou CUSTOM (sur mesure) pour GAME, null par défaut pour nouvelle réservation
-  const [numberOfGames, setNumberOfGames] = useState(2) // Par défaut 2 jeux pour GAME
+  const [numberOfGames, setNumberOfGames] = useState(1) // Par défaut 1 jeu (sera ajusté selon gameArea)
   const [laserAllocationMode, setLaserAllocationMode] = useState<'auto' | 'petit' | 'grand' | 'maxi'>('auto') // Mode d'allocation manuelle pour LASER
   const [showSpareVestsPopup, setShowSpareVestsPopup] = useState(false) // Popup pour demander si spare vests disponibles
   const [pendingSpareVestsData, setPendingSpareVestsData] = useState<{ currentUsage: number; maxVests: number; spareVests: number; totalVests: number } | null>(null) // Données pour le popup spare vests
@@ -632,9 +632,9 @@ export function BookingModal({
           // Si editingBooking existe, ne pas réinitialiser (c'est une réservation existante sans game_sessions)
           if (!editingBooking) {
             setGameArea(null) // Pas de zone sélectionnée par défaut pour nouvelle réservation
-            setNumberOfGames(2)
-            setGameDurations(['30', '30'])
-            setGamePauses([0]) // Pause après le premier jeu (0 par défaut pour ACTIVE)
+            setNumberOfGames(1) // Par défaut 1 jeu (ajusté selon gameArea)
+            setGameDurations(['30'])
+            setGamePauses([]) // Pas de pause par défaut
             setLaserRoomIds([])
             setEventGamePlan('AA')
             setEventSession1Duration('30')
@@ -2839,10 +2839,10 @@ export function BookingModal({
                   type="button"
                   onClick={() => {
                     setGameArea('LASER')
-                    // Par défaut LASER : 2 jeux de 30 min avec 30 min pause après le premier
-                    setNumberOfGames(2)
-                    setGameDurations(['30', '30'])
-                    setGamePauses([30]) // Pause après le premier jeu (30 min par défaut pour Laser)
+                    // Par défaut LASER : 1 jeu de 30 min
+                    setNumberOfGames(1)
+                    setGameDurations(['30'])
+                    setGamePauses([]) // Pas de pause pour un seul jeu
                     setDurationMinutes('30') // Durée par défaut pour un jeu LASER simple (30 min)
                   }}
                   className={`p-3 rounded-xl border-2 transition-all flex items-center gap-3 ${

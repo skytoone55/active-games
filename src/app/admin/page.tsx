@@ -2779,7 +2779,7 @@ export default function AdminPage() {
                   return (
                     <div
                       key={`time-room-${timeIndex}`}
-                      onClick={() => openBookingModal(slot.hour, slot.minute, undefined, 'EVENT')}
+                      onClick={() => openBookingModal(slot.hour, slot.minute, undefined, 'GAME', 'LASER')}
                       className={`p-2 text-center text-sm cursor-pointer ${isDark ? 'text-gray-500 hover:text-gray-300 hover:bg-gray-800/50' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'}`}
                       style={{
                         gridColumn: '1',
