@@ -200,45 +200,72 @@ export default function ReservationPage() {
     setBookingData({ ...bookingData, eventAge: age })
   }
 
+  // État pour le message de confirmation
+  const [orderStatus, setOrderStatus] = useState<'auto_confirmed' | 'pending' | null>(null)
+  const [orderMessage, setOrderMessage] = useState<string>('')
+
   const handleConfirm = async () => {
     setIsSubmitting(true)
     try {
-      // Generate reservation number (format: AG-YYYYMMDD-HHMMSS)
-      const now = new Date()
-      const dateStr = now.toISOString().slice(0, 10).replace(/-/g, '')
-      const timeStr = now.toTimeString().slice(0, 8).replace(/:/g, '')
-      const tempReservationNumber = `AG-${dateStr}-${timeStr}`
+      // D'abord, récupérer le branch_id depuis le nom de la branche
+      const branchesResponse = await fetch('/api/branches')
+      const branchesData = await branchesResponse.json()
       
-      // Sauvegarder la réservation via l'API
-      const response = await fetch('/api/reservations', {
+      // Trouver la branche par son nom (case insensitive)
+      const selectedBranch = branchesData.branches?.find((b: { name: string; slug: string }) => 
+        b.name.toLowerCase().includes(bookingData.branch?.toLowerCase() || '') ||
+        b.slug.toLowerCase().includes(bookingData.branch?.toLowerCase() || '')
+      )
+      
+      if (!selectedBranch) {
+        alert('Branche non trouvée. Veuillez réessayer.')
+        setIsSubmitting(false)
+        return
+      }
+      
+      // Déterminer le game_area en fonction du type
+      let gameArea: 'ACTIVE' | 'LASER' | null = null
+      if (bookingData.type === 'game') {
+        // Par défaut ACTIVE, mais on pourrait ajouter un choix dans le formulaire
+        gameArea = 'ACTIVE'
+      }
+      
+      // Appeler la nouvelle API orders
+      const response = await fetch('/api/orders', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          branch: bookingData.branch,
-          type: bookingData.type,
-          players: bookingData.players,
-          date: bookingData.date,
-          time: bookingData.time,
-          firstName: bookingData.firstName,
-          lastName: bookingData.lastName,
-          phone: bookingData.phone,
-          email: bookingData.email || null,
-          specialRequest: bookingData.specialRequest || null,
-          eventType: bookingData.eventType || null,
-          eventAge: bookingData.eventAge || null,
-          reservationNumber: tempReservationNumber,
+          branch_id: selectedBranch.id,
+          order_type: bookingData.type === 'event' ? 'EVENT' : 'GAME',
+          requested_date: bookingData.date,
+          requested_time: bookingData.time,
+          participants_count: bookingData.players || 1,
+          customer_first_name: bookingData.firstName,
+          customer_last_name: bookingData.lastName || '',
+          customer_phone: bookingData.phone,
+          customer_email: bookingData.email || null,
+          customer_notes: bookingData.specialRequest || null,
+          game_area: gameArea,
+          number_of_games: bookingData.type === 'event' ? 2 : 1, // Events get 2 games by default
+          event_type: bookingData.eventType || null,
+          event_celebrant_age: bookingData.eventAge || null,
+          terms_accepted: bookingData.termsAccepted,
         }),
       })
       
       const result = await response.json()
       
       if (result.success) {
-        setReservationNumber(tempReservationNumber)
+        // Utiliser le numéro de réservation du booking si confirmé, sinon la référence temporaire
+        const refNumber = result.order.booking_reference || result.order.request_reference
+        setReservationNumber(refNumber)
+        setOrderStatus(result.order.status)
+        setOrderMessage(result.order.message)
         setStep(6)
       } else {
-        console.error('Error saving reservation:', result.error)
+        console.error('Error saving order:', result.error)
         alert('Erreur lors de la sauvegarde de la réservation. Veuillez réessayer.')
       }
     } catch (error) {
@@ -1088,33 +1115,64 @@ export default function ReservationPage() {
               key="step6"
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="bg-dark-100/50 backdrop-blur-sm rounded-2xl p-8 border-2 border-primary/50 shadow-[0_0_30px_rgba(0,240,255,0.3)]"
+              className={`bg-dark-100/50 backdrop-blur-sm rounded-2xl p-8 border-2 shadow-[0_0_30px_rgba(0,240,255,0.3)] ${
+                orderStatus === 'pending' 
+                  ? 'border-yellow-500/50' 
+                  : 'border-primary/50'
+              }`}
             >
               <div className="text-center">
-                {/* Success Icon */}
+                {/* Success/Pending Icon */}
                 <motion.div
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
                   transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
-                  className="w-20 h-20 mx-auto mb-6 bg-primary/20 rounded-full flex items-center justify-center"
+                  className={`w-20 h-20 mx-auto mb-6 rounded-full flex items-center justify-center ${
+                    orderStatus === 'pending' 
+                      ? 'bg-yellow-500/20' 
+                      : 'bg-primary/20'
+                  }`}
                 >
-                  <Check className="w-12 h-12 text-primary" />
+                  {orderStatus === 'pending' ? (
+                    <Clock className="w-12 h-12 text-yellow-500" />
+                  ) : (
+                    <Check className="w-12 h-12 text-primary" />
+                  )}
                 </motion.div>
 
                 {/* Title */}
-                <h2 className="text-3xl font-bold mb-2 text-primary" style={{ fontFamily: 'Orbitron, sans-serif' }}>
-                  {translations.booking?.confirmation?.title || 'Reservation Confirmed!'}
+                <h2 className={`text-3xl font-bold mb-2 ${orderStatus === 'pending' ? 'text-yellow-500' : 'text-primary'}`} style={{ fontFamily: 'Orbitron, sans-serif' }}>
+                  {orderStatus === 'pending' 
+                    ? (translations.booking?.confirmation?.pending_title || 'Request Received!')
+                    : (translations.booking?.confirmation?.title || 'Reservation Confirmed!')}
                 </h2>
                 <p className="text-gray-300 mb-8" style={{ fontFamily: 'Poppins, sans-serif' }}>
-                  {translations.booking?.confirmation?.subtitle || 'Thank you for your reservation'}
+                  {orderStatus === 'pending'
+                    ? (translations.booking?.confirmation?.pending_subtitle || 'We will contact you shortly to confirm your reservation')
+                    : (translations.booking?.confirmation?.subtitle || 'Thank you for your reservation')}
                 </p>
 
-                {/* Reservation Number */}
-                <div className="bg-primary/10 border border-primary/30 rounded-lg p-4 mb-8">
+                {/* Pending Message */}
+                {orderStatus === 'pending' && (
+                  <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4 mb-6">
+                    <p className="text-yellow-500" style={{ fontFamily: 'Poppins, sans-serif' }}>
+                      {orderMessage || 'Your request has been received. We will contact you shortly to confirm your reservation.'}
+                    </p>
+                  </div>
+                )}
+
+                {/* Reservation/Request Number */}
+                <div className={`border rounded-lg p-4 mb-8 ${
+                  orderStatus === 'pending' 
+                    ? 'bg-yellow-500/10 border-yellow-500/30' 
+                    : 'bg-primary/10 border-primary/30'
+                }`}>
                   <p className="text-gray-400 text-sm mb-2" style={{ fontFamily: 'Poppins, sans-serif' }}>
-                    {translations.booking?.confirmation?.reservation_number || 'Reservation Number'}
+                    {orderStatus === 'pending'
+                      ? (translations.booking?.confirmation?.request_number || 'Request Number')
+                      : (translations.booking?.confirmation?.reservation_number || 'Reservation Number')}
                   </p>
-                  <p className="text-2xl font-bold text-primary" style={{ fontFamily: 'Orbitron, sans-serif', letterSpacing: '2px' }}>
+                  <p className={`text-2xl font-bold ${orderStatus === 'pending' ? 'text-yellow-500' : 'text-primary'}`} style={{ fontFamily: 'Orbitron, sans-serif', letterSpacing: '2px' }}>
                     {reservationNumber}
                   </p>
                 </div>

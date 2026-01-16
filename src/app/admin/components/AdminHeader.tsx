@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { LogOut, User, Settings, ChevronDown, Sun, Moon, Users, Calendar, Menu, X } from 'lucide-react'
+import { LogOut, User, Settings, ChevronDown, Sun, Moon, Users, Calendar, Menu, X, ShoppingCart } from 'lucide-react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
@@ -9,6 +9,7 @@ import type { AuthUser } from '@/hooks/useAuth'
 import type { Branch, EventRoom, BranchSettings } from '@/lib/supabase/types'
 import { BranchSelector } from './BranchSelector'
 import { SettingsModal } from './SettingsModal'
+import { usePendingOrdersCount } from '@/hooks/useOrders'
 
 interface AdminHeaderProps {
   user: AuthUser
@@ -60,6 +61,9 @@ export function AdminHeader({
     }
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [showUserMenu])
+
+  // Compteur de commandes en attente pour le badge
+  const pendingOrdersCount = usePendingOrdersCount(selectedBranch?.id || null)
 
   const getRoleBadge = () => {
     const baseClasses = "px-2 py-0.5 text-xs rounded-full"
@@ -126,7 +130,7 @@ export function AdminHeader({
           </Link>
         </div>
 
-        {/* Navigation - Agenda et CRM - Se rapproche du logo quand on réduit */}
+        {/* Navigation - Agenda, Clients, Commandes - Se rapproche du logo quand on réduit */}
         <div className="hidden min-[900px]:flex items-center gap-3 flex-1 justify-center min-w-0">
           <Link
             href="/admin"
@@ -152,7 +156,25 @@ export function AdminHeader({
             }`}
           >
             <Users className="w-4 h-4" />
-            <span>CRM</span>
+            <span>Clients</span>
+          </Link>
+          <Link
+            href="/admin/orders"
+            className={`px-4 py-2 rounded-lg transition-colors flex items-center gap-2 relative ${
+              pathname === '/admin/orders'
+                ? 'bg-blue-600 text-white'
+                : theme === 'dark' 
+                  ? 'bg-gray-800 hover:bg-gray-700 text-gray-300'
+                  : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+            }`}
+          >
+            <ShoppingCart className="w-4 h-4" />
+            <span>Commandes</span>
+            {pendingOrdersCount > 0 && (
+              <span className="absolute -top-1 -right-1 bg-yellow-500 text-black text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center">
+                {pendingOrdersCount > 9 ? '9+' : pendingOrdersCount}
+              </span>
+            )}
           </Link>
         </div>
 
@@ -344,7 +366,26 @@ export function AdminHeader({
                 }`}
               >
                 <Users className="w-4 h-4" />
-                <span>CRM</span>
+                <span>Clients</span>
+              </Link>
+              <Link
+                href="/admin/orders"
+                onClick={() => setShowMobileMenu(false)}
+                className={`flex items-center gap-3 px-4 py-2 rounded-lg transition-colors relative ${
+                  pathname === '/admin/orders'
+                    ? 'bg-blue-600 text-white'
+                    : theme === 'dark' 
+                      ? 'bg-gray-800 hover:bg-gray-700 text-gray-300'
+                      : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                }`}
+              >
+                <ShoppingCart className="w-4 h-4" />
+                <span>Commandes</span>
+                {pendingOrdersCount > 0 && (
+                  <span className="bg-yellow-500 text-black text-xs font-bold px-2 py-0.5 rounded-full ml-auto">
+                    {pendingOrdersCount}
+                  </span>
+                )}
               </Link>
             </div>
 

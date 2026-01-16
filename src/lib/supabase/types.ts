@@ -15,8 +15,13 @@ export type BookingType = 'GAME' | 'EVENT'
 export type BookingStatus = 'DRAFT' | 'CONFIRMED' | 'CANCELLED'
 export type UserRole = 'super_admin' | 'branch_admin' | 'agent'
 export type ContactStatus = 'active' | 'archived'
-export type ContactSource = 'admin_agenda' | 'public_booking'
+export type ContactSource = 'admin_agenda' | 'public_booking' | 'website'
 export type GameArea = 'ACTIVE' | 'LASER'
+
+// Types pour Orders (commandes en ligne)
+export type OrderStatus = 'pending' | 'auto_confirmed' | 'manually_confirmed' | 'cancelled'
+export type OrderType = 'GAME' | 'EVENT'
+export type PendingReason = 'overbooking' | 'room_unavailable' | 'slot_unavailable' | 'laser_vests_full' | 'other'
 
 export interface Database {
   public: {
@@ -223,6 +228,41 @@ export interface Database {
         Insert: Omit<Database['public']['Tables']['user_branches']['Row'], 'id' | 'created_at'>
         Update: Partial<Database['public']['Tables']['user_branches']['Insert']>
       }
+      orders: {
+        Row: {
+          id: string
+          branch_id: string | null
+          order_type: OrderType
+          status: OrderStatus
+          booking_id: string | null
+          contact_id: string | null
+          request_reference: string
+          customer_first_name: string
+          customer_last_name: string | null
+          customer_phone: string
+          customer_email: string | null
+          customer_notes: string | null
+          requested_date: string
+          requested_time: string
+          participants_count: number
+          game_area: GameArea | null
+          number_of_games: number | null
+          event_type: string | null
+          event_celebrant_age: number | null
+          pending_reason: PendingReason | null
+          pending_details: string | null
+          terms_accepted: boolean
+          terms_accepted_at: string | null
+          processed_at: string | null
+          processed_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['orders']['Row'], 'id' | 'created_at' | 'updated_at' | 'status'> & {
+          status?: OrderStatus
+        }
+        Update: Partial<Database['public']['Tables']['orders']['Insert']>
+      }
     }
     Views: {}
     Functions: {}
@@ -245,6 +285,14 @@ export type Booking = Database['public']['Tables']['bookings']['Row']
 export type BookingSlot = Database['public']['Tables']['booking_slots']['Row']
 export type Profile = Database['public']['Tables']['profiles']['Row']
 export type UserBranch = Database['public']['Tables']['user_branches']['Row']
+export type Order = Database['public']['Tables']['orders']['Row']
+
+// Type étendu pour Order avec relations
+export interface OrderWithRelations extends Order {
+  branch?: Branch | null
+  booking?: Booking | null
+  contact?: Contact | null
+}
 
 // Type étendu pour Booking avec relations contacts
 export interface BookingWithContacts extends Booking {
