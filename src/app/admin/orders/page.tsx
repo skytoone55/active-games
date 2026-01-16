@@ -30,7 +30,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { AdminHeader } from '../components/AdminHeader'
 import { OrdersTable } from './components/OrdersTable'
 import { OrderDetailModal } from './components/OrderDetailModal'
-import { ClientDetailModal } from './components/ClientDetailModal'
+import { ContactDetailsModal } from '../components/ContactDetailsModal'
 import { createClient } from '@/lib/supabase/client'
 import type { OrderWithRelations, OrderStatus, GameArea } from '@/lib/supabase/types'
 
@@ -471,12 +471,11 @@ export default function OrdersPage() {
         />
       )}
 
-      {/* Modal Fiche Client */}
+      {/* Modal Fiche Client - Identique à section Clients */}
       {selectedContactId && (
-        <ClientDetailModal
+        <ContactDetailsModal
           contactId={selectedContactId}
           onClose={closeClientModal}
-          onGoToCRM={handleGoToCRM}
           isDark={isDark}
         />
       )}
