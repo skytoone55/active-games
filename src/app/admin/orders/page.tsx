@@ -30,6 +30,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { AdminHeader } from '../components/AdminHeader'
 import { OrdersTable } from './components/OrdersTable'
 import { OrderDetailModal } from './components/OrderDetailModal'
+import { ClientDetailModal } from './components/ClientDetailModal'
 import { createClient } from '@/lib/supabase/client'
 import type { OrderWithRelations, OrderStatus, GameArea } from '@/lib/supabase/types'
 
@@ -48,6 +49,7 @@ export default function OrdersPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [theme, setTheme] = useState<Theme>('light')
   const [selectedOrder, setSelectedOrder] = useState<OrderWithRelations | null>(null)
+  const [selectedContactId, setSelectedContactId] = useState<string | null>(null)
   
   const { 
     orders, 
@@ -205,9 +207,13 @@ export default function OrdersPage() {
     setSelectedOrder(order)
   }
 
-  // Navigation directe vers la fiche client dans la section Clients
+  // Ouvrir la fiche client dans une modal (comme dans la section Clients)
   const handleViewClient = (contactId: string) => {
-    router.push(`/admin/clients?contact=${contactId}`)
+    setSelectedContactId(contactId)
+  }
+
+  const closeClientModal = () => {
+    setSelectedContactId(null)
   }
 
   const closeOrderModal = () => {
@@ -460,11 +466,20 @@ export default function OrdersPage() {
           onConfirm={handleConfirm}
           onCancel={handleCancel}
           onGoToAgenda={handleGoToAgenda}
-          onGoToClient={handleGoToCRM}
+          onGoToClient={handleViewClient}
           isDark={isDark}
         />
       )}
 
+      {/* Modal Fiche Client */}
+      {selectedContactId && (
+        <ClientDetailModal
+          contactId={selectedContactId}
+          onClose={closeClientModal}
+          onGoToCRM={handleGoToCRM}
+          isDark={isDark}
+        />
+      )}
     </div>
   )
 }

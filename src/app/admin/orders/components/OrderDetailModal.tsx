@@ -286,24 +286,42 @@ export function OrderDetailModal({
                 Accès rapide
               </h3>
               
-              {/* Bouton vers Agenda */}
-              <button
-                onClick={() => onGoToAgenda(order.requested_date, order.booking?.id)}
-                className={`w-full mb-3 flex items-center gap-3 p-3 rounded-xl transition-colors ${
-                  isDark 
-                    ? 'bg-blue-600/20 hover:bg-blue-600/30 text-blue-400' 
-                    : 'bg-blue-50 hover:bg-blue-100 text-blue-600'
-                }`}
-              >
-                <Calendar className="w-5 h-5" />
-                <div className="text-left flex-1">
-                  <p className="font-medium">Voir dans l'agenda</p>
-                  <p className={`text-xs ${isDark ? 'text-blue-400/70' : 'text-blue-500/70'}`}>
-                    Ouvrir la réservation
-                  </p>
+              {/* Bouton vers Agenda - grisé si annulé */}
+              {order.status === 'cancelled' || !order.booking_id ? (
+                <div
+                  className={`w-full mb-3 flex items-center gap-3 p-3 rounded-xl cursor-not-allowed ${
+                    isDark 
+                      ? 'bg-gray-700/50 text-gray-500' 
+                      : 'bg-gray-100 text-gray-400'
+                  }`}
+                >
+                  <Calendar className="w-5 h-5" />
+                  <div className="text-left flex-1">
+                    <p className="font-medium">Voir dans l'agenda</p>
+                    <p className={`text-xs ${isDark ? 'text-gray-600' : 'text-gray-400'}`}>
+                      Réservation annulée ou supprimée
+                    </p>
+                  </div>
                 </div>
-                <ExternalLink className="w-4 h-4" />
-              </button>
+              ) : (
+                <button
+                  onClick={() => onGoToAgenda(order.requested_date, order.booking?.id)}
+                  className={`w-full mb-3 flex items-center gap-3 p-3 rounded-xl transition-colors ${
+                    isDark 
+                      ? 'bg-blue-600/20 hover:bg-blue-600/30 text-blue-400' 
+                      : 'bg-blue-50 hover:bg-blue-100 text-blue-600'
+                  }`}
+                >
+                  <Calendar className="w-5 h-5" />
+                  <div className="text-left flex-1">
+                    <p className="font-medium">Voir dans l'agenda</p>
+                    <p className={`text-xs ${isDark ? 'text-blue-400/70' : 'text-blue-500/70'}`}>
+                      Ouvrir la réservation
+                    </p>
+                  </div>
+                  <ExternalLink className="w-4 h-4" />
+                </button>
+              )}
 
               {/* Bouton vers Client */}
               {order.contact_id && (
