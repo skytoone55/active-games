@@ -20,7 +20,7 @@ import {
   ExternalLink,
   Gamepad2,
   Target,
-  Cake,
+  PartyPopper,
   Search,
   X
 } from 'lucide-react'
@@ -186,7 +186,7 @@ export default function OrdersPage() {
 
   // Obtenir l'icône du type de commande
   const getTypeIcon = (orderType: string, gameArea: string | null) => {
-    if (orderType === 'EVENT') return Cake
+    if (orderType === 'EVENT') return PartyPopper
     if (gameArea === 'LASER') return Target
     return Gamepad2
   }

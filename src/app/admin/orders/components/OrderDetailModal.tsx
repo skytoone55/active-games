@@ -10,7 +10,7 @@ import {
   MessageSquare,
   Gamepad2,
   Target,
-  Cake,
+  PartyPopper,
   ExternalLink,
   User,
   CheckCircle,
@@ -93,7 +93,7 @@ export function OrderDetailModal({
   }
 
   const getGameIcon = () => {
-    if (order.order_type === 'EVENT') return Cake
+    if (order.order_type === 'EVENT') return PartyPopper
     if (order.game_area === 'LASER') return Target
     return Gamepad2
   }
@@ -113,8 +113,8 @@ export function OrderDetailModal({
   }
 
   const getGameColor = () => {
-    if (order.order_type === 'EVENT') return 'text-purple-500'
-    if (order.game_area === 'LASER') return 'text-cyan-500'
+    if (order.order_type === 'EVENT') return 'text-green-500'
+    if (order.game_area === 'LASER') return 'text-purple-500'
     return 'text-blue-500'
   }
 

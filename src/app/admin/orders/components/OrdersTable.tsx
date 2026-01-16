@@ -11,7 +11,7 @@ import {
   ExternalLink,
   Gamepad2,
   Target,
-  Cake,
+  PartyPopper,
   User,
   ChevronUp,
   ChevronDown
@@ -133,7 +133,7 @@ export function OrdersTable({ orders, isDark, onConfirm, onCancel, onViewOrder, 
 
   // Obtenir l'icône du type de jeu
   const getGameIcon = (orderType: string, gameArea: string | null) => {
-    if (orderType === 'EVENT') return Cake
+    if (orderType === 'EVENT') return PartyPopper
     if (gameArea === 'LASER') return Target
     if (gameArea === 'ACTIVE') return Gamepad2
     return Gamepad2 // Par défaut
@@ -192,8 +192,8 @@ export function OrdersTable({ orders, isDark, onConfirm, onCancel, onViewOrder, 
               <div className="col-span-1 flex items-center">
                 <div className={`p-2 rounded-lg ${isDark ? 'bg-gray-700' : 'bg-gray-100'}`}>
                   <GameIcon className={`w-4 h-4 ${
-                    order.order_type === 'EVENT' ? 'text-purple-500' :
-                    order.game_area === 'LASER' ? 'text-cyan-500' :
+                    order.order_type === 'EVENT' ? 'text-green-500' :
+                    order.game_area === 'LASER' ? 'text-purple-500' :
                     'text-blue-500'
                   }`} />
                 </div>
