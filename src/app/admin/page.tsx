@@ -2690,48 +2690,66 @@ export default function AdminPage() {
                             }
 
                             
-                            // Si un segment doit être affiché, calculer colSpan et rowSpan
+                            // Si des segments doivent être affichés
                             if (segmentsToDisplay.length > 0) {
-                              const segment = segmentsToDisplay[0] // Un seul segment par cellule (top-left corner)
-                              
-                              // Calculer le rowSpan pour ce segment
-                              const segmentStartMinutes = segment.start.getHours() * 60 + segment.start.getMinutes()
-                              const segmentEndMinutes = segment.end.getHours() * 60 + segment.end.getMinutes()
+                              // Calculer le rowSpan et colSpan max (tous les segments partagent les mêmes)
+                              const firstSegment = segmentsToDisplay[0]
+                              const segmentStartMinutes = firstSegment.start.getHours() * 60 + firstSegment.start.getMinutes()
+                              const segmentEndMinutes = firstSegment.end.getHours() * 60 + firstSegment.end.getMinutes()
                               const durationMinutes = segmentEndMinutes - segmentStartMinutes
                               const rowSpan = Math.ceil(durationMinutes / 15)
+                              const colSpan = firstSegment.slotEnd - firstSegment.slotStart
                               
-                              // Calculer le colSpan pour ce segment
-                              const colSpan = segment.slotEnd - segment.slotStart
-                              
-                              const booking = segment.booking
-                              const bookingColor = booking.color || '#a855f7'
-                              
+                              // Conteneur qui occupe les cellules fusionnées
                               return (
                                 <div
                                   key={`laser-cell-${timeIndex}-${roomIndex}`}
-                                  onClick={() => openBookingModal(slot.hour, slot.minute, booking)}
-                                  className="cursor-pointer flex flex-col items-center justify-center text-center p-1"
+                                  className="relative flex"
                                   style={{
                                     gridColumn: colSpan > 1 ? `${gridColumn} / span ${colSpan}` : gridColumn,
                                     gridRow: rowSpan > 1 ? `${gridRow} / span ${rowSpan}` : gridRow,
-                                    backgroundColor: bookingColor,
-                                    border: `2px solid ${grayBorderColor}`,
+                                    backgroundColor: 'transparent',
                                   }}
-                                  title={(() => {
-                                    const contactData = getContactDisplayData(booking)
-                                    return `${contactData.firstName} ${contactData.lastName || ''}`.trim() || 'Sans nom'
-                                  })() + ` - ${booking.participants_count} pers.`}
                                 >
-                                  <div 
-                                    className={`${getTextSizeClass(displayTextSize)} ${getTextWeightClass(displayTextWeight)} leading-tight text-white whitespace-nowrap overflow-hidden text-ellipsis px-1`}
-                                    style={{ textShadow: '0 1px 3px rgba(0,0,0,0.5)' }}
-                                  >
-                                    {(() => {
-                                      const contactData = getContactDisplayData(booking)
-                                      const name = contactData.firstName || 'Sans nom'
-                                      return `${name}-${booking.participants_count}`
-                                    })()}
-                                  </div>
+                                  {/* Afficher chaque segment côte à côte */}
+                                  {segmentsToDisplay.map((segment, segmentIndex) => {
+                                    const booking = segment.booking
+                                    const bookingColor = booking.color || '#a855f7'
+                                    const segmentWidth = `calc(100% / ${segmentsToDisplay.length})`
+                                    
+                                    return (
+                                      <div
+                                        key={`laser-segment-${segment.segmentId}`}
+                                        onClick={(e) => {
+                                          e.stopPropagation()
+                                          openBookingModal(slot.hour, slot.minute, booking)
+                                        }}
+                                        className="cursor-pointer flex flex-col items-center justify-center text-center p-1"
+                                        style={{
+                                          width: segmentWidth,
+                                          height: '100%',
+                                          backgroundColor: bookingColor,
+                                          border: `2px solid ${grayBorderColor}`,
+                                          borderRight: segmentIndex < segmentsToDisplay.length - 1 ? `1px solid ${isDark ? '#1f2937' : '#f3f4f6'}` : `2px solid ${grayBorderColor}`,
+                                        }}
+                                        title={(() => {
+                                          const contactData = getContactDisplayData(booking)
+                                          return `${contactData.firstName} ${contactData.lastName || ''}`.trim() || 'Sans nom'
+                                        })() + ` - ${booking.participants_count} pers.`}
+                                      >
+                                        <div 
+                                          className={`${getTextSizeClass(displayTextSize)} ${getTextWeightClass(displayTextWeight)} leading-tight text-white whitespace-nowrap overflow-hidden text-ellipsis px-1`}
+                                          style={{ textShadow: '0 1px 3px rgba(0,0,0,0.5)' }}
+                                        >
+                                          {(() => {
+                                            const contactData = getContactDisplayData(booking)
+                                            const name = contactData.firstName || 'Sans nom'
+                                            return `${name}-${booking.participants_count}`
+                                          })()}
+                                        </div>
+                                      </div>
+                                    )
+                                  })}
                                 </div>
                               )
                             }
