@@ -65,63 +65,73 @@ export function ContactDetailsModal({
     if (contactData) {
       setContact(contactData)
 
-      // Charger les réservations liées
+      // Charger les réservations liées - méthode en 2 étapes pour robustesse
+      // Étape 1: Récupérer les IDs des bookings liés
       const { data: bookingContactsData } = await supabase
         .from('booking_contacts')
-        .select(`
-          booking:bookings (
-            id,
-            booking_type,
-            booking_date,
-            start_time,
-            start_datetime,
-            participants_count,
-            status,
-            reference_code,
-            game_sessions (
-              id,
-              game_area
-            )
-          )
-        `)
+        .select('booking_id')
         .eq('contact_id', contactId)
 
-      if (bookingContactsData) {
-        const bookings = bookingContactsData
-          .map((bc: any) => bc.booking)
-          .filter((b: any) => b !== null)
-          .map((b: any) => ({
-            ...b,
-            type: b.booking_type
-          }))
+      let bookings: any[] = []
+      
+      if (bookingContactsData && bookingContactsData.length > 0) {
+        const bookingIds = bookingContactsData.map((bc: any) => bc.booking_id).filter(Boolean)
+        
+        // Étape 2: Charger les bookings avec leurs game_sessions
+        if (bookingIds.length > 0) {
+          const { data: bookingsData } = await supabase
+            .from('bookings')
+            .select(`
+              id,
+              booking_type,
+              booking_date,
+              start_time,
+              start_datetime,
+              participants_count,
+              status,
+              reference_code,
+              game_sessions (
+                id,
+                game_area
+              )
+            `)
+            .in('id', bookingIds)
 
-        // Trier par date décroissante
-        bookings.sort((a: any, b: any) => 
-          new Date(b.start_datetime || b.booking_date).getTime() - 
-          new Date(a.start_datetime || a.booking_date).getTime()
-        )
-
-        setLinkedBookings(bookings)
-
-        // Calculer les statistiques
-        const now = new Date()
-        const gameCount = bookings.filter((b: any) => b.booking_type === 'GAME').length
-        const eventCount = bookings.filter((b: any) => b.booking_type === 'EVENT').length
-        const totalParticipants = bookings.reduce((sum: number, b: any) => sum + (b.participants_count || 0), 0)
-        const upcomingCount = bookings.filter((b: any) => 
-          new Date(b.start_datetime || b.booking_date) >= now && b.status !== 'CANCELLED'
-        ).length
-        const lastBooking = bookings.find((b: any) => b.status !== 'CANCELLED')
-
-        setContactStats({
-          totalBookings: bookings.length,
-          gameBookings: gameCount,
-          eventBookings: eventCount,
-          totalParticipants,
-          upcomingBookings: upcomingCount,
-          lastActivity: lastBooking ? (lastBooking.start_datetime || lastBooking.booking_date) : null,
-        })
+          if (bookingsData) {
+            bookings = bookingsData.map((b: any) => ({
+              ...b,
+              type: b.booking_type
+            }))
+          }
+        }
       }
+
+      // Trier par date décroissante
+      bookings.sort((a: any, b: any) => 
+        new Date(b.start_datetime || b.booking_date).getTime() - 
+        new Date(a.start_datetime || a.booking_date).getTime()
+      )
+
+      setLinkedBookings(bookings)
+
+      // Calculer les statistiques
+      const now = new Date()
+      const gameCount = bookings.filter((b: any) => b.booking_type === 'GAME').length
+      const eventCount = bookings.filter((b: any) => b.booking_type === 'EVENT').length
+      const totalParticipants = bookings.reduce((sum: number, b: any) => sum + (b.participants_count || 0), 0)
+      const upcomingCount = bookings.filter((b: any) => 
+        new Date(b.start_datetime || b.booking_date) >= now && b.status !== 'CANCELLED'
+      ).length
+      const lastBooking = bookings.find((b: any) => b.status !== 'CANCELLED')
+
+      setContactStats({
+        totalBookings: bookings.length,
+        gameBookings: gameCount,
+        eventBookings: eventCount,
+        totalParticipants,
+        upcomingBookings: upcomingCount,
+        lastActivity: lastBooking ? (lastBooking.start_datetime || lastBooking.booking_date) : null,
+      })
     }
 
     setLoading(false)
