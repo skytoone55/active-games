@@ -1455,8 +1455,8 @@ export default function AdminPage() {
       return { isViolated: false, currentUsage: 0, maxVests: 0, message: '' }
     }
 
-    // Calculer l'utilisation actuelle sur ce créneau
-    const currentUsage = await calculateVestsUsage(startDateTime, endDateTime, excludeBookingId)
+    // Calculer l'utilisation actuelle sur ce créneau (filtrer par branche)
+    const currentUsage = await calculateVestsUsage(startDateTime, endDateTime, excludeBookingId, branchIdToUse)
     const totalWithNew = currentUsage + participants
 
     const isViolated = totalWithNew > maxVests

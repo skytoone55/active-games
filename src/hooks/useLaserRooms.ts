@@ -168,9 +168,11 @@ export function useLaserRooms(branchId: string | null) {
   const calculateVestsUsage = useCallback(async (
     startDateTime: Date,
     endDateTime: Date,
-    excludeBookingId?: string
+    excludeBookingId?: string,
+    targetBranchId?: string | null
   ): Promise<number> => {
-    if (!branchId) return 0
+    const branchIdToUse = targetBranchId || branchId
+    if (!branchIdToUse) return 0
 
     const supabase = getClient()
     try {
@@ -199,20 +201,20 @@ export function useLaserRooms(branchId: string | null) {
 
       if (filteredSessions.length === 0) return 0
 
-      // Charger les bookings pour obtenir participants_count
+      // Charger les bookings pour obtenir participants_count ET branch_id
       // IMPORTANT : On compte participants_count du booking entier, mais SEULEMENT pour les bookings
-      // qui ont des sessions LASER sur ce créneau. Les bookings avec uniquement des sessions ACTIVE
-      // ne sont PAS inclus ici car la requête filtre déjà avec .eq('game_area', 'LASER')
+      // qui ont des sessions LASER sur ce créneau ET qui appartiennent à la branche cible
       const bookingIds = [...new Set(filteredSessions.map((s: any) => s.booking_id))]
       const { data: bookings } = await supabase
         .from('bookings')
-        .select('id, participants_count')
+        .select('id, participants_count, branch_id')
         .in('id', bookingIds)
-        .returns<Array<{ id: string; participants_count: number }>>()
+        .eq('branch_id', branchIdToUse) // FILTRE CRITIQUE : Seulement les bookings de la branche cible
+        .returns<Array<{ id: string; participants_count: number; branch_id: string }>>()
 
       if (!bookings) return 0
 
-      // Calculer le total des participants UNIQUEMENT pour les bookings avec sessions LASER
+      // Calculer le total des participants UNIQUEMENT pour les bookings avec sessions LASER de cette branche
       // IMPORTANT : Si un booking a à la fois des sessions ACTIVE et LASER (booking mixte),
       // on compte quand même le total car tous les participants peuvent utiliser les vestes LASER
       // Les grilles ACTIVE et LASER sont indépendantes : un participant peut jouer ACTIVE
