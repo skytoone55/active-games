@@ -750,12 +750,35 @@ export function BookingModal({
         if (reactivateDataStr) {
           try {
             const data = JSON.parse(reactivateDataStr)
-            setFirstName(data.firstName || '')
-            setLastName(data.lastName || '')
-            setPhone(data.phone || '')
-            setEmail(data.email || '')
             setParticipants(data.participants || '')
             setNumberOfGames(Number(data.numberOfGames) || 1)
+            
+            // Si un contactId est fourni, charger le contact existant
+            if (data.contactId) {
+              getContact(data.contactId).then((contact) => {
+                if (contact) {
+                  setSelectedContact(contact)
+                  setFirstName(contact.first_name || '')
+                  setLastName(contact.last_name || '')
+                  setPhone(contact.phone || '')
+                  setEmail(contact.email || '')
+                  setNotes(contact.notes_client || '')
+                  setIsEditingContact(false) // Champs gelés car contact importé
+                } else {
+                  // Fallback si le contact n'existe plus
+                  setFirstName(data.firstName || '')
+                  setLastName(data.lastName || '')
+                  setPhone(data.phone || '')
+                  setEmail(data.email || '')
+                }
+              })
+            } else {
+              // Pas de contactId, juste remplir les champs
+              setFirstName(data.firstName || '')
+              setLastName(data.lastName || '')
+              setPhone(data.phone || '')
+              setEmail(data.email || '')
+            }
             // Ne pas supprimer les données tout de suite - on en aura besoin pour le submit
           } catch (e) {
             console.error('Error parsing reactivate data:', e)
