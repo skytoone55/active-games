@@ -593,7 +593,7 @@ export async function GET(request: NextRequest) {
       .select(`
         *,
         branch:branches(id, name, slug),
-        booking:bookings(id, reference_code, status),
+        booking:bookings(id, reference_code, status, booking_date, start_time, start_datetime, participants_count),
         contact:contacts(id, first_name, last_name, phone, email)
       `)
       .order('created_at', { ascending: false })

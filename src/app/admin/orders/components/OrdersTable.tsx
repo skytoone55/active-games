@@ -165,7 +165,7 @@ export function OrdersTable({ orders, isDark, onConfirm, onCancel, onViewOrder, 
           Client<SortIcon field="client" />
         </div>
         <div className="col-span-1 cursor-pointer hover:text-blue-500" onClick={() => handleSort('date')}>
-          Événement<SortIcon field="date" />
+          Date<SortIcon field="date" />
         </div>
         <div className="col-span-1 cursor-pointer hover:text-blue-500" onClick={() => handleSort('time')}>
           Heure<SortIcon field="time" />
@@ -232,14 +232,14 @@ export function OrdersTable({ orders, isDark, onConfirm, onCancel, onViewOrder, 
                 <div className="text-xs text-gray-500 mt-0.5">{order.customer_phone}</div>
               </div>
 
-              {/* Date événement */}
+              {/* Date - utilise booking.booking_date si disponible pour avoir la date à jour */}
               <div className={`col-span-1 text-sm ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                {formatDate(order.requested_date)}
+                {formatDate(order.booking?.booking_date || order.requested_date)}
               </div>
 
-              {/* Heure */}
+              {/* Heure - utilise booking.start_time si disponible */}
               <div className={`col-span-1 text-sm font-mono ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                {formatTime(order.requested_time)}
+                {order.booking?.start_time ? formatTime(order.booking.start_time) : formatTime(order.requested_time)}
               </div>
 
               {/* Date création */}

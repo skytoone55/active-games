@@ -65,44 +65,59 @@ export function ContactDetailsModal({
     if (contactData) {
       setContact(contactData)
 
-      // Charger les réservations liées - méthode en 2 étapes pour robustesse
-      // Étape 1: Récupérer les IDs des bookings liés
+      // Charger les réservations liées - 2 méthodes pour couvrir tous les cas
+      let bookings: any[] = []
+      const bookingIds = new Set<string>()
+      
+      // Méthode 1: Via booking_contacts (relation explicite)
       const { data: bookingContactsData } = await supabase
         .from('booking_contacts')
         .select('booking_id')
         .eq('contact_id', contactId)
 
-      let bookings: any[] = []
+      if (bookingContactsData) {
+        bookingContactsData.forEach((bc: any) => {
+          if (bc.booking_id) bookingIds.add(bc.booking_id)
+        })
+      }
       
-      if (bookingContactsData && bookingContactsData.length > 0) {
-        const bookingIds = bookingContactsData.map((bc: any) => bc.booking_id).filter(Boolean)
-        
-        // Étape 2: Charger les bookings avec leurs game_sessions
-        if (bookingIds.length > 0) {
-          const { data: bookingsData } = await supabase
-            .from('bookings')
-            .select(`
-              id,
-              booking_type,
-              booking_date,
-              start_time,
-              start_datetime,
-              participants_count,
-              status,
-              reference_code,
-              game_sessions (
-                id,
-                game_area
-              )
-            `)
-            .in('id', bookingIds)
+      // Méthode 2: Via primary_contact_id (relation directe)
+      const { data: directBookingsData } = await supabase
+        .from('bookings')
+        .select('id')
+        .eq('primary_contact_id', contactId)
 
-          if (bookingsData) {
-            bookings = bookingsData.map((b: any) => ({
-              ...b,
-              type: b.booking_type
-            }))
-          }
+      if (directBookingsData) {
+        directBookingsData.forEach((b: any) => {
+          if (b.id) bookingIds.add(b.id)
+        })
+      }
+      
+      // Charger tous les bookings trouvés
+      if (bookingIds.size > 0) {
+        const { data: bookingsData } = await supabase
+          .from('bookings')
+          .select(`
+            id,
+            booking_type,
+            booking_date,
+            start_time,
+            start_datetime,
+            participants_count,
+            status,
+            reference_code,
+            game_sessions (
+              id,
+              game_area
+            )
+          `)
+          .in('id', Array.from(bookingIds))
+
+        if (bookingsData) {
+          bookings = bookingsData.map((b: any) => ({
+            ...b,
+            type: b.booking_type
+          }))
         }
       }
 
