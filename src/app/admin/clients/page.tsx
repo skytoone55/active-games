@@ -2,11 +2,12 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { Search, Edit2, Archive, User, Phone, Mail, Loader2, Eye, Calendar, Gamepad2, PartyPopper, ChevronLeft, ChevronRight, X, Plus, Download, ArrowUpDown, ArrowUp, ArrowDown, TrendingUp, Users as UsersIcon, Clock, GitMerge, Settings, Zap, Target } from 'lucide-react'
+import { Search, Edit2, Archive, User, Phone, Mail, Loader2, Eye, ChevronLeft, ChevronRight, Plus, Download, ArrowUpDown, ArrowUp, ArrowDown, Users as UsersIcon, GitMerge, Settings } from 'lucide-react'
 import { useContacts, type SearchContactsResult } from '@/hooks/useContacts'
 import { useBranches } from '@/hooks/useBranches'
 import { useAuth } from '@/hooks/useAuth'
 import { AdminHeader } from '../components/AdminHeader'
+import { ContactDetailsModal } from '../components/ContactDetailsModal'
 import { ClientModal } from './components/ClientModal'
 import { MergeContactsModal } from './components/MergeContactsModal'
 import { ConfirmationModal } from '../components/ConfirmationModal'
@@ -18,7 +19,7 @@ export default function ClientsPage() {
   const router = useRouter()
   const { user } = useAuth()
   const { branches, selectedBranch, selectBranch } = useBranches()
-  const { searchContacts, archiveContact, unarchiveContact, getLinkedBookings, getContactStats } = useContacts(selectedBranch?.id || null)
+  const { searchContacts, archiveContact, unarchiveContact } = useContacts(selectedBranch?.id || null)
 
   const [searchQuery, setSearchQuery] = useState('')
   const [includeArchived, setIncludeArchived] = useState(false)
@@ -31,9 +32,6 @@ export default function ClientsPage() {
   const [showDetailsModal, setShowDetailsModal] = useState(false)
   const [showClientModal, setShowClientModal] = useState(false)
   const [editingContact, setEditingContact] = useState<Contact | null>(null)
-  const [linkedBookings, setLinkedBookings] = useState<any[]>([])
-  const [loadingBookings, setLoadingBookings] = useState(false)
-  const [contactStats, setContactStats] = useState<any>(null)
   const [sortField, setSortField] = useState<'name' | 'created_at' | 'last_activity'>('created_at')
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
   const [duplicatesToMerge, setDuplicatesToMerge] = useState<Contact[]>([])
@@ -136,19 +134,9 @@ export default function ClientsPage() {
   }
 
   // Ouvrir les détails
-  const handleViewDetails = async (contact: Contact) => {
+  const handleViewDetails = (contact: Contact) => {
     setSelectedContact(contact)
     setShowDetailsModal(true)
-    
-    // Charger les réservations liées et stats
-    setLoadingBookings(true)
-    const [bookings, stats] = await Promise.all([
-      getLinkedBookings(contact.id),
-      getContactStats(contact.id),
-    ])
-    setLinkedBookings(bookings || [])
-    setContactStats(stats)
-    setLoadingBookings(false)
   }
 
   // Export CSV
@@ -674,270 +662,13 @@ export default function ClientsPage() {
         )}
       </div>
 
-      {/* Modal détails (simplifié pour l'instant) */}
+      {/* Modal détails du contact - Composant partagé */}
       {showDetailsModal && selectedContact && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className={`rounded-lg border max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto ${
-            isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
-          }`}>
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className={`text-xl font-bold ${
-                  isDark ? 'text-white' : 'text-gray-900'
-                }`}>Détails du contact</h2>
-                <button
-                  onClick={() => setShowDetailsModal(false)}
-                  className={`p-2 rounded-lg transition-colors ${
-                    isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100'
-                  }`}
-                >
-                  <X className={`w-5 h-5 ${
-                    isDark ? 'text-gray-300' : 'text-gray-700'
-                  }`} />
-                </button>
-              </div>
-              <div className="space-y-6">
-                {/* Informations de base */}
-                <div className="space-y-4">
-                  <div>
-                    <label className={`text-sm ${
-                      isDark ? 'text-gray-400' : 'text-gray-600'
-                    }`}>Nom complet</label>
-                    <p className={`font-medium text-lg ${
-                      isDark ? 'text-white' : 'text-gray-900'
-                    }`}>{getDisplayName(selectedContact)}</p>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className={`text-sm ${
-                        isDark ? 'text-gray-400' : 'text-gray-600'
-                      }`}>Téléphone</label>
-                      <p className={isDark ? 'text-white' : 'text-gray-900'}>{selectedContact.phone}</p>
-                    </div>
-                    {selectedContact.email && (
-                      <div>
-                        <label className={`text-sm ${
-                          isDark ? 'text-gray-400' : 'text-gray-600'
-                        }`}>Email</label>
-                        <p className={isDark ? 'text-white' : 'text-gray-900'}>{selectedContact.email}</p>
-                      </div>
-                    )}
-                  </div>
-                  {selectedContact.notes_client && (
-                    <div>
-                      <label className={`text-sm ${
-                        isDark ? 'text-gray-400' : 'text-gray-600'
-                      }`}>Notes client</label>
-                      <p className={`whitespace-pre-wrap p-3 rounded-lg ${
-                        isDark
-                          ? 'text-white bg-gray-700/50'
-                          : 'text-gray-900 bg-gray-100'
-                      }`}>{selectedContact.notes_client}</p>
-                    </div>
-                  )}
-                </div>
-
-                {/* Statistiques */}
-                {contactStats && (
-                  <div className={`pt-4 border-t ${
-                    isDark ? 'border-gray-700' : 'border-gray-200'
-                  }`}>
-                    <h3 className={`text-lg font-semibold mb-4 flex items-center gap-2 ${
-                      isDark ? 'text-white' : 'text-gray-900'
-                    }`}>
-                      <TrendingUp className="w-5 h-5" />
-                      Statistiques
-                    </h3>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                      <div className={`p-4 rounded-lg ${
-                        isDark ? 'bg-gray-700/50' : 'bg-gray-100'
-                      }`}>
-                        <div className="text-2xl font-bold text-blue-400">{contactStats.totalBookings}</div>
-                        <div className={`text-sm mt-1 ${
-                          isDark ? 'text-gray-400' : 'text-gray-600'
-                        }`}>Réservations totales</div>
-                      </div>
-                      <div className={`p-4 rounded-lg ${
-                        isDark ? 'bg-gray-700/50' : 'bg-gray-100'
-                      }`}>
-                        <div className="text-2xl font-bold text-green-400">{contactStats.upcomingBookings}</div>
-                        <div className={`text-sm mt-1 ${
-                          isDark ? 'text-gray-400' : 'text-gray-600'
-                        }`}>À venir</div>
-                      </div>
-                      <div className={`p-4 rounded-lg ${
-                        isDark ? 'bg-gray-700/50' : 'bg-gray-100'
-                      }`}>
-                        <div className="text-2xl font-bold text-purple-400">{contactStats.totalParticipants}</div>
-                        <div className={`text-sm mt-1 ${
-                          isDark ? 'text-gray-400' : 'text-gray-600'
-                        }`}>Participants totaux</div>
-                      </div>
-                      <div className={`p-4 rounded-lg ${
-                        isDark ? 'bg-gray-700/50' : 'bg-gray-100'
-                      }`}>
-                        <div className="flex items-center gap-2">
-                          <div className="text-2xl font-bold text-yellow-400">{contactStats.gameBookings}</div>
-                          <Gamepad2 className="w-5 h-5 text-blue-400" />
-                        </div>
-                        <div className="flex items-center gap-2 mt-1">
-                          <div className="text-2xl font-bold text-green-400">{contactStats.eventBookings}</div>
-                          <PartyPopper className="w-5 h-5 text-green-400" />
-                        </div>
-                        <div className={`text-sm mt-1 ${
-                          isDark ? 'text-gray-400' : 'text-gray-600'
-                        }`}>Jeux / Événements</div>
-                      </div>
-                    </div>
-                    {contactStats.lastActivity && (
-                      <div className={`mt-4 flex items-center gap-2 text-sm ${
-                        isDark ? 'text-gray-400' : 'text-gray-600'
-                      }`}>
-                        <Clock className="w-4 h-4" />
-                        Dernière activité: {new Date(contactStats.lastActivity).toLocaleDateString('fr-FR', {
-                          day: 'numeric',
-                          month: 'long',
-                          year: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* Réservations liées */}
-              <div className={`mt-6 pt-6 border-t ${
-                isDark ? 'border-gray-700' : 'border-gray-200'
-              }`}>
-                <h3 className={`text-lg font-semibold mb-4 flex items-center gap-2 ${
-                  isDark ? 'text-white' : 'text-gray-900'
-                }`}>
-                  <Calendar className="w-5 h-5" />
-                  Réservations liées ({linkedBookings.length})
-                </h3>
-                {loadingBookings ? (
-                  <div className="flex items-center justify-center py-8">
-                    <Loader2 className={`w-6 h-6 animate-spin ${
-                      isDark ? 'text-blue-400' : 'text-blue-600'
-                    }`} />
-                  </div>
-                ) : linkedBookings.length === 0 ? (
-                  <p className={`text-sm ${
-                    isDark ? 'text-gray-400' : 'text-gray-600'
-                  }`}>Aucune réservation liée à ce contact</p>
-                ) : (
-                  <div className="space-y-2 max-h-96 overflow-y-auto">
-                    {linkedBookings.map((booking) => {
-                      const bookingDate = new Date(booking.start_datetime)
-                      const isPast = bookingDate < new Date()
-                      
-                      // Déterminer le type de jeu pour les GAME
-                      let gameIcon = null
-                      if (booking.type === 'GAME') {
-                        // Vérifier si game_sessions existe et est un tableau
-                        const sessions = booking.game_sessions || []
-                        if (Array.isArray(sessions) && sessions.length > 0) {
-                          // Extraire les game_area (peut être un objet avec game_area ou directement une string)
-                          const gameAreas = sessions
-                            .map(s => {
-                              // Si c'est un objet avec game_area, prendre game_area, sinon prendre directement
-                              return (typeof s === 'object' && s !== null) ? s.game_area : s
-                            })
-                            .filter(Boolean)
-                          
-                          const hasActive = gameAreas.includes('ACTIVE')
-                          const hasLaser = gameAreas.includes('LASER')
-                          
-                          if (hasActive && !hasLaser) {
-                            // Toutes les sessions sont ACTIVE
-                            gameIcon = <Zap className="w-5 h-5 flex-shrink-0 text-blue-400" />
-                          } else if (hasLaser && !hasActive) {
-                            // Toutes les sessions sont LASER
-                            gameIcon = <Target className="w-5 h-5 flex-shrink-0 text-purple-400" />
-                          } else {
-                            // Mix (ACTIVE + LASER) ou autre - garder Gamepad2
-                            gameIcon = <Gamepad2 className="w-5 h-5 flex-shrink-0 text-blue-400" />
-                          }
-                        } else {
-                          // Pas de game_sessions - logo par défaut
-                          gameIcon = <Gamepad2 className="w-5 h-5 flex-shrink-0 text-blue-400" />
-                        }
-                      }
-                      
-                      return (
-                        <div
-                          key={booking.id}
-                          onClick={() => {
-                            // Deep-link vers la réservation dans l'agenda
-                            const bookingDateStr = bookingDate.toISOString().split('T')[0]
-                            router.push(`/admin?date=${bookingDateStr}&booking=${booking.id}`)
-                            setShowDetailsModal(false)
-                          }}
-                          className={`p-3 rounded-lg border cursor-pointer transition-colors ${
-                            isPast
-                              ? isDark
-                                ? 'bg-gray-700/50 border-gray-600 hover:bg-gray-700'
-                                : 'bg-gray-100 border-gray-300 hover:bg-gray-200'
-                              : 'bg-blue-600/10 border-blue-600/30 hover:bg-blue-600/20'
-                          }`}
-                        >
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3 flex-1 min-w-0">
-                              {booking.type === 'EVENT' ? (
-                                <PartyPopper className="w-5 h-5 flex-shrink-0 text-green-400" />
-                              ) : (
-                                gameIcon || <Gamepad2 className="w-5 h-5 flex-shrink-0 text-blue-400" />
-                              )}
-                              <div className="flex-1 min-w-0">
-                                <div className={`font-medium truncate ${
-                                  isDark ? 'text-white' : 'text-gray-900'
-                                }`}>
-                                  {booking.reference_code} - {booking.type === 'EVENT' ? 'Événement' : 'Jeu'}
-                                </div>
-                                <div className={`text-sm ${
-                                  isDark ? 'text-gray-400' : 'text-gray-600'
-                                }`}>
-                                  {bookingDate.toLocaleDateString('fr-FR', {
-                                    weekday: 'short',
-                                    day: 'numeric',
-                                    month: 'short',
-                                    year: 'numeric',
-                                    hour: '2-digit',
-                                    minute: '2-digit',
-                                  })}
-                                </div>
-                              </div>
-                            </div>
-                            <div className="text-right flex-shrink-0 ml-3">
-                              <div className={`text-sm font-medium ${
-                                isDark ? 'text-white' : 'text-gray-900'
-                              }`}>
-                                {booking.participants_count} pers.
-                              </div>
-                              <div className={`text-xs ${
-                                booking.status === 'CANCELLED'
-                                  ? 'text-red-400'
-                                  : booking.status === 'CONFIRMED'
-                                  ? 'text-green-400'
-                                  : isDark
-                                  ? 'text-gray-400'
-                                  : 'text-gray-600'
-                              }`}>
-                                {booking.status === 'CANCELLED' ? 'Annulé' : booking.status === 'CONFIRMED' ? 'Confirmé' : 'Brouillon'}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
+        <ContactDetailsModal
+          contactId={selectedContact.id}
+          onClose={() => setShowDetailsModal(false)}
+          isDark={isDark}
+        />
       )}
 
       {/* Modal création/édition client */}
