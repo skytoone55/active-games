@@ -37,6 +37,7 @@ export function SettingsModal({
   const [laserTotalVests, setLaserTotalVests] = useState<number>(0)
   const [laserSpareVests, setLaserSpareVests] = useState<number>(0)
   const [laserSingleGroupThreshold, setLaserSingleGroupThreshold] = useState<number>(8)
+  const [laserExclusiveThreshold, setLaserExclusiveThreshold] = useState<number>(10)
   const [laserEnabled, setLaserEnabled] = useState<boolean>(false)
   const [newLaserRoomName, setNewLaserRoomName] = useState('')
   const [newLaserRoomCapacity, setNewLaserRoomCapacity] = useState(15)
@@ -71,6 +72,7 @@ export function SettingsModal({
       setLaserTotalVests(settings.laser_total_vests || 0)
       setLaserSpareVests(settings.laser_spare_vests || 0)
       setLaserSingleGroupThreshold(settings.laser_single_group_threshold || 8)
+      setLaserExclusiveThreshold(settings.laser_exclusive_threshold || 10)
       setLaserEnabled(settings.laser_enabled || false)
     } else {
       setPlayersPerSlot(6) // Valeur par défaut si pas de settings
@@ -221,6 +223,7 @@ export function SettingsModal({
           laser_total_vests: laserTotalVests,
           laser_spare_vests: laserSpareVests,
           laser_single_group_threshold: laserSingleGroupThreshold,
+          laser_exclusive_threshold: laserExclusiveThreshold,
           laser_enabled: laserEnabled
         })
         .eq('branch_id', branchId)
@@ -583,6 +586,36 @@ export function SettingsModal({
                 </div>
                 <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
                   Nombre minimum de participants pour qu'un groupe joue seul dans un labyrinthe (allocation automatique).
+                </p>
+
+                {/* Seuil salle exclusive */}
+                <div>
+                  <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                    Seuil salle exclusive (partie privée)
+                  </label>
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="number"
+                      min="1"
+                      max="50"
+                      value={laserExclusiveThreshold}
+                      onChange={(e) => {
+                        const value = parseInt(e.target.value) || 10
+                        setLaserExclusiveThreshold(value)
+                      }}
+                      className={`w-24 px-3 py-2 rounded-lg border ${
+                        isDark
+                          ? 'bg-gray-800 border-gray-600 text-white'
+                          : 'bg-white border-gray-300 text-gray-900'
+                      } focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                    />
+                    <span className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                      personnes
+                    </span>
+                  </div>
+                </div>
+                <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                  À partir de ce nombre, la salle devient EXCLUSIVE (bloquée, le groupe joue seul). Plus personne ne peut s'ajouter.
                 </p>
 
                 {/* Liste des salles Laser */}

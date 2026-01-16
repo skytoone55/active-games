@@ -2997,56 +2997,78 @@ export function BookingModal({
                 <Target className="w-5 h-5 text-purple-400" />
                 <span className={`font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>Allocation des labyrinthes</span>
               </div>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => setLaserAllocationMode('auto')}
-                  className={`px-4 py-3 rounded-lg border-2 transition-all ${
-                    laserAllocationMode === 'auto'
-                      ? 'border-purple-500 bg-purple-500/10 text-purple-500'
-                      : isDark ? 'border-gray-700 hover:border-gray-600 text-gray-300' : 'border-gray-200 hover:border-gray-300 text-gray-700'
-                  }`}
-                >
-                  <div className="font-medium">Auto</div>
-                  <div className={`text-xs mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Allocation automatique</div>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setLaserAllocationMode('petit')}
-                  className={`px-4 py-3 rounded-lg border-2 transition-all ${
-                    laserAllocationMode === 'petit'
-                      ? 'border-purple-500 bg-purple-500/10 text-purple-500'
-                      : isDark ? 'border-gray-700 hover:border-gray-600 text-gray-300' : 'border-gray-200 hover:border-gray-300 text-gray-700'
-                  }`}
-                >
-                  <div className="font-medium">Petit laby</div>
-                  <div className={`text-xs mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Petit seul</div>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setLaserAllocationMode('grand')}
-                  className={`px-4 py-3 rounded-lg border-2 transition-all ${
-                    laserAllocationMode === 'grand'
-                      ? 'border-purple-500 bg-purple-500/10 text-purple-500'
-                      : isDark ? 'border-gray-700 hover:border-gray-600 text-gray-300' : 'border-gray-200 hover:border-gray-300 text-gray-700'
-                  }`}
-                >
-                  <div className="font-medium">Grand laby</div>
-                  <div className={`text-xs mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Grand seul</div>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setLaserAllocationMode('maxi')}
-                  className={`px-4 py-3 rounded-lg border-2 transition-all ${
-                    laserAllocationMode === 'maxi'
-                      ? 'border-purple-500 bg-purple-500/10 text-purple-500'
-                      : isDark ? 'border-gray-700 hover:border-gray-600 text-gray-300' : 'border-gray-200 hover:border-gray-300 text-gray-700'
-                  }`}
-                >
-                  <div className="font-medium">Maxi</div>
-                  <div className={`text-xs mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Les deux labys</div>
-                </button>
-              </div>
+              {(() => {
+                const activeLaserRooms = laserRooms?.filter(r => r.is_active) || []
+                const hasMultipleRooms = activeLaserRooms.length > 1
+                return (
+                  <>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setLaserAllocationMode('auto')}
+                        className={`px-4 py-3 rounded-lg border-2 transition-all ${
+                          laserAllocationMode === 'auto'
+                            ? 'border-purple-500 bg-purple-500/10 text-purple-500'
+                            : isDark ? 'border-gray-700 hover:border-gray-600 text-gray-300' : 'border-gray-200 hover:border-gray-300 text-gray-700'
+                        }`}
+                      >
+                        <div className="font-medium">Auto</div>
+                        <div className={`text-xs mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Allocation automatique</div>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => hasMultipleRooms && setLaserAllocationMode('petit')}
+                        disabled={!hasMultipleRooms}
+                        className={`px-4 py-3 rounded-lg border-2 transition-all ${
+                          !hasMultipleRooms
+                            ? 'opacity-40 cursor-not-allowed border-gray-600 text-gray-500'
+                            : laserAllocationMode === 'petit'
+                              ? 'border-purple-500 bg-purple-500/10 text-purple-500'
+                              : isDark ? 'border-gray-700 hover:border-gray-600 text-gray-300' : 'border-gray-200 hover:border-gray-300 text-gray-700'
+                        }`}
+                      >
+                        <div className="font-medium">Petit laby</div>
+                        <div className={`text-xs mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Petit seul</div>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => hasMultipleRooms && setLaserAllocationMode('grand')}
+                        disabled={!hasMultipleRooms}
+                        className={`px-4 py-3 rounded-lg border-2 transition-all ${
+                          !hasMultipleRooms
+                            ? 'opacity-40 cursor-not-allowed border-gray-600 text-gray-500'
+                            : laserAllocationMode === 'grand'
+                              ? 'border-purple-500 bg-purple-500/10 text-purple-500'
+                              : isDark ? 'border-gray-700 hover:border-gray-600 text-gray-300' : 'border-gray-200 hover:border-gray-300 text-gray-700'
+                        }`}
+                      >
+                        <div className="font-medium">Grand laby</div>
+                        <div className={`text-xs mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Grand seul</div>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => hasMultipleRooms && setLaserAllocationMode('maxi')}
+                        disabled={!hasMultipleRooms}
+                        className={`px-4 py-3 rounded-lg border-2 transition-all ${
+                          !hasMultipleRooms
+                            ? 'opacity-40 cursor-not-allowed border-gray-600 text-gray-500'
+                            : laserAllocationMode === 'maxi'
+                              ? 'border-purple-500 bg-purple-500/10 text-purple-500'
+                              : isDark ? 'border-gray-700 hover:border-gray-600 text-gray-300' : 'border-gray-200 hover:border-gray-300 text-gray-700'
+                        }`}
+                      >
+                        <div className="font-medium">Maxi</div>
+                        <div className={`text-xs mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Les deux labys</div>
+                      </button>
+                    </div>
+                    {!hasMultipleRooms && (
+                      <p className={`text-xs mt-2 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                        Une seule salle disponible. Mode Auto uniquement.
+                      </p>
+                    )}
+                  </>
+                )
+              })()}
             </div>
           )}
 

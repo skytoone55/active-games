@@ -1,0 +1,6 @@
+{
+  "version": 3,
+  "sources": [],
+  "sections": [
+    {"offset": {"line": 14, "column": 0}, "map": {"version":3,"sources":["file:///Users/jeremy/Desktop/cursor/activegames/app/page.tsx"],"sourcesContent":["import { redirect } from 'next/navigation';\nimport { defaultLocale } from '@/lib/i18n';\n\nexport default function RootPage() {\n  redirect(`/${defaultLocale}`);\n}\n"],"names":[],"mappings":";;;;AAAA;AAAA;;;;;;;;AAGe,SAAS;IACtB,IAAA,iMAAQ,EAAC,CAAC,CAAC,EAAE,eAAe;AAC9B"}}]
+}

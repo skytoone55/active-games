@@ -1369,8 +1369,9 @@ export default function AdminPage() {
     const targetBranch = branches.find(b => b.id === branchIdToUse)
     const targetLaserRooms = targetBranch?.laserRooms?.filter(r => r.is_active) || []
     
-    // Récupérer le seuil de groupe seul depuis les settings
+    // Récupérer les seuils depuis les settings
     const threshold = targetBranch?.settings?.laser_single_group_threshold || 8
+    const exclusiveThreshold = targetBranch?.settings?.laser_exclusive_threshold || 10
 
     if (targetLaserRooms.length === 0) return null
 
@@ -1418,13 +1419,13 @@ export default function AdminPage() {
         return 0 // Créneau entier bloqué
       }
       
-      // RÈGLE 2 : Vérifier si cette salle spécifique contient une résa de 10+ personnes
+      // RÈGLE 2 : Vérifier si cette salle spécifique contient une résa au-delà du seuil exclusif
       // Si oui, la salle est EXCLUSIVE (fermée, personne d'autre ne peut s'ajouter)
       const hasExclusiveBooking = overlappingLaserBookings.some(b => {
         const isInThisRoom = b.game_sessions?.some(s => 
           s.game_area === 'LASER' && s.laser_room_id === roomId
         )
-        return isInThisRoom && b.participants_count >= 10
+        return isInThisRoom && b.participants_count >= exclusiveThreshold
       })
       
       if (hasExclusiveBooking) {
