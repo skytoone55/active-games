@@ -1,6 +1,7 @@
 /**
- * API Debug - Vérifier les settings
+ * API Debug - Vérifier et corriger les settings
  * GET /api/debug/settings?branch_id=xxx
+ * PATCH /api/debug/settings - Corriger les settings
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
@@ -9,6 +10,53 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
+
+// Corriger les settings
+export async function PATCH(request: NextRequest) {
+  try {
+    const body = await request.json()
+    
+    if (body.action === 'fix_duration') {
+      // Corriger game_duration_minutes à 30 pour toutes les branches
+      const { data, error } = await supabase
+        .from('branch_settings')
+        .update({ game_duration_minutes: 30 })
+        .neq('game_duration_minutes', 30)
+        .select()
+      
+      if (error) {
+        return NextResponse.json({ error: 'Failed to update', details: error }, { status: 500 })
+      }
+      
+      return NextResponse.json({ 
+        success: true, 
+        message: 'game_duration_minutes mis à jour à 30 minutes',
+        updated: data?.length || 0
+      })
+    }
+    
+    if (body.branch_id && body.settings) {
+      // Mise à jour personnalisée
+      const { data, error } = await supabase
+        .from('branch_settings')
+        .update(body.settings)
+        .eq('branch_id', body.branch_id)
+        .select()
+      
+      if (error) {
+        return NextResponse.json({ error: 'Failed to update', details: error }, { status: 500 })
+      }
+      
+      return NextResponse.json({ success: true, updated: data })
+    }
+    
+    return NextResponse.json({ error: 'Invalid request. Use action: "fix_duration" or provide branch_id + settings' }, { status: 400 })
+    
+  } catch (error) {
+    console.error('PATCH error:', error)
+    return NextResponse.json({ error: 'Internal error', details: String(error) }, { status: 500 })
+  }
+}
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams
