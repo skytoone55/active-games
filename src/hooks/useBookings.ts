@@ -353,44 +353,40 @@ export function useBookings(branchId: string | null, date?: string) {
       // Créer une entrée dans orders pour synchroniser avec la section Commandes
       const bookingDate = new Date(data.start_datetime)
       
-      // Générer une référence de demande unique pour l'order
-      const generateRequestReference = () => {
-        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
-        let result = ''
-        for (let i = 0; i < 6; i++) {
-          result += chars.charAt(Math.floor(Math.random() * chars.length))
-        }
-        return result
-      }
-      
+      // Utiliser le reference_code du booking (pas générer une nouvelle référence)
       const orderData = {
         branch_id: data.branch_id,
         booking_id: newBooking.id,
         contact_id: data.primary_contact_id || null,
         status: 'auto_confirmed',
         order_type: data.type, // 'GAME' ou 'EVENT'
-        game_area: newSessions.length > 0 ? newSessions[0].game_area : 'ACTIVE',
+        game_area: newSessions.length > 0 ? newSessions[0].game_area : null, // null pour Events
         number_of_games: newSessions.length || 1,
         requested_date: bookingDate.toISOString().split('T')[0],
         requested_time: bookingDate.toTimeString().slice(0, 5),
         participants_count: data.participants_count,
-        customer_first_name: data.customer_first_name || '',
+        customer_first_name: data.customer_first_name || 'Client',
         customer_last_name: data.customer_last_name || '',
-        customer_phone: data.customer_phone || '',
+        customer_phone: data.customer_phone || '0000000000',
         customer_email: data.customer_email || null,
         customer_notes: data.customer_notes_at_booking || null,
-        request_reference: generateRequestReference(),
+        request_reference: newBooking.reference_code, // Utiliser la même référence que le booking
         terms_accepted: true, // Automatiquement accepté car créé par admin
         terms_accepted_at: new Date().toISOString(),
       }
 
-      const { error: orderError } = await supabase
+      console.log('Creating order with data:', JSON.stringify(orderData, null, 2))
+
+      const { data: insertedOrder, error: orderError } = await supabase
         .from('orders')
         .insert(orderData as any)
+        .select()
+        .single()
 
       if (orderError) {
-        // Log mais ne pas bloquer - l'order est optionnel pour la compatibilité
-        console.warn('Order creation warning (non-blocking):', orderError.message)
+        console.error('Order creation error:', orderError.message, orderError.details, orderError.hint, orderError.code)
+      } else {
+        console.log('Order created successfully:', insertedOrder?.id)
       }
 
       const result: BookingWithSlots = {
