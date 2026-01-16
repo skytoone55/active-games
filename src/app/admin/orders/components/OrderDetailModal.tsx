@@ -95,11 +95,17 @@ export function OrderDetailModal({
   const getGameIcon = () => {
     if (order.order_type === 'EVENT') return PartyPopper
     if (order.game_area === 'LASER') return Target
-    return Gamepad2
+    if (order.game_area === 'MIX') return Gamepad2
+    return Zap // Active Games
   }
 
   const getGameLabel = () => {
     if (order.order_type === 'EVENT') {
+      // Nouveaux types d'événements (basés sur le type de jeu)
+      if (order.game_area === 'ACTIVE' || order.event_type === 'event_active') return 'Événement Active Games'
+      if (order.game_area === 'LASER' || order.event_type === 'event_laser') return 'Événement Laser City'
+      if (order.event_type === 'event_mix') return 'Événement Mix'
+      // Anciens types (compatibilité)
       switch (order.event_type) {
         case 'birthday': return 'Anniversaire'
         case 'bar_mitzvah': return 'Bar/Bat Mitzvah'
@@ -109,6 +115,7 @@ export function OrderDetailModal({
       }
     }
     if (order.game_area === 'LASER') return 'Laser City'
+    if (order.game_area === 'MIX') return 'Mix Active + Laser'
     return 'Active Games'
   }
 

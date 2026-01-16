@@ -12,6 +12,7 @@ import {
   Gamepad2,
   Target,
   PartyPopper,
+  Zap,
   User,
   ChevronUp,
   ChevronDown
@@ -131,12 +132,12 @@ export function OrdersTable({ orders, isDark, onConfirm, onCancel, onViewOrder, 
     }
   }
 
-  // Obtenir l'icône du type de jeu
+  // Obtenir l'icône du type de jeu (cohérent avec BookingModal)
   const getGameIcon = (orderType: string, gameArea: string | null) => {
     if (orderType === 'EVENT') return PartyPopper
     if (gameArea === 'LASER') return Target
-    if (gameArea === 'ACTIVE') return Gamepad2
-    return Gamepad2 // Par défaut
+    if (gameArea === 'MIX') return Gamepad2
+    return Zap // Active Games
   }
 
   if (orders.length === 0) {

@@ -546,6 +546,15 @@ export function useBookings(branchId: string | null, date?: string) {
 
       if (cancelError) throw cancelError
 
+      // Mettre à jour l'order correspondante si elle existe
+      await supabase
+        .from('orders')
+        .update({
+          status: 'cancelled',
+          updated_at: new Date().toISOString(),
+        })
+        .eq('booking_id', id)
+
       await fetchBookings()
       return true
     } catch (err) {
@@ -561,6 +570,16 @@ export function useBookings(branchId: string | null, date?: string) {
     setError(null)
 
     try {
+      // D'abord, mettre à jour l'order correspondante si elle existe
+      await supabase
+        .from('orders')
+        .update({
+          status: 'cancelled',
+          booking_id: null, // Détacher l'order du booking supprimé
+          updated_at: new Date().toISOString(),
+        })
+        .eq('booking_id', id)
+
       // Les slots seront supprimés automatiquement grâce à ON DELETE CASCADE
       const { error: deleteError } = await supabase
         .from('bookings')
