@@ -48,7 +48,7 @@ async function findOrCreateContact(
   // Chercher un contact existant avec même téléphone ET même nom
   const { data: existingContacts } = await supabase
     .from('contacts')
-    .select('id, first_name, last_name, phone, email, notes')
+    .select('id, first_name, last_name, phone, email, notes_client')
     .eq('phone', phone)
     .eq('status', 'active')
   
@@ -64,13 +64,13 @@ async function findOrCreateContact(
       if (notes && notes.trim()) {
         const dateStr = new Date().toLocaleDateString('fr-FR')
         const newNote = `[${dateStr} - Réservation site] ${notes}`
-        const updatedNotes = exactMatch.notes 
-          ? `${exactMatch.notes}\n\n${newNote}`
+        const updatedNotes = exactMatch.notes_client 
+          ? `${exactMatch.notes_client}\n\n${newNote}`
           : newNote
         
         await supabase
           .from('contacts')
-          .update({ notes: updatedNotes })
+          .update({ notes_client: updatedNotes })
           .eq('id', exactMatch.id)
       }
       return exactMatch.id
@@ -85,7 +85,6 @@ async function findOrCreateContact(
   }
   
   // Créer un nouveau contact
-  // Note: on utilise 'public_booking' car c'est une valeur existante dans l'enum
   const { data: newContact, error } = await supabase
     .from('contacts')
     .insert({
@@ -94,7 +93,7 @@ async function findOrCreateContact(
       last_name: lastName,
       phone: phone,
       email: email,
-      notes: formattedNotes,
+      notes_client: formattedNotes,
       source: 'public_booking',
       status: 'active',
     })
