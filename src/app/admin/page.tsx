@@ -1373,6 +1373,14 @@ export default function AdminPage() {
 
     if (targetLaserRooms.length === 0) return null
 
+    // Trier les salles par capacité décroissante pour identifier L1 et L2
+    const sortedRooms = [...targetLaserRooms].sort((a, b) => {
+      if (a.capacity !== b.capacity) {
+        return b.capacity - a.capacity // Décroissant (L2=20 en premier, puis L1=15)
+      }
+      return a.sort_order - b.sort_order
+    })
+    
     // Trier les salles par capacité croissante pour optimiser l'espace (plus petite salle suffisante en premier)
     const sortedRoomsByCapacity = [...targetLaserRooms].sort((a, b) => {
       if (a.capacity !== b.capacity) {
@@ -1399,14 +1407,6 @@ export default function AdminPage() {
       if (!checkLaserRoomAvailability) return true
       return await checkLaserRoomAvailability(roomId, startDateTime, endDateTime, excludeBookingId)
     }
-    
-    // Identifier L1 et L2 (trier par capacité décroissante pour identifier les salles)
-    const sortedRooms = [...targetLaserRooms].sort((a, b) => {
-      if (a.capacity !== b.capacity) {
-        return b.capacity - a.capacity // Décroissant (L2=20 en premier, puis L1=15)
-      }
-      return a.sort_order - b.sort_order
-    })
     
     // Logique d'allocation selon nombre de participants et seuil
     // Si participants >= threshold : chercher une salle entière (priorité à la plus petite suffisante)

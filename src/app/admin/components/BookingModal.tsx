@@ -120,7 +120,7 @@ export function BookingModal({
   const [hour, setHour] = useState(initialHour)
   const [minute, setMinute] = useState(initialMinute)
   const [durationMinutes, setDurationMinutes] = useState('60') // Durée en minutes (champ libre)
-  const [participants, setParticipants] = useState('1')
+  const [participants, setParticipants] = useState('')
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
   const [phone, setPhone] = useState('')
@@ -710,7 +710,7 @@ export function BookingModal({
           setRoomStartMinute(initialMinute)
         }
         
-        setParticipants('1')
+        setParticipants('')
         setBookingType(defaultBookingType) // Utiliser le type par défaut selon où on clique
         // Réinitialiser gameArea selon defaultGameArea (ne pas mémoriser le dernier)
         if (defaultBookingType === 'GAME') {
@@ -1508,7 +1508,7 @@ export function BookingModal({
           setEmail('')
           setNotes('')
           setEventNotes('')
-          setParticipants('1')
+          setParticipants('')
           setDurationMinutes('60')
           setSelectedContact(null)
           setIsEditingContact(false)
