@@ -737,6 +737,10 @@ export function BookingModal({
           setEventGamePauses([30]) // Par défaut : 30 min de pause après le premier jeu
           setEventCustomGamePauses([0]) // Par défaut : 0 min de pause pour le plan sur mesure
         }
+        setFirstName('')
+        setLastName('')
+        setPhone('')
+        setEmail('')
         setError(null)
         // CRM: Réinitialiser le contact et le mode édition pour une nouvelle réservation
         setSelectedContact(null)
@@ -744,33 +748,6 @@ export function BookingModal({
         setIsEditingEvent(false) // Réinitialiser le mode édition événement
         // Couleur par défaut selon le type
         setColor(defaultBookingType === 'GAME' ? COLORS[0].value : COLORS[1].value)
-        
-        // Vérifier s'il y a des données de pré-remplissage (ex: recréation d'une commande)
-        const prefillDataStr = localStorage.getItem('booking-prefill-data')
-        if (prefillDataStr) {
-          try {
-            const prefillData = JSON.parse(prefillDataStr)
-            setFirstName(prefillData.firstName || '')
-            setLastName(prefillData.lastName || '')
-            setPhone(prefillData.phone || '')
-            setEmail(prefillData.email || '')
-            setParticipants(prefillData.participants || '')
-            setNumberOfGames(Number(prefillData.numberOfGames) || 1)
-            // Supprimer les données de pré-remplissage après utilisation
-            localStorage.removeItem('booking-prefill-data')
-          } catch (e) {
-            console.error('Error parsing prefill data:', e)
-            setFirstName('')
-            setLastName('')
-            setPhone('')
-            setEmail('')
-          }
-        } else {
-          setFirstName('')
-          setLastName('')
-          setPhone('')
-          setEmail('')
-        }
       }
     }
   }, [isOpen, selectedDate, initialHour, initialMinute, defaultBookingType, defaultGameArea, editingBooking])

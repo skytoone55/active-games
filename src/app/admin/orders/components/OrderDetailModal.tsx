@@ -308,7 +308,7 @@ export function OrderDetailModal({
                     </div>
                   </div>
                   
-                  {/* Bouton Recréer - seulement si annulé */}
+                  {/* Bouton Réactiver - seulement si annulé */}
                   {order.status === 'cancelled' && onRecreate && (
                     <button
                       onClick={() => onRecreate(order.id)}
@@ -320,9 +320,9 @@ export function OrderDetailModal({
                     >
                       <RefreshCw className="w-5 h-5" />
                       <div className="text-left flex-1">
-                        <p className="font-medium">Recréer la réservation</p>
+                        <p className="font-medium">Réactiver la réservation</p>
                         <p className={`text-xs ${isDark ? 'text-green-400/70' : 'text-green-500/70'}`}>
-                          Réactiver cette commande
+                          Remettre en statut confirmé (même référence)
                         </p>
                       </div>
                     </button>

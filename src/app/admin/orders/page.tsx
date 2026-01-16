@@ -240,44 +240,44 @@ export default function OrdersPage() {
     router.push(`/admin/clients?contact=${contactId}`)
   }
 
-  // Recréer une réservation annulée - redirige vers l'agenda avec les données pré-remplies
-  const handleRecreate = (orderId: string) => {
-    const order = orders.find(o => o.id === orderId)
-    if (!order) return
-    
+  // Réactiver une réservation annulée - garde la même référence
+  const handleReactivate = (orderId: string) => {
     setConfirmModal({
       isOpen: true,
-      title: 'Recréer la réservation',
-      message: 'Vous allez être redirigé vers l\'agenda avec les informations de cette commande pré-remplies. Vous pourrez modifier les détails avant de confirmer.',
+      title: 'Réactiver la réservation',
+      message: 'Voulez-vous réactiver cette réservation ? Elle sera remise en statut "Confirmé" avec la même référence.',
       type: 'success',
-      onConfirm: () => {
-        // Construire les query params avec les données de la commande
-        const params = new URLSearchParams({
-          recreate: 'true',
-          date: order.requested_date,
-          time: order.requested_time,
-          type: order.order_type,
-          participants: order.participants_count.toString(),
-          firstName: order.customer_first_name,
-          lastName: order.customer_last_name || '',
-          phone: order.customer_phone,
-          email: order.customer_email || '',
-          orderId: order.id,
-          reference: order.booking?.reference_code || order.request_reference
-        })
-        
-        if (order.game_area) {
-          params.set('gameArea', order.game_area)
+      onConfirm: async () => {
+        try {
+          const response = await fetch(`/api/orders/${orderId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'reactivate' })
+          })
+          
+          const data = await response.json()
+          if (data.success) {
+            closeOrderModal()
+            window.location.reload()
+          } else {
+            setConfirmModal({
+              isOpen: true,
+              title: 'Erreur',
+              message: data.error || 'Erreur lors de la réactivation',
+              type: 'warning',
+              onConfirm: () => {}
+            })
+          }
+        } catch (err) {
+          console.error('Error reactivating order:', err)
+          setConfirmModal({
+            isOpen: true,
+            title: 'Erreur',
+            message: 'Erreur lors de la réactivation',
+            type: 'warning',
+            onConfirm: () => {}
+          })
         }
-        if (order.number_of_games) {
-          params.set('numberOfGames', order.number_of_games.toString())
-        }
-        if (order.contact_id) {
-          params.set('contactId', order.contact_id)
-        }
-        
-        closeOrderModal()
-        router.push(`/admin?${params.toString()}`)
       }
     })
   }
@@ -465,7 +465,7 @@ export default function OrdersPage() {
           onClose={closeOrderModal}
           onConfirm={handleConfirm}
           onCancel={handleCancel}
-          onRecreate={handleRecreate}
+          onRecreate={handleReactivate}
           onGoToAgenda={handleGoToAgenda}
           onGoToClient={handleViewClient}
           isDark={isDark}

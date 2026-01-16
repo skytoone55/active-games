@@ -238,8 +238,8 @@ export async function PATCH(
         message: 'Order cancelled successfully'
       })
       
-    } else if (action === 'recreate') {
-      // Recréer une commande annulée
+    } else if (action === 'reactivate') {
+      // Réactiver une commande annulée (garder la même référence)
       if (order.status !== 'cancelled') {
         return NextResponse.json(
           { success: false, error: 'Order is not cancelled' },
@@ -247,9 +247,62 @@ export async function PATCH(
         )
       }
       
-      // Créer un nouveau booking
-      const bookingReference = Math.random().toString(36).substring(2, 8).toUpperCase()
+      // Utiliser la référence originale de la commande
+      const originalReference = order.request_reference
       
+      // Vérifier si le booking existe encore et est annulé
+      if (order.booking_id) {
+        const { data: existingBooking } = await supabase
+          .from('bookings')
+          .select('id, status')
+          .eq('id', order.booking_id)
+          .single()
+        
+        if (existingBooking && existingBooking.status === 'CANCELLED') {
+          // Réactiver le booking existant
+          const { error: reactivateError } = await supabase
+            .from('bookings')
+            .update({
+              status: 'CONFIRMED',
+              cancelled_at: null,
+              cancelled_reason: null,
+            })
+            .eq('id', order.booking_id)
+          
+          if (reactivateError) {
+            console.error('Error reactivating booking:', reactivateError)
+            return NextResponse.json(
+              { success: false, error: 'Failed to reactivate booking' },
+              { status: 500 }
+            )
+          }
+          
+          // Mettre à jour la commande
+          const { error: updateError } = await supabase
+            .from('orders')
+            .update({
+              status: 'manually_confirmed',
+              processed_at: new Date().toISOString(),
+              processed_by: user_id || null,
+            })
+            .eq('id', id)
+          
+          if (updateError) {
+            return NextResponse.json(
+              { success: false, error: 'Failed to update order' },
+              { status: 500 }
+            )
+          }
+          
+          return NextResponse.json({
+            success: true,
+            message: 'Order reactivated successfully',
+            booking_reference: originalReference
+          })
+        }
+      }
+      
+      // Si le booking n'existe plus, en créer un nouveau avec la MÊME référence
       // Récupérer les settings
       const { data: settings } = await supabase
         .from('branch_settings')
@@ -276,7 +329,7 @@ export async function PATCH(
         gameEndDateTime = endDateTime
       }
       
-      // Créer le booking
+      // Créer le booking avec la MÊME référence originale
       const { data: booking, error: bookingError } = await supabase
         .from('bookings')
         .insert({
@@ -294,7 +347,7 @@ export async function PATCH(
           customer_email: order.customer_email,
           customer_notes_at_booking: order.customer_notes,
           primary_contact_id: order.contact_id,
-          reference_code: bookingReference,
+          reference_code: originalReference, // MÊME référence
         })
         .select('id')
         .single()
@@ -382,8 +435,8 @@ export async function PATCH(
       
       return NextResponse.json({
         success: true,
-        message: 'Order recreated successfully',
-        booking_reference: bookingReference
+        message: 'Order reactivated successfully',
+        booking_reference: originalReference
       })
       
     } else {
