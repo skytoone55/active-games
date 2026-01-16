@@ -1,0 +1,347 @@
+{
+  "nav": {
+    "concept": "ABOUT THE GAME",
+    "games": "GAMES",
+    "pricing": "PRICING",
+    "branches": "LOCATIONS",
+    "contact": "CONTACT"
+  },
+  "hero": {
+    "subtitle": "New generation leisure activities",
+    "title": "Active Games",
+    "description": "Fully immersive interactive arenas, where neon lighting, sound, and physical challenges combine to create unique experiences.",
+    "cta_games": "Discover our games",
+    "cta_concept": "Discover the concept"
+  },
+  "concept": {
+    "title": "ABOUT THE GAME",
+    "intro": "Active Games is an innovative interactive gaming complex based on teamwork, movement, and strategic thinking.",
+    "features": {
+      "players": "Up to 6 players",
+      "duration": "60 minutes of action",
+      "bracelet": "Smart bracelet",
+      "rooms": "8 different rooms",
+      "modes": "Competitive or Team",
+      "strategy": "Your strategy wins"
+    },
+    "description": [
+      "The experience is designed for groups of up to 6 players and lasts 60 minutes of non-stop action.",
+      "Upon arrival, each player receives a smart bracelet and registers with their name. The bracelet identifies you throughout the game – every point, achievement, and challenge is saved on it.",
+      "Before entering each room, the group scans the bracelet, and the system automatically identifies participants and activates the selected game.",
+      "The complex includes 8 different rooms, each with its own world, concept, and unique challenges. Each room offers multiple games with varying difficulty levels, so every group can choose the challenges that suit them.",
+      "You can play in competitive mode or team mode – compete against each other or cooperate with friends and partners, choosing in each game whether to play as rivals or as one team.",
+      "There's no fixed route and no required order – you choose where to enter, when to switch rooms, and which strategy will lead you to maximum points.",
+      "Active Games is a dynamic, immersive, and adrenaline-filled experience where cooperation, speed, and sharp thinking are the keys to victory."
+    ]
+  },
+  "games": {
+    "title": "OUR GAMES",
+    "subtitle": "Each game offers a unique experience combining fun, challenge, and physical engagement. Whether you prefer testing your reflexes, improving your coordination, or working together in cooperation: choose your style and dive into the action.",
+    "more_info": "More info",
+    "items": {
+      "grid": {
+        "name": "Grid",
+        "description": "A revolutionary interactive flooring system with built-in RGB LED lights and sensors. Designed for all ages, it creates a dynamic and immersive experience.",
+        "popup_description": "The Active Games Grid immerses players in a captivating challenge of logic and reasoning on an interactive board. This dynamic game tests your analytical skills and strategy to complete the grid and achieve the objectives.",
+        "features": ["5 game modes", "50 levels to explore"]
+      },
+      "arena": {
+        "name": "Arena",
+        "description": "The ultimate dodgeball LED target wall game. Test speed, accuracy & memory with real-time scoring, tournaments & team challenges.",
+        "popup_description": "An interactive LED hexagon target wall where players use dodgeballs to hit glowing targets. Each match combines memory, agility, and speed. Hit the right colors and avoid the red zones to maximize your score.",
+        "features": ["4 game modes", "40 levels to explore"]
+      },
+      "push": {
+        "name": "Push",
+        "description": "In this room, the walls are filled with buttons that can change colors. Various game modes test color recognition and memory abilities.",
+        "popup_description": "Push is an observation and strategy challenge game. Surrounded by multi-colored button walls, players need to quickly identify patterns and use strategy, memory, and collaboration to press the right buttons within the time limit.",
+        "features": ["5 game modes", "50 levels to explore"]
+      },
+      "basketball": {
+        "name": "Hoops Basketball",
+        "description": "An interactive basketball fitness game that combines fun, exercise, and technology—perfect for entertainment centers.",
+        "popup_description": "A fully interactive fitness experience that combines the excitement of sports, the challenge of competition, and the innovation of modern technology. Every shot is recorded in real time.",
+        "features": ["LED-lit targets", "Smart sensor tracking"]
+      },
+      "climbing": {
+        "name": "Climbing",
+        "description": "An interactive LED wall designed to test your agility, strategy, and team fun. This attraction combines physical movement with quick thinking.",
+        "popup_description": "An interactive LED climbing wall game that simulates the thrill of cliff climbing. Players must step carefully along a narrow edge, grabbing green safe lights to move forward.",
+        "features": ["Grab green safe lights", "Avoid dangerous red zones"]
+      },
+      "hide": {
+        "name": "Digital Hide Room",
+        "description": "In this room, sensor eyes track your every movement. Use strategic pillars for cover, complete light sequences, and work with your team to win.",
+        "popup_description": "A thrilling blend of stealth, strategy, and teamwork. Powered by advanced motion-sensing technology, the game challenges players to outsmart glowing « eyes » while completing interactive light sequences.",
+        "features": ["4 game modes", "40 levels to explore"]
+      },
+      "flash": {
+        "name": "Flash",
+        "description": "Two or more players must cooperate. Press the circular light before the randomly decreasing current reaches the target. The higher the level, the faster the current speed.",
+        "popup_description": "Flash is a game of quick reaction challenges. Light tubes cover the walls and a flash of electricity falls from the ceiling – you need to react quickly to intercept each flash before it reaches the end.",
+        "features": ["4 game modes", "40 levels to explore"]
+      },
+      "laser": {
+        "name": "Laser",
+        "description": "A thrilling escape room experience where players dodge laser beams by running, jumping, crawling, and rolling. Multiple game modes available.",
+        "popup_description": "Creates a real-life action challenge where players must dodge, crawl, and weave through an array of laser beams. This exciting maze tests your reflexes, agility, and strategy.",
+        "features": ["Dynamic difficulty modes", "For kids, teens, and adults"]
+      }
+    }
+  },
+  "pricing": {
+    "title": "PRICING",
+    "subtitle": "Choose the option that suits you best",
+    "single": {
+      "title": "Unlimited Games",
+      "price": "100",
+      "currency": "₪",
+      "duration": "One hour per participant",
+      "features": [
+        "Access to all 8 rooms",
+        "Unlimited games",
+        "Smart bracelet: 10₪ first-time fee (reusable)"
+      ]
+    },
+    "packages": {
+      "title": "Event Packages",
+      "items": [
+        {
+          "name": "Package 15+",
+          "minParticipants": "From 15 participants",
+          "price": "130",
+          "currency": "₪ / person",
+          "features": [
+            "Unlimited games for one hour",
+            "Private event room for 2 hours",
+            "Sound and lighting system",
+            "Game tables",
+            "Unlimited snacks and drinks",
+            "Two pizza slices per participant",
+            "Smart bracelet included in package price",
+            "Collector gold bracelet for the birthday person"
+          ]
+        },
+        {
+          "name": "Package 30+",
+          "minParticipants": "From 30 participants",
+          "price": "120",
+          "currency": "₪ / person",
+          "features": [
+            "Unlimited games for one hour",
+            "Private event room for 2 hours",
+            "Sound and lighting system",
+            "Game tables",
+            "Unlimited snacks and drinks",
+            "Two pizza slices per participant",
+            "Smart bracelet included in package price",
+            "Collector gold bracelet for the birthday person"
+          ]
+        }
+      ]
+    }
+  },
+  "branches": {
+    "title": "LOCATIONS",
+    "subtitle": "Find the location nearest to you",
+    "items": [
+      {
+        "name": "Rishon LeZion",
+        "address": "Aliyat HaNoar 1, Bar-On Center – Floor 5",
+        "city": "Rishon LeZion",
+        "phone": "03-5512277 (Ext. 1)",
+        "venue": "At Laser City complex"
+      },
+      {
+        "name": "Petah Tikva",
+        "address": "Amal 37",
+        "city": "Petah Tikva",
+        "phone": "03-5512277 (Ext. 3)",
+        "venue": "At Laser City complex"
+      }
+    ]
+  },
+  "contact": {
+    "title": "Contact Us",
+    "subtitle": "Contact us for any further information or specific inquiries.",
+    "form": {
+      "name": "Name",
+      "email": "Email",
+      "message": "Message",
+      "send": "Send"
+    },
+    "info": {
+      "phone": "03 551-2277",
+      "email": "contact@activegames.co.il"
+    }
+  },
+  "footer": {
+    "games_title": "OUR GAMES",
+    "concept_title": "CONCEPT",
+    "pricing_title": "PRICING"
+  },
+  "booking": {
+    "order_now": "Order now",
+    "title": "Book your session",
+    "step1": {
+      "title": "Select branch",
+      "subtitle": "Choose the location where you want to play"
+    },
+    "step2": {
+      "title": "Reservation Type",
+      "subtitle": "Choose the type of activity"
+    },
+    "step3": {
+      "title": "Select date",
+      "subtitle": "Choose the day for your session"
+    },
+    "step4": {
+      "title": "Select time",
+      "subtitle": "Choose the time slot"
+    },
+    "step5": {
+      "title": "Contact Information",
+      "subtitle": "Please fill in your details",
+      "title_event": "Event Information & Contact",
+      "subtitle_event": "Please fill in your contact details and event order information"
+    },
+    "contact": {
+      "first_name": "First Name",
+      "last_name": "Last Name",
+      "phone": "Phone Number",
+      "email": "Email",
+      "special_request": "Special Request",
+      "first_name_placeholder": "Enter first name",
+      "last_name_placeholder": "Enter last name",
+      "phone_placeholder": "Enter phone number",
+      "email_placeholder": "Enter email (optional)",
+      "special_request_placeholder": "If you have any special requests, please mention them here (optional)",
+      "event_type": "Event Type",
+      "event_type_placeholder": "Select event type",
+      "event_type_birthday": "Birthday",
+      "event_type_bar_mitzvah": "Bar/Bat Mitzvah",
+      "event_type_corporate": "Corporate",
+      "event_type_party": "Party",
+      "event_type_other": "Other",
+      "event_age": "Age",
+      "event_age_placeholder": "Age (optional)",
+      "terms": {
+        "label": "I have read and agree to the terms and rules",
+        "read_terms": "Read terms and rules",
+        "title": "Terms and Rules",
+        "close": "Close",
+        "booking_info": {
+          "title": "Booking Information",
+          "items": [
+            "Please arrive at least 10 minutes before your scheduled time",
+            "Reservations are confirmed upon payment",
+            "Changes or cancellations must be made at least 24 hours in advance",
+            "Late arrivals may result in reduced play time"
+          ]
+        },
+        "rules": {
+          "title": "Rules and Regulations",
+          "items": [
+            "Follow all safety instructions provided by staff",
+            "Respect other players and maintain a friendly environment",
+            "No food or drinks inside the game rooms",
+            "Smoking is strictly prohibited",
+            "Children under 12 must be accompanied by an adult",
+            "Any damage to equipment will result in additional charges"
+          ]
+        },
+        "payment": {
+          "title": "Payment Details",
+          "items": [
+            "Payment is required at the time of booking",
+            "Accepted payment methods: Cash, Credit Card, Bank Transfer",
+            "Refunds are available only for cancellations made 24+ hours in advance",
+            "Smart bracelet fee: 10₪ (one-time, reusable)",
+            "Event packages include smart bracelet in the price"
+          ]
+        },
+        "contact": {
+          "title": "Contact Information",
+          "description": "For questions or special requests, please contact us:",
+          "items": [
+            "Phone: 03-551-2277",
+            "Email: contact@activegames.co.il",
+            "WhatsApp: Available on our website"
+          ]
+        },
+        "acknowledgment": "By checking the box, you acknowledge that you have read, understood, and agree to all terms and conditions stated above."
+      },
+      "event": {
+        "booking_info": {
+          "title": "Event Booking Information",
+          "items": [
+            "Event reservations require a minimum of 15 participants",
+            "Please arrive at least 15 minutes before your scheduled time for setup",
+            "Reservations are confirmed upon payment",
+            "Changes or cancellations must be made at least 48 hours in advance"
+          ]
+        },
+        "rules": {
+          "title": "Event Rules and Regulations",
+          "items": [
+            "Follow all safety instructions provided by staff",
+            "Respect other participants and maintain a friendly environment",
+            "No food or drinks inside the game rooms without authorization",
+            "Smoking is strictly prohibited",
+            "Children under 12 must be accompanied by an adult",
+            "Any damage to equipment will result in additional charges"
+          ]
+        },
+        "payment": {
+          "title": "Event Payment Details",
+          "items": [
+            "Payment is required at the time of booking",
+            "Accepted payment methods: Cash, Credit Card, Bank Transfer",
+            "Refunds are available only for cancellations made 48+ hours in advance",
+            "Event packages include smart bracelet in the price"
+          ]
+        },
+        "acknowledgment": "By checking the box, you acknowledge that you have read, understood, and agree to all event terms and conditions stated above."
+      }
+    },
+    "type": {
+      "game": {
+        "title": "Game",
+        "description": "Unlimited games for one hour"
+      },
+      "event": {
+        "title": "Event",
+        "description": "Event package with private room",
+        "min_players_note": "Minimum 15 players required for events"
+      },
+      "players": {
+        "label": "Number of players",
+        "placeholder": "Select or enter a number",
+        "info_event": "Minimum 15 players required"
+      }
+    },
+    "next": "Next",
+    "previous": "Previous",
+    "confirm": "Confirm booking",
+    "loading": "Loading...",
+    "confirmation": {
+      "title": "Reservation Confirmed!",
+      "subtitle": "Thank you for your reservation",
+      "reservation_number": "Reservation Number",
+      "back_to_site": "Back to Site",
+      "finished": "Finished",
+      "download_reservation": "Download Reservation",
+      "download_order": "Download Order"
+    },
+    "arrival_note": "Please arrive at least 10 minutes before your scheduled time",
+    "summary": {
+      "title": "Booking Summary",
+      "branch": "Branch:",
+      "type": "Type:",
+      "date": "Date:",
+      "time": "Time:",
+      "event_type": "Event Type:",
+      "event_age": "Age:"
+    }
+  }
+}
