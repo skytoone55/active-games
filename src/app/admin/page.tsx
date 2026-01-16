@@ -2631,13 +2631,45 @@ export default function AdminPage() {
                             // Obtenir TOUS les segments qui chevauchent ce créneau
                             const allSegments = getSegmentsForCellLaser(slot.hour, slot.minute, roomIndex)
                             
+                            // Filtrer pour ne garder que les segments qui commencent à ce créneau (isSegmentTop)
+                            // ET qui commencent à cette salle (isSegmentStart)
+                            const segmentsToDisplay = allSegments.filter(segment => {
+                              // Vérifier début vertical (isSegmentTop)
+                              const isSegmentTop = timeIndex === 0 || 
+                                !getSegmentsForCellLaser(
+                                  timeSlots[timeIndex - 1].hour, 
+                                  timeSlots[timeIndex - 1].minute, 
+                                  roomIndex
+                                ).find(ps => ps.segmentId === segment.segmentId)
+                              
+                              // Vérifier début horizontal (isSegmentStart)
+                              const isSegmentStart = segment.slotStart === roomIndex
+                              
+                              // Afficher seulement si c'est le coin top-left du segment
+                              return isSegmentTop && isSegmentStart
+                            })
+                            
                             const gridColumn = roomIndex + 1
                             const gridRow = timeIndex + 1
                             const shouldShowTopBorder = (slot.minute === 0 || slot.minute === 30)
                             const grayBorderColor = isDark ? '#6b7280' : '#9ca3af'
                             
-                            // Cellule vide
-                            if (allSegments.length === 0) {
+                            // Vérifier si cette cellule est à l'intérieur d'une réservation (pas le début)
+                            const isInsideReservation = allSegments.length > 0 && segmentsToDisplay.length === 0
+                            
+                            // Cellule vide (aucun segment à afficher)
+                            if (segmentsToDisplay.length === 0) {
+                              // Vérifier si cette cellule est couverte par un segment fusionné horizontalement
+                              // (le segment commence à gauche et s'étend jusqu'ici)
+                              const isCoveredByFusedSegment = allSegments.some(seg => 
+                                seg.slotStart < roomIndex && seg.slotEnd > roomIndex
+                              )
+                              
+                              // Ne pas afficher les cellules couvertes par un segment fusionné
+                              if (isCoveredByFusedSegment || isInsideReservation) {
+                                return null
+                              }
+                              
                               return (
                                 <div
                                   key={`laser-cell-${timeIndex}-${roomIndex}`}
@@ -2647,6 +2679,7 @@ export default function AdminPage() {
                                     gridColumn,
                                     gridRow,
                                     backgroundColor: 'transparent',
+                                    // Ne pas afficher borderTop si on est à l'intérieur d'une réservation
                                     borderTop: shouldShowTopBorder ? `2px solid ${isDark ? '#374151' : '#e5e7eb'}` : 'none',
                                     borderBottom: 'none',
                                     borderLeft: `2px solid ${isDark ? '#374151' : '#e5e7eb'}`,
@@ -2657,61 +2690,51 @@ export default function AdminPage() {
                             }
 
                             
-                            // Affichage simplifié côte à côte : toutes les réservations dans cette cellule
-                            return (
-                              <div
-                                key={`laser-cell-${timeIndex}-${roomIndex}`}
-                                className="relative flex cursor-pointer"
-                                style={{
-                                  gridColumn,
-                                  gridRow,
-                                  backgroundColor: 'transparent',
-                                  borderTop: shouldShowTopBorder ? `2px solid ${isDark ? '#374151' : '#e5e7eb'}` : 'none',
-                                  borderBottom: 'none',
-                                  borderLeft: `2px solid ${isDark ? '#374151' : '#e5e7eb'}`,
-                                  borderRight: `2px solid ${isDark ? '#374151' : '#e5e7eb'}`,
-                                }}
-                              >
-                                {allSegments.map((segment, segmentIndex) => {
-                                  const booking = segment.booking
-                                  const segmentWidth = `calc(100% / ${allSegments.length})`
-                                  const bookingColor = booking.color || '#a855f7'
-                                  
-                                  return (
-                                    <div
-                                      key={`laser-segment-${segment.segmentId}-${segmentIndex}`}
-                                      onClick={(e) => {
-                                        e.stopPropagation()
-                                        openBookingModal(slot.hour, slot.minute, booking)
-                                      }}
-                                      className="flex items-center justify-center text-center relative"
-                                      style={{
-                                        width: segmentWidth,
-                                        backgroundColor: bookingColor,
-                                        border: `2px solid ${grayBorderColor}`,
-                                        borderRight: segmentIndex < allSegments.length - 1 ? `1px solid ${isDark ? '#1f2937' : '#f3f4f6'}` : `2px solid ${grayBorderColor}`,
-                                        minHeight: '100%',
-                                      }}
-                                      title={(() => {
-                                        const contactData = getContactDisplayData(booking)
-                                        return `${contactData.firstName} ${contactData.lastName || ''}`.trim() || 'Sans nom'
-                                      })() + ` - ${booking.participants_count} pers.`}
-                                    >
-                                      <div 
-                                        className={`${getTextSizeClass(displayTextSize)} ${getTextWeightClass(displayTextWeight)} leading-tight text-white whitespace-nowrap overflow-hidden text-ellipsis px-1`}
-                                        style={{ textShadow: '0 1px 3px rgba(0,0,0,0.5)' }}
-                                      >
-                                        {(() => {
-                                          const contactData = getContactDisplayData(booking)
-                                          const name = contactData.firstName || 'Sans nom'
-                                          return `${name}-${booking.participants_count}`
-                                        })()}
-                                      </div>
-                                    </div>
-                                  )
-                                })}
-                              </div>
-                            )
+                            // Si un segment doit être affiché, calculer colSpan et rowSpan
+                            if (segmentsToDisplay.length > 0) {
+                              const segment = segmentsToDisplay[0] // Un seul segment par cellule (top-left corner)
+                              
+                              // Calculer le rowSpan pour ce segment
+                              const segmentStartMinutes = segment.start.getHours() * 60 + segment.start.getMinutes()
+                              const segmentEndMinutes = segment.end.getHours() * 60 + segment.end.getMinutes()
+                              const durationMinutes = segmentEndMinutes - segmentStartMinutes
+                              const rowSpan = Math.ceil(durationMinutes / 15)
+                              
+                              // Calculer le colSpan pour ce segment
+                              const colSpan = segment.slotEnd - segment.slotStart
+                              
+                              const booking = segment.booking
+                              const bookingColor = booking.color || '#a855f7'
+                              
+                              return (
+                                <div
+                                  key={`laser-cell-${timeIndex}-${roomIndex}`}
+                                  onClick={() => openBookingModal(slot.hour, slot.minute, booking)}
+                                  className="cursor-pointer flex flex-col items-center justify-center text-center p-1"
+                                  style={{
+                                    gridColumn: colSpan > 1 ? `${gridColumn} / span ${colSpan}` : gridColumn,
+                                    gridRow: rowSpan > 1 ? `${gridRow} / span ${rowSpan}` : gridRow,
+                                    backgroundColor: bookingColor,
+                                    border: `2px solid ${grayBorderColor}`,
+                                  }}
+                                  title={(() => {
+                                    const contactData = getContactDisplayData(booking)
+                                    return `${contactData.firstName} ${contactData.lastName || ''}`.trim() || 'Sans nom'
+                                  })() + ` - ${booking.participants_count} pers.`}
+                                >
+                                  <div 
+                                    className={`${getTextSizeClass(displayTextSize)} ${getTextWeightClass(displayTextWeight)} leading-tight text-white whitespace-nowrap overflow-hidden text-ellipsis px-1`}
+                                    style={{ textShadow: '0 1px 3px rgba(0,0,0,0.5)' }}
+                                  >
+                                    {(() => {
+                                      const contactData = getContactDisplayData(booking)
+                                      const name = contactData.firstName || 'Sans nom'
+                                      return `${name}-${booking.participants_count}`
+                                    })()}
+                                  </div>
+                                </div>
+                              )
+                            }
                           })}
                       </Fragment>
                     )
