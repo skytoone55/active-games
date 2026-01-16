@@ -238,21 +238,36 @@ async function checkAvailability(
       return { available: false, reason: 'laser_vests_full', details: `Only ${availableVests - usedVests} vests available` }
     }
     
-    // Trouver une salle disponible
+    // Trouver les salles disponibles
     const exclusiveThreshold = settings.laser_exclusive_threshold || 10
+    const availableRooms = laserRooms.filter(room => !roomsWithBookings.has(room.id))
     
-    for (const room of laserRooms) {
-      if (!roomsWithBookings.has(room.id) || participantsCount < exclusiveThreshold) {
-        return { available: true, laserRoomIds: [room.id] }
-      }
+    // Calculer le nombre de salles nécessaires
+    // Si participants > capacité d'une salle, on a besoin de plusieurs salles
+    const maxRoomCapacity = Math.max(...laserRooms.map(r => r.capacity || 12))
+    const roomsNeeded = Math.ceil(participantsCount / maxRoomCapacity)
+    
+    console.log(`[checkAvailability] LASER: ${participantsCount} participants, need ${roomsNeeded} rooms, ${availableRooms.length} available`)
+    
+    if (roomsNeeded <= availableRooms.length) {
+      // Prendre les salles nécessaires (par ordre de capacité décroissante)
+      const sortedRooms = [...availableRooms].sort((a, b) => (b.capacity || 12) - (a.capacity || 12))
+      const selectedRoomIds = sortedRooms.slice(0, roomsNeeded).map(r => r.id)
+      return { available: true, laserRoomIds: selectedRoomIds }
     }
     
-    // Si toutes les salles sont occupées mais qu'on peut partager
+    // Pas assez de salles disponibles
+    if (participantsCount < exclusiveThreshold && availableRooms.length > 0) {
+      // Petit groupe, peut partager une salle
+      return { available: true, laserRoomIds: [availableRooms[0].id] }
+    }
+    
+    // Vérifier si on peut partager des salles occupées
     if (participantsCount < exclusiveThreshold) {
       return { available: true, laserRoomIds: [laserRooms[0].id] }
     }
     
-    return { available: false, reason: 'slot_unavailable', details: 'No laser room available for exclusive group' }
+    return { available: false, reason: 'slot_unavailable', details: `Need ${roomsNeeded} rooms but only ${availableRooms.length} available` }
   }
   
   // Pour ACTIVE games
@@ -332,6 +347,15 @@ async function createBooking(
     gameEndDateTime = endDateTime
   }
   
+  // Définir la couleur par défaut selon le type de jeu
+  // Bleu pour ACTIVE, Violet pour LASER, Vert pour EVENT
+  let defaultColor = '#3B82F6' // Bleu par défaut (ACTIVE)
+  if (gameArea === 'LASER') {
+    defaultColor = '#8B5CF6' // Violet pour LASER
+  } else if (orderType === 'EVENT') {
+    defaultColor = '#22C55E' // Vert pour EVENT
+  }
+  
   // Créer le booking (avec la référence passée en paramètre)
   const { data: booking, error: bookingError } = await supabase
     .from('bookings')
@@ -352,6 +376,7 @@ async function createBooking(
       customer_notes_at_booking: notes,
       primary_contact_id: contactId,
       reference_code: referenceCode,
+      color: defaultColor, // Couleur par défaut
     })
     .select('id')
     .single()
@@ -398,15 +423,33 @@ async function createBooking(
     
     for (let i = 0; i < numberOfGames; i++) {
       const sessionEnd = new Date(sessionTime.getTime() + gameDuration * 60000)
-      sessions.push({
-        booking_id: booking.id,
-        game_area: gameArea,
-        start_datetime: sessionTime.toISOString(),
-        end_datetime: sessionEnd.toISOString(),
-        laser_room_id: gameArea === 'LASER' && laserRoomIds?.[0] ? laserRoomIds[0] : null,
-        session_order: i + 1,
-        pause_before_minutes: 0,
-      })
+      
+      if (gameArea === 'LASER' && laserRoomIds && laserRoomIds.length > 0) {
+        // Pour LASER : créer une session par salle (toutes les salles en parallèle)
+        // Les salles sont utilisées simultanément pour le même créneau
+        for (let roomIndex = 0; roomIndex < laserRoomIds.length; roomIndex++) {
+          sessions.push({
+            booking_id: booking.id,
+            game_area: gameArea,
+            start_datetime: sessionTime.toISOString(),
+            end_datetime: sessionEnd.toISOString(),
+            laser_room_id: laserRoomIds[roomIndex],
+            session_order: i + 1,
+            pause_before_minutes: 0,
+          })
+        }
+      } else {
+        // Pour ACTIVE ou autres
+        sessions.push({
+          booking_id: booking.id,
+          game_area: gameArea,
+          start_datetime: sessionTime.toISOString(),
+          end_datetime: sessionEnd.toISOString(),
+          laser_room_id: null,
+          session_order: i + 1,
+          pause_before_minutes: 0,
+        })
+      }
       sessionTime = sessionEnd
     }
     
