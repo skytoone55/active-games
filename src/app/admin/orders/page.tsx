@@ -240,44 +240,44 @@ export default function OrdersPage() {
     router.push(`/admin/clients?contact=${contactId}`)
   }
 
-  // Réactiver une réservation annulée - garde la même référence
+  // Réactiver une réservation annulée - redirige vers l'agenda pour vérifier les disponibilités
   const handleReactivate = (orderId: string) => {
+    const order = orders.find(o => o.id === orderId)
+    if (!order) return
+    
     setConfirmModal({
       isOpen: true,
       title: 'Réactiver la réservation',
-      message: 'Voulez-vous réactiver cette réservation ? Elle sera remise en statut "Confirmé" avec la même référence.',
+      message: 'Vous allez être redirigé vers l\'agenda pour vérifier les disponibilités et confirmer la réactivation.',
       type: 'success',
-      onConfirm: async () => {
-        try {
-          const response = await fetch(`/api/orders/${orderId}`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'reactivate' })
-          })
-          
-          const data = await response.json()
-          if (data.success) {
-            closeOrderModal()
-            window.location.reload()
-          } else {
-            setConfirmModal({
-              isOpen: true,
-              title: 'Erreur',
-              message: data.error || 'Erreur lors de la réactivation',
-              type: 'warning',
-              onConfirm: () => {}
-            })
-          }
-        } catch (err) {
-          console.error('Error reactivating order:', err)
-          setConfirmModal({
-            isOpen: true,
-            title: 'Erreur',
-            message: 'Erreur lors de la réactivation',
-            type: 'warning',
-            onConfirm: () => {}
-          })
+      onConfirm: () => {
+        // Construire les query params avec les données de la commande
+        const params = new URLSearchParams({
+          reactivate: 'true',
+          orderId: order.id,
+          date: order.requested_date,
+          time: order.requested_time,
+          type: order.order_type,
+          participants: order.participants_count.toString(),
+          firstName: order.customer_first_name,
+          lastName: order.customer_last_name || '',
+          phone: order.customer_phone,
+          email: order.customer_email || '',
+          reference: order.request_reference
+        })
+        
+        if (order.game_area) {
+          params.set('gameArea', order.game_area)
         }
+        if (order.number_of_games) {
+          params.set('numberOfGames', order.number_of_games.toString())
+        }
+        if (order.contact_id) {
+          params.set('contactId', order.contact_id)
+        }
+        
+        closeOrderModal()
+        router.push(`/admin?${params.toString()}`)
       }
     })
   }

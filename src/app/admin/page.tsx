@@ -191,11 +191,58 @@ export default function AdminPage() {
     return false
   })
 
-  // CRM: Gérer les query params pour deep-link vers une réservation
+  // CRM: Gérer les query params pour deep-link vers une réservation ou réactivation
   useEffect(() => {
     const bookingId = searchParams?.get('booking')
     const dateParam = searchParams?.get('date')
+    const isReactivate = searchParams?.get('reactivate') === 'true'
     
+    // Cas 1: Réactivation d'une commande annulée
+    if (isReactivate && dateParam) {
+      const timeParam = searchParams?.get('time') || '10:00'
+      const [hours, minutes] = timeParam.split(':').map(Number)
+      
+      // Naviguer vers la date demandée
+      const targetDate = new Date(dateParam)
+      setSelectedDate(targetDate)
+      
+      // Configurer le modal
+      setModalInitialHour(hours || 10)
+      setModalInitialMinute(minutes || 0)
+      setEditingBooking(null) // Nouvelle réservation (pas d'édition)
+      
+      const bookingType = searchParams?.get('type') as 'GAME' | 'EVENT' || 'GAME'
+      setModalDefaultBookingType(bookingType)
+      
+      const gameArea = searchParams?.get('gameArea') as 'ACTIVE' | 'LASER' | undefined
+      if (gameArea) {
+        setModalDefaultGameArea(gameArea)
+      }
+      
+      // Stocker les données de pré-remplissage pour le BookingModal
+      const reactivateData = {
+        isReactivate: true,
+        orderId: searchParams?.get('orderId') || '',
+        firstName: searchParams?.get('firstName') || '',
+        lastName: searchParams?.get('lastName') || '',
+        phone: searchParams?.get('phone') || '',
+        email: searchParams?.get('email') || '',
+        participants: searchParams?.get('participants') || '2',
+        numberOfGames: searchParams?.get('numberOfGames') || '1',
+        contactId: searchParams?.get('contactId') || '',
+        reference: searchParams?.get('reference') || ''
+      }
+      localStorage.setItem('booking-reactivate-data', JSON.stringify(reactivateData))
+      
+      // Ouvrir le modal
+      setShowBookingModal(true)
+      
+      // Nettoyer l'URL
+      router.replace('/admin')
+      return
+    }
+    
+    // Cas 2: Deep-link vers une réservation existante
     if (bookingId && allBookings.length > 0) {
       // Trouver la réservation
       const booking = allBookings.find(b => b.id === bookingId)

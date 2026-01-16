@@ -737,10 +737,6 @@ export function BookingModal({
           setEventGamePauses([30]) // Par défaut : 30 min de pause après le premier jeu
           setEventCustomGamePauses([0]) // Par défaut : 0 min de pause pour le plan sur mesure
         }
-        setFirstName('')
-        setLastName('')
-        setPhone('')
-        setEmail('')
         setError(null)
         // CRM: Réinitialiser le contact et le mode édition pour une nouvelle réservation
         setSelectedContact(null)
@@ -748,6 +744,32 @@ export function BookingModal({
         setIsEditingEvent(false) // Réinitialiser le mode édition événement
         // Couleur par défaut selon le type
         setColor(defaultBookingType === 'GAME' ? COLORS[0].value : COLORS[1].value)
+        
+        // Vérifier s'il y a des données de réactivation
+        const reactivateDataStr = localStorage.getItem('booking-reactivate-data')
+        if (reactivateDataStr) {
+          try {
+            const data = JSON.parse(reactivateDataStr)
+            setFirstName(data.firstName || '')
+            setLastName(data.lastName || '')
+            setPhone(data.phone || '')
+            setEmail(data.email || '')
+            setParticipants(data.participants || '')
+            setNumberOfGames(Number(data.numberOfGames) || 1)
+            // Ne pas supprimer les données tout de suite - on en aura besoin pour le submit
+          } catch (e) {
+            console.error('Error parsing reactivate data:', e)
+            setFirstName('')
+            setLastName('')
+            setPhone('')
+            setEmail('')
+          }
+        } else {
+          setFirstName('')
+          setLastName('')
+          setPhone('')
+          setEmail('')
+        }
       }
     }
   }, [isOpen, selectedDate, initialHour, initialMinute, defaultBookingType, defaultGameArea, editingBooking])
@@ -1487,6 +1509,22 @@ export function BookingModal({
         }
       }
 
+      // Vérifier s'il y a des données de réactivation
+      let reactivateOrderId: string | undefined
+      let reactivateReference: string | undefined
+      const reactivateDataStr = localStorage.getItem('booking-reactivate-data')
+      if (reactivateDataStr) {
+        try {
+          const reactivateData = JSON.parse(reactivateDataStr)
+          if (reactivateData.isReactivate) {
+            reactivateOrderId = reactivateData.orderId
+            reactivateReference = reactivateData.reference
+          }
+        } catch (e) {
+          console.error('Error parsing reactivate data:', e)
+        }
+      }
+
       const bookingData: CreateBookingData = {
         branch_id: bookingBranchId, // Utiliser la branche de la réservation (peut être modifiée)
         type: bookingType,
@@ -1505,10 +1543,18 @@ export function BookingModal({
         notes: bookingNotes || undefined,
         color: color,
         slots: slots.length > 0 ? slots : [],
-        game_sessions: game_sessions.length > 0 ? game_sessions : []
+        game_sessions: game_sessions.length > 0 ? game_sessions : [],
+        // Données de réactivation si présentes
+        reactivateOrderId,
+        reactivateReference
       }
 
       const success = await onSubmit(bookingData)
+
+      // Nettoyer les données de réactivation après soumission
+      if (reactivateDataStr) {
+        localStorage.removeItem('booking-reactivate-data')
+      }
 
       if (success) {
         // Si c'était une nouvelle réservation (pas d'édition), reset et fermer

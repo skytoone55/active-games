@@ -43,6 +43,9 @@ export interface CreateBookingData {
     session_order: number
     pause_before_minutes: number
   }[]
+  // Pour réactiver une commande annulée
+  reactivateOrderId?: string
+  reactivateReference?: string // Référence à réutiliser
 }
 
 // Générer un code de référence unique (max 10 caractères pour varchar(10))
@@ -235,7 +238,7 @@ export function useBookings(branchId: string | null, date?: string) {
         customer_email: data.customer_email,
         customer_notes_at_booking: data.customer_notes_at_booking,
         primary_contact_id: data.primary_contact_id,
-        reference_code: generateReferenceCode(),
+        reference_code: data.reactivateReference || generateReferenceCode(), // Utiliser la ref fournie si réactivation
         notes: data.notes,
       }
       
@@ -350,44 +353,73 @@ export function useBookings(branchId: string | null, date?: string) {
         newSessions = insertedSessions || []
       }
 
-      // Créer une entrée dans orders pour synchroniser avec la section Commandes
+      // Synchroniser avec la section Commandes
       const bookingDate = new Date(data.start_datetime)
       
-      // Utiliser le reference_code du booking (pas générer une nouvelle référence)
-      const orderData = {
-        branch_id: data.branch_id,
-        booking_id: newBooking.id,
-        contact_id: data.primary_contact_id || null,
-        source: 'admin_agenda', // Source = admin car créé depuis l'agenda
-        status: 'auto_confirmed',
-        order_type: data.type, // 'GAME' ou 'EVENT'
-        game_area: newSessions.length > 0 ? newSessions[0].game_area : null, // null pour Events
-        number_of_games: newSessions.length || 1,
-        requested_date: bookingDate.toISOString().split('T')[0],
-        requested_time: bookingDate.toTimeString().slice(0, 5),
-        participants_count: data.participants_count,
-        customer_first_name: data.customer_first_name || 'Client',
-        customer_last_name: data.customer_last_name || '',
-        customer_phone: data.customer_phone || '0000000000',
-        customer_email: data.customer_email || null,
-        customer_notes: data.customer_notes_at_booking || null,
-        request_reference: newBooking.reference_code, // Utiliser la même référence que le booking
-        terms_accepted: true, // Automatiquement accepté car créé par admin
-        terms_accepted_at: new Date().toISOString(),
-      }
-
-      console.log('Creating order with data:', JSON.stringify(orderData, null, 2))
-
-      const { data: insertedOrder, error: orderError } = await supabase
-        .from('orders')
-        .insert(orderData as any)
-        .select()
-        .single()
-
-      if (orderError) {
-        console.error('Order creation error:', orderError.message, orderError.details, orderError.hint, orderError.code)
+      if (data.reactivateOrderId) {
+        // Réactivation: mettre à jour l'order existant
+        console.log('Reactivating order:', data.reactivateOrderId)
+        
+        const { error: updateOrderError } = await supabase
+          .from('orders')
+          .update({
+            booking_id: newBooking.id,
+            status: 'manually_confirmed',
+            requested_date: bookingDate.toISOString().split('T')[0],
+            requested_time: bookingDate.toTimeString().slice(0, 5),
+            participants_count: data.participants_count,
+            customer_first_name: data.customer_first_name || 'Client',
+            customer_last_name: data.customer_last_name || '',
+            customer_phone: data.customer_phone || '0000000000',
+            customer_email: data.customer_email || null,
+            game_area: newSessions.length > 0 ? newSessions[0].game_area : null,
+            number_of_games: newSessions.length || 1,
+            processed_at: new Date().toISOString(),
+          })
+          .eq('id', data.reactivateOrderId)
+        
+        if (updateOrderError) {
+          console.error('Order reactivation error:', updateOrderError.message)
+        } else {
+          console.log('Order reactivated successfully:', data.reactivateOrderId)
+        }
       } else {
-        console.log('Order created successfully:', insertedOrder?.id)
+        // Nouvelle création: créer une entrée dans orders
+        const orderData = {
+          branch_id: data.branch_id,
+          booking_id: newBooking.id,
+          contact_id: data.primary_contact_id || null,
+          source: 'admin_agenda', // Source = admin car créé depuis l'agenda
+          status: 'auto_confirmed',
+          order_type: data.type, // 'GAME' ou 'EVENT'
+          game_area: newSessions.length > 0 ? newSessions[0].game_area : null, // null pour Events
+          number_of_games: newSessions.length || 1,
+          requested_date: bookingDate.toISOString().split('T')[0],
+          requested_time: bookingDate.toTimeString().slice(0, 5),
+          participants_count: data.participants_count,
+          customer_first_name: data.customer_first_name || 'Client',
+          customer_last_name: data.customer_last_name || '',
+          customer_phone: data.customer_phone || '0000000000',
+          customer_email: data.customer_email || null,
+          customer_notes: data.customer_notes_at_booking || null,
+          request_reference: newBooking.reference_code, // Utiliser la même référence que le booking
+          terms_accepted: true, // Automatiquement accepté car créé par admin
+          terms_accepted_at: new Date().toISOString(),
+        }
+
+        console.log('Creating order with data:', JSON.stringify(orderData, null, 2))
+
+        const { data: insertedOrder, error: orderError } = await supabase
+          .from('orders')
+          .insert(orderData as any)
+          .select()
+          .single()
+
+        if (orderError) {
+          console.error('Order creation error:', orderError.message, orderError.details, orderError.hint, orderError.code)
+        } else {
+          console.log('Order created successfully:', insertedOrder?.id)
+        }
       }
 
       const result: BookingWithSlots = {
