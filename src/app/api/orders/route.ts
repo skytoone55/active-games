@@ -329,6 +329,9 @@ async function createBooking(
   const gameDuration = settings?.game_duration_minutes || 30
   const eventDuration = settings?.event_total_duration_minutes || 120
   
+  console.log(`[createBooking] Settings: gameDuration=${gameDuration}min, numberOfGames=${numberOfGames}, gameArea=${gameArea}`)
+  console.log(`[createBooking] Total duration: ${numberOfGames * gameDuration}min`)
+  
   const startDateTime = new Date(`${requestedDate}T${requestedTime}`)
   let endDateTime: Date
   let gameStartDateTime: Date | null = null
