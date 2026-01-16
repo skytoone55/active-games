@@ -225,7 +225,14 @@ export function useLaserRooms(branchId: string | null) {
 
       return totalParticipants
     } catch (err) {
-      console.error('Error calculating vests usage:', err)
+      console.error('Error calculating vests usage:', {
+        error: err,
+        message: err instanceof Error ? err.message : 'Unknown error',
+        branchId: branchIdToUse,
+        startDateTime: startDateTime.toISOString(),
+        endDateTime: endDateTime.toISOString(),
+        excludeBookingId
+      })
       return 0
     }
   }, [branchId])
