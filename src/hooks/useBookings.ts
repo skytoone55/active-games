@@ -543,6 +543,39 @@ export function useBookings(branchId: string | null, date?: string) {
         }
       }
 
+      // Mettre à jour l'order correspondante si elle existe
+      const bookingDate = new Date(data.start_datetime || updatedBooking.start_datetime)
+      const orderUpdateData: Record<string, unknown> = {
+        updated_at: new Date().toISOString(),
+      }
+      
+      // Mettre à jour les champs si modifiés
+      if (data.start_datetime) {
+        orderUpdateData.requested_date = bookingDate.toISOString().split('T')[0]
+        orderUpdateData.requested_time = bookingDate.toTimeString().slice(0, 5)
+      }
+      if (data.participants_count !== undefined) {
+        orderUpdateData.participants_count = data.participants_count
+      }
+      if (data.customer_first_name !== undefined || data.customer_last_name !== undefined) {
+        orderUpdateData.customer_name = `${data.customer_first_name || updatedBooking.customer_first_name || ''} ${data.customer_last_name || updatedBooking.customer_last_name || ''}`.trim()
+      }
+      if (data.customer_phone !== undefined) {
+        orderUpdateData.customer_phone = data.customer_phone
+      }
+      if (data.customer_email !== undefined) {
+        orderUpdateData.customer_email = data.customer_email
+      }
+      if (data.game_sessions && data.game_sessions.length > 0) {
+        orderUpdateData.game_area = data.game_sessions[0].game_area
+        orderUpdateData.number_of_games = data.game_sessions.length
+      }
+
+      await supabase
+        .from('orders')
+        .update(orderUpdateData)
+        .eq('booking_id', id)
+
       await fetchBookings()
       return { 
         ...updatedBooking, 
