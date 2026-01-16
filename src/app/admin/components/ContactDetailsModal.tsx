@@ -159,8 +159,8 @@ export function ContactDetailsModal({
 
       // Calculer les statistiques
       const now = new Date()
-      const gameCount = bookings.filter((b: any) => b.booking_type === 'GAME').length
-      const eventCount = bookings.filter((b: any) => b.booking_type === 'EVENT').length
+      const gameCount = bookings.filter((b: any) => b.type === 'GAME').length
+      const eventCount = bookings.filter((b: any) => b.type === 'EVENT').length
       const totalParticipants = bookings.reduce((sum: number, b: any) => sum + (b.participants_count || 0), 0)
       const upcomingCount = bookings.filter((b: any) => 
         new Date(b.start_datetime) >= now && b.status !== 'CANCELLED'
