@@ -121,6 +121,8 @@ async function checkAvailability(
   numberOfGames?: number
 ): Promise<{ available: boolean; reason?: string; details?: string; eventRoomId?: string; laserRoomIds?: string[] }> {
   
+  console.log(`[checkAvailability] Called with: orderType=${orderType}, gameArea=${gameArea}, numberOfGames=${numberOfGames}, participants=${participantsCount}`)
+  
   // Récupérer les settings de la branche
   const { data: settings } = await supabase
     .from('branch_settings')
@@ -338,6 +340,7 @@ async function createBooking(
   
   console.log(`[createBooking] Settings: gameDuration=${gameDuration}min, numberOfGames=${numberOfGames}, gameArea=${gameArea}`)
   console.log(`[createBooking] Total duration: ${numberOfGames * gameDuration}min`)
+  console.log(`[createBooking] Date/Time: ${requestedDate} ${requestedTime}`)
   
   const startDateTime = new Date(`${requestedDate}T${requestedTime}`)
   let endDateTime: Date
@@ -476,6 +479,15 @@ async function createBooking(
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
+    
+    console.log('[POST /api/orders] Received body:', {
+      order_type: body.order_type,
+      game_area: body.game_area,
+      number_of_games: body.number_of_games,
+      participants_count: body.participants_count,
+      requested_date: body.requested_date,
+      requested_time: body.requested_time
+    })
     
     // Validation des champs requis
     const requiredFields = ['branch_id', 'order_type', 'requested_date', 'requested_time', 'participants_count', 'customer_first_name', 'customer_phone', 'terms_accepted']
