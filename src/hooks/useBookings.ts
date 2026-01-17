@@ -215,14 +215,45 @@ export function useBookings(branchId: string | null, date?: string) {
     fetchBookings()
   }, [fetchBookings])
 
-  // Auto-refresh every 30 seconds to catch new online bookings
+  // Auto-refresh silencieux toutes les 30 secondes (sans recharger la page)
   useEffect(() => {
     const intervalId = setInterval(() => {
-      fetchBookings()
-    }, 30000) // 30 seconds
+      // Fetch silencieux : pas de setLoading(true)
+      if (!branchId) return
+      
+      const supabase = getClient()
+      const query = supabase
+        .from('bookings')
+        .select(`
+          *,
+          event_rooms (id, name),
+          contacts (id, first_name, last_name, phone, email),
+          booking_slots (id, slot_start, slot_end, participants_count, slot_type),
+          game_sessions (
+            id, game_area, start_datetime, end_datetime, 
+            laser_room_id, session_order, pause_before_minutes,
+            laser_rooms (id, name, capacity)
+          )
+        `)
+        .eq('branch_id', branchId)
+        .neq('status', 'CANCELLED')
+      
+      if (date) {
+        query.gte('start_datetime', `${date}T00:00:00`).lt('start_datetime', `${date}T23:59:59`)
+      }
+      
+      query.order('start_datetime', { ascending: true })
+        .then(({ data }) => {
+          if (data) {
+            setBookings(data as BookingWithSlots[])
+          }
+        })
+        .catch(console.error)
+        
+    }, 30000) // 30 secondes
 
     return () => clearInterval(intervalId)
-  }, [fetchBookings])
+  }, [branchId, date])
 
   // Créer une réservation
   const createBooking = useCallback(async (data: CreateBookingData): Promise<BookingWithSlots | null> => {
