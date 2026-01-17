@@ -92,11 +92,7 @@ export function UsersTable({
           <select
             value={selectedRole}
             onChange={(e) => setSelectedRole(e.target.value)}
-            className={`px-3 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-              isDark
-                ? 'border-gray-600 text-white'
-                : 'border-gray-300 text-gray-900'
-            }`}
+            className="px-3 py-2 rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="all">Tous les rôles</option>
             <option value="super_admin">Super Admin</option>
