@@ -4,9 +4,10 @@ import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
-import { MapPin, Calendar, Clock, ChevronRight, ChevronLeft, Check, Users, Gamepad2, User, Phone, Mail, MessageSquare, FileText, ExternalLink, X, Home, Cake, Download, Target, Zap } from 'lucide-react'
+import { MapPin, Calendar, Clock, ChevronRight, ChevronLeft, Check, Users, Gamepad2, User, Phone, Mail, MessageSquare, FileText, ExternalLink, X, Home, Cake, Download, Target, Zap, AlertCircle } from 'lucide-react'
 import { getTranslations, getDirection, Locale, defaultLocale } from '@/i18n'
 import { Header, Footer } from '@/components'
+import { validateEmail, validateIsraeliPhone, formatIsraeliPhone, VALIDATION_MESSAGES } from '@/lib/validation'
 
 type BookingStep = 1 | 2 | 3 | 4 | 5 | 6 | 7
 
@@ -56,6 +57,7 @@ export default function ReservationPage() {
   const [showTermsModal, setShowTermsModal] = useState(false)
   const [reservationNumber, setReservationNumber] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [validationErrors, setValidationErrors] = useState<{ phone?: string; email?: string }>({})
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -270,6 +272,29 @@ export default function ReservationPage() {
 
   const handleContactInfoChange = (field: 'firstName' | 'lastName' | 'phone' | 'email' | 'specialRequest', value: string | number) => {
     setBookingData({ ...bookingData, [field]: value })
+    
+    // Validation en temps réel
+    const newErrors = { ...validationErrors }
+    
+    if (field === 'phone' && value) {
+      const phoneStr = String(value)
+      if (!validateIsraeliPhone(phoneStr)) {
+        newErrors.phone = VALIDATION_MESSAGES.phone.israeliFormat
+      } else {
+        delete newErrors.phone
+      }
+    }
+    
+    if (field === 'email' && value) {
+      const emailStr = String(value)
+      if (!validateEmail(emailStr)) {
+        newErrors.email = VALIDATION_MESSAGES.email.invalid
+      } else {
+        delete newErrors.email
+      }
+    }
+    
+    setValidationErrors(newErrors)
   }
 
   // État pour le message de confirmation
@@ -356,7 +381,7 @@ export default function ReservationPage() {
           participants_count: bookingData.players || 1,
           customer_first_name: bookingData.firstName,
           customer_last_name: bookingData.lastName || '',
-          customer_phone: bookingData.phone,
+          customer_phone: bookingData.phone ? formatIsraeliPhone(bookingData.phone) : bookingData.phone,
           customer_email: bookingData.email || null,
           customer_notes: customerNotes || null,
           game_area: gameArea,
@@ -1198,8 +1223,8 @@ export default function ReservationPage() {
                       type="tel"
                       value={bookingData.phone || ''}
                       onChange={(e) => handleContactInfoChange('phone', e.target.value)}
-                      placeholder={translations.booking?.contact?.phone_placeholder || 'Enter phone number'}
-                      className="w-full border border-primary/30 rounded-lg pl-12 pr-4 py-3 font-medium hover:border-primary/70 transition-all backdrop-blur-sm"
+                      placeholder="05XXXXXXXX"
+                      className={`w-full border ${validationErrors.phone ? 'border-red-500' : 'border-primary/30'} rounded-lg pl-12 pr-4 py-3 font-medium hover:border-primary/70 transition-all backdrop-blur-sm`}
                       style={{ 
                         fontFamily: 'Poppins, sans-serif',
                         backgroundColor: 'rgba(50, 50, 70, 0.7)',
@@ -1208,6 +1233,12 @@ export default function ReservationPage() {
                       }}
                       required
                     />
+                    {validationErrors.phone && (
+                      <div className="flex items-center gap-1 mt-1 text-red-500 text-sm">
+                        <AlertCircle className="w-4 h-4" />
+                        <span>{validationErrors.phone}</span>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -1222,8 +1253,8 @@ export default function ReservationPage() {
                       type="email"
                       value={bookingData.email || ''}
                       onChange={(e) => handleContactInfoChange('email', e.target.value)}
-                      placeholder={translations.booking?.contact?.email_placeholder || 'Enter email (optional)'}
-                      className="w-full border border-primary/30 rounded-lg pl-12 pr-4 py-3 font-medium hover:border-primary/70 transition-all backdrop-blur-sm"
+                      placeholder="example@email.com"
+                      className={`w-full border ${validationErrors.email ? 'border-red-500' : 'border-primary/30'} rounded-lg pl-12 pr-4 py-3 font-medium hover:border-primary/70 transition-all backdrop-blur-sm`}
                       style={{ 
                         fontFamily: 'Poppins, sans-serif',
                         backgroundColor: 'rgba(50, 50, 70, 0.7)',
@@ -1231,6 +1262,12 @@ export default function ReservationPage() {
                         outline: 'none'
                       }}
                     />
+                    {validationErrors.email && (
+                      <div className="flex items-center gap-1 mt-1 text-red-500 text-sm">
+                        <AlertCircle className="w-4 h-4" />
+                        <span>{validationErrors.email}</span>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -1526,14 +1563,18 @@ export default function ReservationPage() {
                 !bookingData.firstName || 
                 !bookingData.lastName || 
                 !bookingData.phone || 
-                !bookingData.termsAccepted
+                !bookingData.termsAccepted ||
+                !!validationErrors.phone ||
+                (bookingData.email && !!validationErrors.email)
               }
               className={`inline-flex items-center gap-2 px-6 py-3 rounded-xl transition-all duration-300 ${
                 !isSubmitting &&
                 bookingData.firstName && 
                 bookingData.lastName && 
                 bookingData.phone && 
-                bookingData.termsAccepted
+                bookingData.termsAccepted &&
+                !validationErrors.phone &&
+                (!bookingData.email || !validationErrors.email)
                   ? 'glow-button'
                   : 'bg-dark-200 border-2 border-primary/30 text-gray-300 cursor-not-allowed hover:border-primary/40'
               }`}
