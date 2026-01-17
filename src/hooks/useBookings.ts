@@ -215,6 +215,15 @@ export function useBookings(branchId: string | null, date?: string) {
     fetchBookings()
   }, [fetchBookings])
 
+  // Auto-refresh every 30 seconds to catch new online bookings
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      fetchBookings()
+    }, 30000) // 30 seconds
+
+    return () => clearInterval(intervalId)
+  }, [fetchBookings])
+
   // Créer une réservation
   const createBooking = useCallback(async (data: CreateBookingData): Promise<BookingWithSlots | null> => {
     const supabase = getClient()
