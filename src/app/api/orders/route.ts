@@ -431,6 +431,7 @@ async function createBooking(
   if (gameArea) {
     const sessions = []
     let sessionTime = new Date(gameStartDateTime || startDateTime)
+    let sessionOrderCounter = 1 // Compteur global unique
     
     for (let i = 0; i < numberOfGames; i++) {
       const sessionEnd = new Date(sessionTime.getTime() + gameDuration * 60000)
@@ -445,7 +446,7 @@ async function createBooking(
             start_datetime: sessionTime.toISOString(),
             end_datetime: sessionEnd.toISOString(),
             laser_room_id: laserRoomIds[roomIndex],
-            session_order: i + 1,
+            session_order: sessionOrderCounter++, // Incrémente pour chaque session
             pause_before_minutes: 0,
           })
         }
@@ -457,12 +458,14 @@ async function createBooking(
           start_datetime: sessionTime.toISOString(),
           end_datetime: sessionEnd.toISOString(),
           laser_room_id: null,
-          session_order: i + 1,
+          session_order: sessionOrderCounter++,
           pause_before_minutes: 0,
         })
       }
       sessionTime = sessionEnd
     }
+    
+    console.log(`[createBooking] Created ${sessions.length} game_sessions for ${numberOfGames} games`)
     
     if (sessions.length > 0) {
       await supabase.from('game_sessions').insert(sessions)
