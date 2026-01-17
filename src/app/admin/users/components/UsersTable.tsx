@@ -275,7 +275,7 @@ export function UsersTable({
                   <td className="px-4 py-4">
                     <div className={`flex items-center gap-2 text-sm ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
                       <Mail className="w-4 h-4 flex-shrink-0" />
-                      <span className="truncate">{user.id}</span>
+                      <span className="truncate">{user.email || 'N/A'}</span>
                     </div>
                   </td>
 

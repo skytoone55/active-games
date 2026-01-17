@@ -316,6 +316,7 @@ export type ProfileUpdate = Database['public']['Tables']['profiles']['Update']
 export type UserWithBranches = Profile & {
   branches: Branch[]
   creator?: Profile | null
+  email?: string // Email récupéré depuis auth.users
 }
 
 // Type étendu pour Order avec relations

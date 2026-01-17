@@ -65,8 +65,14 @@ export async function GET(request: NextRequest) {
         )
       }
 
-      // Pour chaque utilisateur, récupérer ses branches
+      // Créer un client service role pour récupérer les emails
+      const serviceClient = createServiceRoleClient()
+
+      // Pour chaque utilisateur, récupérer ses branches et son email
       for (const userProfile of allProfiles || []) {
+        // Récupérer l'email depuis auth.users
+        const { data: authUser } = await serviceClient.auth.admin.getUserById(userProfile.id)
+        
         const { data: userBranches } = await supabase
           .from('user_branches')
           .select('branch_id, branches(*)')
@@ -87,6 +93,7 @@ export async function GET(request: NextRequest) {
 
         users.push({
           ...userProfile,
+          email: authUser?.user?.email || userProfile.id,
           branches,
           creator,
         })
@@ -125,11 +132,17 @@ export async function GET(request: NextRequest) {
       // 3. Grouper par utilisateur
       const userMap = new Map<string, UserWithBranches>()
       
+      // Créer un client service role pour récupérer les emails
+      const serviceClient = createServiceRoleClient()
+      
       for (const ub of userBranchesData || []) {
         if (!ub.profiles) continue
 
         const userId = ub.user_id
         if (!userMap.has(userId)) {
+          // Récupérer l'email depuis auth.users
+          const { data: authUser } = await serviceClient.auth.admin.getUserById(userId)
+          
           // Récupérer le créateur
           let creator = null
           if (ub.profiles.created_by) {
@@ -143,6 +156,7 @@ export async function GET(request: NextRequest) {
 
           userMap.set(userId, {
             ...ub.profiles,
+            email: authUser?.user?.email || userId,
             branches: [],
             creator,
           })

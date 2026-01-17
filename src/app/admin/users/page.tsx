@@ -10,6 +10,7 @@ import { AdminHeader } from '../components/AdminHeader'
 import { UsersTable } from './components/UsersTable'
 import { CreateUserModal } from './components/CreateUserModal'
 import { EditUserModal } from './components/EditUserModal'
+import { EditSelfModal } from './components/EditSelfModal'
 import type { UserWithBranches } from '@/lib/supabase/types'
 import { createClient } from '@/lib/supabase/client'
 
@@ -21,6 +22,7 @@ export default function UsersPage() {
   
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
+  const [showEditSelfModal, setShowEditSelfModal] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [selectedUser, setSelectedUser] = useState<UserWithBranches | null>(null)
 
@@ -55,9 +57,14 @@ export default function UsersPage() {
     router.push('/admin/login')
   }
 
-  const handleEdit = (user: UserWithBranches) => {
-    setSelectedUser(user)
-    setShowEditModal(true)
+  const handleEdit = (editUser: UserWithBranches) => {
+    setSelectedUser(editUser)
+    // Si l'utilisateur édite son propre compte, ouvrir le modal simplifié
+    if (editUser.id === user.id) {
+      setShowEditSelfModal(true)
+    } else {
+      setShowEditModal(true)
+    }
   }
 
   const handleDelete = (user: UserWithBranches) => {
@@ -190,6 +197,17 @@ export default function UsersPage() {
         branches={branches}
         currentUserRole={user.role}
         currentUserBranchIds={user.branches.map(b => b.id)}
+        isDark={isDark}
+      />
+
+      <EditSelfModal
+        isOpen={showEditSelfModal}
+        onClose={() => {
+          setShowEditSelfModal(false)
+          setSelectedUser(null)
+        }}
+        onSubmit={updateUser}
+        user={selectedUser}
         isDark={isDark}
       />
 
