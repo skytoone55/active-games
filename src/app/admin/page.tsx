@@ -35,17 +35,24 @@ export default function AdminPage() {
   const selectedBranchIdFromHook = branchesHook.selectedBranchId
   
   // Calculer effectiveSelectedBranchId AVANT useBookings pour éviter les problèmes de timing
-  // Si selectedBranchId n'est pas défini mais qu'il n'y a qu'une seule branche, l'utiliser
-  const effectiveSelectedBranchId = selectedBranchIdFromHook || (branches.length === 1 ? branches[0]?.id : null)
+  // Si selectedBranchId n'est pas défini, utiliser la première branche disponible
+  const effectiveSelectedBranchId = selectedBranchIdFromHook || (branches.length > 0 ? branches[0]?.id : null)
+  
+  // Vérifier que selectedBranchIdFromHook est bien dans les branches autorisées
+  const isValidBranchId = selectedBranchIdFromHook && branches.some(b => b.id === selectedBranchIdFromHook)
+  const finalSelectedBranchId = isValidBranchId ? selectedBranchIdFromHook : (branches.length > 0 ? branches[0]?.id : null)
   
   // Synchroniser avec le hook si nécessaire
   useEffect(() => {
-    if (effectiveSelectedBranchId && !selectedBranchIdFromHook && branches.length === 1) {
-      branchesHook.selectBranch(effectiveSelectedBranchId)
+    if (finalSelectedBranchId && !selectedBranchIdFromHook && branches.length > 0) {
+      branchesHook.selectBranch(finalSelectedBranchId)
+    } else if (selectedBranchIdFromHook && !isValidBranchId && branches.length > 0) {
+      // Si la branche sauvegardée n'est plus autorisée, réinitialiser avec la première
+      branchesHook.selectBranch(branches[0].id)
     }
-  }, [effectiveSelectedBranchId, selectedBranchIdFromHook, branches.length, branchesHook])
+  }, [finalSelectedBranchId, selectedBranchIdFromHook, isValidBranchId, branches.length, branchesHook])
   
-  const selectedBranchId = effectiveSelectedBranchId
+  const selectedBranchId = finalSelectedBranchId
   const setSelectedBranchId = (branchId: string | null) => {
     if (branchId) {
       branchesHook.selectBranch(branchId)
