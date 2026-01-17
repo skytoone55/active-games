@@ -42,9 +42,21 @@ export default function OrdersPage() {
   const searchParams = useSearchParams()
   const { user, loading: authLoading, signOut } = useAuth()
   const branchesHook = useBranches()
-  const selectedBranchId = branchesHook.selectedBranchId
   const branches = branchesHook.branches
   const branchesLoading = branchesHook.loading
+  const selectedBranchIdFromHook = branchesHook.selectedBranchId
+  
+  // Calculer effectiveSelectedBranchId avec fallback
+  const effectiveSelectedBranchId = selectedBranchIdFromHook || (branches.length > 0 ? branches[0]?.id : null)
+  
+  // Synchroniser avec le hook si nécessaire
+  useEffect(() => {
+    if (effectiveSelectedBranchId && !selectedBranchIdFromHook && branches.length === 1) {
+      branchesHook.selectBranch(effectiveSelectedBranchId)
+    }
+  }, [effectiveSelectedBranchId, selectedBranchIdFromHook, branches.length, branchesHook])
+  
+  const selectedBranchId = effectiveSelectedBranchId
   const [searchQuery, setSearchQuery] = useState('')
   const [quickStatusFilter, setQuickStatusFilter] = useState<string>('all')
   const [theme, setTheme] = useState<Theme>('light')
@@ -296,7 +308,7 @@ export default function OrdersPage() {
     )
   }
 
-  const selectedBranch = branches.find(b => b.id === selectedBranchId) || null
+  const selectedBranch = branches.find(b => b.id === selectedBranchId) || (branches.length > 0 ? branches[0] : null)
 
   return (
     <div className={`min-h-screen ${isDark ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
@@ -304,7 +316,7 @@ export default function OrdersPage() {
       <AdminHeader
         user={user}
         branches={branches}
-        selectedBranch={selectedBranch}
+        selectedBranch={selectedBranch || branches[0] || null}
         onBranchSelect={(branchId) => branchesHook.selectBranch(branchId)}
         onSignOut={signOut}
         theme={theme}
