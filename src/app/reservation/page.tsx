@@ -77,15 +77,19 @@ export default function ReservationPage() {
   const getAvailableDates = () => {
     const dates: string[] = []
     const today = new Date()
-    today.setHours(0, 0, 0, 0) // Normaliser à minuit local
     
-    console.log('[getAvailableDates] Today (normalized):', today.toISOString(), 'Local:', today.toLocaleDateString())
+    console.log('[getAvailableDates] Today RAW:', today.toString())
     
     // Start from TODAY (i=0), not tomorrow
     for (let i = 0; i <= 365; i++) {
       const date = new Date(today)
       date.setDate(today.getDate() + i)
-      dates.push(date.toISOString().split('T')[0])
+      
+      // FORMAT LOCAL (pas ISO pour éviter décalage timezone)
+      const year = date.getFullYear()
+      const month = String(date.getMonth() + 1).padStart(2, '0')
+      const day = String(date.getDate()).padStart(2, '0')
+      dates.push(`${year}-${month}-${day}`)
     }
     
     console.log('[getAvailableDates] First 3 dates:', dates.slice(0, 3))
@@ -99,9 +103,8 @@ export default function ReservationPage() {
     const grouped: { [key: string]: string[] } = {}
     
     dates.forEach((date) => {
-      const dateObj = new Date(date + 'T00:00:00')
-      // BUG FIX: getMonth() retourne 0-11, il faut +1 pour avoir 1-12
-      const monthKey = `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}`
+      const [year, month] = date.split('-')
+      const monthKey = `${year}-${month}`
       if (!grouped[monthKey]) {
         grouped[monthKey] = []
       }
