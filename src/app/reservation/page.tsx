@@ -51,7 +51,7 @@ export default function ReservationPage() {
     eventType: null,
     eventAge: null,
   })
-  const [selectedMonth, setSelectedMonth] = useState<number>(new Date().getMonth())
+  const [selectedMonth, setSelectedMonth] = useState<number>(new Date().getMonth() + 1) // 1-12, pas 0-11
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear())
   const [showTermsModal, setShowTermsModal] = useState(false)
   const [reservationNumber, setReservationNumber] = useState<string | null>(null)
