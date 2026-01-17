@@ -144,7 +144,7 @@ export default function ReservationPage() {
   }
 
   // Generate available time slots (10:00 to 23:00, every 30 minutes)
-  // FILTRE: Si date = aujourd'hui, ne montrer que les heures futures
+  // FILTRE: Si date = aujourd'hui, ne montrer que les heures futures (dès maintenant, pas de marge)
   const getAvailableTimes = () => {
     const times: string[] = []
     const now = new Date()
@@ -152,15 +152,16 @@ export default function ReservationPage() {
     const todayStr = now.toISOString().split('T')[0]
     const isToday = selectedDateStr === todayStr
     
+    console.log('[getAvailableTimes] Now:', now.toISOString(), 'Selected date:', selectedDateStr, 'IsToday:', isToday)
+    
     for (let hour = 10; hour <= 23; hour++) {
       // Add :00
       const time00 = `${hour.toString().padStart(2, '0')}:00`
       if (isToday) {
-        // Si aujourd'hui, vérifier que l'heure est dans le futur (avec marge de 1h)
+        // Si aujourd'hui, vérifier que l'heure est dans le futur (dès maintenant, pas de marge)
         const slotDate = new Date(now)
         slotDate.setHours(hour, 0, 0, 0)
-        const oneHourFromNow = new Date(now.getTime() + 60 * 60 * 1000)
-        if (slotDate >= oneHourFromNow) {
+        if (slotDate >= now) {
           times.push(time00)
         }
       } else {
@@ -173,8 +174,7 @@ export default function ReservationPage() {
         if (isToday) {
           const slotDate = new Date(now)
           slotDate.setHours(hour, 30, 0, 0)
-          const oneHourFromNow = new Date(now.getTime() + 60 * 60 * 1000)
-          if (slotDate >= oneHourFromNow) {
+          if (slotDate >= now) {
             times.push(time30)
           }
         } else {
@@ -182,6 +182,9 @@ export default function ReservationPage() {
         }
       }
     }
+    
+    console.log('[getAvailableTimes] Generated', times.length, 'time slots, first:', times[0], 'last:', times[times.length - 1])
+    
     return times
   }
 
