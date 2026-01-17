@@ -1927,7 +1927,16 @@ export default function AdminPage() {
 
   const selectedBranchFromUserData = userData.branches.find(b => b.id === selectedBranchId)
   // Récupérer le Branch complet depuis useBranches
-  const selectedBranch = branches.find(b => b.id === selectedBranchId) || null
+  // Si selectedBranchId n'est pas défini mais qu'il n'y a qu'une seule branche, l'utiliser
+  let effectiveSelectedBranchId = selectedBranchId
+  if (!effectiveSelectedBranchId && branches.length === 1) {
+    effectiveSelectedBranchId = branches[0].id
+    // Mettre à jour le hook pour synchroniser
+    if (effectiveSelectedBranchId) {
+      branchesHook.selectBranch(effectiveSelectedBranchId)
+    }
+  }
+  const selectedBranch = branches.find(b => b.id === effectiveSelectedBranchId) || null
   const isDark = theme === 'dark'
 
   // Conversion userData vers format AuthUser pour AdminHeader
@@ -2005,11 +2014,11 @@ export default function AdminPage() {
   return (
     <div className={`min-h-screen ${isDark ? 'bg-gray-900' : 'bg-gray-100'}`}>
       {/* Header avec navigation */}
-      {!loading && authUser && selectedBranch && (
+      {!loading && authUser && branches.length > 0 && (
         <AdminHeader
           user={authUser}
           branches={branches}
-          selectedBranch={selectedBranch}
+          selectedBranch={selectedBranch || branches[0]}
           onBranchSelect={(branchId) => {
             branchesHook.selectBranch(branchId) // Utiliser selectBranch du hook pour synchroniser avec le CRM
             setShowBranchMenu(false)
