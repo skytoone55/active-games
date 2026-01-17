@@ -1843,6 +1843,32 @@ export default function AdminPage() {
     startTimeSlotIndex: number // Index du premier créneau horaire
     startSlotIndex: number // Index du premier slot vertical
   } => {
+    // Pour LASER, compter le nombre de JEUX (session_order uniques), pas la durée totale
+    if (booking.type === 'GAME' && booking.game_sessions && booking.game_sessions.length > 0) {
+      const laserSessions = booking.game_sessions.filter(s => s.game_area === 'LASER')
+      if (laserSessions.length > 0) {
+        // Compter les session_order uniques
+        const uniqueGameNumbers = new Set(laserSessions.map(s => s.session_order))
+        const numberOfGames = uniqueGameNumbers.size
+        
+        let slotCount = 1
+        let startSlotIndex = 0
+        
+        if (!isRoom && booking.type === 'GAME') {
+          slotCount = Math.ceil(booking.participants_count / 6)
+          startSlotIndex = 0
+        }
+        
+        return {
+          timeSlots: numberOfGames, // Nombre de jeux, pas de créneaux de temps
+          slotCount,
+          startTimeSlotIndex: 0,
+          startSlotIndex
+        }
+      }
+    }
+    
+    // Pour ACTIVE et autres : utiliser la durée totale
     const startTime = new Date(booking.game_start_datetime || booking.start_datetime)
     const endTime = new Date(booking.game_end_datetime || booking.end_datetime)
     const bookingStartMinutes = startTime.getHours() * 60 + startTime.getMinutes()
@@ -1851,13 +1877,6 @@ export default function AdminPage() {
     // Calculer le nombre de créneaux horaires (chaque créneau = 30 min)
     const durationMinutes = bookingEndMinutes - bookingStartMinutes
     const numberOfTimeSlots = Math.ceil(durationMinutes / 30)
-    
-    // Trouver l'index du premier créneau horaire dans timeSlots (le tableau défini plus bas)
-    // Note: Cette fonction est appelée avant la déclaration de timeSlots, donc on ne peut pas l'utiliser ici
-    // Cette logique semble obsolète, on la commente pour l'instant
-    // const startHour = Math.floor(bookingStartMinutes / 60)
-    // const startMinute = bookingStartMinutes % 60
-    // const startTimeSlotIndex = timeSlots.findIndex(ts => ts.hour === startHour && ts.minute === startMinute)
     
     let slotCount = 1
     let startSlotIndex = 0
