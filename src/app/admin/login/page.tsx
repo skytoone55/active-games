@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { getClient } from '@/lib/supabase/client'
-import { Loader2, Mail, AlertCircle } from 'lucide-react'
+import { Loader2, Lock, Mail, AlertCircle } from 'lucide-react'
 import Image from 'next/image'
 
 export default function LoginPage() {
