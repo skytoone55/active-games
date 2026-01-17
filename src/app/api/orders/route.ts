@@ -431,14 +431,19 @@ async function createBooking(
   if (gameArea) {
     const sessions = []
     let sessionTime = new Date(gameStartDateTime || startDateTime)
-    let sessionOrderCounter = 1 // Compteur global unique
+    
+    console.log(`[createBooking] Creating sessions: gameArea=${gameArea}, numberOfGames=${numberOfGames}, laserRoomIds=${JSON.stringify(laserRoomIds)}`)
     
     for (let i = 0; i < numberOfGames; i++) {
       const sessionEnd = new Date(sessionTime.getTime() + gameDuration * 60000)
       
+      console.log(`[createBooking] Game ${i+1}/${numberOfGames}: ${sessionTime.toISOString()} to ${sessionEnd.toISOString()}`)
+      
       if (gameArea === 'LASER' && laserRoomIds && laserRoomIds.length > 0) {
         // Pour LASER : créer une session par salle (toutes les salles en parallèle)
         // Les salles sont utilisées simultanément pour le même créneau
+        // IMPORTANT: session_order = numéro du JEU (i+1), pas un compteur global
+        console.log(`[createBooking] LASER game ${i+1}: creating ${laserRoomIds.length} sessions (one per room)`)
         for (let roomIndex = 0; roomIndex < laserRoomIds.length; roomIndex++) {
           sessions.push({
             booking_id: booking.id,
@@ -446,7 +451,7 @@ async function createBooking(
             start_datetime: sessionTime.toISOString(),
             end_datetime: sessionEnd.toISOString(),
             laser_room_id: laserRoomIds[roomIndex],
-            session_order: sessionOrderCounter++, // Incrémente pour chaque session
+            session_order: i + 1, // Numéro du JEU (même pour toutes les salles)
             pause_before_minutes: 0,
           })
         }
@@ -458,14 +463,14 @@ async function createBooking(
           start_datetime: sessionTime.toISOString(),
           end_datetime: sessionEnd.toISOString(),
           laser_room_id: null,
-          session_order: sessionOrderCounter++,
+          session_order: i + 1, // Numéro du JEU
           pause_before_minutes: 0,
         })
       }
       sessionTime = sessionEnd
     }
     
-    console.log(`[createBooking] Created ${sessions.length} game_sessions for ${numberOfGames} games`)
+    console.log(`[createBooking] Created ${sessions.length} game_sessions for ${numberOfGames} games:`, sessions.map(s => ({ start: s.start_datetime, end: s.end_datetime, room: s.laser_room_id, order: s.session_order })))
     
     if (sessions.length > 0) {
       await supabase.from('game_sessions').insert(sessions)
