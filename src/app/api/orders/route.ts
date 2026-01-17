@@ -295,6 +295,7 @@ async function checkAvailability(
 }
 
 // Créer un booking avec la référence fournie
+// UTILISE LA MÊME LOGIQUE QUE L'ADMIN (session-builder.ts)
 async function createBooking(
   branchId: string,
   orderType: 'GAME' | 'EVENT',
@@ -311,7 +312,7 @@ async function createBooking(
   numberOfGames: number,
   referenceCode: string, // Référence passée en paramètre
   eventRoomId?: string,
-  laserRoomIds?: string[]
+  laserRoomIds?: string[] // Ignoré, sera calculé par session-builder
 ): Promise<{ bookingId: string; referenceCode: string }> {
   
   // Récupérer les settings
@@ -325,8 +326,7 @@ async function createBooking(
   const eventDuration = settings?.event_total_duration_minutes || 120
   
   console.log(`[createBooking] Settings: gameDuration=${gameDuration}min, numberOfGames=${numberOfGames}, gameArea=${gameArea}`)
-  console.log(`[createBooking] Total duration: ${numberOfGames * gameDuration}min`)
-  console.log(`[createBooking] Date/Time: ${requestedDate} ${requestedTime}`)
+  console.log(`[createBooking] Using session-builder (same logic as admin)`)
   
   const startDateTime = new Date(`${requestedDate}T${requestedTime}`)
   let endDateTime: Date
@@ -346,14 +346,13 @@ async function createBooking(
     gameEndDateTime = endDateTime
   }
   
-  // Définir la couleur par défaut selon le type
-  // Bleu pour tous les GAME (ACTIVE et LASER), Vert pour EVENT
+  // Couleur par défaut
   let defaultColor = '#3B82F6' // Bleu pour GAME
   if (orderType === 'EVENT') {
     defaultColor = '#22C55E' // Vert pour EVENT
   }
   
-  // Créer le booking (avec la référence passée en paramètre)
+  // Créer le booking
   const { data: booking, error: bookingError } = await supabase
     .from('bookings')
     .insert({
@@ -373,7 +372,7 @@ async function createBooking(
       customer_notes_at_booking: notes,
       primary_contact_id: contactId,
       reference_code: referenceCode,
-      color: defaultColor, // Couleur par défaut
+      color: defaultColor,
     })
     .select('id')
     .single()
@@ -413,53 +412,34 @@ async function createBooking(
     await supabase.from('booking_slots').insert(slots)
   }
   
-  // Créer les game_sessions
+  // UTILISER SESSION-BUILDER (même logique que admin)
   if (gameArea) {
-    const sessions = []
-    let sessionTime = new Date(gameStartDateTime || startDateTime)
+    const { buildGameSessionsForAPI } = await import('@/lib/session-builder')
     
-    console.log(`[createBooking] Creating sessions: gameArea=${gameArea}, numberOfGames=${numberOfGames}, laserRoomIds=${JSON.stringify(laserRoomIds)}`)
+    const sessionResult = await buildGameSessionsForAPI({
+      gameArea,
+      numberOfGames,
+      participants: participantsCount,
+      startDateTime: gameStartDateTime || startDateTime,
+      branchId,
+      gameDuration,
+      supabase
+    })
     
-    for (let i = 0; i < numberOfGames; i++) {
-      const sessionEnd = new Date(sessionTime.getTime() + gameDuration * 60000)
-      
-      console.log(`[createBooking] Game ${i+1}/${numberOfGames}: ${sessionTime.toISOString()} to ${sessionEnd.toISOString()}`)
-      
-      if (gameArea === 'LASER' && laserRoomIds && laserRoomIds.length > 0) {
-        // Pour LASER : créer une session par salle (toutes les salles en parallèle)
-        // Les salles sont utilisées simultanément pour le même créneau
-        // IMPORTANT: session_order = numéro du JEU (i+1), pas un compteur global
-        console.log(`[createBooking] LASER game ${i+1}: creating ${laserRoomIds.length} sessions (one per room)`)
-        for (let roomIndex = 0; roomIndex < laserRoomIds.length; roomIndex++) {
-          sessions.push({
-            booking_id: booking.id,
-            game_area: gameArea,
-            start_datetime: sessionTime.toISOString(),
-            end_datetime: sessionEnd.toISOString(),
-            laser_room_id: laserRoomIds[roomIndex],
-            session_order: i + 1, // Numéro du JEU (même pour toutes les salles)
-            pause_before_minutes: 0,
-          })
-        }
-      } else {
-        // Pour ACTIVE ou autres
-        sessions.push({
-          booking_id: booking.id,
-          game_area: gameArea,
-          start_datetime: sessionTime.toISOString(),
-          end_datetime: sessionEnd.toISOString(),
-          laser_room_id: null,
-          session_order: i + 1, // Numéro du JEU
-          pause_before_minutes: 0,
-        })
-      }
-      sessionTime = sessionEnd
+    if (sessionResult.error) {
+      // Supprimer le booking si échec sessions
+      await supabase.from('bookings').delete().eq('id', booking.id)
+      throw new Error(sessionResult.error)
     }
     
-    console.log(`[createBooking] Created ${sessions.length} game_sessions for ${numberOfGames} games:`, sessions.map(s => ({ start: s.start_datetime, end: s.end_datetime, room: s.laser_room_id, order: s.session_order })))
+    console.log(`[createBooking] Built ${sessionResult.game_sessions.length} sessions via session-builder`)
     
-    if (sessions.length > 0) {
-      await supabase.from('game_sessions').insert(sessions)
+    // Insérer les sessions
+    if (sessionResult.game_sessions.length > 0) {
+      await supabase.from('game_sessions').insert(sessionResult.game_sessions.map(s => ({
+        ...s,
+        booking_id: booking.id
+      })))
     }
   }
   
