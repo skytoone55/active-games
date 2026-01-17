@@ -432,6 +432,7 @@ export async function GET(request: NextRequest) {
   const pendingCount = orders?.filter(o => o.status === 'pending').length || 0
   
   return NextResponse.json({
+    success: true,
     orders,
     pending_count: pendingCount
   })

@@ -57,7 +57,15 @@ export async function findBestLaserRoomsForBooking(params: {
   const exclusiveThreshold = settings.laser_exclusive_threshold || 10
   const activeLaserRooms = laserRooms.filter(r => r.is_active)
   
+  console.log('[laser-allocation] Starting allocation:', {
+    participants,
+    exclusiveThreshold,
+    activeLaserRoomsCount: activeLaserRooms.length,
+    rooms: activeLaserRooms.map(r => ({ id: r.id, name: r.name, capacity: r.capacity }))
+  })
+  
   if (activeLaserRooms.length === 0) {
+    console.log('[laser-allocation] No active rooms found')
     return null
   }
 
@@ -155,10 +163,15 @@ export async function findBestLaserRoomsForBooking(params: {
   
   // Cas 1 : Groupe >= exclusiveThreshold → Besoin d'une salle exclusive
   if (participants >= exclusiveThreshold) {
+    console.log('[laser-allocation] Exclusive group (>=', exclusiveThreshold, ') - need exclusive room(s)')
+    
     // Trouver une salle vide avec capacité suffisante (plus petite possible)
     for (const room of sortedRoomsByCapacity) {
       const remaining = getRoomRemainingCapacity(room.id)
+      console.log('[laser-allocation] Checking room', room.name, '- capacity:', room.capacity, 'remaining:', remaining)
+      
       if (remaining === room.capacity && room.capacity >= participants) {
+        console.log('[laser-allocation] Found exclusive room:', room.name)
         return {
           roomIds: [room.id],
           requiresTwoRooms: false
@@ -166,21 +179,27 @@ export async function findBestLaserRoomsForBooking(params: {
       }
     }
     
+    console.log('[laser-allocation] No single room fits, trying combination...')
+    
     // Si aucune salle simple ne suffit, essayer combinaison de 2 salles
     const totalCapacityAllRooms = sortedRoomsByCapacity.reduce((sum, r) => {
       const remaining = getRoomRemainingCapacity(r.id)
       return sum + (remaining === r.capacity ? r.capacity : 0) // Seulement salles vides
     }, 0)
     
+    console.log('[laser-allocation] Total capacity of empty rooms:', totalCapacityAllRooms)
+    
     if (totalCapacityAllRooms >= participants) {
       // Prendre toutes les salles disponibles vides
       const emptyRooms = sortedRoomsByCapacity.filter(r => getRoomRemainingCapacity(r.id) === r.capacity)
+      console.log('[laser-allocation] Using multiple rooms:', emptyRooms.map(r => r.name))
       return {
         roomIds: emptyRooms.map(r => r.id),
         requiresTwoRooms: true
       }
     }
     
+    console.log('[laser-allocation] Not enough capacity for exclusive group')
     return null // Pas de capacité pour groupe exclusif
   }
   

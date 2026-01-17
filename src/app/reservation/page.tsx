@@ -277,6 +277,12 @@ export default function ReservationPage() {
   const [orderMessage, setOrderMessage] = useState<string>('')
 
   const handleConfirm = async () => {
+    // Protection double-click
+    if (isSubmitting) {
+      console.log('[handleConfirm] Already submitting, ignoring click')
+      return
+    }
+    
     setIsSubmitting(true)
     try {
       // D'abord, récupérer le branch_id depuis le nom de la branche
@@ -337,16 +343,17 @@ export default function ReservationPage() {
       
       const result = await response.json()
       
+      console.log('[handleConfirm] API result:', result)
+      
       if (result.success) {
-        // Utiliser le numéro de réservation du booking si confirmé, sinon la référence temporaire
-        const refNumber = result.order.booking_reference || result.order.request_reference
-        setReservationNumber(refNumber)
-        setOrderStatus(result.order.status)
-        setOrderMessage(result.order.message)
+        // L'API retourne directement reference, status, message
+        setReservationNumber(result.reference)
+        setOrderStatus(result.status)
+        setOrderMessage(result.message || 'Booking confirmed')
         setStep(7)
       } else {
         console.error('Error saving order:', result.error)
-        alert('Erreur lors de la sauvegarde de la réservation. Veuillez réessayer.')
+        alert(`Erreur: ${result.error || 'Erreur lors de la sauvegarde de la réservation'}`)
       }
     } catch (error) {
       console.error('Error confirming reservation:', error)
@@ -984,7 +991,7 @@ export default function ReservationPage() {
               {/* Current Month Display */}
               <div className="text-center mb-4">
                 <h3 className="text-xl font-bold text-primary" style={{ fontFamily: 'Orbitron, sans-serif' }}>
-                  {new Date(selectedYear, selectedMonth, 1).toLocaleDateString(isRTL ? 'he-IL' : 'en-US', { 
+                  {new Date(selectedYear, selectedMonth - 1, 1).toLocaleDateString(isRTL ? 'he-IL' : 'en-US', { 
                     month: 'long', 
                     year: 'numeric' 
                   })}
