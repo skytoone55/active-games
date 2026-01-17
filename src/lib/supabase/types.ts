@@ -205,16 +205,24 @@ export interface Database {
         Row: {
           id: string
           role: UserRole
-          full_name: string | null
+          first_name: string
+          last_name: string
+          phone: string
+          full_name: string | null // Deprecated, gardé pour compatibilité
           avatar_url: string | null
+          created_by: string | null
           created_at: string
           updated_at: string
         }
         Insert: {
           id: string
           role?: UserRole
+          first_name: string
+          last_name: string
+          phone: string
           full_name?: string | null
           avatar_url?: string | null
+          created_by?: string | null
         }
         Update: Partial<Omit<Database['public']['Tables']['profiles']['Insert'], 'id'>>
       }
@@ -302,6 +310,14 @@ export type BookingUpdate = Database['public']['Tables']['bookings']['Update']
 export type BookingContactUpdate = Database['public']['Tables']['booking_contacts']['Update']
 export type ContactUpdate = Database['public']['Tables']['contacts']['Update']
 export type OrderUpdate = Database['public']['Tables']['orders']['Update']
+export type ProfileUpdate = Database['public']['Tables']['profiles']['Update']
+
+// Helper types complexes
+export type UserWithBranches = Profile & {
+  branches: Branch[]
+  creator?: Profile | null
+  email?: string // Email récupéré depuis auth.users
+}
 
 // Type étendu pour Order avec relations
 export interface OrderWithRelations extends Order {

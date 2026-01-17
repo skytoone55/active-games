@@ -122,7 +122,7 @@ export async function PUT(
     }
 
     // Préparer les updates
-    const updates: Record<string, any> = {}
+    const updates: ProfileUpdate = {}
 
     if (first_name !== undefined) {
       if (!first_name.trim()) {
@@ -219,11 +219,9 @@ export async function PUT(
 
     // Mettre à jour le profil
     if (Object.keys(updates).length > 0) {
-      // @ts-expect-error - updates peut contenir des champs dynamiques (first_name, last_name, phone)
-      // qui ne sont pas dans le type TypeScript mais existent dans la base de données
       const { error: updateError } = await supabase
         .from('profiles')
-        .update(updates)
+        .update(updates as ProfileUpdate)
         .eq('id', targetUserId)
 
       if (updateError) {

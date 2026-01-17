@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { LogOut, User, ChevronDown, Sun, Moon, Users, Calendar, Menu, X, ShoppingCart } from 'lucide-react'
+import { LogOut, User, ChevronDown, Sun, Moon, Users, Calendar, Menu, X, ShoppingCart, Shield } from 'lucide-react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
@@ -97,7 +97,7 @@ export function AdminHeader({
   }
 
   return (
-    <header className={`${theme === 'dark' ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'} border-b px-4 sm:px-6 py-4`}>
+    <header className={`sticky top-0 z-40 ${theme === 'dark' ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'} border-b px-4 sm:px-6 py-4 shadow-md`}>
       <div className="flex items-center justify-between">
         {/* Logos - À gauche */}
         <div className="flex items-center min-w-0 flex-shrink-0 gap-3">
@@ -176,6 +176,22 @@ export function AdminHeader({
               </span>
             )}
           </Link>
+          {/* Bouton Utilisateurs - visible uniquement pour super_admin et branch_admin */}
+          {(user.role === 'super_admin' || user.role === 'branch_admin') && (
+            <Link
+              href="/admin/users"
+              className={`px-4 py-2 rounded-lg transition-colors flex items-center gap-2 ${
+                pathname === '/admin/users'
+                  ? 'bg-blue-600 text-white'
+                  : theme === 'dark' 
+                    ? 'bg-gray-800 hover:bg-gray-700 text-gray-300'
+                    : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+              }`}
+            >
+              <Shield className="w-4 h-4" />
+              <span>Utilisateurs</span>
+            </Link>
+          )}
         </div>
 
         {/* Actions - À droite : Branch, Thème, Profil - Se rapprochent de l'Agenda quand on réduit */}
@@ -363,6 +379,23 @@ export function AdminHeader({
                   </span>
                 )}
               </Link>
+              {/* Bouton Utilisateurs mobile - visible uniquement pour super_admin et branch_admin */}
+              {(user.role === 'super_admin' || user.role === 'branch_admin') && (
+                <Link
+                  href="/admin/users"
+                  onClick={() => setShowMobileMenu(false)}
+                  className={`flex items-center gap-3 px-4 py-2 rounded-lg transition-colors ${
+                    pathname === '/admin/users'
+                      ? 'bg-blue-600 text-white'
+                      : theme === 'dark' 
+                        ? 'bg-gray-800 hover:bg-gray-700 text-gray-300'
+                        : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                  }`}
+                >
+                  <Shield className="w-4 h-4" />
+                  <span>Utilisateurs</span>
+                </Link>
+              )}
             </div>
 
             {/* Utilisateur mobile */}

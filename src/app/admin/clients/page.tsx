@@ -68,13 +68,17 @@ export default function ClientsPage() {
 
   // Rechercher les contacts
   const performSearch = useCallback(async () => {
-    if (!selectedBranch?.id) return
+    const branchToUse = selectedBranch || (branches.length > 0 ? branches[0] : null)
+    if (!branchToUse?.id) return
 
     setLoading(true)
     try {
+      const branchToUse = selectedBranch || (branches.length > 0 ? branches[0] : null)
+      if (!branchToUse) return
+      
       const result: SearchContactsResult = await searchContacts({
         query: searchQuery.trim() || undefined,
-        branchId: selectedBranch.id,
+        branchId: branchToUse.id,
         includeArchived: filterStatus === 'all' ? includeArchived : filterStatus === 'archived',
         status: filterStatus === 'all' ? undefined : filterStatus,
         source: filterSource === 'all' ? undefined : filterSource,
@@ -108,13 +112,14 @@ export default function ClientsPage() {
     } finally {
       setLoading(false)
     }
-  }, [searchQuery, includeArchived, page, selectedBranch?.id, sortField, sortDirection, filterStatus, filterSource])
+  }, [searchQuery, includeArchived, page, selectedBranch?.id, branches, sortField, sortDirection, filterStatus, filterSource])
 
   useEffect(() => {
-    if (selectedBranch?.id) {
+    const branchToUse = selectedBranch || (branches.length > 0 ? branches[0] : null)
+    if (branchToUse?.id) {
       performSearch()
     }
-  }, [performSearch, selectedBranch?.id])
+  }, [performSearch, selectedBranch?.id, branches])
 
   // Gérer l'archivage
   const handleArchive = (contact: Contact) => {
@@ -234,7 +239,10 @@ export default function ClientsPage() {
 
   const isDark = theme === 'dark'
 
-  if (authLoading || branchesLoading || !user || !selectedBranch) {
+  // Calculer effectiveSelectedBranch avec fallback
+  const effectiveSelectedBranch = selectedBranch || (branches.length > 0 ? branches[0] : null)
+
+  if (authLoading || branchesLoading || !user || !effectiveSelectedBranch) {
     return (
       <div className={`min-h-screen flex items-center justify-center ${isDark ? 'bg-gray-900' : 'bg-gray-100'}`}>
         <Loader2 className={`w-8 h-8 animate-spin ${isDark ? 'text-blue-400' : 'text-blue-600'}`} />
@@ -248,7 +256,7 @@ export default function ClientsPage() {
       <AdminHeader
         user={user}
         branches={branches}
-        selectedBranch={selectedBranch}
+        selectedBranch={effectiveSelectedBranch}
         onBranchSelect={selectBranch}
         onSignOut={handleSignOut}
         theme={theme}
@@ -267,7 +275,7 @@ export default function ClientsPage() {
                 ? 'bg-blue-600/20 text-blue-400'
                 : 'bg-blue-100 text-blue-700'
             }`}>
-              {selectedBranch.name}
+              {effectiveSelectedBranch.name}
             </span>
           </div>
           <div className="flex items-center gap-3">
@@ -691,7 +699,7 @@ export default function ClientsPage() {
       )}
 
       {/* Modal fusion contacts */}
-      {showMergeModal && selectedBranch && duplicatesToMerge.length >= 2 && (
+      {showMergeModal && effectiveSelectedBranch && duplicatesToMerge.length >= 2 && (
         <MergeContactsModal
           isOpen={showMergeModal}
           onClose={() => {
@@ -700,7 +708,7 @@ export default function ClientsPage() {
           }}
           contacts={duplicatesToMerge}
           onMergeComplete={performSearch}
-          branchId={selectedBranch.id}
+          branchId={effectiveSelectedBranch.id}
           isDark={isDark}
         />
       )}

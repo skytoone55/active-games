@@ -1,9 +1,10 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { X, Loader2, User, Phone, Mail, MessageSquare, Save } from 'lucide-react'
+import { X, Loader2, User, Phone, Mail, MessageSquare, Save, AlertCircle } from 'lucide-react'
 import { useContacts } from '@/hooks/useContacts'
 import type { Contact } from '@/lib/supabase/types'
+import { validateEmail, validateIsraeliPhone, formatIsraeliPhone, VALIDATION_MESSAGES } from '@/lib/validation'
 
 interface ClientModalProps {
   isOpen: boolean
@@ -31,6 +32,7 @@ export function ClientModal({
   const [notesClient, setNotesClient] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [validationErrors, setValidationErrors] = useState<{ phone?: string; email?: string }>({})
 
   // Initialiser les champs quand le modal s'ouvre ou que le contact change
   useEffect(() => {
@@ -69,15 +71,29 @@ export function ClientModal({
       return
     }
 
+    // Validation format téléphone
+    if (!validateIsraeliPhone(phone)) {
+      setError(VALIDATION_MESSAGES.phone.israeliFormat)
+      return
+    }
+
+    // Validation format email si renseigné
+    if (email.trim() && !validateEmail(email)) {
+      setError(VALIDATION_MESSAGES.email.invalid)
+      return
+    }
+
     setLoading(true)
 
     try {
+      const formattedPhone = formatIsraeliPhone(phone)
+      
       if (contact) {
         // Mise à jour
         const updated = await updateContact(contact.id, {
           first_name: firstName.trim(),
           last_name: lastName.trim() || null,
-          phone: phone.trim(),
+          phone: formattedPhone,
           email: email.trim() || null,
           notes_client: notesClient.trim() || null,
         })
@@ -94,7 +110,7 @@ export function ClientModal({
           branch_id_main: branchId,
           first_name: firstName.trim(),
           last_name: lastName.trim() || null,
-          phone: phone.trim(),
+          phone: formattedPhone,
           email: email.trim() || null,
           notes_client: notesClient.trim() || null,
           source: 'admin_agenda',
@@ -203,15 +219,33 @@ export function ClientModal({
               <input
                 type="tel"
                 value={phone}
-                onChange={(e) => setPhone(e.target.value)}
+                onChange={(e) => {
+                  const newPhone = e.target.value
+                  setPhone(newPhone)
+                  // Validation en temps réel
+                  if (newPhone.trim() && !validateIsraeliPhone(newPhone)) {
+                    setValidationErrors({ ...validationErrors, phone: VALIDATION_MESSAGES.phone.israeliFormat })
+                  } else {
+                    const { phone: _, ...rest } = validationErrors
+                    setValidationErrors(rest)
+                  }
+                }}
                 required
                 className={`w-full px-3 py-2 rounded-lg border ${
-                  isDark
+                  validationErrors.phone
+                    ? 'border-red-500'
+                    : isDark
                     ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-500'
                     : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'
                 } focus:outline-none focus:ring-2 focus:ring-blue-500`}
-                placeholder="05X XXX XXXX"
+                placeholder="05XXXXXXXX"
               />
+              {validationErrors.phone && (
+                <div className="flex items-center gap-1 mt-1 text-red-500 text-sm">
+                  <AlertCircle className="w-4 h-4" />
+                  <span>{validationErrors.phone}</span>
+                </div>
+              )}
             </div>
             <div>
               <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
@@ -221,14 +255,32 @@ export function ClientModal({
               <input
                 type="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => {
+                  const newEmail = e.target.value
+                  setEmail(newEmail)
+                  // Validation en temps réel
+                  if (newEmail.trim() && !validateEmail(newEmail)) {
+                    setValidationErrors({ ...validationErrors, email: VALIDATION_MESSAGES.email.invalid })
+                  } else {
+                    const { email: _, ...rest } = validationErrors
+                    setValidationErrors(rest)
+                  }
+                }}
                 className={`w-full px-3 py-2 rounded-lg border ${
-                  isDark
+                  validationErrors.email
+                    ? 'border-red-500'
+                    : isDark
                     ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-500'
                     : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'
                 } focus:outline-none focus:ring-2 focus:ring-blue-500`}
                 placeholder="email@exemple.com"
               />
+              {validationErrors.email && (
+                <div className="flex items-center gap-1 mt-1 text-red-500 text-sm">
+                  <AlertCircle className="w-4 h-4" />
+                  <span>{validationErrors.email}</span>
+                </div>
+              )}
             </div>
           </div>
 

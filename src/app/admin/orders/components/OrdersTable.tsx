@@ -219,7 +219,7 @@ export function OrdersTable({ orders, isDark, onCancel, onViewOrder, onViewClien
       case 'manually_confirmed':
         return { icon: CheckCircle, color: 'text-blue-600', bg: 'bg-blue-100 dark:bg-blue-900/30', label: 'Confirmé' }
       case 'cancelled':
-        return { icon: XCircle, color: 'text-gray-500', bg: 'bg-gray-100 dark:bg-gray-700', label: 'Annulé' }
+        return { icon: XCircle, color: 'text-red-600', bg: 'bg-gray-100 dark:bg-gray-700', label: 'Annulé' }
       default:
         return { icon: Clock, color: 'text-gray-500', bg: 'bg-gray-100', label: status }
     }

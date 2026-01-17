@@ -31,7 +31,28 @@ export default function AdminPage() {
   const [userData, setUserData] = useState<UserData | null>(null)
   // Utiliser useBranches pour partager la branche sélectionnée avec le CRM
   const branchesHook = useBranches()
-  const selectedBranchId = branchesHook.selectedBranchId
+  const branches = branchesHook.branches
+  const selectedBranchIdFromHook = branchesHook.selectedBranchId
+  
+  // Calculer effectiveSelectedBranchId AVANT useBookings pour éviter les problèmes de timing
+  // Si selectedBranchId n'est pas défini, utiliser la première branche disponible
+  const effectiveSelectedBranchId = selectedBranchIdFromHook || (branches.length > 0 ? branches[0]?.id : null)
+  
+  // Vérifier que selectedBranchIdFromHook est bien dans les branches autorisées
+  const isValidBranchId = selectedBranchIdFromHook && branches.some(b => b.id === selectedBranchIdFromHook)
+  const finalSelectedBranchId = isValidBranchId ? selectedBranchIdFromHook : (branches.length > 0 ? branches[0]?.id : null)
+  
+  // Synchroniser avec le hook si nécessaire
+  useEffect(() => {
+    if (finalSelectedBranchId && !selectedBranchIdFromHook && branches.length > 0) {
+      branchesHook.selectBranch(finalSelectedBranchId)
+    } else if (selectedBranchIdFromHook && !isValidBranchId && branches.length > 0) {
+      // Si la branche sauvegardée n'est plus autorisée, réinitialiser avec la première
+      branchesHook.selectBranch(branches[0].id)
+    }
+  }, [finalSelectedBranchId, selectedBranchIdFromHook, isValidBranchId, branches.length, branchesHook])
+  
+  const selectedBranchId = finalSelectedBranchId
   const setSelectedBranchId = (branchId: string | null) => {
     if (branchId) {
       branchesHook.selectBranch(branchId)
@@ -164,8 +185,7 @@ export default function AdminPage() {
     refresh: refreshAllBookings
   } = useBookings(selectedBranchId, undefined) // undefined = pas de filtre par date, on charge tout
 
-  // Utiliser les branches du hook principal (déjà appelé plus haut)
-  const branches = branchesHook.branches
+  // branches déjà défini plus haut
   const refreshBranches = branchesHook.refresh
 
   // Filtrer les réservations pour l'agenda du jour sélectionné
@@ -1927,7 +1947,7 @@ export default function AdminPage() {
 
   const selectedBranchFromUserData = userData.branches.find(b => b.id === selectedBranchId)
   // Récupérer le Branch complet depuis useBranches
-  const selectedBranch = branches.find(b => b.id === selectedBranchId) || null
+  const selectedBranch = branches.find(b => b.id === selectedBranchId) || (branches.length > 0 ? branches[0] : null)
   const isDark = theme === 'dark'
 
   // Conversion userData vers format AuthUser pour AdminHeader
@@ -2005,11 +2025,11 @@ export default function AdminPage() {
   return (
     <div className={`min-h-screen ${isDark ? 'bg-gray-900' : 'bg-gray-100'}`}>
       {/* Header avec navigation */}
-      {!loading && authUser && selectedBranch && (
+      {!loading && authUser && branches.length > 0 && (
         <AdminHeader
           user={authUser}
           branches={branches}
-          selectedBranch={selectedBranch}
+          selectedBranch={selectedBranch || branches[0]}
           onBranchSelect={(branchId) => {
             branchesHook.selectBranch(branchId) // Utiliser selectBranch du hook pour synchroniser avec le CRM
             setShowBranchMenu(false)
@@ -2085,7 +2105,7 @@ export default function AdminPage() {
                           <div className="flex-shrink-0">
                             <div
                               className="w-3 h-3 rounded-full"
-                              style={{ backgroundColor: booking.color || (booking.type === 'EVENT' ? '#22c55e' : '#3b82f6') }}
+                              style={{ backgroundColor: booking.status === 'CANCELLED' ? '#ef4444' : (booking.color || (booking.type === 'EVENT' ? '#22c55e' : '#3b82f6')) }}
                             />
                           </div>
                         </div>
@@ -2635,12 +2655,12 @@ export default function AdminPage() {
                         className={`cursor-pointer relative ${
                           booking
                             ? `flex items-center justify-center p-2 text-center`
-                            : `p-2 ${isDark ? 'hover:bg-gray-700/50' : 'hover:bg-gray-50'}`
+                            : `p-2 ${isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100'} transition-colors bg-transparent`
                         }`}
                         style={{
                           gridColumn: booking ? `${gridColumn} / ${gridColumn + colSpan}` : gridColumn,
                           gridRow: booking ? `${gridRow} / ${gridRow + rowSpan}` : gridRow,
-                          backgroundColor: booking ? (booking.color || (booking.type === 'EVENT' ? '#22c55e' : '#3b82f6')) : 'transparent',
+                          ...(booking && { backgroundColor: booking.color || (booking.type === 'EVENT' ? '#22c55e' : '#3b82f6') }),
                           // Quadrillage complet + contour gris pour les réservations
                           borderTop: shouldShowTopBorder ? `2px solid ${borderTopColor}` : 'none',
                           borderBottom: borderBottomColor !== 'none' ? `2px solid ${borderBottomColor}` : 'none',
@@ -2820,11 +2840,10 @@ export default function AdminPage() {
                                 <div
                                   key={`laser-cell-${timeIndex}-${roomIndex}`}
                                   onClick={() => openBookingModal(slot.hour, slot.minute, undefined, 'GAME', 'LASER')}
-                                  className={`cursor-pointer relative ${isDark ? 'hover:bg-gray-700/50' : 'hover:bg-gray-50'}`}
+                                  className={`cursor-pointer relative p-2 ${isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100'} transition-colors bg-transparent`}
                                   style={{
                                     gridColumn,
                                     gridRow,
-                                    backgroundColor: 'transparent',
                                     // Ne pas afficher borderTop si on est à l'intérieur d'une réservation
                                     borderTop: shouldShowTopBorder ? `2px solid ${isDark ? '#374151' : '#e5e7eb'}` : 'none',
                                     borderBottom: 'none',
@@ -3055,12 +3074,12 @@ export default function AdminPage() {
                         className={`cursor-pointer ${
                           booking
                             ? `flex flex-col items-center justify-center p-1 text-center`
-                            : `${isDark ? 'hover:bg-gray-700/50' : 'hover:bg-gray-50'}`
+                            : `p-1 ${isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100'} transition-colors bg-transparent`
                         }`}
                         style={{
                           gridColumn: segment ? `${gridColumn} / ${gridColumn + colSpan}` : gridColumn,
                           gridRow: segment ? `${gridRow} / ${gridRow + rowSpan}` : gridRow,
-                          backgroundColor: segment && booking ? (booking.color || '#22c55e') : 'transparent',
+                          ...(segment && booking && { backgroundColor: booking.color || '#22c55e' }),
                           // Quadrillage complet + contour gris pour les réservations
                           borderTop: borderTopColor !== 'none' ? `2px solid ${borderTopColor}` : 'none',
                           borderBottom: borderBottomColor !== 'none' ? `2px solid ${borderBottomColor}` : 'none',

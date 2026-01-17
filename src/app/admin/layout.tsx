@@ -53,12 +53,32 @@ export default function AdminLayout({
           setIsAuthenticated(true)
         } else if (event === 'SIGNED_OUT') {
           setIsAuthenticated(false)
+        } else if (event === 'TOKEN_REFRESHED') {
+          console.log('Session refreshed successfully')
+          setIsAuthenticated(true)
         }
       }
     )
 
+    // Refresh automatique de la session toutes les 5 minutes
+    const refreshInterval = setInterval(async () => {
+      const { data: { session }, error } = await supabase.auth.getSession()
+      if (session && !error) {
+        // La session existe, forcer un refresh
+        const { error: refreshError } = await supabase.auth.refreshSession()
+        if (refreshError) {
+          console.error('Erreur refresh session:', refreshError)
+          // Si le refresh échoue, rediriger vers login
+          setIsAuthenticated(false)
+        } else {
+          console.log('Session rafraîchie automatiquement')
+        }
+      }
+    }, 5 * 60 * 1000) // 5 minutes
+
     return () => {
       subscription.unsubscribe()
+      clearInterval(refreshInterval)
     }
   }, [pathname])
 
