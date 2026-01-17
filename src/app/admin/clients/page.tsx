@@ -239,7 +239,10 @@ export default function ClientsPage() {
 
   const isDark = theme === 'dark'
 
-  if (authLoading || branchesLoading || !user || !selectedBranch) {
+  // Calculer effectiveSelectedBranch avec fallback
+  const effectiveSelectedBranch = selectedBranch || (branches.length > 0 ? branches[0] : null)
+
+  if (authLoading || branchesLoading || !user || !effectiveSelectedBranch) {
     return (
       <div className={`min-h-screen flex items-center justify-center ${isDark ? 'bg-gray-900' : 'bg-gray-100'}`}>
         <Loader2 className={`w-8 h-8 animate-spin ${isDark ? 'text-blue-400' : 'text-blue-600'}`} />
