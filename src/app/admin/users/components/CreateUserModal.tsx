@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { X, Loader2, User, Phone, Mail, Shield, Building2, AlertCircle, Eye, EyeOff, Copy, Check } from 'lucide-react'
 import type { UserWithBranches, UserRole, Branch } from '@/lib/supabase/types'
 import { validateEmail, validateIsraeliPhone, VALIDATION_MESSAGES } from '@/lib/validation'
+import { CustomSelect } from '../../components/CustomSelect'
 
 interface CreateUserModalProps {
   isOpen: boolean
@@ -393,18 +394,12 @@ export function CreateUserModal({
               <Shield className="w-4 h-4 inline mr-1" />
               Rôle *
             </label>
-            <select
+            <CustomSelect
               value={role}
-              onChange={(e) => setRole(e.target.value as UserRole)}
-              required
-              className="w-full px-3 py-2 rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              {availableRoles.map(r => (
-                <option key={r.value} value={r.value}>
-                  {r.label}
-                </option>
-              ))}
-            </select>
+              onChange={(value) => setRole(value as UserRole)}
+              options={availableRoles}
+              isDark={isDark}
+            />
           </div>
 
           {/* Branches */}
