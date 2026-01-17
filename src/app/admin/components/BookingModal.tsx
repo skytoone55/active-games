@@ -500,34 +500,50 @@ export function BookingModal({
           if (editingBooking.type === 'GAME') {
             const firstSession = editingBooking.game_sessions[0]
             setGameArea(firstSession.game_area)
-            setNumberOfGames(editingBooking.game_sessions.length)
             
-            // Initialiser les durées et pauses
+            // IMPORTANT: Compter les session_order UNIQUES, pas le nombre total de sessions
+            // Car un jeu peut avoir plusieurs sessions (ex: 2 salles LASER pour un même jeu)
+            const sessions = editingBooking.game_sessions || []
+            const uniqueSessionOrders = [...new Set(sessions.map(s => s.session_order))].sort((a, b) => a - b)
+            setNumberOfGames(uniqueSessionOrders.length)
+            
+            // Initialiser les durées et pauses par JEU (groupé par session_order)
             const durations: string[] = []
             const pauses: number[] = []
             const roomIds: string[] = []
             
-            const sessions = editingBooking.game_sessions || []
-            sessions.forEach((session, index) => {
-              const sessionStart = new Date(session.start_datetime)
-              const sessionEnd = new Date(session.end_datetime)
+            uniqueSessionOrders.forEach((sessionOrder, index) => {
+              // Trouver toutes les sessions de ce jeu
+              const sessionsForThisGame = sessions.filter(s => s.session_order === sessionOrder)
+              if (sessionsForThisGame.length === 0) return
+              
+              // Prendre la première session pour les temps (toutes ont les mêmes heures)
+              const firstSessionOfGame = sessionsForThisGame[0]
+              const sessionStart = new Date(firstSessionOfGame.start_datetime)
+              const sessionEnd = new Date(firstSessionOfGame.end_datetime)
               const durationMs = sessionEnd.getTime() - sessionStart.getTime()
               const durationMinutes = Math.round(durationMs / (1000 * 60))
               durations.push(String(durationMinutes))
               
               // Calculer la pause "après" ce jeu en regardant l'écart avec le jeu suivant
-              if (index < sessions.length - 1) {
-                const nextSession = sessions[index + 1]
-                const nextSessionStart = new Date(nextSession.start_datetime)
-                const pauseMs = nextSessionStart.getTime() - sessionEnd.getTime()
-                const pauseMinutes = Math.round(pauseMs / (1000 * 60))
-                pauses.push(pauseMinutes)
+              if (index < uniqueSessionOrders.length - 1) {
+                const nextSessionOrder = uniqueSessionOrders[index + 1]
+                const nextSessions = sessions.filter(s => s.session_order === nextSessionOrder)
+                if (nextSessions.length > 0) {
+                  const nextSessionStart = new Date(nextSessions[0].start_datetime)
+                  const pauseMs = nextSessionStart.getTime() - sessionEnd.getTime()
+                  const pauseMinutes = Math.round(pauseMs / (1000 * 60))
+                  pauses.push(pauseMinutes)
+                }
               }
               // Pas de pause après le dernier jeu
               
-              if (session.laser_room_id) {
-                roomIds.push(session.laser_room_id)
-              }
+              // Collecter les room IDs pour ce jeu
+              sessionsForThisGame.forEach(s => {
+                if (s.laser_room_id) {
+                  roomIds.push(s.laser_room_id)
+                }
+              })
             })
             
             setGameDurations(durations)
