@@ -219,9 +219,10 @@ export async function PUT(
 
     // Mettre à jour le profil
     if (Object.keys(updates).length > 0) {
+      // @ts-ignore - Supabase typage strict ne permet pas les updates partiels dynamiques
       const { error: updateError } = await supabase
         .from('profiles')
-        .update(updates as ProfileUpdate)
+        .update(updates)
         .eq('id', targetUserId)
 
       if (updateError) {
