@@ -447,8 +447,6 @@ export function useBookings(branchId: string | null, date?: string) {
       
       if (data.reactivateOrderId) {
         // Réactivation: mettre à jour l'order existant
-        console.log('Reactivating order:', data.reactivateOrderId)
-        
         const updateData = {
             booking_id: newBooking.id,
             status: 'manually_confirmed',
@@ -471,9 +469,7 @@ export function useBookings(branchId: string | null, date?: string) {
           .eq('id', data.reactivateOrderId)
         
         if (updateOrderError) {
-          console.error('Order reactivation error:', updateOrderError.message)
-        } else {
-          console.log('Order reactivated successfully:', data.reactivateOrderId)
+          // Silent fail - order sync is not critical
         }
       } else {
         // Nouvelle création: créer une entrée dans orders
@@ -499,9 +495,7 @@ export function useBookings(branchId: string | null, date?: string) {
           terms_accepted_at: new Date().toISOString(),
         }
 
-        console.log('Creating order with data:', JSON.stringify(orderData, null, 2))
-
-        const { data: insertedOrder, error: orderError } = await supabase
+        const { error: orderError } = await supabase
           .from('orders')
           // @ts-expect-error - Supabase SSR typing limitation with insert
           .insert(orderData as OrderInsert)
@@ -509,9 +503,7 @@ export function useBookings(branchId: string | null, date?: string) {
           .single<Order>()
 
         if (orderError) {
-          console.error('Order creation error:', orderError.message, orderError.details, orderError.hint, orderError.code)
-        } else if (insertedOrder) {
-          console.log('Order created successfully:', insertedOrder.id)
+          // Silent fail - order sync is not critical
         }
       }
 

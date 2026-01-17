@@ -40,8 +40,10 @@ export async function GET(request: NextRequest) {
       )
     }
 
+    const userProfile = profile as { role: string; id: string; created_by?: string | null }
+
     // Vérifier les permissions (super_admin ou branch_admin)
-    if (profile.role !== 'super_admin' && profile.role !== 'branch_admin') {
+    if (userProfile.role !== 'super_admin' && userProfile.role !== 'branch_admin') {
       return NextResponse.json(
         { success: false, error: 'Permission refusée' },
         { status: 403 }
@@ -50,15 +52,15 @@ export async function GET(request: NextRequest) {
 
     let users: UserWithBranches[] = []
 
-    if (profile.role === 'super_admin') {
+    if (userProfile.role === 'super_admin') {
       // Super admin voit tous les utilisateurs
       const { data: allProfiles, error: usersError } = await supabase
         .from('profiles')
         .select('*')
         .order('created_at', { ascending: false })
+        .returns<Array<{ id: string; role: string; created_by?: string | null; first_name?: string; last_name?: string; phone?: string; created_at?: string }>>()
 
       if (usersError) {
-        console.error('Error fetching users:', usersError)
         return NextResponse.json(
           { success: false, error: 'Erreur lors de la récupération des utilisateurs' },
           { status: 500 }
@@ -69,34 +71,34 @@ export async function GET(request: NextRequest) {
       const serviceClient = createServiceRoleClient()
 
       // Pour chaque utilisateur, récupérer ses branches et son email
-      for (const userProfile of allProfiles || []) {
+      for (const profileData of allProfiles || []) {
         // Récupérer l'email depuis auth.users
-        const { data: authUser } = await serviceClient.auth.admin.getUserById(userProfile.id)
-        
+        const { data: authUser } = await serviceClient.auth.admin.getUserById(profileData.id)
+
         const { data: userBranches } = await supabase
           .from('user_branches')
           .select('branch_id, branches(*)')
-          .eq('user_id', userProfile.id)
+          .eq('user_id', profileData.id)
 
         const branches = (userBranches || []).map((ub: any) => ub.branches).filter(Boolean)
 
         // Récupérer le créateur
         let creator = null
-        if (userProfile.created_by) {
+        if (profileData.created_by) {
           const { data: creatorProfile } = await supabase
             .from('profiles')
             .select('*')
-            .eq('id', userProfile.created_by)
+            .eq('id', profileData.created_by)
             .single()
           creator = creatorProfile
         }
 
         users.push({
-          ...userProfile,
-          email: authUser?.user?.email || userProfile.id,
+          ...profileData,
+          email: authUser?.user?.email || profileData.id,
           branches,
           creator,
-        })
+        } as UserWithBranches)
       }
     } else {
       // Branch admin voit lui-même + tous les utilisateurs qui partagent au moins une branche
@@ -110,41 +112,43 @@ export async function GET(request: NextRequest) {
         // Même sans branches, le branch_admin doit se voir lui-même
         const serviceClient = createServiceRoleClient()
         const { data: authUser } = await serviceClient.auth.admin.getUserById(user.id)
-        
+
         // Récupérer le créateur si existe
         let creator = null
-        if (profile.created_by) {
+        if (userProfile.created_by) {
           const { data: creatorProfile } = await supabase
             .from('profiles')
             .select('*')
-            .eq('id', profile.created_by)
+            .eq('id', userProfile.created_by)
             .single()
           creator = creatorProfile
         }
-        
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const profileObj = profile as any
         users.push({
-          ...profile,
+          ...profileObj,
           email: authUser?.user?.email || user.id,
           branches: [],
           creator,
-        })
-        
+        } as UserWithBranches)
+
         return NextResponse.json(
           { success: true, users },
           { status: 200 }
         )
       }
 
-      const branchIds = adminBranches.map(b => b.branch_id)
+      const branchIds = adminBranches.map((b: { branch_id: string }) => b.branch_id)
 
       // 2. Récupérer tous les user_branches pour ces branches (sans profiles, car pas de FK directe)
       const { data: userBranchesData, error: userBranchesError } = await supabase
         .from('user_branches')
         .select('user_id, branch_id, branches(*)')
         .in('branch_id', branchIds)
+        .returns<Array<{ user_id: string; branch_id: string; branches: any }>>()
 
       if (userBranchesError) {
-        console.error('Error fetching user branches:', userBranchesError)
         return NextResponse.json(
           { success: false, error: 'Erreur lors de la récupération des utilisateurs' },
           { status: 500 }
@@ -162,9 +166,9 @@ export async function GET(request: NextRequest) {
         .from('profiles')
         .select('*')
         .in('id', userIds)
+        .returns<Array<{ id: string; role: string; created_by?: string | null; first_name?: string; last_name?: string; phone?: string; created_at?: string }>>()
 
       if (profilesError) {
-        console.error('Error fetching profiles:', profilesError)
         return NextResponse.json(
           { success: false, error: 'Erreur lors de la récupération des profils' },
           { status: 500 }
@@ -210,7 +214,7 @@ export async function GET(request: NextRequest) {
           email: authUser?.user?.email || userId,
           branches: userBranches as any[],
           creator,
-        })
+        } as UserWithBranches)
       }
 
       users = Array.from(userMap.values())
@@ -223,8 +227,7 @@ export async function GET(request: NextRequest) {
       },
       { status: 200 }
     )
-  } catch (error) {
-    console.error('Error in GET /api/admin/users:', error)
+  } catch {
     return NextResponse.json(
       { success: false, error: 'Erreur serveur' },
       { status: 500 }
@@ -278,8 +281,10 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    const userProfile = profile as { role: string; id: string }
+
     // Vérifier les permissions
-    if (profile.role !== 'super_admin' && profile.role !== 'branch_admin') {
+    if (userProfile.role !== 'super_admin' && userProfile.role !== 'branch_admin') {
       return NextResponse.json(
         { success: false, error: 'Permission refusée' },
         { status: 403 }
@@ -324,7 +329,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Si branch_admin, vérifier qu'il ne crée que des agents
-    if (profile.role === 'branch_admin' && role !== 'agent') {
+    if (userProfile.role === 'branch_admin' && role !== 'agent') {
       return NextResponse.json(
         { success: false, error: 'Les branch_admin ne peuvent créer que des agents' },
         { status: 403 }
@@ -332,14 +337,14 @@ export async function POST(request: NextRequest) {
     }
 
     // Si branch_admin, vérifier qu'il n'assigne que ses propres branches
-    if (profile.role === 'branch_admin') {
+    if (userProfile.role === 'branch_admin') {
       const { data: adminBranches } = await supabase
         .from('user_branches')
         .select('branch_id')
         .eq('user_id', user.id)
 
-      const adminBranchIds = (adminBranches || []).map(b => b.branch_id)
-      const invalidBranches = branch_ids.filter(id => !adminBranchIds.includes(id))
+      const adminBranchIds = (adminBranches || []).map((b: { branch_id: string }) => b.branch_id)
+      const invalidBranches = branch_ids.filter((id: string) => !adminBranchIds.includes(id))
 
       if (invalidBranches.length > 0) {
         // Récupérer les noms des branches invalides pour un message plus clair
@@ -348,10 +353,8 @@ export async function POST(request: NextRequest) {
           .select('name')
           .in('id', invalidBranches)
 
-        const branchNames = (invalidBranchNames || []).map(b => b.name).join(', ')
-        
-        console.error(`Branch admin ${user.id} attempted to assign unauthorized branches:`, invalidBranches)
-        
+        const branchNames = (invalidBranchNames || []).map((b: { name: string }) => b.name).join(', ')
+
         return NextResponse.json(
           { 
             success: false, 
@@ -374,7 +377,6 @@ export async function POST(request: NextRequest) {
     })
 
     if (createUserError || !newUser.user) {
-      console.error('Error creating user in Auth:', createUserError)
       return NextResponse.json(
         { success: false, error: createUserError?.message || 'Erreur lors de la création du compte' },
         { status: 500 }
@@ -382,7 +384,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Créer le profil
-    const { data: newProfile, error: profileInsertError } = await supabase
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: newProfile, error: profileInsertError } = await (supabase as any)
       .from('profiles')
       .insert({
         id: newUser.user.id,
@@ -396,7 +399,6 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (profileInsertError) {
-      console.error('Error creating profile:', profileInsertError)
       // Rollback: supprimer le user Auth
       await supabaseAdmin.auth.admin.deleteUser(newUser.user.id)
       return NextResponse.json(
@@ -406,17 +408,17 @@ export async function POST(request: NextRequest) {
     }
 
     // Créer les associations user_branches
-    const branchAssignments = branch_ids.map(branchId => ({
+    const branchAssignments = branch_ids.map((branchId: string) => ({
       user_id: newUser.user.id,
       branch_id: branchId,
     }))
 
-    const { error: branchAssignError } = await supabase
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error: branchAssignError } = await (supabase as any)
       .from('user_branches')
       .insert(branchAssignments)
 
     if (branchAssignError) {
-      console.error('Error assigning branches:', branchAssignError)
       // Rollback: supprimer profil et user Auth
       await supabase.from('profiles').delete().eq('id', newUser.user.id)
       await supabaseAdmin.auth.admin.deleteUser(newUser.user.id)
@@ -435,10 +437,10 @@ export async function POST(request: NextRequest) {
     const userBranches = (branches || []).map((ub: any) => ub.branches).filter(Boolean)
 
     const createdUser: UserWithBranches = {
-      ...newProfile,
+      ...(newProfile || {}),
       branches: userBranches,
-      creator: profile,
-    }
+      creator: profile || null,
+    } as UserWithBranches
 
     return NextResponse.json(
       {
@@ -448,8 +450,7 @@ export async function POST(request: NextRequest) {
       },
       { status: 201 }
     )
-  } catch (error) {
-    console.error('Error in POST /api/admin/users:', error)
+  } catch {
     return NextResponse.json(
       { success: false, error: 'Erreur serveur' },
       { status: 500 }

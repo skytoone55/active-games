@@ -199,19 +199,7 @@ export async function buildGameSessionsForAPI(params: {
       excludeId?: string
     ) => {
       const { findBestLaserRoomsForBooking } = await import('./laser-allocation')
-      
-      console.log('[buildGameSessionsForAPI] Calling laser allocation with:', {
-        participants,
-        start: start.toISOString(),
-        end: end.toISOString(),
-        laserRoomsCount: laserRooms?.length || 0,
-        settings: {
-          laser_exclusive_threshold: settings?.laser_exclusive_threshold || 10,
-          laser_total_vests: settings?.laser_total_vests || 30,
-          laser_spare_vests: settings?.laser_spare_vests || 0
-        }
-      })
-      
+
       const result = await findBestLaserRoomsForBooking({
         participants,
         startDateTime: start,
@@ -227,9 +215,7 @@ export async function buildGameSessionsForAPI(params: {
         excludeBookingId: excludeId,
         allocationMode: 'auto'
       })
-      
-      console.log('[buildGameSessionsForAPI] Laser allocation result:', result)
-      
+
       return result
     }
     

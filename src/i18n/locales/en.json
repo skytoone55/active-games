@@ -216,15 +216,6 @@
       "phone_placeholder": "Enter phone number",
       "email_placeholder": "Enter email (optional)",
       "special_request_placeholder": "If you have any special requests, please mention them here (optional)",
-      "event_type": "Event Type",
-      "event_type_placeholder": "Select event type",
-      "event_type_birthday": "Birthday",
-      "event_type_bar_mitzvah": "Bar/Bat Mitzvah",
-      "event_type_corporate": "Corporate",
-      "event_type_party": "Party",
-      "event_type_other": "Other",
-      "event_age": "Age",
-      "event_age_placeholder": "Age (optional)",
       "terms": {
         "label": "I have read and agree to the terms and rules",
         "read_terms": "Read terms and rules",
@@ -339,9 +330,7 @@
       "branch": "Branch:",
       "type": "Type:",
       "date": "Date:",
-      "time": "Time:",
-      "event_type": "Event Type:",
-      "event_age": "Age:"
+      "time": "Time:"
     }
   }
 }

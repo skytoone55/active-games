@@ -184,15 +184,6 @@
       "phone_placeholder": "Entrez le numéro de téléphone",
       "email_placeholder": "Entrez l'email (optionnel)",
       "special_request_placeholder": "Si vous avez des demandes particulières, veuillez les mentionner ici (optionnel)",
-      "event_type": "Type d'événement",
-      "event_type_placeholder": "Sélectionnez le type d'événement",
-      "event_type_birthday": "Anniversaire",
-      "event_type_bar_mitzvah": "Bar/Bat Mitzvah",
-      "event_type_corporate": "Entreprise",
-      "event_type_party": "Fête",
-      "event_type_other": "Autre",
-      "event_age": "Âge",
-      "event_age_placeholder": "Âge (optionnel)",
       "terms": {
         "label": "J'ai lu et j'accepte les conditions et règles",
         "read_terms": "Lire les conditions et règles",
@@ -307,9 +298,7 @@
       "branch": "Succursale:",
       "type": "Type:",
       "date": "Date:",
-      "time": "Heure:",
-      "event_type": "Type d'événement:",
-      "event_age": "Âge:"
+      "time": "Heure:"
     }
   }
 }

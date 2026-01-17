@@ -108,8 +108,8 @@ export async function PUT(
         .eq('user_id', targetUserId)
         .returns<Array<{ branch_id: string }>>()
 
-      const adminBranchIds = (adminBranches || []).map(b => b.branch_id)
-      const targetBranchIds = (targetBranches || []).map(b => b.branch_id)
+      const adminBranchIds = (adminBranches || []).map((b: { branch_id: string }) => b.branch_id)
+      const targetBranchIds = (targetBranches || []).map((b: { branch_id: string }) => b.branch_id)
 
       const hasCommonBranch = targetBranchIds.some(id => adminBranchIds.includes(id))
 
@@ -250,7 +250,7 @@ export async function PUT(
           .select('branch_id')
           .eq('user_id', user.id)
 
-        const adminBranchIds = (adminBranches || []).map(b => b.branch_id)
+        const adminBranchIds = (adminBranches || []).map((b: { branch_id: string }) => b.branch_id)
         const invalidBranches = branch_ids.filter(id => !adminBranchIds.includes(id))
 
         if (invalidBranches.length > 0) {
@@ -273,12 +273,12 @@ export async function PUT(
         branch_id: branchId,
       }))
 
-      const { error: branchAssignError } = await supabase
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error: branchAssignError } = await (supabase as any)
         .from('user_branches')
         .insert(branchAssignments)
 
       if (branchAssignError) {
-        console.error('Error assigning branches:', branchAssignError)
         return NextResponse.json(
           { success: false, error: 'Erreur lors de l\'assignation des branches' },
           { status: 500 }
@@ -304,14 +304,14 @@ export async function PUT(
       {
         success: true,
         user: {
-          ...updatedProfile,
+          ...(updatedProfile || {}),
           branches: userBranches,
         },
       },
       { status: 200 }
     )
   } catch (error) {
-    console.error('Error in PUT /api/admin/users/[id]:', error)
+    void error
     return NextResponse.json(
       { success: false, error: 'Erreur serveur' },
       { status: 500 }
@@ -402,8 +402,8 @@ export async function DELETE(
         .select('branch_id')
         .eq('user_id', targetUserId)
 
-      const adminBranchIds = (adminBranches || []).map(b => b.branch_id)
-      const targetBranchIds = (targetBranches || []).map(b => b.branch_id)
+      const adminBranchIds = (adminBranches || []).map((b: { branch_id: string }) => b.branch_id)
+      const targetBranchIds = (targetBranches || []).map((b: { branch_id: string }) => b.branch_id)
 
       const hasCommonBranch = targetBranchIds.some(id => adminBranchIds.includes(id))
 

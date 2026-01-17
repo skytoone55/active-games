@@ -216,15 +216,6 @@
       "phone_placeholder": "הזינו מספר טלפון",
       "email_placeholder": "הזינו אימייל (אופציונלי)",
       "special_request_placeholder": "אם יש לכם בקשה מיוחדת, אנא ציינו כאן (אופציונלי)",
-      "event_type": "סוג אירוע",
-      "event_type_placeholder": "בחרו סוג אירוע",
-      "event_type_birthday": "יום הולדת",
-      "event_type_bar_mitzvah": "בר/בת מצווה",
-      "event_type_corporate": "חברה",
-      "event_type_party": "מסיבה",
-      "event_type_other": "אחר",
-      "event_age": "גיל",
-      "event_age_placeholder": "גיל (אופציונלי)",
       "terms": {
         "label": "אני קראתי ואני מסכים לתנאים והכללים",
         "read_terms": "קרא את התנאים והכללים",
@@ -346,9 +337,7 @@
       "branch": "סניף:",
       "type": "סוג:",
       "date": "תאריך:",
-      "time": "שעה:",
-      "event_type": "סוג אירוע:",
-      "event_age": "גיל:"
+      "time": "שעה:"
     }
   }
 }

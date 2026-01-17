@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
-import { MapPin, Calendar, Clock, ChevronRight, ChevronLeft, Check, Users, Gamepad2, User, Phone, Mail, MessageSquare, FileText, ExternalLink, X, Home, Cake, Download, Target, Zap, AlertCircle } from 'lucide-react'
+import { MapPin, Calendar, Clock, ChevronRight, ChevronLeft, Check, Users, Gamepad2, User, Phone, Mail, MessageSquare, FileText, ExternalLink, X, Home, Cake, Target, Zap, AlertCircle } from 'lucide-react'
 import { getTranslations, getDirection, Locale, defaultLocale } from '@/i18n'
 import { Header, Footer } from '@/components'
 import { validateEmail, validateIsraeliPhone, formatIsraeliPhone, VALIDATION_MESSAGES } from '@/lib/validation'
@@ -79,9 +79,7 @@ export default function ReservationPage() {
   const getAvailableDates = () => {
     const dates: string[] = []
     const today = new Date()
-    
-    console.log('[getAvailableDates] Today RAW:', today.toString())
-    
+
     // Start from TODAY (i=0), not tomorrow
     for (let i = 0; i <= 365; i++) {
       const date = new Date(today)
@@ -93,9 +91,7 @@ export default function ReservationPage() {
       const day = String(date.getDate()).padStart(2, '0')
       dates.push(`${year}-${month}-${day}`)
     }
-    
-    console.log('[getAvailableDates] First 3 dates:', dates.slice(0, 3))
-    
+
     return dates
   }
 
@@ -112,9 +108,7 @@ export default function ReservationPage() {
       }
       grouped[monthKey].push(date)
     })
-    
-    console.log('[getDatesByMonth] Grouped keys:', Object.keys(grouped).slice(0, 3))
-    
+
     return grouped
   }
 
@@ -159,9 +153,7 @@ export default function ReservationPage() {
     const selectedDateStr = bookingData.date // Format: "YYYY-MM-DD"
     const todayStr = now.toISOString().split('T')[0]
     const isToday = selectedDateStr === todayStr
-    
-    console.log('[getAvailableTimes] Now:', now.toISOString(), 'Selected date:', selectedDateStr, 'IsToday:', isToday)
-    
+
     for (let hour = 10; hour <= 23; hour++) {
       // Add :00
       const time00 = `${hour.toString().padStart(2, '0')}:00`
@@ -190,9 +182,7 @@ export default function ReservationPage() {
         }
       }
     }
-    
-    console.log('[getAvailableTimes] Generated', times.length, 'time slots, first:', times[0], 'last:', times[times.length - 1])
-    
+
     return times
   }
 
@@ -304,37 +294,31 @@ export default function ReservationPage() {
   const handleConfirm = async () => {
     // Protection double-click
     if (isSubmitting) {
-      console.log('[handleConfirm] Already submitting, ignoring click')
       return
     }
-    
+
     setIsSubmitting(true)
     try {
       // D'abord, récupérer le branch_id depuis le nom de la branche
       const branchesResponse = await fetch('/api/branches')
       const branchesData = await branchesResponse.json()
-      
-      console.log('[handleConfirm] Booking branch:', bookingData.branch)
-      console.log('[handleConfirm] Branches from API:', branchesData.branches)
-      
+
       if (!branchesData.success || !branchesData.branches || branchesData.branches.length === 0) {
-        console.error('[handleConfirm] No branches found in API response')
         alert('Aucune branche disponible. Veuillez contacter le support.')
         setIsSubmitting(false)
         return
       }
-      
+
       if (!bookingData.branch) {
-        console.error('[handleConfirm] No branch selected in booking data')
         alert('Veuillez sélectionner une branche.')
         setIsSubmitting(false)
         return
       }
-      
+
       // Trouver la branche par son nom ou slug (case insensitive, comparaison exacte ou partielle)
       const branchNameLower = bookingData.branch.toLowerCase().trim()
       const selectedBranch = branchesData.branches?.find((b: { name: string; slug: string }) => {
-        const nameMatch = b.name?.toLowerCase().trim() === branchNameLower || 
+        const nameMatch = b.name?.toLowerCase().trim() === branchNameLower ||
                           b.name?.toLowerCase().trim().includes(branchNameLower) ||
                           branchNameLower.includes(b.name?.toLowerCase().trim() || '')
         const slugMatch = b.slug?.toLowerCase().trim() === branchNameLower ||
@@ -342,17 +326,14 @@ export default function ReservationPage() {
                           branchNameLower.includes(b.slug?.toLowerCase().trim() || '')
         return nameMatch || slugMatch
       })
-      
+
       if (!selectedBranch) {
-        console.error('[handleConfirm] Branch not found. Search:', branchNameLower, 'Available:', branchesData.branches.map((b: any) => ({ name: b.name, slug: b.slug })))
         alert(`Branche "${bookingData.branch}" non trouvée. Veuillez réessayer.`)
         setIsSubmitting(false)
         return
       }
-      
-      console.log('[handleConfirm] Selected branch:', selectedBranch)
-      
-        // Utiliser le gameArea sélectionné par l'utilisateur
+
+      // Utiliser le gameArea sélectionné par l'utilisateur
       let gameArea: 'ACTIVE' | 'LASER' | null = null
       let customerNotes = bookingData.specialRequest || ''
       
@@ -393,9 +374,7 @@ export default function ReservationPage() {
       })
       
       const result = await response.json()
-      
-      console.log('[handleConfirm] API result:', result)
-      
+
       if (result.success) {
         // L'API retourne directement reference, status, message
         setReservationNumber(result.reference)
@@ -1512,20 +1491,6 @@ export default function ReservationPage() {
                   </div>
                 </div>
 
-                {/* Download Button */}
-                <div className="flex justify-center items-center mb-6">
-                  <button
-                    onClick={() => {
-                      // TODO: Generate and download reservation/order PDF
-                      console.log('Download reservation/order:', bookingData)
-                    }}
-                    className="glow-button inline-flex items-center gap-2"
-                  >
-                    <Download className="w-5 h-5" />
-                    {translations.booking?.confirmation?.download_reservation || 'Download Reservation'}
-                  </button>
-                </div>
-
                 {/* Back to Site Button */}
                 <Link
                   href="/"
@@ -1560,12 +1525,12 @@ export default function ReservationPage() {
               onClick={handleConfirm}
               disabled={
                 isSubmitting ||
-                !bookingData.firstName || 
-                !bookingData.lastName || 
-                !bookingData.phone || 
+                !bookingData.firstName ||
+                !bookingData.lastName ||
+                !bookingData.phone ||
                 !bookingData.termsAccepted ||
                 !!validationErrors.phone ||
-                (bookingData.email && !!validationErrors.email)
+                !!(bookingData.email && validationErrors.email)
               }
               className={`inline-flex items-center gap-2 px-6 py-3 rounded-xl transition-all duration-300 ${
                 !isSubmitting &&

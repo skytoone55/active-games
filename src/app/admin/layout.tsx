@@ -31,12 +31,10 @@ export default function AdminLayout({
         
         if (error || !user) {
           setIsAuthenticated(false)
-          console.log('No authenticated user found')
         } else {
           setIsAuthenticated(true)
         }
-      } catch (err) {
-        console.error('Error checking auth:', err)
+      } catch {
         setIsAuthenticated(false)
       } finally {
         setIsChecking(false)
@@ -54,7 +52,6 @@ export default function AdminLayout({
         } else if (event === 'SIGNED_OUT') {
           setIsAuthenticated(false)
         } else if (event === 'TOKEN_REFRESHED') {
-          console.log('Session refreshed successfully')
           setIsAuthenticated(true)
         }
       }
@@ -67,11 +64,8 @@ export default function AdminLayout({
         // La session existe, forcer un refresh
         const { error: refreshError } = await supabase.auth.refreshSession()
         if (refreshError) {
-          console.error('Erreur refresh session:', refreshError)
           // Si le refresh échoue, rediriger vers login
           setIsAuthenticated(false)
-        } else {
-          console.log('Session rafraîchie automatiquement')
         }
       }
     }, 5 * 60 * 1000) // 5 minutes

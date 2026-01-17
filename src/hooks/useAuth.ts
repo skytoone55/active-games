@@ -36,10 +36,14 @@ export function useAuth() {
 
       // Si le profil n'existe pas (code PGRST116 = no rows), le créer
       if (profileError && profileError.code === 'PGRST116') {
+        const userName = authUser.email?.split('@')[0] || 'Admin'
         const profileData: ProfileInsert = {
           id: authUser.id,
           role: 'super_admin', // Premier utilisateur = super_admin
-          full_name: authUser.email?.split('@')[0] || 'Admin',
+          first_name: userName,
+          last_name: '',
+          phone: '0500000000', // Placeholder phone - super admin should update later
+          full_name: userName,
         }
         const { data: newProfile, error: createError } = await supabase
           .from('profiles')
@@ -49,7 +53,6 @@ export function useAuth() {
           .single<Profile>()
 
         if (createError) {
-          console.error('Error creating profile:', createError)
           throw createError
         }
         profile = newProfile

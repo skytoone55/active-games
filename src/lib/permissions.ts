@@ -109,24 +109,26 @@ export async function canManageUser(
       .from('user_branches')
       .select('branch_id')
       .eq('user_id', currentUserId)
+      .returns<Array<{ branch_id: string }>>()
 
     if (!adminBranches || adminBranches.length === 0) {
       return false
     }
 
-    const adminBranchIds = adminBranches.map(b => b.branch_id)
+    const adminBranchIds = adminBranches.map((b: { branch_id: string }) => b.branch_id)
 
     // Récupérer les branches de l'utilisateur cible
     const { data: targetBranches } = await supabase
       .from('user_branches')
       .select('branch_id')
       .eq('user_id', targetUserId)
+      .returns<Array<{ branch_id: string }>>()
 
     if (!targetBranches || targetBranches.length === 0) {
       return false
     }
 
-    const targetBranchIds = targetBranches.map(b => b.branch_id)
+    const targetBranchIds = targetBranches.map((b: { branch_id: string }) => b.branch_id)
 
     // Vérifier s'il y a au moins une branche en commun
     return targetBranchIds.some(id => adminBranchIds.includes(id))
