@@ -696,7 +696,7 @@ export default function ClientsPage() {
       )}
 
       {/* Modal fusion contacts */}
-      {showMergeModal && selectedBranch && duplicatesToMerge.length >= 2 && (
+      {showMergeModal && effectiveSelectedBranch && duplicatesToMerge.length >= 2 && (
         <MergeContactsModal
           isOpen={showMergeModal}
           onClose={() => {
@@ -705,7 +705,7 @@ export default function ClientsPage() {
           }}
           contacts={duplicatesToMerge}
           onMergeComplete={performSearch}
-          branchId={selectedBranch.id}
+          branchId={effectiveSelectedBranch.id}
           isDark={isDark}
         />
       )}
