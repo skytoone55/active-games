@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { getClient } from '@/lib/supabase/client'
-import { Loader2, Lock, Mail, AlertCircle } from 'lucide-react'
+import { Loader2, Lock as LockIcon, Mail, AlertCircle } from 'lucide-react'
 import Image from 'next/image'
 
 export default function LoginPage() {
@@ -101,7 +101,7 @@ export default function LoginPage() {
               Mot de passe
             </label>
             <div className="relative">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
+              <LockIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
               <input
                 id="password"
                 type="password"
