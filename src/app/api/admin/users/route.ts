@@ -137,10 +137,10 @@ export async function GET(request: NextRequest) {
 
       const branchIds = adminBranches.map(b => b.branch_id)
 
-      // 2. Récupérer tous les utilisateurs assignés à ces branches (y compris le branch_admin lui-même)
+      // 2. Récupérer tous les user_branches pour ces branches (sans profiles, car pas de FK directe)
       const { data: userBranchesData, error: userBranchesError } = await supabase
         .from('user_branches')
-        .select('user_id, branch_id, branches(*), profiles(*)')
+        .select('user_id, branch_id, branches(*)')
         .in('branch_id', branchIds)
 
       if (userBranchesError) {
@@ -151,78 +151,66 @@ export async function GET(request: NextRequest) {
         )
       }
 
-      // 3. Grouper par utilisateur (inclure le branch_admin lui-même même s'il n'a pas de user_branches)
+      // 3. Extraire les user_ids uniques (y compris le branch_admin lui-même)
+      const userIds = Array.from(new Set([
+        user.id, // S'assurer que le branch_admin est inclus
+        ...(userBranchesData || []).map(ub => ub.user_id)
+      ]))
+
+      // 4. Récupérer tous les profiles de ces utilisateurs
+      const { data: userProfiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('*')
+        .in('id', userIds)
+
+      if (profilesError) {
+        console.error('Error fetching profiles:', profilesError)
+        return NextResponse.json(
+          { success: false, error: 'Erreur lors de la récupération des profils' },
+          { status: 500 }
+        )
+      }
+
+      // 5. Créer un Map pour accéder rapidement aux profiles
+      const profilesMap = new Map((userProfiles || []).map(p => [p.id, p]))
+
+      // 6. Grouper par utilisateur
       const userMap = new Map<string, UserWithBranches>()
       
       // Créer un client service role pour récupérer les emails
       const serviceClient = createServiceRoleClient()
       
-      // D'abord, ajouter le branch_admin lui-même
-      const { data: authUserSelf } = await serviceClient.auth.admin.getUserById(user.id)
-      const adminBranchesFull = await Promise.all(
-        branchIds.map(async (branchId) => {
-          const { data: branch } = await supabase
-            .from('branches')
+      // Pour chaque utilisateur, construire l'objet UserWithBranches
+      for (const userId of userIds) {
+        const userProfile = profilesMap.get(userId)
+        if (!userProfile) continue
+
+        // Récupérer l'email depuis auth.users
+        const { data: authUser } = await serviceClient.auth.admin.getUserById(userId)
+        
+        // Récupérer les branches de cet utilisateur depuis userBranchesData
+        const userBranches = (userBranchesData || [])
+          .filter(ub => ub.user_id === userId)
+          .map(ub => ub.branches)
+          .filter(Boolean)
+
+        // Récupérer le créateur
+        let creator = null
+        if (userProfile.created_by) {
+          const { data: creatorProfile } = await supabase
+            .from('profiles')
             .select('*')
-            .eq('id', branchId)
+            .eq('id', userProfile.created_by)
             .single()
-          return branch
+          creator = creatorProfile
+        }
+
+        userMap.set(userId, {
+          ...userProfile,
+          email: authUser?.user?.email || userId,
+          branches: userBranches as any[],
+          creator,
         })
-      )
-      
-      // Récupérer le créateur du branch_admin
-      let creatorSelf = null
-      if (profile.created_by) {
-        const { data: creatorProfile } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', profile.created_by)
-          .single()
-        creatorSelf = creatorProfile
-      }
-      
-      userMap.set(user.id, {
-        ...profile,
-        email: authUserSelf?.user?.email || user.id,
-        branches: adminBranchesFull.filter(Boolean) as any[],
-        creator: creatorSelf,
-      })
-      
-      // Ensuite, ajouter tous les autres utilisateurs qui partagent des branches
-      for (const ub of userBranchesData || []) {
-        if (!ub.profiles) continue
-
-        const userId = ub.user_id
-        // Si c'est déjà le branch_admin, on skip (déjà ajouté)
-        if (userId === user.id) continue
-        
-        if (!userMap.has(userId)) {
-          // Récupérer l'email depuis auth.users
-          const { data: authUser } = await serviceClient.auth.admin.getUserById(userId)
-          
-          // Récupérer le créateur
-          let creator = null
-          if (ub.profiles.created_by) {
-            const { data: creatorProfile } = await supabase
-              .from('profiles')
-              .select('*')
-              .eq('id', ub.profiles.created_by)
-              .single()
-            creator = creatorProfile
-          }
-
-          userMap.set(userId, {
-            ...ub.profiles,
-            email: authUser?.user?.email || userId,
-            branches: [],
-            creator,
-          })
-        }
-        
-        const userWithBranches = userMap.get(userId)!
-        if (ub.branches && !userWithBranches.branches.find(b => b.id === ub.branches.id)) {
-          userWithBranches.branches.push(ub.branches)
-        }
       }
 
       users = Array.from(userMap.values())
