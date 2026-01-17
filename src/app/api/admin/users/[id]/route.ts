@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { validateEmail, validateIsraeliPhone, formatIsraeliPhone } from '@/lib/validation'
-import type { UserRole, Profile } from '@/lib/supabase/types'
+import type { UserRole, Profile, ProfileUpdate } from '@/lib/supabase/types'
 
 /**
  * PUT /api/admin/users/[id]
@@ -122,7 +122,7 @@ export async function PUT(
     }
 
     // Préparer les updates
-    const updates: any = {}
+    const updates: ProfileUpdate = {}
 
     if (first_name !== undefined) {
       if (!first_name.trim()) {
