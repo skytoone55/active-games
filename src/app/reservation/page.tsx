@@ -289,17 +289,43 @@ export default function ReservationPage() {
       const branchesResponse = await fetch('/api/branches')
       const branchesData = await branchesResponse.json()
       
-      // Trouver la branche par son nom (case insensitive)
-      const selectedBranch = branchesData.branches?.find((b: { name: string; slug: string }) => 
-        b.name.toLowerCase().includes(bookingData.branch?.toLowerCase() || '') ||
-        b.slug.toLowerCase().includes(bookingData.branch?.toLowerCase() || '')
-      )
+      console.log('[handleConfirm] Booking branch:', bookingData.branch)
+      console.log('[handleConfirm] Branches from API:', branchesData.branches)
       
-      if (!selectedBranch) {
-        alert('Branche non trouvée. Veuillez réessayer.')
+      if (!branchesData.success || !branchesData.branches || branchesData.branches.length === 0) {
+        console.error('[handleConfirm] No branches found in API response')
+        alert('Aucune branche disponible. Veuillez contacter le support.')
         setIsSubmitting(false)
         return
       }
+      
+      if (!bookingData.branch) {
+        console.error('[handleConfirm] No branch selected in booking data')
+        alert('Veuillez sélectionner une branche.')
+        setIsSubmitting(false)
+        return
+      }
+      
+      // Trouver la branche par son nom ou slug (case insensitive, comparaison exacte ou partielle)
+      const branchNameLower = bookingData.branch.toLowerCase().trim()
+      const selectedBranch = branchesData.branches?.find((b: { name: string; slug: string }) => {
+        const nameMatch = b.name?.toLowerCase().trim() === branchNameLower || 
+                          b.name?.toLowerCase().trim().includes(branchNameLower) ||
+                          branchNameLower.includes(b.name?.toLowerCase().trim() || '')
+        const slugMatch = b.slug?.toLowerCase().trim() === branchNameLower ||
+                          b.slug?.toLowerCase().trim().includes(branchNameLower) ||
+                          branchNameLower.includes(b.slug?.toLowerCase().trim() || '')
+        return nameMatch || slugMatch
+      })
+      
+      if (!selectedBranch) {
+        console.error('[handleConfirm] Branch not found. Search:', branchNameLower, 'Available:', branchesData.branches.map((b: any) => ({ name: b.name, slug: b.slug })))
+        alert(`Branche "${bookingData.branch}" non trouvée. Veuillez réessayer.`)
+        setIsSubmitting(false)
+        return
+      }
+      
+      console.log('[handleConfirm] Selected branch:', selectedBranch)
       
         // Utiliser le gameArea sélectionné par l'utilisateur
       let gameArea: 'ACTIVE' | 'LASER' | null = null
