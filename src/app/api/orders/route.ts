@@ -155,12 +155,24 @@ export async function POST(request: NextRequest) {
     }
     
     const gameDuration = settings.game_duration_minutes || 30
+    const pauseDuration = 30 // 30 min de pause entre les jeux (comme admin)
     
     // 3. Construire les dates/heures du booking
     const startDateTime = new Date(`${requested_date}T${requested_time}`)
-    const endDateTime = new Date(startDateTime.getTime() + (number_of_games * gameDuration * 60000))
     
-    console.log('[POST /api/orders] Booking timespan:', startDateTime.toISOString(), 'to', endDateTime.toISOString())
+    // Calculer la durée totale incluant les pauses
+    // Pour LASER : jeux × durée + (jeux - 1) × pause
+    // Pour ACTIVE : jeux × durée (pas de pause par défaut dans l'admin)
+    let totalDuration: number
+    if (game_area === 'LASER' && number_of_games > 1) {
+      totalDuration = (number_of_games * gameDuration) + ((number_of_games - 1) * pauseDuration)
+    } else {
+      totalDuration = number_of_games * gameDuration
+    }
+    
+    const endDateTime = new Date(startDateTime.getTime() + (totalDuration * 60000))
+    
+    console.log('[POST /api/orders] Booking timespan:', startDateTime.toISOString(), 'to', endDateTime.toISOString(), 'Total duration:', totalDuration, 'min')
     
     // 4. Construire les sessions avec session-builder (MÊME LOGIQUE QUE ADMIN)
     const { buildGameSessionsForAPI } = await import('@/lib/session-builder')
@@ -295,21 +307,34 @@ export async function POST(request: NextRequest) {
       is_primary: true
     })
     
-    // 7. Créer les slots
+    // 7. Créer les slots (basés sur les sessions créées)
+    // Pour être cohérent, on utilise les sessions pour définir les slots
     const slots = []
-    let slotTime = new Date(startDateTime)
     
-    for (let i = 0; i < number_of_games; i++) {
-      const slotEnd = new Date(slotTime.getTime() + gameDuration * 60000)
-      slots.push({
-        booking_id: booking.id,
-        branch_id,
-        slot_start: slotTime.toISOString(),
-        slot_end: slotEnd.toISOString(),
-        participants_count,
-        slot_type: 'game_zone'
-      })
-      slotTime = slotEnd
+    if (sessionResult.game_sessions.length > 0) {
+      // Grouper les sessions par session_order (chaque jeu)
+      const sessionsByOrder = new Map<number, typeof sessionResult.game_sessions>()
+      for (const session of sessionResult.game_sessions) {
+        if (!sessionsByOrder.has(session.session_order)) {
+          sessionsByOrder.set(session.session_order, [])
+        }
+        sessionsByOrder.get(session.session_order)!.push(session)
+      }
+      
+      // Créer un slot par jeu (session_order)
+      for (const [, sessions] of sessionsByOrder) {
+        if (sessions.length > 0) {
+          const firstSession = sessions[0]
+          slots.push({
+            booking_id: booking.id,
+            branch_id,
+            slot_start: firstSession.start_datetime,
+            slot_end: firstSession.end_datetime,
+            participants_count,
+            slot_type: 'game_zone'
+          })
+        }
+      }
     }
     
     if (slots.length > 0) {

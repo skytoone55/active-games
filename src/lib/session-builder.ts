@@ -127,8 +127,13 @@ export async function buildGameSessions(
         })
       })
       
-      // Prochain jeu commence directement après (pas de pause par défaut site)
-      currentStart = sessionEnd
+      // Prochain jeu commence après la pause (30 min par défaut, comme l'admin)
+      // IDENTIQUE à BookingModal ligne 1328-1332
+      const pauseAfter = i < numberOfGames - 1 ? 30 : 0 // 30 min pause entre les jeux
+      currentStart = new Date(sessionEnd)
+      if (pauseAfter > 0) {
+        currentStart.setMinutes(currentStart.getMinutes() + pauseAfter)
+      }
     }
   }
 
