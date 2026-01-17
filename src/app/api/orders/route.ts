@@ -250,9 +250,16 @@ async function checkAvailability(
     console.log(`[checkAvailability] LASER: ${participantsCount} participants, need ${roomsNeeded} rooms, ${availableRooms.length} available`)
     
     if (roomsNeeded <= availableRooms.length) {
-      // Prendre les salles nécessaires (par ordre de capacité décroissante)
-      const sortedRooms = [...availableRooms].sort((a, b) => (b.capacity || 12) - (a.capacity || 12))
+      // Prendre les salles nécessaires (par ordre de capacité CROISSANTE)
+      // Plus petite salle suffisante en premier pour optimiser l'espace
+      const sortedRooms = [...availableRooms].sort((a, b) => {
+        if (a.capacity !== b.capacity) {
+          return (a.capacity || 12) - (b.capacity || 12) // CROISSANT: L1(15) avant L2(20)
+        }
+        return (a.sort_order || 0) - (b.sort_order || 0)
+      })
       const selectedRoomIds = sortedRooms.slice(0, roomsNeeded).map(r => r.id)
+      console.log(`[checkAvailability] Selected rooms:`, sortedRooms.slice(0, roomsNeeded).map(r => `${r.name}(${r.capacity})`))
       return { available: true, laserRoomIds: selectedRoomIds }
     }
     
