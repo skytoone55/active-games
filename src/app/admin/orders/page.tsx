@@ -60,7 +60,6 @@ export default function OrdersPage() {
     error, 
     stats, 
     pendingCount,
-    confirmOrder, 
     cancelOrder
   } = useOrders(selectedBranchId)
 
@@ -194,19 +193,6 @@ export default function OrdersPage() {
     if (orderType === 'EVENT') return PartyPopper
     if (gameArea === 'LASER') return Target
     return Gamepad2
-  }
-
-  const handleConfirm = (orderId: string) => {
-    setConfirmModal({
-      isOpen: true,
-      title: 'Confirmer la commande',
-      message: 'Voulez-vous confirmer cette commande et créer la réservation ?',
-      type: 'success',
-      onConfirm: async () => {
-        await confirmOrder(orderId)
-        closeOrderModal()
-      }
-    })
   }
 
   const handleCancel = (orderId: string) => {
@@ -464,7 +450,6 @@ export default function OrdersPage() {
           <OrdersTable
             orders={filteredOrders}
             isDark={isDark}
-            onConfirm={handleConfirm}
             onCancel={handleCancel}
             onViewOrder={handleViewOrder}
             onViewClient={handleViewClient}
@@ -477,7 +462,6 @@ export default function OrdersPage() {
         <OrderDetailModal
           order={selectedOrder}
           onClose={closeOrderModal}
-          onConfirm={handleConfirm}
           onCancel={handleCancel}
           onRecreate={handleReactivate}
           onGoToAgenda={handleGoToAgenda}

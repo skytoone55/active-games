@@ -73,30 +73,6 @@ export function useOrders(branchId: string | null) {
     fetchOrders()
   }, [fetchOrders])
 
-  // Confirmer une commande manuellement
-  const confirmOrder = useCallback(async (orderId: string): Promise<boolean> => {
-    setError(null)
-    try {
-      const response = await fetch(`/api/orders/${orderId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'confirm' })
-      })
-
-      const data = await response.json()
-      if (!data.success) {
-        throw new Error(data.error || 'Failed to confirm order')
-      }
-
-      await fetchOrders()
-      return true
-    } catch (err) {
-      console.error('Error confirming order:', err)
-      setError('Erreur lors de la confirmation')
-      return false
-    }
-  }, [fetchOrders])
-
   // Annuler une commande
   const cancelOrder = useCallback(async (orderId: string): Promise<boolean> => {
     setError(null)
@@ -150,7 +126,6 @@ export function useOrders(branchId: string | null) {
     pendingCount,
     stats,
     fetchOrders,
-    confirmOrder,
     cancelOrder,
     deleteOrder,
     refresh: fetchOrders

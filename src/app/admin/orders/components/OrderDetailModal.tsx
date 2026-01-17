@@ -24,7 +24,6 @@ import type { OrderWithRelations } from '@/lib/supabase/types'
 interface OrderDetailModalProps {
   order: OrderWithRelations
   onClose: () => void
-  onConfirm: (orderId: string) => void
   onCancel: (orderId: string) => void
   onRecreate?: (orderId: string) => void
   onGoToAgenda: (date: string, bookingId?: string) => void
@@ -35,7 +34,6 @@ interface OrderDetailModalProps {
 export function OrderDetailModal({
   order,
   onClose,
-  onConfirm,
   onCancel,
   onRecreate,
   onGoToAgenda,
@@ -377,16 +375,18 @@ export function OrderDetailModal({
                   Actions
                 </h3>
                 <div className="space-y-2">
-                  <button
-                    onClick={() => {
-                      onConfirm(order.id)
-                      onClose()
-                    }}
-                    className="w-full py-3 px-4 bg-green-600 hover:bg-green-700 text-white rounded-xl font-medium transition-colors flex items-center justify-center gap-2"
-                  >
-                    <CheckCircle className="w-5 h-5" />
-                    Confirmer la commande
-                  </button>
+                  {onRecreate && (
+                    <button
+                      onClick={() => {
+                        onRecreate(order.id)
+                        onClose()
+                      }}
+                      className="w-full py-3 px-4 bg-green-600 hover:bg-green-700 text-white rounded-xl font-medium transition-colors flex items-center justify-center gap-2"
+                    >
+                      <RefreshCw className="w-5 h-5" />
+                      Valider dans l'agenda
+                    </button>
+                  )}
                   <button
                     onClick={() => {
                       onCancel(order.id)

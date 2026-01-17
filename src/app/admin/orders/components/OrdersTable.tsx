@@ -23,7 +23,6 @@ type SortDirection = 'asc' | 'desc'
 interface OrdersTableProps {
   orders: OrderWithRelations[]
   isDark: boolean
-  onConfirm: (orderId: string) => void
   onCancel: (orderId: string) => void
   onViewOrder: (order: OrderWithRelations) => void
   onViewClient: (contactId: string) => void
@@ -114,7 +113,7 @@ function FilterDropdown({
 
 const PAGE_SIZE_OPTIONS = [10, 20, 50, 100, 200, 500, 1000]
 
-export function OrdersTable({ orders, isDark, onConfirm, onCancel, onViewOrder, onViewClient }: OrdersTableProps) {
+export function OrdersTable({ orders, isDark, onCancel, onViewOrder, onViewClient }: OrdersTableProps) {
   const [sortField, setSortField] = useState<SortField>('created')
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
   const [currentPage, setCurrentPage] = useState(1)
