@@ -37,15 +37,56 @@ export function useBranches() {
     setError(null)
 
     try {
-      // Les politiques RLS filtreront automatiquement selon l'utilisateur
-      const { data: branchesData, error: branchesError } = await supabase
-        .from('branches')
-        .select('*')
-        .eq('is_active', true)
-        .order('name')
-        .returns<Branch[]>()
+      // Récupérer l'utilisateur et ses branches autorisées
+      const { data: { user: authUser } } = await supabase.auth.getUser()
+      
+      if (!authUser) {
+        setBranches([])
+        setLoading(false)
+        return
+      }
 
-      if (branchesError) throw branchesError
+      // Récupérer le rôle de l'utilisateur
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', authUser.id)
+        .single()
+
+      let branchesData: Branch[] = []
+
+      if (profile?.role === 'super_admin') {
+        // Super admin voit toutes les branches
+        const { data, error: branchesError } = await supabase
+          .from('branches')
+          .select('*')
+          .eq('is_active', true)
+          .order('name')
+          .returns<Branch[]>()
+
+        if (branchesError) throw branchesError
+        branchesData = data || []
+      } else {
+        // Branch admin et agent voient uniquement leurs branches assignées
+        const { data: userBranches } = await supabase
+          .from('user_branches')
+          .select('branch_id')
+          .eq('user_id', authUser.id)
+
+        if (userBranches && userBranches.length > 0) {
+          const branchIds = userBranches.map(ub => ub.branch_id)
+          const { data, error: branchesError } = await supabase
+            .from('branches')
+            .select('*')
+            .in('id', branchIds)
+            .eq('is_active', true)
+            .order('name')
+            .returns<Branch[]>()
+
+          if (branchesError) throw branchesError
+          branchesData = data || []
+        }
+      }
 
       if (!branchesData || branchesData.length === 0) {
         setBranches([])
@@ -92,10 +133,15 @@ export function useBranches() {
 
       setBranches(branchesWithDetails)
 
-      // Sélectionner Rishon LeZion par défaut si aucune n'est sélectionnée
+      // Sélectionner automatiquement la première branche si aucune n'est sélectionnée
       setSelectedBranchId(prev => {
         if (!prev && branchesWithDetails.length > 0) {
-          // Chercher Rishon LeZion en priorité (par slug ou nom)
+          // Si une seule branche (branch_admin avec 1 branche), la sélectionner
+          if (branchesWithDetails.length === 1) {
+            return branchesWithDetails[0].id
+          }
+          
+          // Sinon, chercher Rishon LeZion en priorité (pour super_admin)
           const rishonBranch = branchesWithDetails.find(
             b => b.slug === 'rishon-lezion' || 
                  b.name.toLowerCase().includes('rishon') ||
