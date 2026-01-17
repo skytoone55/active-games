@@ -122,7 +122,7 @@ export async function PUT(
     }
 
     // Préparer les updates
-    const updates: ProfileUpdate = {}
+    const updates: Partial<ProfileUpdate> = {}
 
     if (first_name !== undefined) {
       if (!first_name.trim()) {
