@@ -3,7 +3,8 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { getClient } from '@/lib/supabase/client'
-import { Loader2, Lock, Mail, AlertCircle } from 'lucide-react'
+import { Loader2, Mail, AlertCircle } from 'lucide-react'
+import Image from 'next/image'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -51,10 +52,16 @@ export default function LoginPage() {
       <div className="w-full max-w-md">
         {/* Logo/Title */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-cyan-600/20 mb-4">
-            <Lock className="w-8 h-8 text-cyan-500" />
+          <div className="flex justify-center mb-6">
+            <Image
+              src="/images/logo-activegames.png"
+              alt="Active Games"
+              width={213}
+              height={81}
+              className="h-20 w-auto object-contain"
+              priority
+            />
           </div>
-          <h1 className="text-2xl font-bold text-white">Active Games Admin</h1>
           <p className="text-gray-400 mt-2">Connectez-vous pour accéder au tableau de bord</p>
         </div>
 
