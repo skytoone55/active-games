@@ -69,8 +69,8 @@ export function UsersTable({
       const nameB = `${b.first_name} ${b.last_name}`.toLowerCase()
       compareResult = nameA.localeCompare(nameB)
     } else if (sortField === 'role') {
-      const roleOrder = { super_admin: 0, branch_admin: 1, agent: 2 }
-      compareResult = roleOrder[a.role] - roleOrder[b.role]
+      const roleOrder: Record<string, number> = { super_admin: 0, branch_admin: 1, agent: 2 }
+      compareResult = (roleOrder[a.role || ''] || 99) - (roleOrder[b.role || ''] || 99)
     } else if (sortField === 'phone') {
       compareResult = a.phone.localeCompare(b.phone)
     }

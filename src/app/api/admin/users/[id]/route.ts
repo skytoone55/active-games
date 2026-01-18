@@ -21,24 +21,27 @@ async function getUserLevel(serviceClient: ReturnType<typeof createServiceRoleCl
     return { level: 10, role: null }
   }
 
+  // Type explicite pour accéder aux propriétés
+  const profileData = profile as { role?: string | null; role_id?: string | null }
+
   // Récupérer le rôle par role_id ou par name
   let roleData: Role | null = null
 
-  if (profile.role_id) {
+  if (profileData.role_id) {
     const { data } = await serviceClient
       .from('roles')
       .select('*')
-      .eq('id', profile.role_id)
-      .single()
+      .eq('id', profileData.role_id)
+      .single<Role>()
     roleData = data
   }
 
-  if (!roleData && profile.role) {
+  if (!roleData && profileData.role) {
     const { data } = await serviceClient
       .from('roles')
       .select('*')
-      .eq('name', profile.role)
-      .single()
+      .eq('name', profileData.role)
+      .single<Role>()
     roleData = data
   }
 
@@ -225,7 +228,7 @@ export async function PUT(
           .from('roles')
           .select('*')
           .eq('id', role_id)
-          .single()
+          .single<Role>()
         newTargetRole = data
       } else if (role) {
         // Rétrocompatibilité: chercher par nom
@@ -233,7 +236,7 @@ export async function PUT(
           .from('roles')
           .select('*')
           .eq('name', role)
-          .single()
+          .single<Role>()
         newTargetRole = data
       }
 

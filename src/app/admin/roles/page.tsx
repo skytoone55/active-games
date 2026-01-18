@@ -18,7 +18,7 @@ export default function RolesPage() {
   const { t } = useTranslation()
   const { user, loading: authLoading } = useAuth()
   const { branches, selectedBranch, selectBranch, loading: branchesLoading } = useBranches()
-  const { roles, loading: rolesLoading, error, refreshRoles, getRoleLevel } = useRoles()
+  const { roles, loading: rolesLoading, error, refresh: refreshRoles, getRoleLevel } = useRoles()
 
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
@@ -58,7 +58,7 @@ export default function RolesPage() {
   }
 
   // Get user level for hierarchy checks
-  const userLevel = user ? getRoleLevel(user.role) : 10
+  const userLevel = user?.role ? getRoleLevel(user.role) : 10
 
   const handleEdit = (role: Role) => {
     setSelectedRole(role)
@@ -110,7 +110,7 @@ export default function RolesPage() {
     }
   }
 
-  const handleCreateRole = async (roleData: Omit<Role, 'id' | 'created_at' | 'updated_at'>) => {
+  const handleCreateRole = async (roleData: Partial<Role>): Promise<{ success: boolean; error?: string }> => {
     try {
       const response = await fetch('/api/roles', {
         method: 'POST',

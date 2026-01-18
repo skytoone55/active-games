@@ -12,8 +12,11 @@ interface RolesTableProps {
   onDelete: (role: Role) => void
 }
 
+// Icon props type
+type IconProps = { className?: string; style?: React.CSSProperties }
+
 // Icon mapping
-const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
+const ICON_MAP: Record<string, React.ComponentType<IconProps>> = {
   Shield: Shield,
   UserCog: UserCog,
   Users: Users,
@@ -22,7 +25,7 @@ const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
   Lock: Lock
 }
 
-function getIconComponent(iconName: string): React.ComponentType<{ className?: string }> {
+function getIconComponent(iconName: string): React.ComponentType<IconProps> {
   return ICON_MAP[iconName] || User
 }
 

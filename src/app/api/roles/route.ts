@@ -82,25 +82,27 @@ export async function POST(request: NextRequest) {
     // Récupérer le profil et le rôle de l'utilisateur
     const serviceClient = createServiceRoleClient()
 
-    const { data: profile, error: profileError } = await serviceClient
+    const { data: profileData, error: profileError } = await serviceClient
       .from('profiles')
       .select('role, role_id')
       .eq('id', user.id)
       .single()
 
-    if (profileError || !profile) {
+    if (profileError || !profileData) {
       return NextResponse.json(
         { success: false, error: 'Profile not found' },
         { status: 404 }
       )
     }
 
+    const profile = profileData as { role?: string | null; role_id?: string | null }
+
     // Récupérer le level de l'utilisateur
     const { data: userRole, error: userRoleError } = await serviceClient
       .from('roles')
       .select('level')
-      .eq('name', profile.role)
-      .single()
+      .eq('name', profile.role || '')
+      .single<{ level: number }>()
 
     if (userRoleError || !userRole) {
       return NextResponse.json(
@@ -178,7 +180,8 @@ export async function POST(request: NextRequest) {
       is_system: false
     }
 
-    const { data: createdRole, error: createError } = await serviceClient
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: createdRole, error: createError } = await (serviceClient as any)
       .from('roles')
       .insert(newRole)
       .select()
@@ -204,7 +207,8 @@ export async function POST(request: NextRequest) {
       can_delete: false
     }))
 
-    await serviceClient
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (serviceClient as any)
       .from('role_permissions')
       .insert(permissionsToInsert)
 

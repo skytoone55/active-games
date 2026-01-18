@@ -9,6 +9,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
+import type { Role } from '@/lib/supabase/types'
 
 /**
  * GET /api/roles/[id]
@@ -88,24 +89,26 @@ export async function PUT(
     const serviceClient = createServiceRoleClient()
 
     // Récupérer le level de l'utilisateur
-    const { data: profile } = await serviceClient
+    const { data: profileData } = await serviceClient
       .from('profiles')
       .select('role')
       .eq('id', user.id)
       .single()
 
-    if (!profile) {
+    if (!profileData) {
       return NextResponse.json(
         { success: false, error: 'Profile not found' },
         { status: 404 }
       )
     }
 
+    const profile = profileData as { role?: string | null }
+
     const { data: userRole } = await serviceClient
       .from('roles')
       .select('level')
-      .eq('name', profile.role)
-      .single()
+      .eq('name', profile.role || '')
+      .single<{ level: number }>()
 
     const userLevel = userRole?.level ?? 10
 
@@ -114,7 +117,7 @@ export async function PUT(
       .from('roles')
       .select('*')
       .eq('id', id)
-      .single()
+      .single<Role>()
 
     if (roleError || !targetRole) {
       return NextResponse.json(
@@ -202,7 +205,8 @@ export async function PUT(
     }
 
     // Mettre à jour le rôle
-    const { data: updatedRole, error: updateError } = await serviceClient
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: updatedRole, error: updateError } = await (serviceClient as any)
       .from('roles')
       .update(updates)
       .eq('id', id)
@@ -259,24 +263,26 @@ export async function DELETE(
     const serviceClient = createServiceRoleClient()
 
     // Récupérer le level de l'utilisateur
-    const { data: profile } = await serviceClient
+    const { data: profileData } = await serviceClient
       .from('profiles')
       .select('role')
       .eq('id', user.id)
       .single()
 
-    if (!profile) {
+    if (!profileData) {
       return NextResponse.json(
         { success: false, error: 'Profile not found' },
         { status: 404 }
       )
     }
 
+    const profile = profileData as { role?: string | null }
+
     const { data: userRole } = await serviceClient
       .from('roles')
       .select('level')
-      .eq('name', profile.role)
-      .single()
+      .eq('name', profile.role || '')
+      .single<{ level: number }>()
 
     const userLevel = userRole?.level ?? 10
 
@@ -285,7 +291,7 @@ export async function DELETE(
       .from('roles')
       .select('*')
       .eq('id', id)
-      .single()
+      .single<Role>()
 
     if (roleError || !targetRole) {
       return NextResponse.json(
@@ -343,7 +349,8 @@ export async function DELETE(
       }
 
       // Mettre les utilisateurs sans rôle (role = null, role_id = null)
-      const { error: removeRoleError } = await serviceClient
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error: removeRoleError } = await (serviceClient as any)
         .from('profiles')
         .update({
           role: null,

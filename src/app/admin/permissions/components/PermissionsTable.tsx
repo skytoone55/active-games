@@ -18,8 +18,11 @@ const RESOURCE_ORDER: ResourceType[] = ['agenda', 'orders', 'clients', 'users', 
 // Permission columns
 const PERMISSION_COLUMNS: (keyof PermissionSet)[] = ['can_view', 'can_create', 'can_edit', 'can_delete']
 
+// Icon props type
+type IconProps = { className?: string; style?: React.CSSProperties }
+
 // Icon mapping for role icons
-const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
+const ICON_MAP: Record<string, React.ComponentType<IconProps>> = {
   Shield: Shield,
   UserCog: UserCog,
   Users: Users,
@@ -29,7 +32,7 @@ const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
 }
 
 // Get icon component from icon name
-function getIconComponent(iconName: string): React.ComponentType<{ className?: string }> {
+function getIconComponent(iconName: string): React.ComponentType<IconProps> {
   return ICON_MAP[iconName] || User
 }
 

@@ -25,7 +25,7 @@ export default function UsersPage() {
   const { getRoleLevel } = useRoles()
 
   // Get the current user's level for hierarchy checks
-  const currentUserLevel = user ? getRoleLevel(user.role) : 10
+  const currentUserLevel = user?.role ? getRoleLevel(user.role) : 10
   
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
