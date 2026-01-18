@@ -412,6 +412,8 @@
       "clients": "Clients",
       "orders": "Orders",
       "users": "Users",
+      "logs": "Logs",
+      "permissions": "Permissions",
       "settings": "Settings",
       "sign_out": "Sign out",
       "theme_light": "Light mode",
@@ -977,6 +979,97 @@
       "phone_invalid": "Invalid phone number (format: 05XXXXXXXX)",
       "min_length": "Minimum {{min}} characters",
       "max_length": "Maximum {{max}} characters"
+    },
+    "logs": {
+      "title": "Activity Logs",
+      "subtitle": "Track all system activity and user actions",
+      "access_denied": "Access denied",
+      "access_denied_message": "You do not have permission to view activity logs.",
+      "search_placeholder": "Search logs (user, action, target)...",
+      "no_logs": "No activity logs found",
+      "no_matching_logs": "No logs match the current filters",
+      "results": "result(s)",
+      "logs_count": "log(s)",
+      "delete_confirm": "Are you sure you want to delete {{count}} log(s)? This action is irreversible.",
+      "delete_selected": "Delete ({{count}})",
+      "stats": {
+        "today": "Today",
+        "this_week": "This week",
+        "total": "Total"
+      },
+      "table": {
+        "timestamp": "Timestamp",
+        "action": "Action",
+        "user": "User",
+        "role": "Role",
+        "target": "Target",
+        "details": "Details",
+        "branch": "Branch"
+      },
+      "actions": {
+        "booking_created": "Booking created",
+        "booking_updated": "Booking updated",
+        "booking_cancelled": "Booking cancelled",
+        "booking_deleted": "Booking deleted",
+        "order_confirmed": "Order confirmed",
+        "order_cancelled": "Order cancelled",
+        "order_deleted": "Order deleted",
+        "contact_created": "Contact created",
+        "contact_updated": "Contact updated",
+        "contact_archived": "Contact archived",
+        "contact_deleted": "Contact deleted",
+        "user_created": "User created",
+        "user_updated": "User updated",
+        "user_deleted": "User deleted",
+        "user_login": "User login",
+        "user_logout": "User logout",
+        "permission_changed": "Permission changed",
+        "settings_updated": "Settings updated",
+        "log_deleted": "Log deleted"
+      },
+      "targets": {
+        "booking": "Booking",
+        "order": "Order",
+        "contact": "Contact",
+        "user": "User",
+        "branch": "Branch",
+        "settings": "Settings",
+        "log": "Log"
+      }
+    },
+    "permissions": {
+      "title": "Permissions Management",
+      "subtitle": "Configure access rights for each role",
+      "access_denied": "Access denied",
+      "access_denied_message": "Only super administrators can manage permissions.",
+      "info_title": "Granular Permission Control",
+      "info_description": "Super Admin permissions are locked and cannot be modified. Branch Admin and Agent permissions can be customized. Changes take effect immediately.",
+      "super_admin_locked": "Super Admin permissions cannot be modified",
+      "table": {
+        "resource": "Resource",
+        "role": "Role",
+        "can_view": "View",
+        "can_create": "Create",
+        "can_edit": "Edit",
+        "can_delete": "Delete"
+      },
+      "save": "Save",
+      "save_success": "Permissions saved successfully",
+      "save_error": "Error saving permissions",
+      "legend_title": "Role Legend",
+      "legend_super_admin": "Full access (locked)",
+      "legend_branch_admin": "Customizable",
+      "legend_agent": "Customizable",
+      "legend_locked": "Cannot be modified",
+      "resources": {
+        "agenda": "Agenda",
+        "orders": "Orders",
+        "clients": "Clients",
+        "users": "Users",
+        "logs": "Activity Logs",
+        "settings": "Settings",
+        "permissions": "Permissions"
+      }
     }
   }
 }

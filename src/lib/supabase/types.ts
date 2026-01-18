@@ -23,6 +23,33 @@ export type OrderStatus = 'pending' | 'auto_confirmed' | 'manually_confirmed' | 
 export type OrderType = 'GAME' | 'EVENT'
 export type PendingReason = 'overbooking' | 'room_unavailable' | 'slot_unavailable' | 'laser_vests_full' | 'other'
 
+// Types pour Activity Logs
+export type ActionType =
+  | 'booking_created'
+  | 'booking_updated'
+  | 'booking_cancelled'
+  | 'booking_deleted'
+  | 'order_confirmed'
+  | 'order_cancelled'
+  | 'order_deleted'
+  | 'contact_created'
+  | 'contact_updated'
+  | 'contact_archived'
+  | 'contact_deleted'
+  | 'user_created'
+  | 'user_updated'
+  | 'user_deleted'
+  | 'user_login'
+  | 'user_logout'
+  | 'permission_changed'
+  | 'settings_updated'
+  | 'log_deleted'
+
+export type TargetType = 'booking' | 'order' | 'contact' | 'user' | 'branch' | 'settings' | 'log'
+
+// Types pour Permissions
+export type ResourceType = 'agenda' | 'orders' | 'clients' | 'users' | 'logs' | 'settings' | 'permissions'
+
 export interface Database {
   public: {
     Tables: {
@@ -272,6 +299,41 @@ export interface Database {
         }
         Update: Partial<Database['public']['Tables']['orders']['Insert']>
       }
+      activity_logs: {
+        Row: {
+          id: string
+          user_id: string | null
+          user_role: UserRole
+          user_name: string
+          action_type: ActionType
+          target_type: TargetType | null
+          target_id: string | null
+          target_name: string | null
+          branch_id: string | null
+          details: Json
+          ip_address: string | null
+          created_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['activity_logs']['Row'], 'id' | 'created_at' | 'details'> & {
+          details?: Json
+        }
+        Update: Partial<Database['public']['Tables']['activity_logs']['Insert']>
+      }
+      role_permissions: {
+        Row: {
+          id: string
+          role: UserRole
+          resource: ResourceType
+          can_view: boolean
+          can_create: boolean
+          can_edit: boolean
+          can_delete: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['role_permissions']['Row'], 'id' | 'created_at' | 'updated_at'>
+        Update: Partial<Database['public']['Tables']['role_permissions']['Insert']>
+      }
     }
     Views: {}
     Functions: {}
@@ -295,6 +357,8 @@ export type BookingSlot = Database['public']['Tables']['booking_slots']['Row']
 export type Profile = Database['public']['Tables']['profiles']['Row']
 export type UserBranch = Database['public']['Tables']['user_branches']['Row']
 export type Order = Database['public']['Tables']['orders']['Row']
+export type ActivityLog = Database['public']['Tables']['activity_logs']['Row']
+export type RolePermission = Database['public']['Tables']['role_permissions']['Row']
 
 // Types Insert (création)
 export type BookingInsert = Database['public']['Tables']['bookings']['Insert']
@@ -304,6 +368,8 @@ export type GameSessionInsert = Database['public']['Tables']['game_sessions']['I
 export type ContactInsert = Database['public']['Tables']['contacts']['Insert']
 export type OrderInsert = Database['public']['Tables']['orders']['Insert']
 export type ProfileInsert = Database['public']['Tables']['profiles']['Insert']
+export type ActivityLogInsert = Database['public']['Tables']['activity_logs']['Insert']
+export type RolePermissionInsert = Database['public']['Tables']['role_permissions']['Insert']
 
 // Types Update (modification)
 export type BookingUpdate = Database['public']['Tables']['bookings']['Update']
@@ -311,6 +377,7 @@ export type BookingContactUpdate = Database['public']['Tables']['booking_contact
 export type ContactUpdate = Database['public']['Tables']['contacts']['Update']
 export type OrderUpdate = Database['public']['Tables']['orders']['Update']
 export type ProfileUpdate = Database['public']['Tables']['profiles']['Update']
+export type RolePermissionUpdate = Database['public']['Tables']['role_permissions']['Update']
 
 // Helper types complexes
 export type UserWithBranches = Profile & {
@@ -345,3 +412,18 @@ export interface UserWithProfile {
   profile: Profile | null
   branches: Branch[]
 }
+
+// Type étendu pour ActivityLog avec relations
+export interface ActivityLogWithRelations extends ActivityLog {
+  branch?: Branch | null
+}
+
+// Type pour les permissions par ressource (utilisé côté client)
+export interface PermissionSet {
+  can_view: boolean
+  can_create: boolean
+  can_edit: boolean
+  can_delete: boolean
+}
+
+export type PermissionsByResource = Record<ResourceType, PermissionSet>

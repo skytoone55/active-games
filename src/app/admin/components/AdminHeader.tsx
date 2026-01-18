@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { LogOut, User, ChevronDown, Sun, Moon, Users, Calendar, Menu, X, ShoppingCart, Shield, Globe } from 'lucide-react'
+import { LogOut, User, ChevronDown, Sun, Moon, Users, Calendar, Menu, X, ShoppingCart, Shield, Globe, FileText, Lock } from 'lucide-react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
@@ -190,22 +190,6 @@ export function AdminHeader({
               </span>
             )}
           </Link>
-          {/* Bouton Utilisateurs - visible uniquement pour super_admin et branch_admin */}
-          {(user.role === 'super_admin' || user.role === 'branch_admin') && (
-            <Link
-              href="/admin/users"
-              className={`px-4 py-2 rounded-lg transition-colors flex items-center gap-2 ${
-                pathname === '/admin/users'
-                  ? 'bg-blue-600 text-white'
-                  : theme === 'dark'
-                    ? 'bg-gray-800 hover:bg-gray-700 text-gray-300'
-                    : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-              }`}
-            >
-              <Shield className="w-4 h-4" />
-              <span>{t('admin.header.users')}</span>
-            </Link>
-          )}
         </div>
 
         {/* Actions - À droite : Branch, Langue, Thème, Profil */}
@@ -326,6 +310,58 @@ export function AdminHeader({
                   }`}>{user.email}</div>
                 </div>
 
+                {/* Liens administration */}
+                {(user.role === 'super_admin' || user.role === 'branch_admin') && (
+                  <div className={`py-2 border-b ${
+                    theme === 'dark' ? 'border-gray-700' : 'border-gray-200'
+                  }`}>
+                    <Link
+                      href="/admin/users"
+                      onClick={() => setShowUserMenu(false)}
+                      className={`w-full px-4 py-2 text-left flex items-center gap-2 transition-colors ${
+                        pathname === '/admin/users'
+                          ? 'bg-blue-600 text-white'
+                          : theme === 'dark'
+                            ? 'text-gray-300 hover:bg-gray-700'
+                            : 'text-gray-700 hover:bg-gray-100'
+                      }`}
+                    >
+                      <Users className="w-4 h-4" />
+                      {t('admin.header.users')}
+                    </Link>
+                    <Link
+                      href="/admin/logs"
+                      onClick={() => setShowUserMenu(false)}
+                      className={`w-full px-4 py-2 text-left flex items-center gap-2 transition-colors ${
+                        pathname === '/admin/logs'
+                          ? 'bg-blue-600 text-white'
+                          : theme === 'dark'
+                            ? 'text-gray-300 hover:bg-gray-700'
+                            : 'text-gray-700 hover:bg-gray-100'
+                      }`}
+                    >
+                      <FileText className="w-4 h-4" />
+                      {t('admin.header.logs')}
+                    </Link>
+                    {user.role === 'super_admin' && (
+                      <Link
+                        href="/admin/permissions"
+                        onClick={() => setShowUserMenu(false)}
+                        className={`w-full px-4 py-2 text-left flex items-center gap-2 transition-colors ${
+                          pathname === '/admin/permissions'
+                            ? 'bg-blue-600 text-white'
+                            : theme === 'dark'
+                              ? 'text-gray-300 hover:bg-gray-700'
+                              : 'text-gray-700 hover:bg-gray-100'
+                        }`}
+                      >
+                        <Lock className="w-4 h-4" />
+                        {t('admin.header.permissions')}
+                      </Link>
+                    )}
+                  </div>
+                )}
+
                 <div className="py-2">
                   <button
                     onClick={() => {
@@ -439,23 +475,6 @@ export function AdminHeader({
                   </span>
                 )}
               </Link>
-              {/* Bouton Utilisateurs mobile - visible uniquement pour super_admin et branch_admin */}
-              {(user.role === 'super_admin' || user.role === 'branch_admin') && (
-                <Link
-                  href="/admin/users"
-                  onClick={() => setShowMobileMenu(false)}
-                  className={`flex items-center gap-3 px-4 py-2 rounded-lg transition-colors ${
-                    pathname === '/admin/users'
-                      ? 'bg-blue-600 text-white'
-                      : theme === 'dark'
-                        ? 'bg-gray-800 hover:bg-gray-700 text-gray-300'
-                        : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-                  }`}
-                >
-                  <Shield className="w-4 h-4" />
-                  <span>{t('admin.header.users')}</span>
-                </Link>
-              )}
             </div>
 
             {/* Sélecteur de langue mobile */}
@@ -500,6 +519,55 @@ export function AdminHeader({
                 </div>
                 {getRoleBadge()}
               </div>
+              {/* Liens administration mobile */}
+              {(user.role === 'super_admin' || user.role === 'branch_admin') && (
+                <>
+                  <Link
+                    href="/admin/users"
+                    onClick={() => setShowMobileMenu(false)}
+                    className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg transition-colors ${
+                      pathname === '/admin/users'
+                        ? 'bg-blue-600 text-white'
+                        : theme === 'dark'
+                          ? 'text-gray-300 hover:bg-gray-700'
+                          : 'text-gray-700 hover:bg-gray-100'
+                    }`}
+                  >
+                    <Users className="w-4 h-4" />
+                    <span>{t('admin.header.users')}</span>
+                  </Link>
+                  <Link
+                    href="/admin/logs"
+                    onClick={() => setShowMobileMenu(false)}
+                    className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg transition-colors ${
+                      pathname === '/admin/logs'
+                        ? 'bg-blue-600 text-white'
+                        : theme === 'dark'
+                          ? 'text-gray-300 hover:bg-gray-700'
+                          : 'text-gray-700 hover:bg-gray-100'
+                    }`}
+                  >
+                    <FileText className="w-4 h-4" />
+                    <span>{t('admin.header.logs')}</span>
+                  </Link>
+                  {user.role === 'super_admin' && (
+                    <Link
+                      href="/admin/permissions"
+                      onClick={() => setShowMobileMenu(false)}
+                      className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg transition-colors ${
+                        pathname === '/admin/permissions'
+                          ? 'bg-blue-600 text-white'
+                          : theme === 'dark'
+                            ? 'text-gray-300 hover:bg-gray-700'
+                            : 'text-gray-700 hover:bg-gray-100'
+                      }`}
+                    >
+                      <Lock className="w-4 h-4" />
+                      <span>{t('admin.header.permissions')}</span>
+                    </Link>
+                  )}
+                </>
+              )}
               <button
                 onClick={() => {
                   setShowMobileMenu(false)

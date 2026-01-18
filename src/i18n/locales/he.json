@@ -449,6 +449,8 @@
       "orders": "הזמנות",
       "users": "משתמשים",
       "clients": "לקוחות",
+      "logs": "יומן פעילות",
+      "permissions": "הרשאות",
       "switch_branch": "החלף סניף",
       "all_branches": "כל הסניפים",
       "pending_orders": "הזמנות ממתינות",
@@ -1099,6 +1101,97 @@
       "showing": "מציג",
       "to": "עד",
       "entries": "רשומות"
+    },
+    "logs": {
+      "title": "יומן פעילות",
+      "subtitle": "מעקב אחר כל פעילות המערכת ופעולות המשתמשים",
+      "access_denied": "הגישה נדחתה",
+      "access_denied_message": "אין לך הרשאה לצפות ביומן הפעילות.",
+      "search_placeholder": "חיפוש ביומן (משתמש, פעולה, יעד)...",
+      "no_logs": "לא נמצאו רשומות פעילות",
+      "no_matching_logs": "אין רשומות התואמות את הסינון הנוכחי",
+      "results": "תוצאה(ות)",
+      "logs_count": "רשומה(ות)",
+      "delete_confirm": "האם אתה בטוח שברצונך למחוק {{count}} רשומה(ות)? פעולה זו בלתי הפיכה.",
+      "delete_selected": "מחק ({{count}})",
+      "stats": {
+        "today": "היום",
+        "this_week": "השבוע",
+        "total": "סה״כ"
+      },
+      "table": {
+        "timestamp": "תאריך/שעה",
+        "action": "פעולה",
+        "user": "משתמש",
+        "role": "תפקיד",
+        "target": "יעד",
+        "details": "פרטים",
+        "branch": "סניף"
+      },
+      "actions": {
+        "booking_created": "הזמנה נוצרה",
+        "booking_updated": "הזמנה עודכנה",
+        "booking_cancelled": "הזמנה בוטלה",
+        "booking_deleted": "הזמנה נמחקה",
+        "order_confirmed": "הזמנה אושרה",
+        "order_cancelled": "הזמנה בוטלה",
+        "order_deleted": "הזמנה נמחקה",
+        "contact_created": "איש קשר נוצר",
+        "contact_updated": "איש קשר עודכן",
+        "contact_archived": "איש קשר הועבר לארכיון",
+        "contact_deleted": "איש קשר נמחק",
+        "user_created": "משתמש נוצר",
+        "user_updated": "משתמש עודכן",
+        "user_deleted": "משתמש נמחק",
+        "user_login": "התחברות",
+        "user_logout": "התנתקות",
+        "permission_changed": "הרשאה שונתה",
+        "settings_updated": "הגדרות עודכנו",
+        "log_deleted": "רשומה נמחקה"
+      },
+      "targets": {
+        "booking": "הזמנה",
+        "order": "הזמנה",
+        "contact": "איש קשר",
+        "user": "משתמש",
+        "branch": "סניף",
+        "settings": "הגדרות",
+        "log": "רשומה"
+      }
+    },
+    "permissions": {
+      "title": "ניהול הרשאות",
+      "subtitle": "הגדרת הרשאות גישה לכל תפקיד",
+      "access_denied": "הגישה נדחתה",
+      "access_denied_message": "רק מנהלי-על יכולים לנהל הרשאות.",
+      "info_title": "שליטה גרנולרית בהרשאות",
+      "info_description": "הרשאות מנהל-על נעולות ולא ניתנות לשינוי. הרשאות מנהל סניף וסוכן ניתנות להתאמה אישית. השינויים נכנסים לתוקף מיידית.",
+      "super_admin_locked": "הרשאות מנהל-על לא ניתנות לשינוי",
+      "table": {
+        "resource": "משאב",
+        "role": "תפקיד",
+        "can_view": "צפייה",
+        "can_create": "יצירה",
+        "can_edit": "עריכה",
+        "can_delete": "מחיקה"
+      },
+      "save": "שמור",
+      "save_success": "ההרשאות נשמרו בהצלחה",
+      "save_error": "שגיאה בשמירת ההרשאות",
+      "legend_title": "מקרא תפקידים",
+      "legend_super_admin": "גישה מלאה (נעול)",
+      "legend_branch_admin": "ניתן להתאמה",
+      "legend_agent": "ניתן להתאמה",
+      "legend_locked": "לא ניתן לשינוי",
+      "resources": {
+        "agenda": "יומן",
+        "orders": "הזמנות",
+        "clients": "לקוחות",
+        "users": "משתמשים",
+        "logs": "יומן פעילות",
+        "settings": "הגדרות",
+        "permissions": "הרשאות"
+      }
     }
   }
 }

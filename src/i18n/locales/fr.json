@@ -469,6 +469,8 @@
       "clients": "Clients",
       "orders": "Commandes",
       "users": "Utilisateurs",
+      "logs": "Logs",
+      "permissions": "Permissions",
       "settings": "Parametres",
       "sign_out": "Deconnexion",
       "theme_light": "Mode clair",
@@ -1031,6 +1033,97 @@
       "phone_invalid": "Numero de telephone invalide (format: 05XXXXXXXX)",
       "min_length": "Minimum {{min}} caracteres",
       "max_length": "Maximum {{max}} caracteres"
+    },
+    "logs": {
+      "title": "Journal d'activite",
+      "subtitle": "Suivez toutes les activites du systeme et les actions des utilisateurs",
+      "access_denied": "Acces refuse",
+      "access_denied_message": "Vous n'avez pas la permission de voir les journaux d'activite.",
+      "search_placeholder": "Rechercher dans les logs (utilisateur, action, cible)...",
+      "no_logs": "Aucun journal d'activite trouve",
+      "no_matching_logs": "Aucun log ne correspond aux filtres actuels",
+      "results": "resultat(s)",
+      "logs_count": "log(s)",
+      "delete_confirm": "Etes-vous sur de vouloir supprimer {{count}} log(s) ? Cette action est irreversible.",
+      "delete_selected": "Supprimer ({{count}})",
+      "stats": {
+        "today": "Aujourd'hui",
+        "this_week": "Cette semaine",
+        "total": "Total"
+      },
+      "table": {
+        "timestamp": "Date/Heure",
+        "action": "Action",
+        "user": "Utilisateur",
+        "role": "Role",
+        "target": "Cible",
+        "details": "Details",
+        "branch": "Branche"
+      },
+      "actions": {
+        "booking_created": "Reservation creee",
+        "booking_updated": "Reservation modifiee",
+        "booking_cancelled": "Reservation annulee",
+        "booking_deleted": "Reservation supprimee",
+        "order_confirmed": "Commande confirmee",
+        "order_cancelled": "Commande annulee",
+        "order_deleted": "Commande supprimee",
+        "contact_created": "Contact cree",
+        "contact_updated": "Contact modifie",
+        "contact_archived": "Contact archive",
+        "contact_deleted": "Contact supprime",
+        "user_created": "Utilisateur cree",
+        "user_updated": "Utilisateur modifie",
+        "user_deleted": "Utilisateur supprime",
+        "user_login": "Connexion",
+        "user_logout": "Deconnexion",
+        "permission_changed": "Permission modifiee",
+        "settings_updated": "Parametres modifies",
+        "log_deleted": "Log supprime"
+      },
+      "targets": {
+        "booking": "Reservation",
+        "order": "Commande",
+        "contact": "Contact",
+        "user": "Utilisateur",
+        "branch": "Branche",
+        "settings": "Parametres",
+        "log": "Log"
+      }
+    },
+    "permissions": {
+      "title": "Gestion des permissions",
+      "subtitle": "Configurez les droits d'acces pour chaque role",
+      "access_denied": "Acces refuse",
+      "access_denied_message": "Seuls les super administrateurs peuvent gerer les permissions.",
+      "info_title": "Controle granulaire des permissions",
+      "info_description": "Les permissions Super Admin sont verrouillees et ne peuvent pas etre modifiees. Les permissions Admin Agence et Agent peuvent etre personnalisees. Les modifications prennent effet immediatement.",
+      "super_admin_locked": "Les permissions Super Admin ne peuvent pas etre modifiees",
+      "table": {
+        "resource": "Ressource",
+        "role": "Role",
+        "can_view": "Voir",
+        "can_create": "Creer",
+        "can_edit": "Modifier",
+        "can_delete": "Supprimer"
+      },
+      "save": "Enregistrer",
+      "save_success": "Permissions enregistrees avec succes",
+      "save_error": "Erreur lors de l'enregistrement des permissions",
+      "legend_title": "Legende des roles",
+      "legend_super_admin": "Acces complet (verrouille)",
+      "legend_branch_admin": "Personnalisable",
+      "legend_agent": "Personnalisable",
+      "legend_locked": "Non modifiable",
+      "resources": {
+        "agenda": "Agenda",
+        "orders": "Commandes",
+        "clients": "Clients",
+        "users": "Utilisateurs",
+        "logs": "Journaux d'activite",
+        "settings": "Parametres",
+        "permissions": "Permissions"
+      }
     }
   }
 }

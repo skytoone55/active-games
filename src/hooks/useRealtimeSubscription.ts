@@ -4,7 +4,7 @@ import { useEffect, useRef, useCallback } from 'react'
 import { getClient } from '@/lib/supabase/client'
 import type { RealtimeChannel, RealtimePostgresChangesPayload } from '@supabase/supabase-js'
 
-type TableName = 'bookings' | 'orders' | 'contacts' | 'game_sessions' | 'booking_slots'
+type TableName = 'bookings' | 'orders' | 'contacts' | 'game_sessions' | 'booking_slots' | 'activity_logs' | 'role_permissions'
 type EventType = 'INSERT' | 'UPDATE' | 'DELETE' | '*'
 
 interface SubscriptionConfig {
