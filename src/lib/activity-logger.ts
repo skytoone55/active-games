@@ -156,7 +156,7 @@ export async function logOrderAction(params: {
   userId: string | null
   userRole: UserRole
   userName: string
-  action: 'confirmed' | 'cancelled' | 'deleted'
+  action: 'created' | 'updated' | 'confirmed' | 'cancelled' | 'deleted'
   orderId: string
   orderRef: string
   branchId?: string | null
@@ -164,6 +164,8 @@ export async function logOrderAction(params: {
   ipAddress?: string
 }): Promise<void> {
   const actionTypeMap: Record<string, ActionType> = {
+    created: 'order_created',
+    updated: 'order_updated',
     confirmed: 'order_confirmed',
     cancelled: 'order_cancelled',
     deleted: 'order_deleted',

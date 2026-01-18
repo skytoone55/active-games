@@ -6,9 +6,10 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import type { AuthUser } from '@/hooks/useAuth'
-import type { Branch } from '@/lib/supabase/types'
+import type { Branch, UserRole } from '@/lib/supabase/types'
 import { BranchSelector } from './BranchSelector'
 import { usePendingOrdersCount } from '@/hooks/useOrders'
+import { useUserPermissions } from '@/hooks/useUserPermissions'
 import { useTranslation } from '@/contexts/LanguageContext'
 import type { Locale } from '@/i18n'
 
@@ -45,6 +46,9 @@ export function AdminHeader({
   const [mounted, setMounted] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
   const langMenuRef = useRef<HTMLDivElement>(null)
+
+  // Permissions de l'utilisateur pour conditionner l'affichage des menus
+  const { hasPermission } = useUserPermissions(user.role as UserRole)
 
   // Éviter les problèmes d'hydratation
   useEffect(() => {
@@ -158,38 +162,42 @@ export function AdminHeader({
               </span>
             )}
           </Link>
-          <Link
-            href="/admin/clients"
-            className={`px-4 py-2 rounded-lg transition-colors flex items-center gap-2 ${
-              pathname === '/admin/clients'
-                ? 'bg-blue-600 text-white'
-                : theme === 'dark'
-                  ? 'bg-gray-800 hover:bg-gray-700 text-gray-300'
-                  : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-            }`}
-          >
-            <Users className="w-4 h-4" />
-            <span>{t('admin.header.clients')}</span>
-          </Link>
-          <Link
-            href="/admin/orders"
-            className={`px-4 py-2 rounded-lg transition-colors flex items-center gap-2 relative ${
-              pathname === '/admin/orders'
-                ? 'bg-blue-600 text-white'
-                : theme === 'dark'
-                  ? 'bg-gray-800 hover:bg-gray-700 text-gray-300'
-                  : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-            }`}
-          >
-            <ShoppingCart className="w-4 h-4" />
-            <span>{t('admin.header.orders')}</span>
-            {/* Pastille rouge critique pour commandes en attente */}
-            {hasPendingOrders && (
-              <span className="absolute -top-1 -right-1 bg-red-600 text-white text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center animate-pulse shadow-lg">
-                {pendingOrdersCount > 9 ? '9+' : pendingOrdersCount}
-              </span>
-            )}
-          </Link>
+          {hasPermission('clients', 'can_view') && (
+            <Link
+              href="/admin/clients"
+              className={`px-4 py-2 rounded-lg transition-colors flex items-center gap-2 ${
+                pathname === '/admin/clients'
+                  ? 'bg-blue-600 text-white'
+                  : theme === 'dark'
+                    ? 'bg-gray-800 hover:bg-gray-700 text-gray-300'
+                    : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+              }`}
+            >
+              <Users className="w-4 h-4" />
+              <span>{t('admin.header.clients')}</span>
+            </Link>
+          )}
+          {hasPermission('orders', 'can_view') && (
+            <Link
+              href="/admin/orders"
+              className={`px-4 py-2 rounded-lg transition-colors flex items-center gap-2 relative ${
+                pathname === '/admin/orders'
+                  ? 'bg-blue-600 text-white'
+                  : theme === 'dark'
+                    ? 'bg-gray-800 hover:bg-gray-700 text-gray-300'
+                    : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+              }`}
+            >
+              <ShoppingCart className="w-4 h-4" />
+              <span>{t('admin.header.orders')}</span>
+              {/* Pastille rouge critique pour commandes en attente */}
+              {hasPendingOrders && (
+                <span className="absolute -top-1 -right-1 bg-red-600 text-white text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center animate-pulse shadow-lg">
+                  {pendingOrdersCount > 9 ? '9+' : pendingOrdersCount}
+                </span>
+              )}
+            </Link>
+          )}
         </div>
 
         {/* Actions - À droite : Branch, Langue, Thème, Profil */}
@@ -310,40 +318,44 @@ export function AdminHeader({
                   }`}>{user.email}</div>
                 </div>
 
-                {/* Liens administration */}
-                {(user.role === 'super_admin' || user.role === 'branch_admin') && (
+                {/* Liens administration - basés sur les permissions */}
+                {(hasPermission('users', 'can_view') || hasPermission('logs', 'can_view') || hasPermission('permissions', 'can_view')) && (
                   <div className={`py-2 border-b ${
                     theme === 'dark' ? 'border-gray-700' : 'border-gray-200'
                   }`}>
-                    <Link
-                      href="/admin/users"
-                      onClick={() => setShowUserMenu(false)}
-                      className={`w-full px-4 py-2 text-left flex items-center gap-2 transition-colors ${
-                        pathname === '/admin/users'
-                          ? 'bg-blue-600 text-white'
-                          : theme === 'dark'
-                            ? 'text-gray-300 hover:bg-gray-700'
-                            : 'text-gray-700 hover:bg-gray-100'
-                      }`}
-                    >
-                      <Users className="w-4 h-4" />
-                      {t('admin.header.users')}
-                    </Link>
-                    <Link
-                      href="/admin/logs"
-                      onClick={() => setShowUserMenu(false)}
-                      className={`w-full px-4 py-2 text-left flex items-center gap-2 transition-colors ${
-                        pathname === '/admin/logs'
-                          ? 'bg-blue-600 text-white'
-                          : theme === 'dark'
-                            ? 'text-gray-300 hover:bg-gray-700'
-                            : 'text-gray-700 hover:bg-gray-100'
-                      }`}
-                    >
-                      <FileText className="w-4 h-4" />
-                      {t('admin.header.logs')}
-                    </Link>
-                    {user.role === 'super_admin' && (
+                    {hasPermission('users', 'can_view') && (
+                      <Link
+                        href="/admin/users"
+                        onClick={() => setShowUserMenu(false)}
+                        className={`w-full px-4 py-2 text-left flex items-center gap-2 transition-colors ${
+                          pathname === '/admin/users'
+                            ? 'bg-blue-600 text-white'
+                            : theme === 'dark'
+                              ? 'text-gray-300 hover:bg-gray-700'
+                              : 'text-gray-700 hover:bg-gray-100'
+                        }`}
+                      >
+                        <Users className="w-4 h-4" />
+                        {t('admin.header.users')}
+                      </Link>
+                    )}
+                    {hasPermission('logs', 'can_view') && (
+                      <Link
+                        href="/admin/logs"
+                        onClick={() => setShowUserMenu(false)}
+                        className={`w-full px-4 py-2 text-left flex items-center gap-2 transition-colors ${
+                          pathname === '/admin/logs'
+                            ? 'bg-blue-600 text-white'
+                            : theme === 'dark'
+                              ? 'text-gray-300 hover:bg-gray-700'
+                              : 'text-gray-700 hover:bg-gray-100'
+                        }`}
+                      >
+                        <FileText className="w-4 h-4" />
+                        {t('admin.header.logs')}
+                      </Link>
+                    )}
+                    {hasPermission('permissions', 'can_view') && (
                       <Link
                         href="/admin/permissions"
                         onClick={() => setShowUserMenu(false)}
@@ -442,39 +454,43 @@ export function AdminHeader({
                   </span>
                 )}
               </Link>
-              <Link
-                href="/admin/clients"
-                onClick={() => setShowMobileMenu(false)}
-                className={`flex items-center gap-3 px-4 py-2 rounded-lg transition-colors ${
-                  pathname === '/admin/clients'
-                    ? 'bg-blue-600 text-white'
-                    : theme === 'dark'
-                      ? 'bg-gray-800 hover:bg-gray-700 text-gray-300'
-                      : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-                }`}
-              >
-                <Users className="w-4 h-4" />
-                <span>{t('admin.header.clients')}</span>
-              </Link>
-              <Link
-                href="/admin/orders"
-                onClick={() => setShowMobileMenu(false)}
-                className={`flex items-center gap-3 px-4 py-2 rounded-lg transition-colors relative ${
-                  pathname === '/admin/orders'
-                    ? 'bg-blue-600 text-white'
-                    : theme === 'dark'
-                      ? 'bg-gray-800 hover:bg-gray-700 text-gray-300'
-                      : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-                }`}
-              >
-                <ShoppingCart className="w-4 h-4" />
-                <span>{t('admin.header.orders')}</span>
-                {hasPendingOrders && (
-                  <span className="bg-red-600 text-white text-xs font-bold px-2 py-0.5 rounded-full ml-auto animate-pulse">
-                    {pendingOrdersCount}
-                  </span>
-                )}
-              </Link>
+              {hasPermission('clients', 'can_view') && (
+                <Link
+                  href="/admin/clients"
+                  onClick={() => setShowMobileMenu(false)}
+                  className={`flex items-center gap-3 px-4 py-2 rounded-lg transition-colors ${
+                    pathname === '/admin/clients'
+                      ? 'bg-blue-600 text-white'
+                      : theme === 'dark'
+                        ? 'bg-gray-800 hover:bg-gray-700 text-gray-300'
+                        : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                  }`}
+                >
+                  <Users className="w-4 h-4" />
+                  <span>{t('admin.header.clients')}</span>
+                </Link>
+              )}
+              {hasPermission('orders', 'can_view') && (
+                <Link
+                  href="/admin/orders"
+                  onClick={() => setShowMobileMenu(false)}
+                  className={`flex items-center gap-3 px-4 py-2 rounded-lg transition-colors relative ${
+                    pathname === '/admin/orders'
+                      ? 'bg-blue-600 text-white'
+                      : theme === 'dark'
+                        ? 'bg-gray-800 hover:bg-gray-700 text-gray-300'
+                        : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                  }`}
+                >
+                  <ShoppingCart className="w-4 h-4" />
+                  <span>{t('admin.header.orders')}</span>
+                  {hasPendingOrders && (
+                    <span className="bg-red-600 text-white text-xs font-bold px-2 py-0.5 rounded-full ml-auto animate-pulse">
+                      {pendingOrdersCount}
+                    </span>
+                  )}
+                </Link>
+              )}
             </div>
 
             {/* Sélecteur de langue mobile */}
@@ -519,54 +535,54 @@ export function AdminHeader({
                 </div>
                 {getRoleBadge()}
               </div>
-              {/* Liens administration mobile */}
-              {(user.role === 'super_admin' || user.role === 'branch_admin') && (
-                <>
-                  <Link
-                    href="/admin/users"
-                    onClick={() => setShowMobileMenu(false)}
-                    className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg transition-colors ${
-                      pathname === '/admin/users'
-                        ? 'bg-blue-600 text-white'
-                        : theme === 'dark'
-                          ? 'text-gray-300 hover:bg-gray-700'
-                          : 'text-gray-700 hover:bg-gray-100'
-                    }`}
-                  >
-                    <Users className="w-4 h-4" />
-                    <span>{t('admin.header.users')}</span>
-                  </Link>
-                  <Link
-                    href="/admin/logs"
-                    onClick={() => setShowMobileMenu(false)}
-                    className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg transition-colors ${
-                      pathname === '/admin/logs'
-                        ? 'bg-blue-600 text-white'
-                        : theme === 'dark'
-                          ? 'text-gray-300 hover:bg-gray-700'
-                          : 'text-gray-700 hover:bg-gray-100'
-                    }`}
-                  >
-                    <FileText className="w-4 h-4" />
-                    <span>{t('admin.header.logs')}</span>
-                  </Link>
-                  {user.role === 'super_admin' && (
-                    <Link
-                      href="/admin/permissions"
-                      onClick={() => setShowMobileMenu(false)}
-                      className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg transition-colors ${
-                        pathname === '/admin/permissions'
-                          ? 'bg-blue-600 text-white'
-                          : theme === 'dark'
-                            ? 'text-gray-300 hover:bg-gray-700'
-                            : 'text-gray-700 hover:bg-gray-100'
-                      }`}
-                    >
-                      <Lock className="w-4 h-4" />
-                      <span>{t('admin.header.permissions')}</span>
-                    </Link>
-                  )}
-                </>
+              {/* Liens administration mobile - basés sur les permissions */}
+              {hasPermission('users', 'can_view') && (
+                <Link
+                  href="/admin/users"
+                  onClick={() => setShowMobileMenu(false)}
+                  className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg transition-colors ${
+                    pathname === '/admin/users'
+                      ? 'bg-blue-600 text-white'
+                      : theme === 'dark'
+                        ? 'text-gray-300 hover:bg-gray-700'
+                        : 'text-gray-700 hover:bg-gray-100'
+                  }`}
+                >
+                  <Users className="w-4 h-4" />
+                  <span>{t('admin.header.users')}</span>
+                </Link>
+              )}
+              {hasPermission('logs', 'can_view') && (
+                <Link
+                  href="/admin/logs"
+                  onClick={() => setShowMobileMenu(false)}
+                  className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg transition-colors ${
+                    pathname === '/admin/logs'
+                      ? 'bg-blue-600 text-white'
+                      : theme === 'dark'
+                        ? 'text-gray-300 hover:bg-gray-700'
+                        : 'text-gray-700 hover:bg-gray-100'
+                  }`}
+                >
+                  <FileText className="w-4 h-4" />
+                  <span>{t('admin.header.logs')}</span>
+                </Link>
+              )}
+              {hasPermission('permissions', 'can_view') && (
+                <Link
+                  href="/admin/permissions"
+                  onClick={() => setShowMobileMenu(false)}
+                  className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg transition-colors ${
+                    pathname === '/admin/permissions'
+                      ? 'bg-blue-600 text-white'
+                      : theme === 'dark'
+                        ? 'text-gray-300 hover:bg-gray-700'
+                        : 'text-gray-700 hover:bg-gray-100'
+                  }`}
+                >
+                  <Lock className="w-4 h-4" />
+                  <span>{t('admin.header.permissions')}</span>
+                </Link>
               )}
               <button
                 onClick={() => {

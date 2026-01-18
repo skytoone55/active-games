@@ -1,8 +1,7 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
-import { getClient } from '@/lib/supabase/client'
-import type { Contact, ContactStatus, ContactSource, ContactInsert, ContactUpdate } from '@/lib/supabase/types'
+import { useState, useCallback } from 'react'
+import type { Contact, ContactStatus, ContactSource } from '@/lib/supabase/types'
 
 export interface SearchContactsParams {
   query?: string
@@ -40,6 +39,11 @@ export interface UpdateContactData extends Partial<CreateContactData> {
   archived_reason?: string | null
 }
 
+/**
+ * Hook pour gérer les contacts via les routes API
+ * IMPORTANT: Toutes les opérations passent par /api/contacts pour garantir
+ * les vérifications de permissions et le logging des actions
+ */
 export function useContacts(branchId: string | null) {
   const [contacts, setContacts] = useState<Contact[]>([])
   const [loading, setLoading] = useState(false)
@@ -51,95 +55,39 @@ export function useContacts(branchId: string | null) {
       return { contacts: [], total: 0, page: params.page || 1, pageSize: params.pageSize || 50, totalPages: 0 }
     }
 
-    const supabase = getClient()
     setLoading(true)
     setError(null)
 
     try {
-      const page = params.page || 1
-      const pageSize = params.pageSize || 50
-      const from = (page - 1) * pageSize
-      const to = from + pageSize - 1
+      // Construire les query params
+      const queryParams = new URLSearchParams()
+      queryParams.set('branchId', params.branchId)
+      if (params.query) queryParams.set('query', params.query)
+      if (params.status) queryParams.set('status', params.status)
+      if (params.includeArchived) queryParams.set('includeArchived', 'true')
+      if (params.source) queryParams.set('source', params.source)
+      if (params.dateFrom) queryParams.set('dateFrom', params.dateFrom)
+      if (params.dateTo) queryParams.set('dateTo', params.dateTo)
+      if (params.page) queryParams.set('page', String(params.page))
+      if (params.pageSize) queryParams.set('pageSize', String(params.pageSize))
 
-      // Construire la requête de base
-      let query = supabase
-        .from('contacts')
-        .select('*', { count: 'exact' })
-        .eq('branch_id_main', params.branchId)
+      const response = await fetch(`/api/contacts?${queryParams.toString()}`)
+      const data = await response.json()
 
-      // Filtrer par status
-      if (params.status) {
-        query = query.eq('status', params.status)
-      } else if (!params.includeArchived) {
-        query = query.eq('status', 'active')
+      if (!response.ok) {
+        throw new Error(data.error || 'Erreur lors de la recherche des contacts')
       }
-
-      // Filtrer par source
-      if (params.source) {
-        query = query.eq('source', params.source)
-      }
-
-      // Filtrer par date de création
-      if (params.dateFrom) {
-        query = query.gte('created_at', params.dateFrom)
-      }
-      if (params.dateTo) {
-        query = query.lte('created_at', params.dateTo + 'T23:59:59')
-      }
-
-      // Recherche multi-champs si query fourni
-      if (params.query && params.query.trim().length > 0) {
-        const searchQuery = params.query.trim()
-        // Utiliser or() avec la syntaxe correcte pour Supabase
-        // Format: field.ilike.%value%,field2.ilike.%value%
-        query = query.or(`first_name.ilike.%${searchQuery}%,last_name.ilike.%${searchQuery}%,phone.ilike.%${searchQuery}%,email.ilike.%${searchQuery}%`)
-      }
-
-      // Tri (sera géré côté client pour l'instant, mais on garde un tri par défaut)
-      query = query.order('created_at', { ascending: false })
-
-      // Pagination
-      query = query.range(from, to)
-
-      const result = await query.returns<Contact[]>()
-      const { data, error: searchError, count } = result
-
-      if (searchError) {
-        console.error('Supabase search error details:', {
-          message: searchError.message,
-          details: searchError.details,
-          hint: searchError.hint,
-          code: searchError.code,
-          fullError: searchError,
-        })
-        throw searchError
-      }
-
-      const contactsList = data || []
-      const total = count || 0
-      const totalPages = Math.ceil(total / pageSize)
 
       return {
-        contacts: contactsList,
-        total,
-        page,
-        pageSize,
-        totalPages,
+        contacts: data.contacts || [],
+        total: data.total || 0,
+        page: data.page || 1,
+        pageSize: data.pageSize || 50,
+        totalPages: data.totalPages || 0,
       }
     } catch (err) {
       console.error('Error searching contacts:', err)
-      // Améliorer l'affichage de l'erreur
-      let errorMessage = 'Erreur lors de la recherche des contacts'
-      if (err instanceof Error) {
-        errorMessage = err.message
-      } else if (err && typeof err === 'object') {
-        // Si c'est un objet d'erreur Supabase
-        if ('message' in err) {
-          errorMessage = String(err.message)
-        } else {
-          errorMessage = JSON.stringify(err)
-        }
-      }
+      const errorMessage = err instanceof Error ? err.message : 'Erreur lors de la recherche des contacts'
       setError(errorMessage)
       return { contacts: [], total: 0, page: params.page || 1, pageSize: params.pageSize || 50, totalPages: 0 }
     } finally {
@@ -149,30 +97,22 @@ export function useContacts(branchId: string | null) {
 
   // Créer un contact
   const createContact = useCallback(async (data: CreateContactData): Promise<Contact | null> => {
-    const supabase = getClient()
     setError(null)
 
     try {
-      const { data: newContact, error: createError } = await supabase
-        .from('contacts')
-        // @ts-expect-error - Supabase SSR typing limitation with insert
-        .insert({
-          branch_id_main: data.branch_id_main,
-          first_name: data.first_name.trim(),
-          last_name: data.last_name?.trim() || null,
-          phone: data.phone.trim(),
-          email: data.email?.trim() || null,
-          notes_client: data.notes_client?.trim() || null,
-          alias: data.alias?.trim() || null,
-          source: data.source || 'admin_agenda',
-          status: 'active',
-        } as ContactInsert)
-        .select()
-        .single<Contact>()
+      const response = await fetch('/api/contacts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      })
 
-      if (createError) throw createError
+      const result = await response.json()
 
-      return newContact
+      if (!response.ok) {
+        throw new Error(result.error || 'Erreur lors de la création du contact')
+      }
+
+      return result.contact
     } catch (err) {
       console.error('Error creating contact:', err)
       const errorMessage = err instanceof Error ? err.message : 'Erreur lors de la création du contact'
@@ -183,19 +123,17 @@ export function useContacts(branchId: string | null) {
 
   // Obtenir un contact par ID
   const getContact = useCallback(async (contactId: string): Promise<Contact | null> => {
-    const supabase = getClient()
     setError(null)
 
     try {
-      const { data, error: fetchError } = await supabase
-        .from('contacts')
-        .select('*')
-        .eq('id', contactId)
-        .single<Contact>()
+      const response = await fetch(`/api/contacts/${contactId}`)
+      const data = await response.json()
 
-      if (fetchError) throw fetchError
+      if (!response.ok) {
+        throw new Error(data.error || 'Erreur lors de la récupération du contact')
+      }
 
-      return data
+      return data.contact
     } catch (err) {
       console.error('Error fetching contact:', err)
       const errorMessage = err instanceof Error ? err.message : 'Erreur lors de la récupération du contact'
@@ -206,48 +144,22 @@ export function useContacts(branchId: string | null) {
 
   // Mettre à jour un contact
   const updateContact = useCallback(async (contactId: string, data: UpdateContactData): Promise<Contact | null> => {
-    const supabase = getClient()
     setError(null)
 
     try {
-      const updateData: Record<string, unknown> = {}
+      const response = await fetch(`/api/contacts/${contactId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      })
 
-      if (data.first_name !== undefined) updateData.first_name = data.first_name.trim()
-      if (data.last_name !== undefined) updateData.last_name = data.last_name?.trim() || null
-      if (data.phone !== undefined) updateData.phone = data.phone.trim()
-      if (data.email !== undefined) updateData.email = data.email?.trim() || null
-      if (data.notes_client !== undefined) updateData.notes_client = data.notes_client?.trim() || null
-      if (data.alias !== undefined) updateData.alias = data.alias?.trim() || null
-      if (data.source !== undefined) updateData.source = data.source
-      if (data.status !== undefined) {
-        updateData.status = data.status
-        // Si on archive, mettre archived_at
-        if (data.status === 'archived') {
-          updateData.archived_at = new Date().toISOString()
-          if (data.archived_reason !== undefined) {
-            updateData.archived_reason = data.archived_reason?.trim() || null
-          }
-        } else if (data.status === 'active') {
-          // Si on restaure, effacer archived_at
-          updateData.archived_at = null
-          updateData.archived_reason = null
-        }
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Erreur lors de la mise à jour du contact')
       }
 
-      // Toujours mettre à jour updated_at (via trigger, mais on peut le faire explicitement)
-      updateData.updated_at = new Date().toISOString()
-
-      const { data: updatedContact, error: updateError } = await supabase
-        .from('contacts')
-        // @ts-expect-error - Supabase SSR typing limitation with update
-        .update(updateData as ContactUpdate)
-        .eq('id', contactId)
-        .select()
-        .single<Contact>()
-
-      if (updateError) throw updateError
-
-      return updatedContact
+      return result.contact
     } catch (err) {
       console.error('Error updating contact:', err)
       const errorMessage = err instanceof Error ? err.message : 'Erreur lors de la mise à jour du contact'
@@ -258,22 +170,23 @@ export function useContacts(branchId: string | null) {
 
   // Archiver un contact (soft delete)
   const archiveContact = useCallback(async (contactId: string, reason?: string): Promise<boolean> => {
-    const supabase = getClient()
     setError(null)
 
     try {
-      const { error: archiveError } = await supabase
-        .from('contacts')
-        // @ts-expect-error - Supabase SSR typing limitation with update
-        .update({
+      const response = await fetch(`/api/contacts/${contactId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           status: 'archived',
-          archived_at: new Date().toISOString(),
-          archived_reason: reason?.trim() || null,
-          updated_at: new Date().toISOString(),
-        } as ContactUpdate)
-        .eq('id', contactId)
+          archived_reason: reason || null
+        })
+      })
 
-      if (archiveError) throw archiveError
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Erreur lors de l\'archivage du contact')
+      }
 
       return true
     } catch (err) {
@@ -286,22 +199,22 @@ export function useContacts(branchId: string | null) {
 
   // Restaurer un contact archivé
   const unarchiveContact = useCallback(async (contactId: string): Promise<boolean> => {
-    const supabase = getClient()
     setError(null)
 
     try {
-      const { error: unarchiveError } = await supabase
-        .from('contacts')
-        // @ts-expect-error - Supabase SSR typing limitation with update
-        .update({
-          status: 'active',
-          archived_at: null,
-          archived_reason: null,
-          updated_at: new Date().toISOString(),
-        } as ContactUpdate)
-        .eq('id', contactId)
+      const response = await fetch(`/api/contacts/${contactId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          status: 'active'
+        })
+      })
 
-      if (unarchiveError) throw unarchiveError
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Erreur lors de la restauration du contact')
+      }
 
       return true
     } catch (err) {
@@ -312,48 +225,31 @@ export function useContacts(branchId: string | null) {
     }
   }, [])
 
-  // Vérifier les doublons (phone ou email)
+  // Vérifier les doublons (phone ou email) - via API
   const checkDuplicates = useCallback(async (phone: string, email: string | null, excludeContactId?: string): Promise<{ phoneMatches: Contact[]; emailMatches: Contact[] }> => {
     if (!branchId) {
       return { phoneMatches: [], emailMatches: [] }
     }
 
-    const supabase = getClient()
-
     try {
-      // Rechercher par phone
-      let phoneQuery = supabase
-        .from('contacts')
-        .select('*')
-        .eq('branch_id_main', branchId)
-        .eq('phone', phone.trim())
+      const queryParams = new URLSearchParams()
+      queryParams.set('branchId', branchId)
+      queryParams.set('checkDuplicates', 'true')
+      queryParams.set('phone', phone.trim())
+      if (email) queryParams.set('email', email.trim())
+      if (excludeContactId) queryParams.set('excludeId', excludeContactId)
 
-      if (excludeContactId) {
-        phoneQuery = phoneQuery.neq('id', excludeContactId)
-      }
+      const response = await fetch(`/api/contacts?${queryParams.toString()}`)
+      const data = await response.json()
 
-      const { data: phoneMatches } = await phoneQuery.returns<Contact[]>()
-
-      // Rechercher par email (si fourni)
-      let emailMatches: Contact[] = []
-      if (email && email.trim()) {
-        let emailQuery = supabase
-          .from('contacts')
-          .select('*')
-          .eq('branch_id_main', branchId)
-          .eq('email', email.trim())
-
-        if (excludeContactId) {
-          emailQuery = emailQuery.neq('id', excludeContactId)
-        }
-
-        const { data: emailData } = await emailQuery.returns<Contact[]>()
-        emailMatches = emailData || []
+      if (!response.ok) {
+        console.error('Error checking duplicates:', data.error)
+        return { phoneMatches: [], emailMatches: [] }
       }
 
       return {
-        phoneMatches: phoneMatches || [],
-        emailMatches,
+        phoneMatches: data.phoneMatches || [],
+        emailMatches: data.emailMatches || [],
       }
     } catch (err) {
       console.error('Error checking duplicates:', err)
@@ -361,124 +257,44 @@ export function useContacts(branchId: string | null) {
     }
   }, [branchId])
 
-  // Récupérer les réservations liées à un contact
+  // Récupérer les réservations liées à un contact - via API
   const getLinkedBookings = useCallback(async (contactId: string) => {
     if (!branchId) {
       return []
     }
 
-    const supabase = getClient()
-
     try {
-      // Récupérer les réservations via booking_contacts
-      const { data: bookingContacts, error: bookingContactsError } = await supabase
-        .from('booking_contacts')
-        .select('booking_id')
-        .eq('contact_id', contactId)
-        .returns<Array<{ booking_id: string }>>()
+      const response = await fetch(`/api/contacts/${contactId}/bookings?branchId=${branchId}`)
+      const data = await response.json()
 
-      if (bookingContactsError) throw bookingContactsError
-
-      if (!bookingContacts || bookingContacts.length === 0) {
+      if (!response.ok) {
+        console.error('Error fetching linked bookings:', data.error)
         return []
       }
 
-      const bookingIds = bookingContacts.map((bc) => bc.booking_id)
-
-      // Récupérer les bookings avec leurs game_sessions
-      const { data: bookings, error: bookingsError } = await supabase
-        .from('bookings')
-        .select('id, reference_code, type, status, start_datetime, end_datetime, participants_count, created_at, game_sessions(id, game_area)')
-        .in('id', bookingIds)
-        .eq('branch_id', branchId)
-        .order('start_datetime', { ascending: false })
-
-      if (bookingsError) throw bookingsError
-
-      return bookings || []
+      return data.bookings || []
     } catch (err) {
       console.error('Error fetching linked bookings:', err)
       return []
     }
   }, [branchId])
 
-  // Statistiques d'un contact
+  // Statistiques d'un contact - via API
   const getContactStats = useCallback(async (contactId: string) => {
     if (!branchId) {
       return null
     }
 
-    const supabase = getClient()
-
     try {
-      // Récupérer les réservations liées
-      const { data: bookingContacts, error: bookingContactsError } = await supabase
-        .from('booking_contacts')
-        .select('booking_id')
-        .eq('contact_id', contactId)
-        .returns<Array<{ booking_id: string }>>()
+      const response = await fetch(`/api/contacts/${contactId}/stats?branchId=${branchId}`)
+      const data = await response.json()
 
-      if (bookingContactsError) throw bookingContactsError
-
-      if (!bookingContacts || bookingContacts.length === 0) {
-        return {
-          totalBookings: 0,
-          totalParticipants: 0,
-          upcomingBookings: 0,
-          pastBookings: 0,
-          lastActivity: null,
-          firstBooking: null,
-          gameBookings: 0,
-          eventBookings: 0,
-        }
+      if (!response.ok) {
+        console.error('Error fetching contact stats:', data.error)
+        return null
       }
 
-      const bookingIds = bookingContacts.map((bc) => bc.booking_id)
-      const now = new Date().toISOString()
-
-      // Récupérer les bookings avec stats
-      type BookingStat = { id: string; type: string; status: string; start_datetime: string; participants_count: number; created_at: string }
-      const { data: bookings, error: bookingsError } = await supabase
-        .from('bookings')
-        .select('id, type, status, start_datetime, participants_count, created_at')
-        .in('id', bookingIds)
-        .eq('branch_id', branchId)
-        .returns<BookingStat[]>()
-
-      if (bookingsError) throw bookingsError
-
-      const bookingsList = bookings || []
-      const totalBookings = bookingsList.length
-      const totalParticipants = bookingsList.reduce((sum, b) => sum + (b.participants_count || 0), 0)
-      
-      const upcomingBookings = bookingsList.filter((b) => b.start_datetime > now && b.status !== 'CANCELLED').length
-      const pastBookings = bookingsList.filter((b) => b.start_datetime <= now || b.status === 'CANCELLED').length
-      
-      const gameBookings = bookingsList.filter((b) => b.type === 'GAME').length
-      const eventBookings = bookingsList.filter((b) => b.type === 'EVENT').length
-
-      // Dernière activité (dernière réservation)
-      const sortedByDate = [...bookingsList].sort((a, b) => 
-        new Date(b.start_datetime).getTime() - new Date(a.start_datetime).getTime()
-      )
-      const lastActivity = sortedByDate.length > 0 ? sortedByDate[0].start_datetime : null
-      
-      // Première réservation
-      const sortedByCreated = [...bookingsList].sort((a, b) => 
-        new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-      )
-      const firstBooking = sortedByCreated.length > 0 ? sortedByCreated[0].created_at : null
-
-      return {
-        totalBookings,
-        totalParticipants,
-        upcomingBookings,
-        pastBookings,
-        lastActivity,
-        firstBooking,
-        gameBookings,
-        eventBookings,
-      }
+      return data.stats || null
     } catch (err) {
       console.error('Error fetching contact stats:', err)
       return null

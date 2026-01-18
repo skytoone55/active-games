@@ -142,6 +142,51 @@ export async function PUT(
       )
     }
 
+    // ====================================================================
+    // SYNCHRONISER les données vers les orders et bookings liés
+    // ====================================================================
+    // Si les champs de données client ont changé, mettre à jour les copies
+    const customerFieldsChanged =
+      updateData.first_name !== undefined ||
+      updateData.last_name !== undefined ||
+      updateData.phone !== undefined ||
+      updateData.email !== undefined
+
+    if (customerFieldsChanged) {
+      // Préparer les données pour la synchronisation
+      const syncData: Record<string, unknown> = {}
+      if (updateData.first_name !== undefined) syncData.customer_first_name = contact.first_name
+      if (updateData.last_name !== undefined) syncData.customer_last_name = contact.last_name || ''
+      if (updateData.phone !== undefined) syncData.customer_phone = contact.phone
+      if (updateData.email !== undefined) syncData.customer_email = contact.email
+
+      // Synchroniser vers les orders liées
+      if (Object.keys(syncData).length > 0) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { error: ordersError } = await (supabase as any)
+          .from('orders')
+          .update(syncData)
+          .eq('contact_id', id)
+
+        if (ordersError) {
+          console.warn('Warning: Failed to sync contact data to orders:', ordersError)
+          // On continue quand même - ce n'est pas bloquant
+        }
+
+        // Synchroniser vers les bookings liés (via primary_contact_id)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { error: bookingsError } = await (supabase as any)
+          .from('bookings')
+          .update(syncData)
+          .eq('primary_contact_id', id)
+
+        if (bookingsError) {
+          console.warn('Warning: Failed to sync contact data to bookings:', bookingsError)
+          // On continue quand même - ce n'est pas bloquant
+        }
+      }
+    }
+
     // Déterminer l'action (archivage ou simple update)
     const actionType = body.status === 'archived' ? 'archived' : 'updated'
 

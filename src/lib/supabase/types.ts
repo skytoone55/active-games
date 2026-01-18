@@ -29,6 +29,8 @@ export type ActionType =
   | 'booking_updated'
   | 'booking_cancelled'
   | 'booking_deleted'
+  | 'order_created'
+  | 'order_updated'
   | 'order_confirmed'
   | 'order_cancelled'
   | 'order_deleted'

@@ -469,191 +469,51 @@ export function useBookings(branchId: string | null, date?: string) {
     }
   }, [fetchBookings])
 
-  // Mettre à jour une réservation
+  // Mettre à jour une réservation (via API route pour permissions et logging)
   const updateBooking = useCallback(async (
     id: string,
     data: Partial<CreateBookingData>
   ): Promise<BookingWithSlots | null> => {
-    const supabase = getClient()
     setError(null)
 
     try {
-      // Mettre à jour le booking
-      const updateData: Record<string, unknown> = {}
-      if (data.type) updateData.type = data.type
-      if (data.branch_id !== undefined) updateData.branch_id = data.branch_id // CORRECTION: Mettre à jour branch_id
-      if (data.start_datetime !== undefined) updateData.start_datetime = data.start_datetime
-      if (data.end_datetime !== undefined) updateData.end_datetime = data.end_datetime
-      if (data.game_start_datetime !== undefined) updateData.game_start_datetime = data.game_start_datetime
-      if (data.game_end_datetime !== undefined) updateData.game_end_datetime = data.game_end_datetime
-      if (data.participants_count !== undefined) updateData.participants_count = data.participants_count
-      if (data.event_room_id !== undefined) updateData.event_room_id = data.event_room_id
-      if (data.customer_first_name !== undefined) updateData.customer_first_name = data.customer_first_name
-      if (data.customer_last_name !== undefined) updateData.customer_last_name = data.customer_last_name
-      if (data.customer_phone !== undefined) updateData.customer_phone = data.customer_phone
-      if (data.customer_email !== undefined) updateData.customer_email = data.customer_email
-      if (data.notes !== undefined) updateData.notes = data.notes
-      // Couleur activée - la colonne existe dans la base de données
-      if (data.color !== undefined) updateData.color = data.color
-      // CRM: Mettre à jour primary_contact_id si fourni
-      if (data.primary_contact_id !== undefined) updateData.primary_contact_id = data.primary_contact_id
-      updateData.updated_at = new Date().toISOString()
+      // Construire le body pour l'API
+      const apiBody: Record<string, unknown> = {}
 
-      // Récupérer l'ancien booking pour comparer primary_contact_id
-      const { data: oldBooking } = await supabase
-        .from('bookings')
-        .select('primary_contact_id')
-        .eq('id', id)
-        .single<{ primary_contact_id: string | null }>()
+      if (data.type !== undefined) apiBody.type = data.type
+      if (data.branch_id !== undefined) apiBody.branch_id = data.branch_id
+      if (data.start_datetime !== undefined) apiBody.start_datetime = data.start_datetime
+      if (data.end_datetime !== undefined) apiBody.end_datetime = data.end_datetime
+      if (data.game_start_datetime !== undefined) apiBody.game_start_datetime = data.game_start_datetime
+      if (data.game_end_datetime !== undefined) apiBody.game_end_datetime = data.game_end_datetime
+      if (data.participants_count !== undefined) apiBody.participants_count = data.participants_count
+      if (data.event_room_id !== undefined) apiBody.event_room_id = data.event_room_id
+      if (data.customer_first_name !== undefined) apiBody.customer_first_name = data.customer_first_name
+      if (data.customer_last_name !== undefined) apiBody.customer_last_name = data.customer_last_name
+      if (data.customer_phone !== undefined) apiBody.customer_phone = data.customer_phone
+      if (data.customer_email !== undefined) apiBody.customer_email = data.customer_email
+      if (data.notes !== undefined) apiBody.notes = data.notes
+      if (data.color !== undefined) apiBody.color = data.color
+      if (data.primary_contact_id !== undefined) apiBody.primary_contact_id = data.primary_contact_id
+      if (data.slots !== undefined) apiBody.slots = data.slots
+      if (data.game_sessions !== undefined) apiBody.game_sessions = data.game_sessions
 
-      const { data: updatedBooking, error: bookingError } = await supabase
-        .from('bookings')
-        // @ts-expect-error - Type assertion nécessaire pour contourner le problème de typage Supabase
-        .update(updateData)
-        .eq('id', id)
-        .select()
-        .single<Booking>()
+      const response = await fetch(`/api/bookings/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(apiBody)
+      })
 
-      if (bookingError) throw bookingError
+      const result = await response.json()
 
-      // CRM: Mettre à jour les relations booking_contacts si primary_contact_id a changé
-      const newPrimaryContactId = data.primary_contact_id !== undefined ? data.primary_contact_id : updatedBooking.primary_contact_id
-      const oldPrimaryContactId = oldBooking?.primary_contact_id || null
-      
-      // Si le primary_contact_id a changé, mettre à jour les relations
-      if (newPrimaryContactId !== oldPrimaryContactId) {
-        // Supprimer toutes les anciennes relations pour cette réservation
-        const { error: deleteError } = await supabase
-          .from('booking_contacts')
-          .delete()
-          .eq('booking_id', id)
-
-        if (deleteError) {
-          console.error('Error deleting old booking_contacts:', deleteError)
-        }
-
-        // Créer la nouvelle relation avec le nouveau contact (si fourni)
-        if (newPrimaryContactId) {
-          const { error: bookingContactError } = await supabase
-            .from('booking_contacts')
-            // @ts-expect-error - Supabase SSR typing limitation with insert
-            .insert({
-              booking_id: id,
-              contact_id: newPrimaryContactId,
-              is_primary: true,
-              role: null,
-            } as BookingContactInsert)
-
-          if (bookingContactError) {
-            console.error('Error inserting new booking_contacts:', bookingContactError)
-            // Ne pas faire échouer la mise à jour si la relation échoue
-          }
-        }
+      if (!response.ok || !result.success) {
+        const errorMsg = result.error || 'Failed to update booking'
+        setError(errorMsg)
+        return null
       }
-
-      // Si des slots sont fournis, les recréer
-      let updatedSlots: BookingSlot[] = []
-      if (data.slots) {
-        // Supprimer les anciens slots
-        await supabase
-          .from('booking_slots')
-          .delete()
-          .eq('booking_id', id)
-
-        // Créer les nouveaux slots
-        if (data.slots.length > 0) {
-          const slotsToInsert = data.slots.map(slot => ({
-            booking_id: id,
-            branch_id: data.branch_id || updatedBooking.branch_id, // CORRECTION: Utiliser la nouvelle branch_id si fournie
-            slot_start: slot.slot_start,
-            slot_end: slot.slot_end,
-            participants_count: slot.participants_count,
-            slot_type: 'game_zone',
-          }))
-
-          const { data: insertedSlots } = await supabase
-            .from('booking_slots')
-            // @ts-expect-error - Supabase SSR typing limitation with insert
-            .insert(slotsToInsert as BookingSlotInsert[])
-            .select()
-            .returns<BookingSlot[]>()
-
-          updatedSlots = insertedSlots || []
-        }
-      }
-
-      // Si des game_sessions sont fournies, les recréer
-      let updatedSessions: GameSession[] = []
-      if (data.game_sessions) {
-        // Supprimer les anciennes sessions (ON DELETE CASCADE gère déjà ça, mais on le fait explicitement pour être sûr)
-        await supabase
-          .from('game_sessions')
-          .delete()
-          .eq('booking_id', id)
-
-        // Créer les nouvelles sessions
-        if (data.game_sessions.length > 0) {
-          const sessionsToInsert = data.game_sessions.map(session => ({
-            booking_id: id,
-            game_area: session.game_area,
-            start_datetime: session.start_datetime,
-            end_datetime: session.end_datetime,
-            laser_room_id: session.laser_room_id || null,
-            session_order: session.session_order,
-            pause_before_minutes: session.pause_before_minutes,
-          }))
-
-          const { data: insertedSessions } = await supabase
-            .from('game_sessions')
-            // @ts-expect-error - Supabase SSR typing limitation with insert
-            .insert(sessionsToInsert as GameSessionInsert[])
-            .select()
-            .returns<GameSession[]>()
-
-          updatedSessions = insertedSessions || []
-        }
-      }
-
-      // Mettre à jour l'order correspondante si elle existe
-      const bookingDate = new Date(data.start_datetime || updatedBooking.start_datetime)
-      const orderUpdateData: Record<string, unknown> = {
-        updated_at: new Date().toISOString(),
-      }
-      
-      // Mettre à jour les champs si modifiés
-      if (data.start_datetime) {
-        orderUpdateData.requested_date = bookingDate.toISOString().split('T')[0]
-        orderUpdateData.requested_time = bookingDate.toTimeString().slice(0, 5)
-      }
-      if (data.participants_count !== undefined) {
-        orderUpdateData.participants_count = data.participants_count
-      }
-      if (data.customer_first_name !== undefined || data.customer_last_name !== undefined) {
-        orderUpdateData.customer_name = `${data.customer_first_name || updatedBooking.customer_first_name || ''} ${data.customer_last_name || updatedBooking.customer_last_name || ''}`.trim()
-      }
-      if (data.customer_phone !== undefined) {
-        orderUpdateData.customer_phone = data.customer_phone
-      }
-      if (data.customer_email !== undefined) {
-        orderUpdateData.customer_email = data.customer_email
-      }
-      if (data.game_sessions && data.game_sessions.length > 0) {
-        orderUpdateData.game_area = data.game_sessions[0].game_area
-        orderUpdateData.number_of_games = data.game_sessions.length
-      }
-
-      await supabase
-        .from('orders')
-        // @ts-expect-error - Supabase SSR typing limitation with update
-        .update(orderUpdateData)
-        .eq('booking_id', id)
 
       await fetchBookings()
-      return { 
-        ...updatedBooking, 
-        slots: updatedSlots,
-        game_sessions: updatedSessions,
-      }
+      return result.booking as BookingWithSlots
     } catch (err) {
       console.error('Error updating booking:', err)
       setError('Erreur lors de la mise à jour de la réservation')
@@ -661,34 +521,25 @@ export function useBookings(branchId: string | null, date?: string) {
     }
   }, [fetchBookings])
 
-  // Annuler une réservation
+  // Annuler une réservation (via API route pour permissions et logging)
   const cancelBooking = useCallback(async (id: string, reason?: string): Promise<boolean> => {
-    const supabase = getClient()
     setError(null)
 
     try {
-      const { error: cancelError } = await supabase
-        .from('bookings')
-        // @ts-expect-error - Supabase SSR typing limitation with update
-        .update({
-          status: 'CANCELLED',
-          cancelled_at: new Date().toISOString(),
-          cancelled_reason: reason,
-          updated_at: new Date().toISOString(),
-        } as BookingUpdate)
-        .eq('id', id)
+      const url = new URL(`/api/bookings/${id}`, window.location.origin)
+      if (reason) url.searchParams.set('reason', reason)
 
-      if (cancelError) throw cancelError
+      const response = await fetch(url.toString(), {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' }
+      })
 
-      // Mettre à jour l'order correspondante si elle existe
-      await supabase
-        .from('orders')
-        // @ts-expect-error - Supabase SSR typing limitation with update
-        .update({
-          status: 'cancelled',
-          updated_at: new Date().toISOString(),
-        })
-        .eq('booking_id', id)
+      const result = await response.json()
+
+      if (!response.ok || !result.success) {
+        setError(result.error || 'Erreur lors de l\'annulation')
+        return false
+      }
 
       await fetchBookings()
       return true
@@ -699,30 +550,25 @@ export function useBookings(branchId: string | null, date?: string) {
     }
   }, [fetchBookings])
 
-  // Supprimer définitivement une réservation
+  // Supprimer définitivement une réservation (via API route pour permissions et logging)
   const deleteBooking = useCallback(async (id: string): Promise<boolean> => {
-    const supabase = getClient()
     setError(null)
 
     try {
-      // D'abord, mettre à jour l'order correspondante si elle existe
-      await supabase
-        .from('orders')
-        // @ts-expect-error - Supabase SSR typing limitation with update
-        .update({
-          status: 'cancelled',
-          booking_id: null, // Détacher l'order du booking supprimé
-          updated_at: new Date().toISOString(),
-        })
-        .eq('booking_id', id)
+      const url = new URL(`/api/bookings/${id}`, window.location.origin)
+      url.searchParams.set('hard', 'true')
 
-      // Les slots seront supprimés automatiquement grâce à ON DELETE CASCADE
-      const { error: deleteError } = await supabase
-        .from('bookings')
-        .delete()
-        .eq('id', id)
+      const response = await fetch(url.toString(), {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' }
+      })
 
-      if (deleteError) throw deleteError
+      const result = await response.json()
+
+      if (!response.ok || !result.success) {
+        setError(result.error || 'Erreur lors de la suppression')
+        return false
+      }
 
       await fetchBookings()
       return true

@@ -18,7 +18,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { createIsraelDateTime } from '@/lib/dates'
-import type { EventRoom, LaserRoom } from '@/lib/supabase/types'
+import { validateIsraeliPhone, formatIsraeliPhone } from '@/lib/validation'
+import { logOrderAction, logBookingAction, getClientIpFromHeaders } from '@/lib/activity-logger'
+import type { EventRoom, LaserRoom, UserRole } from '@/lib/supabase/types'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -211,12 +213,26 @@ export async function POST(request: NextRequest) {
       event_celebrant_age = null
     } = body
 
+    // Récupérer l'adresse IP pour le logging
+    const ipAddress = getClientIpFromHeaders(request.headers)
+
+    // Valider le format téléphone israélien
+    if (!validateIsraeliPhone(customer_phone)) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid phone format. Expected Israeli format: 05XXXXXXXX', messageKey: 'errors.invalidPhoneFormat' },
+        { status: 400 }
+      )
+    }
+
+    // Formater le téléphone
+    const formattedPhone = formatIsraeliPhone(customer_phone)
+
     // 1. Trouver ou créer le contact
     const contactId = await findOrCreateContact(
       branch_id,
       customer_first_name,
       customer_last_name || null,
-      customer_phone,
+      formattedPhone,
       customer_email || null,
       customer_notes || null
     )
@@ -292,7 +308,7 @@ export async function POST(request: NextRequest) {
             request_reference: referenceCode,
             customer_first_name,
             customer_last_name: customer_last_name || '',
-            customer_phone,
+            customer_phone: formattedPhone,
             customer_email: customer_email || null,
             customer_notes: customer_notes || null,
             requested_date,
@@ -313,6 +329,26 @@ export async function POST(request: NextRequest) {
             { status: 500 }
           )
         }
+
+        // Logger la création de l'order (pending - room unavailable)
+        await logOrderAction({
+          userId: null,
+          userRole: 'agent' as UserRole,
+          userName: 'Website',
+          action: 'created',
+          orderId: order.id,
+          orderRef: order.request_reference,
+          branchId: branch_id,
+          details: {
+            source: 'website',
+            status: 'pending',
+            reason: 'room_unavailable',
+            orderType: order_type,
+            participants: participants_count,
+            customerName: `${customer_first_name} ${customer_last_name || ''}`.trim()
+          },
+          ipAddress
+        })
 
         return NextResponse.json({
           success: true,
@@ -414,7 +450,7 @@ export async function POST(request: NextRequest) {
                 request_reference: referenceCode,
                 customer_first_name,
                 customer_last_name: customer_last_name || '',
-                customer_phone,
+                customer_phone: formattedPhone,
                 customer_email: customer_email || null,
                 customer_notes: customer_notes || null,
                 requested_date,
@@ -435,6 +471,26 @@ export async function POST(request: NextRequest) {
                 { status: 500 }
               )
             }
+
+            // Logger la création de l'order (pending - laser unavailable)
+            await logOrderAction({
+              userId: null,
+              userRole: 'agent' as UserRole,
+              userName: 'Website',
+              action: 'created',
+              orderId: order.id,
+              orderRef: order.request_reference,
+              branchId: branch_id,
+              details: {
+                source: 'website',
+                status: 'pending',
+                reason: 'laser_unavailable',
+                orderType: order_type,
+                participants: participants_count,
+                customerName: `${customer_first_name} ${customer_last_name || ''}`.trim()
+              },
+              ipAddress
+            })
 
             return NextResponse.json({
               success: true,
@@ -486,7 +542,7 @@ export async function POST(request: NextRequest) {
           event_room_id: eventRoomId, // CRITIQUE : allocation de la salle
           customer_first_name,
           customer_last_name: customer_last_name || '',
-          customer_phone,
+          customer_phone: formattedPhone,
           customer_email: customer_email || null,
           customer_notes_at_booking: eventNotes,
           primary_contact_id: contactId,
@@ -560,7 +616,7 @@ export async function POST(request: NextRequest) {
           request_reference: referenceCode,
           customer_first_name,
           customer_last_name: customer_last_name || '',
-          customer_phone,
+          customer_phone: formattedPhone,
           customer_email: customer_email || null,
           customer_notes: customer_notes || null,
           requested_date,
@@ -581,6 +637,45 @@ export async function POST(request: NextRequest) {
           { status: 500 }
         )
       }
+
+      // Logger la création de l'order (EVENT confirmé)
+      await logOrderAction({
+        userId: null,
+        userRole: 'agent' as UserRole,
+        userName: 'Website',
+        action: 'created',
+        orderId: order.id,
+        orderRef: order.request_reference,
+        branchId: branch_id,
+        details: {
+          source: 'website',
+          status: 'auto_confirmed',
+          orderType: 'EVENT',
+          eventType: event_type,
+          participants: participants_count,
+          customerName: `${customer_first_name} ${customer_last_name || ''}`.trim(),
+          bookingId: booking.id
+        },
+        ipAddress
+      })
+
+      // Logger aussi la création du booking
+      await logBookingAction({
+        userId: null,
+        userRole: 'agent' as UserRole,
+        userName: 'Website',
+        action: 'created',
+        bookingId: booking.id,
+        bookingRef: referenceCode,
+        branchId: branch_id,
+        details: {
+          source: 'website',
+          type: 'EVENT',
+          participants: participants_count,
+          customerName: `${customer_first_name} ${customer_last_name || ''}`.trim()
+        },
+        ipAddress
+      })
 
       return NextResponse.json({
         success: true,
@@ -688,7 +783,7 @@ export async function POST(request: NextRequest) {
             request_reference: referenceCode,
             customer_first_name,
             customer_last_name: customer_last_name || '',
-            customer_phone,
+            customer_phone: formattedPhone,
             customer_email: customer_email || null,
             customer_notes: customer_notes || null,
             requested_date,
@@ -709,6 +804,28 @@ export async function POST(request: NextRequest) {
             { status: 500 }
           )
         }
+
+        // Logger la création de l'order (pending - overbooking)
+        await logOrderAction({
+          userId: null,
+          userRole: 'agent' as UserRole,
+          userName: 'Website',
+          action: 'created',
+          orderId: order.id,
+          orderRef: order.request_reference,
+          branchId: branch_id,
+          details: {
+            source: 'website',
+            status: 'pending',
+            reason: 'overbooking',
+            overbookingDetails,
+            orderType: order_type,
+            gameArea: game_area,
+            participants: participants_count,
+            customerName: `${customer_first_name} ${customer_last_name || ''}`.trim()
+          },
+          ipAddress
+        })
 
         return NextResponse.json({
           success: true,
@@ -757,7 +874,7 @@ export async function POST(request: NextRequest) {
           request_reference: referenceCode,
           customer_first_name,
           customer_last_name: customer_last_name || '',
-          customer_phone,
+          customer_phone: formattedPhone,
           customer_email: customer_email || null,
           customer_notes: customer_notes || null,
           requested_date,
@@ -778,6 +895,28 @@ export async function POST(request: NextRequest) {
           { status: 500 }
         )
       }
+
+      // Logger la création de l'order (pending - slot unavailable)
+      await logOrderAction({
+        userId: null,
+        userRole: 'agent' as UserRole,
+        userName: 'Website',
+        action: 'created',
+        orderId: order.id,
+        orderRef: order.request_reference,
+        branchId: branch_id,
+        details: {
+          source: 'website',
+          status: 'pending',
+          reason: 'slot_unavailable',
+          errorDetails: sessionResult.error,
+          orderType: order_type,
+          gameArea: game_area,
+          participants: participants_count,
+          customerName: `${customer_first_name} ${customer_last_name || ''}`.trim()
+        },
+        ipAddress
+      })
 
       return NextResponse.json({
         success: true,
@@ -805,7 +944,7 @@ export async function POST(request: NextRequest) {
         participants_count,
         customer_first_name,
         customer_last_name: customer_last_name || '',
-        customer_phone,
+        customer_phone: formattedPhone,
         customer_email: customer_email || null,
         customer_notes_at_booking: customer_notes || null,
         primary_contact_id: contactId,
@@ -897,7 +1036,7 @@ export async function POST(request: NextRequest) {
         request_reference: referenceCode,
         customer_first_name,
         customer_last_name: customer_last_name || '',
-        customer_phone,
+        customer_phone: formattedPhone,
         customer_email: customer_email || null,
         customer_notes: customer_notes || null,
         requested_date,
@@ -918,6 +1057,47 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       )
     }
+
+    // Logger la création de l'order (GAME confirmé)
+    await logOrderAction({
+      userId: null,
+      userRole: 'agent' as UserRole,
+      userName: 'Website',
+      action: 'created',
+      orderId: order.id,
+      orderRef: order.request_reference,
+      branchId: branch_id,
+      details: {
+        source: 'website',
+        status: 'auto_confirmed',
+        orderType: order_type,
+        gameArea: game_area,
+        numberOfGames: number_of_games,
+        participants: participants_count,
+        customerName: `${customer_first_name} ${customer_last_name || ''}`.trim(),
+        bookingId: booking.id
+      },
+      ipAddress
+    })
+
+    // Logger aussi la création du booking
+    await logBookingAction({
+      userId: null,
+      userRole: 'agent' as UserRole,
+      userName: 'Website',
+      action: 'created',
+      bookingId: booking.id,
+      bookingRef: referenceCode,
+      branchId: branch_id,
+      details: {
+        source: 'website',
+        type: order_type,
+        gameArea: game_area,
+        participants: participants_count,
+        customerName: `${customer_first_name} ${customer_last_name || ''}`.trim()
+      },
+      ipAddress
+    })
 
     return NextResponse.json({
       success: true,
@@ -941,41 +1121,72 @@ export async function POST(request: NextRequest) {
  * Liste des orders pour l'admin
  */
 export async function GET(request: NextRequest) {
-  const searchParams = request.nextUrl.searchParams
-  const branchId = searchParams.get('branch_id')
-  const status = searchParams.get('status')
+  try {
+    // Importer la vérification de permissions
+    const { verifyApiPermission } = await import('@/lib/permissions')
 
-  if (!branchId) {
-    return NextResponse.json({ error: 'branch_id required' }, { status: 400 })
+    // Vérifier les permissions
+    const { success, user, errorResponse } = await verifyApiPermission('orders', 'view')
+    if (!success || !user) {
+      return errorResponse
+    }
+
+    const searchParams = request.nextUrl.searchParams
+    const branchId = searchParams.get('branch_id')
+    const status = searchParams.get('status')
+
+    if (!branchId) {
+      return NextResponse.json(
+        { success: false, error: 'branch_id required', messageKey: 'errors.branchRequired' },
+        { status: 400 }
+      )
+    }
+
+    // Vérifier l'accès à la branche
+    if (user.role !== 'super_admin' && !user.branchIds.includes(branchId)) {
+      return NextResponse.json(
+        { success: false, error: 'Branch access denied', messageKey: 'errors.branchAccessDenied' },
+        { status: 403 }
+      )
+    }
+
+    let query = supabase
+      .from('orders')
+      .select(`
+        *,
+        contact:contacts(*),
+        booking:bookings(*),
+        branch:branches(*)
+      `)
+      .eq('branch_id', branchId)
+      .order('created_at', { ascending: false })
+
+    if (status) {
+      query = query.eq('status', status)
+    }
+
+    const { data: orders, error } = await query
+
+    if (error) {
+      return NextResponse.json(
+        { success: false, error: error.message, messageKey: 'errors.fetchFailed' },
+        { status: 500 }
+      )
+    }
+
+    // Compter les pending
+    const pendingCount = orders?.filter(o => o.status === 'pending').length || 0
+
+    return NextResponse.json({
+      success: true,
+      orders,
+      pending_count: pendingCount
+    })
+  } catch (error) {
+    console.error('Error in GET /api/orders:', error)
+    return NextResponse.json(
+      { success: false, error: 'Internal server error', messageKey: 'errors.internalError' },
+      { status: 500 }
+    )
   }
-
-  let query = supabase
-    .from('orders')
-    .select(`
-      *,
-      contact:contacts(*),
-      booking:bookings(*),
-      branch:branches(*)
-    `)
-    .eq('branch_id', branchId)
-    .order('created_at', { ascending: false })
-
-  if (status) {
-    query = query.eq('status', status)
-  }
-
-  const { data: orders, error } = await query
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
-  }
-
-  // Compter les pending
-  const pendingCount = orders?.filter(o => o.status === 'pending').length || 0
-
-  return NextResponse.json({
-    success: true,
-    orders,
-    pending_count: pendingCount
-  })
 }

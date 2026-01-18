@@ -124,7 +124,7 @@ export function PermissionsTable({ permissions, isDark, onSavePermissions }: Per
               </tr>
             </thead>
             <tbody className={`divide-y ${isDark ? 'divide-gray-700' : 'divide-gray-200'}`}>
-              {RESOURCE_ORDER.map((resource, resourceIndex) => (
+              {RESOURCE_ORDER.flatMap((resource, resourceIndex) =>
                 ROLE_ORDER.map((role, roleIndex) => {
                   const perm = getPermission(role, resource)
                   const isFirstOfGroup = roleIndex === 0
@@ -206,7 +206,7 @@ export function PermissionsTable({ permissions, isDark, onSavePermissions }: Per
                     </tr>
                   )
                 })
-              ))}
+              )}
             </tbody>
           </table>
         </div>

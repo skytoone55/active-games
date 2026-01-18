@@ -142,6 +142,16 @@ export function useAuth() {
       async (event, session) => {
         if (event === 'SIGNED_IN' && session?.user) {
           await fetchUserData(session.user)
+          // Logger la connexion
+          try {
+            await fetch('/api/auth/log', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ action: 'login' })
+            })
+          } catch (e) {
+            console.error('Failed to log login:', e)
+          }
         } else if (event === 'SIGNED_OUT') {
           setUser(null)
         }
@@ -155,6 +165,16 @@ export function useAuth() {
 
   const signOut = useCallback(async () => {
     const supabase = getClient()
+    // Logger la déconnexion AVANT de se déconnecter (sinon plus de session)
+    try {
+      await fetch('/api/auth/log', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'logout' })
+      })
+    } catch (e) {
+      console.error('Failed to log logout:', e)
+    }
     await supabase.auth.signOut()
     setUser(null)
     router.push('/admin/login')

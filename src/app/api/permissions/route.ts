@@ -13,7 +13,9 @@ import type { UserRole, ResourceType } from '@/lib/supabase/types'
 
 /**
  * GET /api/permissions
- * List all role permissions
+ * List role permissions
+ * - Super admin: returns all permissions (for admin page)
+ * - Other users: returns only permissions for their role (for UI visibility)
  */
 export async function GET() {
   try {
@@ -44,22 +46,23 @@ export async function GET() {
 
     const userProfile = profile as { role: string }
 
-    // Only super_admin can view permissions page
-    if (userProfile.role !== 'super_admin') {
-      return NextResponse.json(
-        { success: false, error: 'Access denied' },
-        { status: 403 }
-      )
-    }
-
-    // Use service role client to fetch all permissions
+    // Use service role client to fetch permissions
     const serviceClient = createServiceRoleClient()
 
-    const { data: permissions, error } = await serviceClient
+    // Super admin gets all permissions (for the admin permissions page)
+    // Other users get only their role's permissions (for UI visibility)
+    let query = serviceClient
       .from('role_permissions')
       .select('*')
       .order('role')
       .order('resource')
+
+    // Non-super_admin users only see their own role's permissions
+    if (userProfile.role !== 'super_admin') {
+      query = query.eq('role', userProfile.role)
+    }
+
+    const { data: permissions, error } = await query
 
     if (error) {
       console.error('Error fetching permissions:', error)

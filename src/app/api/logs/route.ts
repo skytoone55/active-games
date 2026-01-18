@@ -8,6 +8,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
+import { verifyApiPermission } from '@/lib/permissions'
 import { logLogDeletion, getClientIpFromHeaders } from '@/lib/activity-logger'
 
 /**
@@ -16,40 +17,14 @@ import { logLogDeletion, getClientIpFromHeaders } from '@/lib/activity-logger'
  */
 export async function GET(request: NextRequest) {
   try {
+    // Vérifier les permissions via le système de permissions de la base de données
+    const { success, user, errorResponse } = await verifyApiPermission('logs', 'view')
+    if (!success || !user) {
+      return errorResponse
+    }
+
     const supabase = await createClient()
-
-    // Get current user
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    if (authError || !user) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
-
-    // Get user profile
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single()
-
-    if (profileError || !profile) {
-      return NextResponse.json(
-        { success: false, error: 'Profile not found' },
-        { status: 404 }
-      )
-    }
-
-    const userProfile = profile as { role: string }
-
-    // Check permission - only super_admin and branch_admin can view logs
-    if (userProfile.role !== 'super_admin' && userProfile.role !== 'branch_admin') {
-      return NextResponse.json(
-        { success: false, error: 'Access denied' },
-        { status: 403 }
-      )
-    }
+    const userProfile = { role: user.role }
 
     // Parse query parameters
     const searchParams = request.nextUrl.searchParams
@@ -78,16 +53,10 @@ export async function GET(request: NextRequest) {
 
     // Apply filters
 
-    // For branch_admin, always filter by their branches
-    if (userProfile.role === 'branch_admin') {
-      // Get user's branches
-      const { data: userBranches } = await supabase
-        .from('user_branches')
-        .select('branch_id')
-        .eq('user_id', user.id)
-        .returns<Array<{ branch_id: string }>>()
-
-      const branchIds = userBranches?.map(ub => ub.branch_id) || []
+    // For non-super_admin, always filter by their branches
+    if (userProfile.role !== 'super_admin') {
+      // Get user's branches from the already loaded user data
+      const branchIds = user.branchIds || []
       if (branchIds.length > 0) {
         query = query.in('branch_id', branchIds)
       } else {
@@ -150,14 +119,8 @@ export async function GET(request: NextRequest) {
       .from('activity_logs')
       .select('id', { count: 'exact', head: true })
 
-    if (userProfile.role === 'branch_admin') {
-      const { data: userBranches } = await supabase
-        .from('user_branches')
-        .select('branch_id')
-        .eq('user_id', user.id)
-        .returns<Array<{ branch_id: string }>>()
-
-      const branchIds = userBranches?.map(ub => ub.branch_id) || []
+    if (userProfile.role !== 'super_admin') {
+      const branchIds = user.branchIds || []
       if (branchIds.length > 0) {
         countQuery = countQuery.in('branch_id', branchIds)
       }
