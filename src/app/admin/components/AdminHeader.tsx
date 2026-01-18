@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { LogOut, User, ChevronDown, Sun, Moon, Users, Calendar, Menu, X, ShoppingCart, Shield, Globe, FileText, Lock } from 'lucide-react'
+import { LogOut, User, ChevronDown, Sun, Moon, Users, Calendar, Menu, X, ShoppingCart, Shield, Globe, FileText, Lock, Crown } from 'lucide-react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'

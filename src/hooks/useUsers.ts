@@ -6,7 +6,7 @@ interface CreateUserData {
   first_name: string
   last_name: string
   phone: string
-  role: UserRole
+  role_id: string
   branch_ids: string[]
   password?: string
 }
@@ -17,7 +17,7 @@ interface UpdateUserData {
   phone?: string
   email?: string
   password?: string
-  role?: UserRole
+  role_id?: string
   branch_ids?: string[]
 }
 

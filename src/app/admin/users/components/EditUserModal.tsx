@@ -1,10 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { X, Loader2, User, Phone, Shield, Building2, AlertCircle, Save, Mail, Lock } from 'lucide-react'
 import type { UserWithBranches, UserRole, Branch } from '@/lib/supabase/types'
 import { validateIsraeliPhone, validateEmail, VALIDATION_MESSAGES } from '@/lib/validation'
 import { CustomSelect } from '../../components/CustomSelect'
+import { useRoles } from '@/hooks/useRoles'
 
 interface EditUserModalProps {
   isOpen: boolean
@@ -15,13 +16,14 @@ interface EditUserModalProps {
     phone?: string
     email?: string
     password?: string
-    role?: UserRole
+    role_id?: string
     branch_ids?: string[]
   }) => Promise<{ success: boolean; error?: string }>
   user: UserWithBranches | null
   branches: Branch[]
   currentUserRole: UserRole
   currentUserBranchIds: string[]
+  currentUserLevel?: number
   isDark: boolean
 }
 
@@ -33,18 +35,26 @@ export function EditUserModal({
   branches,
   currentUserRole,
   currentUserBranchIds,
+  currentUserLevel = 10,
   isDark,
 }: EditUserModalProps) {
+  const { roles, getAssignableRoles, getRoleByName, loading: rolesLoading } = useRoles()
+
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
   const [phone, setPhone] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [role, setRole] = useState<UserRole>('agent')
+  const [selectedRoleId, setSelectedRoleId] = useState<string>('')
   const [selectedBranchIds, setSelectedBranchIds] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [validationErrors, setValidationErrors] = useState<{ phone?: string; email?: string; password?: string }>({})
+
+  // Get available roles for assignment based on user level
+  const assignableRoles = useMemo(() => {
+    return getAssignableRoles(currentUserLevel)
+  }, [getAssignableRoles, currentUserLevel])
 
   // Initialiser avec les données de l'utilisateur
   useEffect(() => {
@@ -54,12 +64,16 @@ export function EditUserModal({
       setPhone(user.phone)
       setEmail(user.email || '')
       setPassword('') // Toujours vide au départ (optionnel)
-      setRole(user.role)
+
+      // Find role_id from user's role name
+      const userRole = getRoleByName(user.role)
+      setSelectedRoleId(userRole?.id || user.role_id || '')
+
       setSelectedBranchIds(user.branches.map(b => b.id))
       setError(null)
       setValidationErrors({})
     }
-  }, [isOpen, user])
+  }, [isOpen, user, getRoleByName])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -105,13 +119,13 @@ export function EditUserModal({
       phone?: string
       email?: string
       password?: string
-      role?: UserRole
+      role_id?: string
       branch_ids?: string[]
     } = {
       first_name: firstName.trim(),
       last_name: lastName.trim(),
       phone,
-      role,
+      role_id: selectedRoleId,
       branch_ids: selectedBranchIds,
     }
 
@@ -144,20 +158,34 @@ export function EditUserModal({
     )
   }
 
-  const availableBranches = currentUserRole === 'super_admin'
+  // Filter branches based on user level
+  const availableBranches = currentUserLevel < 5
     ? branches
     : branches.filter(b => currentUserBranchIds.includes(b.id))
 
-  const availableRoles: { value: UserRole; label: string }[] = currentUserRole === 'super_admin'
-    ? [
-        { value: 'branch_admin', label: 'Admin Agence' },
-        { value: 'agent', label: 'Agent' },
-      ]
-    : [
-        { value: 'agent', label: 'Agent' },
-      ]
+  // Build role options from dynamic roles
+  const roleOptions = useMemo(() => {
+    return assignableRoles.map(role => ({
+      value: role.id,
+      label: role.display_name,
+      color: role.color
+    }))
+  }, [assignableRoles])
 
   if (!isOpen || !user) return null
+
+  // Loading state for roles
+  if (rolesLoading) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+        <div className={`relative w-full max-w-md rounded-2xl shadow-2xl p-8 ${isDark ? 'bg-gray-800' : 'bg-white'}`}>
+          <div className="flex items-center justify-center">
+            <Loader2 className={`w-8 h-8 animate-spin ${isDark ? 'text-gray-400' : 'text-gray-500'}`} />
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 overflow-y-auto">
@@ -348,11 +376,16 @@ export function EditUserModal({
               Rôle *
             </label>
             <CustomSelect
-              value={role}
-              onChange={(value) => setRole(value as UserRole)}
-              options={availableRoles}
+              value={selectedRoleId}
+              onChange={(value) => setSelectedRoleId(value)}
+              options={roleOptions}
               isDark={isDark}
             />
+            {assignableRoles.length === 0 && (
+              <p className={`text-xs mt-1 ${isDark ? 'text-yellow-400' : 'text-yellow-600'}`}>
+                Aucun rôle disponible pour l'assignation
+              </p>
+            )}
           </div>
 
           <div>

@@ -3,26 +3,77 @@ import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { validateEmail, validateIsraeliPhone, formatIsraeliPhone } from '@/lib/validation'
 import { logUserAction, getClientIpFromHeaders } from '@/lib/activity-logger'
-import type { UserRole, Profile, ProfileUpdate } from '@/lib/supabase/types'
+import type { UserRole, Profile, ProfileUpdate, Role } from '@/lib/supabase/types'
+
+/**
+ * Helper: Récupère le niveau hiérarchique d'un utilisateur
+ * Retourne le level du rôle (1 = plus haut, 10 = plus bas)
+ */
+async function getUserLevel(serviceClient: ReturnType<typeof createServiceRoleClient>, userId: string): Promise<{ level: number; role: Role | null }> {
+  // Récupérer le profil avec role_id
+  const { data: profile } = await serviceClient
+    .from('profiles')
+    .select('role, role_id')
+    .eq('id', userId)
+    .single()
+
+  if (!profile) {
+    return { level: 10, role: null }
+  }
+
+  // Récupérer le rôle par role_id ou par name
+  let roleData: Role | null = null
+
+  if (profile.role_id) {
+    const { data } = await serviceClient
+      .from('roles')
+      .select('*')
+      .eq('id', profile.role_id)
+      .single()
+    roleData = data
+  }
+
+  if (!roleData && profile.role) {
+    const { data } = await serviceClient
+      .from('roles')
+      .select('*')
+      .eq('name', profile.role)
+      .single()
+    roleData = data
+  }
+
+  return {
+    level: roleData?.level ?? 10,
+    role: roleData
+  }
+}
+
+/**
+ * Helper: Vérifie si un utilisateur peut gérer un rôle cible
+ * Règle: userLevel doit être < targetLevel (niveau plus bas = plus de pouvoir)
+ */
+function canManageLevel(userLevel: number, targetLevel: number): boolean {
+  return userLevel < targetLevel
+}
 
 /**
  * PUT /api/admin/users/[id]
  * Modifie un utilisateur existant
- * 
+ *
  * Body: {
  *   first_name?: string
  *   last_name?: string
  *   phone?: string
  *   email?: string
  *   password?: string
- *   role?: 'branch_admin' | 'agent'
+ *   role_id?: string (UUID du rôle)
  *   branch_ids?: string[]
  * }
- * 
- * Permissions:
- * - super_admin: Peut modifier tous les utilisateurs
- * - branch_admin: Peut modifier uniquement les utilisateurs de ses branches (sauf lui-même)
- * - Ne peut pas modifier son propre rôle
+ *
+ * Permissions (basées sur hiérarchie dynamique):
+ * - Un utilisateur peut modifier des utilisateurs avec un rôle de level > son level
+ * - Ne peut pas modifier son propre rôle ou branches
+ * - Restriction par branches pour level >= 5
  */
 export async function PUT(
   request: NextRequest,
@@ -31,6 +82,7 @@ export async function PUT(
   try {
     const { id: targetUserId } = await params
     const supabase = await createClient()
+    const supabaseAdmin = createServiceRoleClient()
 
     // Vérifier l'authentification
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -55,9 +107,12 @@ export async function PUT(
       )
     }
 
-    // Vérifier les permissions
+    // Récupérer le niveau hiérarchique de l'utilisateur connecté
+    const { level: userLevel } = await getUserLevel(supabaseAdmin, user.id)
     const userRole = profile.role as UserRole
-    if (userRole !== 'super_admin' && userRole !== 'branch_admin') {
+
+    // Vérifier que l'utilisateur a le droit de modifier des utilisateurs (level < 8)
+    if (userLevel >= 8) {
       return NextResponse.json(
         { success: false, error: 'Permission refusée' },
         { status: 403 }
@@ -66,14 +121,14 @@ export async function PUT(
 
     // Parser le body pour vérifier les modifications demandées
     const body = await request.json()
-    const { first_name, last_name, phone, email, password, role, branch_ids } = body
+    const { first_name, last_name, phone, email, password, role_id, role, branch_ids } = body
 
     // Si l'utilisateur modifie son propre compte
     const isSelfEdit = targetUserId === user.id
     if (isSelfEdit) {
       // Autoriser uniquement la modification des infos de contact (prénom, nom, téléphone)
       // Interdire la modification du rôle ou des branches
-      if (role !== undefined || branch_ids !== undefined) {
+      if (role_id !== undefined || role !== undefined || branch_ids !== undefined) {
         return NextResponse.json(
           { success: false, error: 'Vous ne pouvez pas modifier votre propre rôle ou vos branches' },
           { status: 403 }
@@ -95,8 +150,19 @@ export async function PUT(
       )
     }
 
-    // Si branch_admin et pas soi-même, vérifier qu'il gère cet utilisateur
-    if (userRole === 'branch_admin' && !isSelfEdit) {
+    // Récupérer le niveau hiérarchique de l'utilisateur cible
+    const { level: targetLevel } = await getUserLevel(supabaseAdmin, targetUserId)
+
+    // Vérifier la hiérarchie: l'utilisateur ne peut modifier que des utilisateurs de niveau > son niveau
+    if (!isSelfEdit && !canManageLevel(userLevel, targetLevel)) {
+      return NextResponse.json(
+        { success: false, error: 'Vous ne pouvez modifier que des utilisateurs avec un niveau hiérarchique inférieur au vôtre' },
+        { status: 403 }
+      )
+    }
+
+    // Si level >= 5 et pas soi-même, vérifier qu'il gère cet utilisateur via les branches
+    if (userLevel >= 5 && !isSelfEdit) {
       const { data: adminBranches } = await supabase
         .from('user_branches')
         .select('branch_id')
@@ -149,28 +215,55 @@ export async function PUT(
       updates.phone = formatIsraeliPhone(phone)
     }
 
-    if (role !== undefined) {
-      const validRoles: UserRole[] = ['branch_admin', 'agent']
-      if (!validRoles.includes(role as UserRole)) {
+    // Gérer le changement de rôle (par role_id ou role pour rétrocompatibilité)
+    if (role_id !== undefined || role !== undefined) {
+      // Récupérer le nouveau rôle cible
+      let newTargetRole: Role | null = null
+
+      if (role_id) {
+        const { data } = await supabaseAdmin
+          .from('roles')
+          .select('*')
+          .eq('id', role_id)
+          .single()
+        newTargetRole = data
+      } else if (role) {
+        // Rétrocompatibilité: chercher par nom
+        const { data } = await supabaseAdmin
+          .from('roles')
+          .select('*')
+          .eq('name', role)
+          .single()
+        newTargetRole = data
+      }
+
+      if (!newTargetRole) {
         return NextResponse.json(
-          { success: false, error: 'Rôle invalide' },
+          { success: false, error: 'Rôle invalide ou introuvable' },
           { status: 400 }
         )
       }
 
-      // Si branch_admin, ne peut modifier qu'en agent
-      if (userRole === 'branch_admin' && role !== 'agent') {
+      // Vérifier la hiérarchie: ne peut assigner que des rôles de niveau > son niveau
+      if (!canManageLevel(userLevel, newTargetRole.level)) {
         return NextResponse.json(
-          { success: false, error: 'Vous ne pouvez assigner que le rôle agent' },
+          { success: false, error: `Vous ne pouvez assigner que des rôles avec un niveau hiérarchique inférieur au vôtre (${userLevel})` },
           { status: 403 }
         )
       }
 
-      updates.role = role as UserRole
+      // Interdire d'assigner le level 1 (super_admin)
+      if (newTargetRole.level === 1) {
+        return NextResponse.json(
+          { success: false, error: 'Impossible d\'assigner le rôle super_admin' },
+          { status: 403 }
+        )
+      }
+
+      updates.role = newTargetRole.name as UserRole
+      updates.role_id = newTargetRole.id
     }
 
-    // Mettre à jour l'email et/ou le mot de passe dans Supabase Auth si fournis
-    const supabaseAdmin = createServiceRoleClient()
     const authUpdates: { email?: string; password?: string } = {}
 
     if (email !== undefined && email.trim()) {
@@ -244,8 +337,8 @@ export async function PUT(
         )
       }
 
-      // Si branch_admin, vérifier qu'il n'assigne que ses branches
-      if (userRole === 'branch_admin') {
+      // Si level >= 5, vérifier qu'il n'assigne que ses branches
+      if (userLevel >= 5) {
         const { data: adminBranches } = await supabase
           .from('user_branches')
           .select('branch_id')
@@ -349,10 +442,11 @@ export async function PUT(
 /**
  * DELETE /api/admin/users/[id]
  * Supprime un utilisateur
- * 
- * Permissions:
- * - super_admin: Peut supprimer tous les utilisateurs (sauf lui-même)
- * - branch_admin: Peut supprimer uniquement les utilisateurs de ses branches (sauf lui-même)
+ *
+ * Permissions (basées sur hiérarchie dynamique):
+ * - Un utilisateur peut supprimer des utilisateurs avec un rôle de level > son level
+ * - Ne peut pas se supprimer soi-même
+ * - Restriction par branches pour level >= 5
  */
 export async function DELETE(
   request: NextRequest,
@@ -386,9 +480,12 @@ export async function DELETE(
       )
     }
 
-    // Vérifier les permissions
+    // Récupérer le niveau hiérarchique de l'utilisateur connecté
+    const { level: userLevel } = await getUserLevel(supabaseAdmin, user.id)
     const userRole = profile.role as UserRole
-    if (userRole !== 'super_admin' && userRole !== 'branch_admin') {
+
+    // Vérifier que l'utilisateur a le droit de supprimer des utilisateurs (level < 8)
+    if (userLevel >= 8) {
       return NextResponse.json(
         { success: false, error: 'Permission refusée' },
         { status: 403 }
@@ -417,8 +514,19 @@ export async function DELETE(
       )
     }
 
-    // Si branch_admin, vérifier qu'il gère cet utilisateur
-    if (userRole === 'branch_admin') {
+    // Récupérer le niveau hiérarchique de l'utilisateur cible
+    const { level: targetLevel } = await getUserLevel(supabaseAdmin, targetUserId)
+
+    // Vérifier la hiérarchie: l'utilisateur ne peut supprimer que des utilisateurs de niveau > son niveau
+    if (!canManageLevel(userLevel, targetLevel)) {
+      return NextResponse.json(
+        { success: false, error: 'Vous ne pouvez supprimer que des utilisateurs avec un niveau hiérarchique inférieur au vôtre' },
+        { status: 403 }
+      )
+    }
+
+    // Si level >= 5, vérifier qu'il gère cet utilisateur via les branches
+    if (userLevel >= 5) {
       const { data: adminBranches } = await supabase
         .from('user_branches')
         .select('branch_id')

@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Loader2, AlertCircle, Lock } from 'lucide-react'
+import { Loader2, AlertCircle, Lock, Crown } from 'lucide-react'
+import Link from 'next/link'
 import { useAuth } from '@/hooks/useAuth'
 import { usePermissions } from '@/hooks/usePermissions'
 import { useBranches } from '@/hooks/useBranches'
@@ -106,6 +107,14 @@ export default function PermissionsPage() {
               </p>
             </div>
           </div>
+          {/* Bouton Roles - accessible depuis la page permissions */}
+          <Link
+            href="/admin/roles"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-yellow-600 hover:bg-yellow-700 text-white transition-colors"
+          >
+            <Crown className="w-5 h-5" />
+            Roles
+          </Link>
         </div>
       </div>
 

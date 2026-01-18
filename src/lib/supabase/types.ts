@@ -13,7 +13,9 @@ export type Json =
 
 export type BookingType = 'GAME' | 'EVENT'
 export type BookingStatus = 'DRAFT' | 'CONFIRMED' | 'CANCELLED'
-export type UserRole = 'super_admin' | 'branch_admin' | 'agent'
+// UserRole est maintenant un string pour supporter les rôles personnalisés
+// Les valeurs par défaut sont: 'super_admin', 'branch_admin', 'agent'
+export type UserRole = string
 export type ContactStatus = 'active' | 'archived'
 export type ContactSource = 'admin_agenda' | 'public_booking' | 'website'
 export type GameArea = 'ACTIVE' | 'LASER'
@@ -52,9 +54,28 @@ export type TargetType = 'booking' | 'order' | 'contact' | 'user' | 'branch' | '
 // Types pour Permissions
 export type ResourceType = 'agenda' | 'orders' | 'clients' | 'users' | 'logs' | 'settings' | 'permissions'
 
+// Type pour la table roles (rôles dynamiques avec hiérarchie)
+export interface Role {
+  id: string
+  name: string                    // Slug unique: "branch_admin"
+  display_name: string            // Nom affiché: "Admin Agence"
+  description: string | null
+  level: number                   // 1 = plus haute autorité, 10 = plus basse
+  color: string                   // Couleur du badge: "#3B82F6"
+  icon: string                    // Nom icône Lucide: "Shield"
+  is_system: boolean              // true = ne peut pas être modifié/supprimé
+  created_at: string
+  updated_at: string
+}
+
 export interface Database {
   public: {
     Tables: {
+      roles: {
+        Row: Role
+        Insert: Omit<Role, 'id' | 'created_at' | 'updated_at'>
+        Update: Partial<Omit<Role, 'id' | 'created_at' | 'updated_at' | 'is_system'>>
+      }
       branches: {
         Row: {
           id: string
@@ -234,6 +255,7 @@ export interface Database {
         Row: {
           id: string
           role: UserRole
+          role_id: string | null    // FK vers roles.id (nouveau)
           first_name: string
           last_name: string
           phone: string
@@ -246,6 +268,7 @@ export interface Database {
         Insert: {
           id: string
           role?: UserRole
+          role_id?: string | null
           first_name: string
           last_name: string
           phone: string
@@ -325,6 +348,7 @@ export interface Database {
         Row: {
           id: string
           role: UserRole
+          role_id: string | null    // FK vers roles.id (nouveau)
           resource: ResourceType
           can_view: boolean
           can_create: boolean
@@ -429,3 +453,20 @@ export interface PermissionSet {
 }
 
 export type PermissionsByResource = Record<ResourceType, PermissionSet>
+
+// Type pour un Profile avec son rôle complet
+export interface ProfileWithRole extends Profile {
+  roleDetails?: Role | null
+}
+
+// Type pour un utilisateur avec profil, rôle et branches
+export interface UserWithProfileAndRole extends UserWithProfile {
+  roleDetails?: Role | null
+}
+
+// Type pour les opérations de rôle avec vérification de hiérarchie
+export interface RoleHierarchyCheck {
+  userLevel: number
+  targetLevel: number
+  canManage: boolean
+}

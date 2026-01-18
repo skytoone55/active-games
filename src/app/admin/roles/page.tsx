@@ -2,40 +2,33 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Loader2, AlertCircle, Trash2, Shield } from 'lucide-react'
+import { Plus, Loader2, AlertCircle, Crown, Trash2 } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
-import { useUsers } from '@/hooks/useUsers'
-import { useBranches } from '@/hooks/useBranches'
 import { useRoles } from '@/hooks/useRoles'
+import { useBranches } from '@/hooks/useBranches'
 import { useTranslation } from '@/contexts/LanguageContext'
 import { AdminHeader } from '../components/AdminHeader'
-import { UsersTable } from './components/UsersTable'
-import { CreateUserModal } from './components/CreateUserModal'
-import { EditUserModal } from './components/EditUserModal'
-import { EditSelfModal } from './components/EditSelfModal'
-import type { UserWithBranches } from '@/lib/supabase/types'
+import { RolesTable } from './components/RolesTable'
+import { RoleModal } from './components/RoleModal'
+import type { Role } from '@/lib/supabase/types'
 import { createClient } from '@/lib/supabase/client'
 
-export default function UsersPage() {
+export default function RolesPage() {
   const router = useRouter()
   const { t } = useTranslation()
   const { user, loading: authLoading } = useAuth()
   const { branches, selectedBranch, selectBranch, loading: branchesLoading } = useBranches()
-  const { users, loading: usersLoading, error, createUser, updateUser, deleteUser } = useUsers()
-  const { getRoleLevel } = useRoles()
+  const { roles, loading: rolesLoading, error, refreshRoles, getRoleLevel } = useRoles()
 
-  // Get the current user's level for hierarchy checks
-  const currentUserLevel = user ? getRoleLevel(user.role) : 10
-  
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
-  const [showEditSelfModal, setShowEditSelfModal] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
-  const [selectedUser, setSelectedUser] = useState<UserWithBranches | null>(null)
+  const [selectedRole, setSelectedRole] = useState<Role | null>(null)
+  const [deleteUserCount, setDeleteUserCount] = useState(0)
 
-  // Gérer le thème (synchronisé avec localStorage) - EXACTEMENT comme clients
+  // Theme state
   const [theme, setTheme] = useState<'light' | 'dark'>('dark')
-  
+
   useEffect(() => {
     const savedTheme = localStorage.getItem('admin_theme') as 'light' | 'dark' | null
     if (savedTheme) {
@@ -51,7 +44,7 @@ export default function UsersPage() {
 
   const isDark = theme === 'dark'
 
-  // Rediriger si pas authentifié
+  // Redirect if not authenticated
   useEffect(() => {
     if (!authLoading && !user) {
       router.push('/admin/login')
@@ -64,46 +57,113 @@ export default function UsersPage() {
     router.push('/admin/login')
   }
 
-  const handleEdit = (editUser: UserWithBranches) => {
-    if (!user) return
-    setSelectedUser(editUser)
-    // Si l'utilisateur édite son propre compte, ouvrir le modal simplifié
-    if (editUser.id === user.id) {
-      setShowEditSelfModal(true)
-    } else {
-      setShowEditModal(true)
-    }
+  // Get user level for hierarchy checks
+  const userLevel = user ? getRoleLevel(user.role) : 10
+
+  const handleEdit = (role: Role) => {
+    setSelectedRole(role)
+    setShowEditModal(true)
   }
 
-  const handleDelete = (user: UserWithBranches) => {
-    setSelectedUser(user)
-    setShowDeleteConfirm(true)
+  const handleDelete = async (role: Role) => {
+    // Premier appel pour vérifier si des utilisateurs ont ce rôle
+    try {
+      const response = await fetch(`/api/roles/${role.id}`, {
+        method: 'DELETE',
+      })
+      const data = await response.json()
+
+      if (data.success) {
+        refreshRoles()
+      } else if (data.requires_confirmation) {
+        // Des utilisateurs ont ce rôle, afficher le popup de confirmation
+        setSelectedRole(role)
+        setDeleteUserCount(data.users_count || 0)
+        setShowDeleteConfirm(true)
+      } else {
+        alert(data.error || 'Erreur lors de la suppression')
+      }
+    } catch {
+      alert('Erreur de connexion')
+    }
   }
 
   const handleConfirmDelete = async () => {
-    if (!selectedUser) return
+    if (!selectedRole) return
 
-    const result = await deleteUser(selectedUser.id)
-    
-    if (result.success) {
-      setShowDeleteConfirm(false)
-      setSelectedUser(null)
-    } else {
-      alert(result.error || 'Erreur lors de la suppression')
+    try {
+      const response = await fetch(`/api/roles/${selectedRole.id}?force_remove=true`, {
+        method: 'DELETE',
+      })
+      const data = await response.json()
+
+      if (data.success) {
+        refreshRoles()
+        setShowDeleteConfirm(false)
+        setSelectedRole(null)
+        setDeleteUserCount(0)
+      } else {
+        alert(data.error || 'Erreur lors de la suppression')
+      }
+    } catch {
+      alert('Erreur de connexion')
     }
   }
 
-  // Vérifier les permissions - level < 8 peut gérer les utilisateurs
-  if (user && currentUserLevel >= 8) {
+  const handleCreateRole = async (roleData: Omit<Role, 'id' | 'created_at' | 'updated_at'>) => {
+    try {
+      const response = await fetch('/api/roles', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(roleData),
+      })
+      const data = await response.json()
+
+      if (data.success) {
+        refreshRoles()
+        setShowCreateModal(false)
+        return { success: true }
+      } else {
+        return { success: false, error: data.error }
+      }
+    } catch {
+      return { success: false, error: 'Erreur de connexion' }
+    }
+  }
+
+  const handleUpdateRole = async (roleId: string, roleData: Partial<Role>) => {
+    try {
+      const response = await fetch(`/api/roles/${roleId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(roleData),
+      })
+      const data = await response.json()
+
+      if (data.success) {
+        refreshRoles()
+        setShowEditModal(false)
+        setSelectedRole(null)
+        return { success: true }
+      } else {
+        return { success: false, error: data.error }
+      }
+    } catch {
+      return { success: false, error: 'Erreur de connexion' }
+    }
+  }
+
+  // Check permissions - only level < 5 can manage roles
+  if (user && userLevel >= 5) {
     return (
       <div className={`min-h-screen flex items-center justify-center ${isDark ? 'bg-gray-900' : 'bg-gray-100'}`}>
         <div className="text-center">
           <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
           <h1 className={`text-2xl font-bold mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-            {t('admin.users.access_denied')}
+            {t('admin.roles.access_denied')}
           </h1>
           <p className={isDark ? 'text-gray-400' : 'text-gray-600'}>
-            {t('admin.users.access_denied_message')}
+            {t('admin.roles.access_denied_message')}
           </p>
         </div>
       </div>
@@ -121,7 +181,7 @@ export default function UsersPage() {
 
   return (
     <div className={`min-h-screen ${isDark ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-900'}`}>
-      {/* Header avec navigation */}
+      {/* Header */}
       <AdminHeader
         user={user}
         branches={branches}
@@ -132,39 +192,35 @@ export default function UsersPage() {
         onToggleTheme={toggleTheme}
       />
 
-      {/* Sous-header avec titre et actions */}
+      {/* Sub-header */}
       <div className={`${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border-b px-6 py-4`}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-              isDark ? 'bg-purple-500/20' : 'bg-purple-100'
+              isDark ? 'bg-yellow-500/20' : 'bg-yellow-100'
             }`}>
-              <Shield className={`w-6 h-6 ${isDark ? 'text-purple-400' : 'text-purple-600'}`} />
+              <Crown className={`w-6 h-6 ${isDark ? 'text-yellow-400' : 'text-yellow-600'}`} />
             </div>
             <div>
               <h1 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                {t('admin.users.title')}
+                {t('admin.roles.title')}
               </h1>
               <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                {t('admin.users.subtitle')}
+                {t('admin.roles.subtitle')}
               </p>
             </div>
           </div>
           <button
             onClick={() => setShowCreateModal(true)}
-            className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
-              isDark
-                ? 'bg-blue-600 hover:bg-blue-700 text-white'
-                : 'bg-blue-600 hover:bg-blue-700 text-white'
-            }`}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition-colors"
           >
             <Plus className="w-5 h-5" />
-            {t('admin.users.create')}
+            {t('admin.roles.create')}
           </button>
         </div>
       </div>
 
-      {/* Contenu principal */}
+      {/* Content */}
       <div className="p-6 space-y-6">
         {/* Error */}
         {error && (
@@ -179,68 +235,49 @@ export default function UsersPage() {
         )}
 
         {/* Loading */}
-        {usersLoading && (
+        {rolesLoading && (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
           </div>
         )}
 
         {/* Table */}
-        {!usersLoading && (
-          <UsersTable
-            users={users}
+        {!rolesLoading && (
+          <RolesTable
+            roles={roles}
             isDark={isDark}
+            userLevel={userLevel}
             onEdit={handleEdit}
             onDelete={handleDelete}
-            currentUserId={user.id}
           />
         )}
       </div>
 
       {/* Modals */}
-      {user && (
-        <>
-          <CreateUserModal
-            isOpen={showCreateModal}
-            onClose={() => setShowCreateModal(false)}
-            onSubmit={createUser}
-            branches={user.branches}
-            currentUserRole={user.role || 'agent'}
-            currentUserBranchIds={user.branches.map(b => b.id)}
-            currentUserLevel={currentUserLevel}
-            isDark={isDark}
-          />
+      <RoleModal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        onSubmit={handleCreateRole}
+        userLevel={userLevel}
+        isDark={isDark}
+        mode="create"
+      />
 
-          <EditSelfModal
-            isOpen={showEditSelfModal}
-            onClose={() => {
-              setShowEditSelfModal(false)
-              setSelectedUser(null)
-            }}
-            onSubmit={updateUser}
-            user={selectedUser}
-            isDark={isDark}
-          />
-
-          <EditUserModal
-            isOpen={showEditModal}
-            onClose={() => {
-              setShowEditModal(false)
-              setSelectedUser(null)
-            }}
-            onSubmit={updateUser}
-            user={selectedUser}
-            branches={user.branches}
-            currentUserRole={user.role || 'agent'}
-            currentUserBranchIds={user.branches.map(b => b.id)}
-            currentUserLevel={currentUserLevel}
-            isDark={isDark}
-          />
-        </>
-      )}
+      <RoleModal
+        isOpen={showEditModal}
+        onClose={() => {
+          setShowEditModal(false)
+          setSelectedRole(null)
+        }}
+        onSubmit={(data) => selectedRole ? handleUpdateRole(selectedRole.id, data) : Promise.resolve({ success: false, error: 'No role selected' })}
+        role={selectedRole}
+        userLevel={userLevel}
+        isDark={isDark}
+        mode="edit"
+      />
 
       {/* Delete Confirmation Modal */}
-      {showDeleteConfirm && selectedUser && (
+      {showDeleteConfirm && selectedRole && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className={`w-full max-w-md rounded-2xl shadow-2xl ${isDark ? 'bg-gray-800' : 'bg-white'}`}>
             <div className={`p-6 border-b ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
@@ -250,10 +287,10 @@ export default function UsersPage() {
                 </div>
                 <div>
                   <h2 className={`text-xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                    {t('admin.users.modal.delete_title')}
+                    {t('admin.roles.delete_title') || 'Supprimer le rôle'}
                   </h2>
                   <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                    {selectedUser.first_name} {selectedUser.last_name}
+                    {selectedRole.display_name}
                   </p>
                 </div>
               </div>
@@ -265,10 +302,10 @@ export default function UsersPage() {
                   <AlertCircle className="w-5 h-5 text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5" />
                   <div className="flex-1">
                     <p className={`text-sm font-medium ${isDark ? 'text-yellow-300' : 'text-yellow-800'}`}>
-                      {t('admin.users.modal.delete_warning')}
+                      {t('admin.roles.delete_warning') || 'Attention'}
                     </p>
                     <p className={`text-sm mt-1 ${isDark ? 'text-yellow-400' : 'text-yellow-700'}`}>
-                      {t('admin.users.modal.delete_message')}
+                      {deleteUserCount} {t('admin.roles.users_will_lose_access') || `utilisateur(s) vont perdre leur accès au système. Ils seront mis "sans rôle" jusqu'à réassignation.`}
                     </p>
                   </div>
                 </div>
@@ -279,7 +316,8 @@ export default function UsersPage() {
               <button
                 onClick={() => {
                   setShowDeleteConfirm(false)
-                  setSelectedUser(null)
+                  setSelectedRole(null)
+                  setDeleteUserCount(0)
                 }}
                 className={`px-4 py-2 rounded-lg transition-colors ${
                   isDark
@@ -293,7 +331,7 @@ export default function UsersPage() {
                 onClick={handleConfirmDelete}
                 className="px-6 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white transition-colors"
               >
-                {t('admin.users.modal.delete_confirm')}
+                {t('admin.roles.confirm_delete') || 'Supprimer quand même'}
               </button>
             </div>
           </div>

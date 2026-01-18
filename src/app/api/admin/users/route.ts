@@ -3,16 +3,67 @@ import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { validateEmail, validateIsraeliPhone, formatIsraeliPhone } from '@/lib/validation'
 import { logUserAction, getClientIpFromHeaders } from '@/lib/activity-logger'
-import type { UserWithBranches, UserRole } from '@/lib/supabase/types'
+import type { UserWithBranches, UserRole, Role } from '@/lib/supabase/types'
+
+/**
+ * Helper: Récupère le niveau hiérarchique d'un utilisateur
+ * Retourne le level du rôle (1 = plus haut, 10 = plus bas)
+ */
+async function getUserLevel(serviceClient: ReturnType<typeof createServiceRoleClient>, userId: string): Promise<{ level: number; role: Role | null }> {
+  // Récupérer le profil avec role_id
+  const { data: profile } = await serviceClient
+    .from('profiles')
+    .select('role, role_id')
+    .eq('id', userId)
+    .single()
+
+  if (!profile) {
+    return { level: 10, role: null }
+  }
+
+  // Récupérer le rôle par role_id ou par name
+  let roleData: Role | null = null
+
+  if (profile.role_id) {
+    const { data } = await serviceClient
+      .from('roles')
+      .select('*')
+      .eq('id', profile.role_id)
+      .single()
+    roleData = data
+  }
+
+  if (!roleData && profile.role) {
+    const { data } = await serviceClient
+      .from('roles')
+      .select('*')
+      .eq('name', profile.role)
+      .single()
+    roleData = data
+  }
+
+  return {
+    level: roleData?.level ?? 10,
+    role: roleData
+  }
+}
+
+/**
+ * Helper: Vérifie si un utilisateur peut gérer un rôle cible
+ * Règle: userLevel doit être < targetLevel (niveau plus bas = plus de pouvoir)
+ */
+function canManageLevel(userLevel: number, targetLevel: number): boolean {
+  return userLevel < targetLevel
+}
 
 /**
  * GET /api/admin/users
  * Liste tous les utilisateurs avec leurs branches
- * 
- * Permissions:
- * - super_admin: Voit TOUS les utilisateurs
- * - branch_admin: Voit uniquement les utilisateurs de sa/ses branche(s)
- * - agent: Accès refusé
+ *
+ * Permissions (basées sur hiérarchie dynamique):
+ * - Utilisateurs avec level < 5: Voient TOUS les utilisateurs
+ * - Utilisateurs avec level >= 5: Voient uniquement les utilisateurs de leurs branches
+ * - Le filtrage dépend aussi de la permission 'users.can_view'
  */
 export async function GET(request: NextRequest) {
   try {
@@ -41,10 +92,17 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    const userProfile = profile as { role: string; id: string; created_by?: string | null }
+    const userProfile = profile as { role: string; role_id?: string | null; id: string; created_by?: string | null }
 
-    // Vérifier les permissions (super_admin ou branch_admin)
-    if (userProfile.role !== 'super_admin' && userProfile.role !== 'branch_admin') {
+    // Créer un client service role
+    const serviceClient = createServiceRoleClient()
+
+    // Récupérer le niveau hiérarchique de l'utilisateur
+    const { level: userLevel, role: userRoleData } = await getUserLevel(serviceClient, user.id)
+
+    // Vérifier que l'utilisateur a un rôle avec permissions suffisantes
+    // Les utilisateurs avec level >= 8 (agents par défaut) n'ont pas accès à la liste des utilisateurs
+    if (userLevel >= 8) {
       return NextResponse.json(
         { success: false, error: 'Permission refusée' },
         { status: 403 }
@@ -53,7 +111,8 @@ export async function GET(request: NextRequest) {
 
     let users: UserWithBranches[] = []
 
-    if (userProfile.role === 'super_admin') {
+    // Les utilisateurs avec level < 5 (super_admin, superviseurs...) voient tous les utilisateurs
+    if (userLevel < 5) {
       // Super admin voit tous les utilisateurs
       const { data: allProfiles, error: usersError } = await supabase
         .from('profiles')
@@ -67,9 +126,6 @@ export async function GET(request: NextRequest) {
           { status: 500 }
         )
       }
-
-      // Créer un client service role pour récupérer les emails
-      const serviceClient = createServiceRoleClient()
 
       // Pour chaque utilisateur, récupérer ses branches et son email
       for (const profileData of allProfiles || []) {
@@ -102,16 +158,15 @@ export async function GET(request: NextRequest) {
         } as UserWithBranches)
       }
     } else {
-      // Branch admin voit lui-même + tous les utilisateurs qui partagent au moins une branche
-      // 1. Récupérer les branches du branch_admin
+      // Utilisateurs avec level >= 5 (branch_admin, etc.) voient seulement les utilisateurs de leurs branches
+      // 1. Récupérer les branches de l'utilisateur
       const { data: adminBranches, error: branchesError } = await supabase
         .from('user_branches')
         .select('branch_id')
         .eq('user_id', user.id)
 
       if (branchesError || !adminBranches || adminBranches.length === 0) {
-        // Même sans branches, le branch_admin doit se voir lui-même
-        const serviceClient = createServiceRoleClient()
+        // Même sans branches, l'utilisateur doit se voir lui-même
         const { data: authUser } = await serviceClient.auth.admin.getUserById(user.id)
 
         // Récupérer le créateur si existe
@@ -181,10 +236,7 @@ export async function GET(request: NextRequest) {
 
       // 6. Grouper par utilisateur
       const userMap = new Map<string, UserWithBranches>()
-      
-      // Créer un client service role pour récupérer les emails
-      const serviceClient = createServiceRoleClient()
-      
+
       // Pour chaque utilisateur, construire l'objet UserWithBranches
       for (const userId of userIds) {
         const userProfile = profilesMap.get(userId)
@@ -239,20 +291,20 @@ export async function GET(request: NextRequest) {
 /**
  * POST /api/admin/users
  * Crée un nouvel utilisateur
- * 
+ *
  * Body: {
  *   email: string
  *   first_name: string
  *   last_name: string
  *   phone: string
- *   role: 'branch_admin' | 'agent'
+ *   role_id: string (UUID du rôle)
  *   branch_ids: string[]
  *   password?: string (optionnel, généré automatiquement si absent)
  * }
- * 
- * Permissions:
- * - super_admin: Peut créer branch_admin et agent pour toutes les branches
- * - branch_admin: Peut créer uniquement agent pour ses branches
+ *
+ * Permissions (basées sur hiérarchie dynamique):
+ * - Un utilisateur peut créer des utilisateurs avec un rôle de level > son level
+ * - Restriction par branches: ne peut assigner que ses propres branches (sauf level < 5)
  */
 export async function POST(request: NextRequest) {
   try {
@@ -282,10 +334,11 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const userProfile = profile as { role: string; id: string }
+    // Récupérer le niveau hiérarchique de l'utilisateur connecté
+    const { level: userLevel } = await getUserLevel(supabaseAdmin, user.id)
 
-    // Vérifier les permissions
-    if (userProfile.role !== 'super_admin' && userProfile.role !== 'branch_admin') {
+    // Vérifier que l'utilisateur a le droit de créer des utilisateurs (level < 8)
+    if (userLevel >= 8) {
       return NextResponse.json(
         { success: false, error: 'Permission refusée' },
         { status: 403 }
@@ -294,12 +347,15 @@ export async function POST(request: NextRequest) {
 
     // Parser le body
     const body = await request.json()
-    const { email, first_name, last_name, phone, role, branch_ids, password } = body
+    const { email, first_name, last_name, phone, role_id, role, branch_ids, password } = body
+
+    // Support du role_id OU role (rétrocompatibilité)
+    const targetRoleId = role_id
 
     // Validations
-    if (!email || !first_name || !last_name || !phone || !role || !branch_ids || branch_ids.length === 0) {
+    if (!email || !first_name || !last_name || !phone || (!role_id && !role) || !branch_ids || branch_ids.length === 0) {
       return NextResponse.json(
-        { success: false, error: 'Tous les champs sont requis (email, first_name, last_name, phone, role, branch_ids)' },
+        { success: false, error: 'Tous les champs sont requis (email, first_name, last_name, phone, role_id, branch_ids)' },
         { status: 400 }
       )
     }
@@ -320,25 +376,51 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Valider le rôle
-    const validRoles: UserRole[] = ['branch_admin', 'agent']
-    if (!validRoles.includes(role as UserRole)) {
+    // Récupérer le rôle cible (par role_id ou par name pour rétrocompatibilité)
+    let targetRole: Role | null = null
+
+    if (targetRoleId) {
+      const { data } = await supabaseAdmin
+        .from('roles')
+        .select('*')
+        .eq('id', targetRoleId)
+        .single()
+      targetRole = data
+    } else if (role) {
+      // Rétrocompatibilité: chercher par nom
+      const { data } = await supabaseAdmin
+        .from('roles')
+        .select('*')
+        .eq('name', role)
+        .single()
+      targetRole = data
+    }
+
+    if (!targetRole) {
       return NextResponse.json(
-        { success: false, error: 'Rôle invalide (branch_admin ou agent uniquement)' },
+        { success: false, error: 'Rôle invalide ou introuvable' },
         { status: 400 }
       )
     }
 
-    // Si branch_admin, vérifier qu'il ne crée que des agents
-    if (userProfile.role === 'branch_admin' && role !== 'agent') {
+    // Vérifier la hiérarchie: l'utilisateur ne peut assigner que des rôles de niveau > son niveau
+    if (!canManageLevel(userLevel, targetRole.level)) {
       return NextResponse.json(
-        { success: false, error: 'Les branch_admin ne peuvent créer que des agents' },
+        { success: false, error: `Vous ne pouvez créer que des utilisateurs avec un niveau hiérarchique inférieur au vôtre (${userLevel})` },
         { status: 403 }
       )
     }
 
-    // Si branch_admin, vérifier qu'il n'assigne que ses propres branches
-    if (userProfile.role === 'branch_admin') {
+    // Vérifier que l'utilisateur ne peut pas créer de super_admin (level 1)
+    if (targetRole.level === 1) {
+      return NextResponse.json(
+        { success: false, error: 'Impossible de créer un utilisateur avec le rôle super_admin' },
+        { status: 403 }
+      )
+    }
+
+    // Si level >= 5, vérifier qu'il n'assigne que ses propres branches
+    if (userLevel >= 5) {
       const { data: adminBranches } = await supabase
         .from('user_branches')
         .select('branch_id')
@@ -357,9 +439,9 @@ export async function POST(request: NextRequest) {
         const branchNames = (invalidBranchNames || []).map((b: { name: string }) => b.name).join(', ')
 
         return NextResponse.json(
-          { 
-            success: false, 
-            error: `Vous ne pouvez assigner que vos propres branches. Branches non autorisées: ${branchNames || invalidBranches.join(', ')}` 
+          {
+            success: false,
+            error: `Vous ne pouvez assigner que vos propres branches. Branches non autorisées: ${branchNames || invalidBranches.join(', ')}`
           },
           { status: 403 }
         )
@@ -384,13 +466,14 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Créer le profil
+    // Créer le profil avec role et role_id
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: newProfile, error: profileInsertError } = await (supabase as any)
       .from('profiles')
       .insert({
         id: newUser.user.id,
-        role: role as UserRole,
+        role: targetRole.name,
+        role_id: targetRole.id,
         first_name: first_name.trim(),
         last_name: last_name.trim(),
         phone: formattedPhone,
@@ -447,13 +530,14 @@ export async function POST(request: NextRequest) {
     const ipAddress = getClientIpFromHeaders(request.headers)
     await logUserAction({
       userId: user.id,
-      userRole: userProfile.role as UserRole,
+      userRole: profile.role as UserRole,
       userName: `${(profile as any).first_name || ''} ${(profile as any).last_name || ''}`.trim(),
       action: 'created',
       targetUserId: newUser.user.id,
       targetUserName: `${first_name} ${last_name}`.trim(),
       details: {
-        targetUserRole: role,
+        targetUserRole: targetRole.name,
+        targetRoleId: targetRole.id,
         email: email.trim(),
         phone: formattedPhone,
         branchIds: branch_ids

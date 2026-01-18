@@ -1,10 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { X, Loader2, User, Phone, Mail, Shield, Building2, AlertCircle, Eye, EyeOff, Copy, Check } from 'lucide-react'
-import type { UserWithBranches, UserRole, Branch } from '@/lib/supabase/types'
+import type { UserRole, Branch, Role } from '@/lib/supabase/types'
 import { validateEmail, validateIsraeliPhone, VALIDATION_MESSAGES } from '@/lib/validation'
 import { CustomSelect } from '../../components/CustomSelect'
+import { useRoles } from '@/hooks/useRoles'
 
 interface CreateUserModalProps {
   isOpen: boolean
@@ -14,13 +15,14 @@ interface CreateUserModalProps {
     first_name: string
     last_name: string
     phone: string
-    role: UserRole
+    role_id: string
     branch_ids: string[]
     password?: string
   }) => Promise<{ success: boolean; error?: string; temporaryPassword?: string }>
   branches: Branch[]
   currentUserRole: UserRole
   currentUserBranchIds: string[]
+  currentUserLevel?: number
   isDark: boolean
 }
 
@@ -31,13 +33,16 @@ export function CreateUserModal({
   branches,
   currentUserRole,
   currentUserBranchIds,
+  currentUserLevel = 10,
   isDark,
 }: CreateUserModalProps) {
+  const { roles, getAssignableRoles, loading: rolesLoading } = useRoles()
+
   const [email, setEmail] = useState('')
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
   const [phone, setPhone] = useState('')
-  const [role, setRole] = useState<UserRole>('agent')
+  const [selectedRoleId, setSelectedRoleId] = useState<string>('')
   const [selectedBranchIds, setSelectedBranchIds] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -46,6 +51,20 @@ export function CreateUserModal({
   const [showPassword, setShowPassword] = useState(false)
   const [passwordCopied, setPasswordCopied] = useState(false)
 
+  // Get available roles for assignment based on user level
+  const assignableRoles = useMemo(() => {
+    return getAssignableRoles(currentUserLevel)
+  }, [getAssignableRoles, currentUserLevel])
+
+  // Set default role when assignable roles are loaded
+  useEffect(() => {
+    if (assignableRoles.length > 0 && !selectedRoleId) {
+      // Default to the role with highest level (lowest authority) among assignable
+      const defaultRole = assignableRoles[assignableRoles.length - 1]
+      setSelectedRoleId(defaultRole.id)
+    }
+  }, [assignableRoles, selectedRoleId])
+
   // Réinitialiser le formulaire à l'ouverture
   useEffect(() => {
     if (isOpen) {
@@ -53,7 +72,8 @@ export function CreateUserModal({
       setFirstName('')
       setLastName('')
       setPhone('')
-      setRole('agent')
+      // Reset role to default (will be set by above effect)
+      setSelectedRoleId('')
       setSelectedBranchIds([])
       setError(null)
       setValidationErrors({})
@@ -83,6 +103,11 @@ export function CreateUserModal({
       return
     }
 
+    if (!selectedRoleId) {
+      setError('Veuillez sélectionner un rôle')
+      return
+    }
+
     setLoading(true)
 
     const result = await onSubmit({
@@ -90,7 +115,7 @@ export function CreateUserModal({
       first_name: firstName.trim(),
       last_name: lastName.trim(),
       phone,
-      role,
+      role_id: selectedRoleId,
       branch_ids: selectedBranchIds,
     })
 
@@ -123,22 +148,35 @@ export function CreateUserModal({
     )
   }
 
-  // Filtrer les branches disponibles selon le rôle
-  const availableBranches = currentUserRole === 'super_admin'
+  // Filtrer les branches disponibles selon le niveau
+  // Level < 5 peut voir toutes les branches
+  const availableBranches = currentUserLevel < 5
     ? branches
     : branches.filter(b => currentUserBranchIds.includes(b.id))
 
-  // Rôles disponibles selon le rôle actuel
-  const availableRoles: { value: UserRole; label: string }[] = currentUserRole === 'super_admin'
-    ? [
-        { value: 'branch_admin', label: 'Admin Agence' },
-        { value: 'agent', label: 'Agent' },
-      ]
-    : [
-        { value: 'agent', label: 'Agent' },
-      ]
+  // Build role options from dynamic roles
+  const roleOptions = useMemo(() => {
+    return assignableRoles.map(role => ({
+      value: role.id,
+      label: role.display_name,
+      color: role.color
+    }))
+  }, [assignableRoles])
 
   if (!isOpen) return null
+
+  // Loading state for roles
+  if (rolesLoading) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+        <div className={`relative w-full max-w-md rounded-2xl shadow-2xl p-8 ${isDark ? 'bg-gray-800' : 'bg-white'}`}>
+          <div className="flex items-center justify-center">
+            <Loader2 className={`w-8 h-8 animate-spin ${isDark ? 'text-gray-400' : 'text-gray-500'}`} />
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   // Si mot de passe temporaire généré, afficher l'écran de confirmation
   if (temporaryPassword) {
@@ -395,11 +433,16 @@ export function CreateUserModal({
               Rôle *
             </label>
             <CustomSelect
-              value={role}
-              onChange={(value) => setRole(value as UserRole)}
-              options={availableRoles}
+              value={selectedRoleId}
+              onChange={(value) => setSelectedRoleId(value)}
+              options={roleOptions}
               isDark={isDark}
             />
+            {assignableRoles.length === 0 && (
+              <p className={`text-xs mt-1 ${isDark ? 'text-yellow-400' : 'text-yellow-600'}`}>
+                Aucun rôle disponible pour l'assignation
+              </p>
+            )}
           </div>
 
           {/* Branches */}
