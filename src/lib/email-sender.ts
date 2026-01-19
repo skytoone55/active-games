@@ -29,6 +29,8 @@ export interface BookingEmailVariables {
   branch_phone: string
   branch_email: string
   client_name: string
+  client_first_name: string
+  client_last_name: string
   client_email: string
   logo_activegames_url: string
   logo_lasercity_url: string
@@ -324,6 +326,8 @@ export async function sendBookingConfirmationEmail(params: {
     branch_phone: branch.phone || '',
     branch_email: '', // À ajouter si disponible dans la table branches
     client_name: `${booking.customer_first_name} ${booking.customer_last_name}`.trim(),
+    client_first_name: booking.customer_first_name || '',
+    client_last_name: booking.customer_last_name || '',
     client_email: booking.customer_email,
     logo_activegames_url: `${baseUrl}/images/logo-activegames.png`,
     logo_lasercity_url: `${baseUrl}/images/logo_laser_city.png`,
