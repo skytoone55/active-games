@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { getClient } from '@/lib/supabase/client'
 import { useRealtimeRefresh } from './useRealtimeSubscription'
 import type {
@@ -60,16 +60,24 @@ export function useBookings(branchId: string | null, date?: string) {
   const [bookings, setBookings] = useState<BookingWithSlots[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const lastFetchKeyRef = useRef<string | null>(null)
+  const isFetchingRef = useRef(false)
 
   // Charger les réservations
-  const fetchBookings = useCallback(async () => {
+  const fetchBookings = useCallback(async (force = false) => {
     if (!branchId) {
       setBookings([])
       setLoading(false)
       return
     }
 
+    // Éviter les appels concurrents
+    if (isFetchingRef.current && !force) {
+      return
+    }
+
     const supabase = getClient()
+    isFetchingRef.current = true
     setLoading(true)
     setError(null)
 
@@ -209,12 +217,19 @@ export function useBookings(branchId: string | null, date?: string) {
       setError('Erreur lors du chargement des réservations')
     } finally {
       setLoading(false)
+      isFetchingRef.current = false
     }
   }, [branchId, date])
 
+  // Charger quand branchId ou date change (avec déduplication)
   useEffect(() => {
+    const fetchKey = `${branchId || ''}-${date || ''}`
+    if (fetchKey === lastFetchKeyRef.current) {
+      return
+    }
+    lastFetchKeyRef.current = fetchKey
     fetchBookings()
-  }, [fetchBookings])
+  }, [branchId, date, fetchBookings])
 
   // Realtime: écouter les changements sur bookings et game_sessions
   // Remplace le polling de 30 secondes - mise à jour instantanée

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRealtimeRefresh } from './useRealtimeSubscription'
 import type { Order, OrderStatus, OrderWithRelations } from '@/lib/supabase/types'
 
@@ -140,24 +140,40 @@ export function useOrders(branchId: string | null) {
 // Hook pour obtenir juste le count des pending (pour le badge)
 export function usePendingOrdersCount(branchId: string | null) {
   const [count, setCount] = useState(0)
+  const lastBranchIdRef = useRef<string | null>(null)
+  const isFetchingRef = useRef(false)
 
   const fetchCount = useCallback(async () => {
     if (!branchId) {
       setCount(0)
       return
     }
+
+    // Éviter les appels concurrents
+    if (isFetchingRef.current) {
+      return
+    }
+
+    isFetchingRef.current = true
     try {
       const response = await fetch(`/api/orders?branch_id=${branchId}&status=pending`)
       const data = await response.json()
       setCount(data.pending_count || data.orders?.length || 0)
     } catch (err) {
       console.error('Error fetching pending count:', err)
+    } finally {
+      isFetchingRef.current = false
     }
   }, [branchId])
 
+  // Fetch quand branchId change (avec déduplication)
   useEffect(() => {
+    if (branchId === lastBranchIdRef.current) {
+      return
+    }
+    lastBranchIdRef.current = branchId
     fetchCount()
-  }, [fetchCount])
+  }, [branchId, fetchCount])
 
   // Realtime: mise à jour instantanée du badge
   // Remplace le polling de 30 secondes

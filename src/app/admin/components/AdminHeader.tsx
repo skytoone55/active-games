@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, memo } from 'react'
 import { LogOut, User, ChevronDown, Sun, Moon, Users, Calendar, Menu, X, ShoppingCart, Shield, Globe, FileText, Lock, Crown, Settings } from 'lucide-react'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -29,7 +29,7 @@ const languageFlags: Record<Locale, { flag: string; label: string }> = {
   he: { flag: '🇮🇱', label: 'עברית' }
 }
 
-export function AdminHeader({
+function AdminHeaderComponent({
   user,
   branches,
   selectedBranch,
@@ -661,3 +661,6 @@ export function AdminHeader({
     </header>
   )
 }
+
+// Memoize pour éviter les re-renders inutiles
+export const AdminHeader = memo(AdminHeaderComponent)

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, Fragment } from 'react'
+import { useState, useEffect, Fragment, useMemo } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Loader2, Plus, LogOut, User, ChevronDown, Sun, Moon, ChevronLeft, ChevronRight, Calendar, Users, PartyPopper, Gamepad2, Search, Trash2, Settings, Sliders } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
@@ -199,28 +199,30 @@ export default function AdminPage() {
   // branches déjà défini plus haut
   const refreshBranches = branchesHook.refresh
 
-  // Filtrer les réservations pour l'agenda du jour sélectionné
+  // Filtrer les réservations pour l'agenda du jour sélectionné (MEMOIZED pour performance)
   // IMPORTANT : Pour les réservations LASER, vérifier aussi les dates des game_sessions LASER
   // car un EVENT peut avoir une salle à une date mais des sessions LASER à une autre date
   const dateStr = formatDateToString(selectedDate)
-  const bookings = allBookings.filter(b => {
-    // Vérifier d'abord la date du booking (start_datetime)
-    const bookingDate = extractLocalDateFromISO(b.start_datetime)
-    if (bookingDate === dateStr) return true
-    
-    // Si le booking a des game_sessions LASER, vérifier si une session LASER est sur cette date
-    if (b.game_sessions && b.game_sessions.length > 0) {
-      const hasLaserSessionOnDate = b.game_sessions.some(session => {
-        if (session.game_area !== 'LASER') return false
-        const sessionDate = extractLocalDateFromISO(session.start_datetime)
-        return sessionDate === dateStr
-      })
-      if (hasLaserSessionOnDate) return true
-    }
-    
-    // Sinon, ne pas inclure cette réservation pour cette date
-    return false
-  })
+  const bookings = useMemo(() => {
+    return allBookings.filter(b => {
+      // Vérifier d'abord la date du booking (start_datetime)
+      const bookingDate = extractLocalDateFromISO(b.start_datetime)
+      if (bookingDate === dateStr) return true
+
+      // Si le booking a des game_sessions LASER, vérifier si une session LASER est sur cette date
+      if (b.game_sessions && b.game_sessions.length > 0) {
+        const hasLaserSessionOnDate = b.game_sessions.some(session => {
+          if (session.game_area !== 'LASER') return false
+          const sessionDate = extractLocalDateFromISO(session.start_datetime)
+          return sessionDate === dateStr
+        })
+        if (hasLaserSessionOnDate) return true
+      }
+
+      // Sinon, ne pas inclure cette réservation pour cette date
+      return false
+    })
+  }, [allBookings, dateStr])
 
   // CRM: Gérer les query params pour deep-link vers une réservation ou réactivation
   useEffect(() => {

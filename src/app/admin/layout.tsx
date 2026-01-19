@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { getClient } from '@/lib/supabase/client'
 import { Loader2 } from 'lucide-react'
@@ -17,60 +17,59 @@ function AdminLayoutContent({
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null)
   const [isChecking, setIsChecking] = useState(true)
   const hasCheckedRef = useRef(false)
+  const isLoginPage = pathname === '/admin/login'
 
-  // Vérification initiale d'authentification - seulement une fois
-  useEffect(() => {
-    // Skip auth check for login page
-    if (pathname === '/admin/login') {
+  // Fonction de vérification stable
+  const checkAuth = useCallback(async () => {
+    if (isLoginPage) {
       setIsAuthenticated(true)
       setIsChecking(false)
       return
     }
 
-    // Éviter les vérifications multiples
-    if (hasCheckedRef.current && isAuthenticated === true) {
+    // Si déjà vérifié et authentifié, ne pas revérifier
+    if (hasCheckedRef.current) {
       setIsChecking(false)
       return
     }
 
-    const checkAuth = async () => {
-      const supabase = getClient()
+    const supabase = getClient()
 
-      try {
-        // Utiliser getUser() qui est plus fiable que getSession()
-        // getUser() vérifie le token auprès du serveur Supabase
-        const { data: { user }, error } = await supabase.auth.getUser()
+    try {
+      const { data: { user }, error } = await supabase.auth.getUser()
 
-        if (error || !user) {
-          // Pas d'utilisateur valide
-          setIsAuthenticated(false)
-        } else {
-          setIsAuthenticated(true)
-          hasCheckedRef.current = true
-        }
-      } catch {
+      if (error || !user) {
         setIsAuthenticated(false)
-      } finally {
-        setIsChecking(false)
+      } else {
+        setIsAuthenticated(true)
+        hasCheckedRef.current = true
       }
+    } catch {
+      setIsAuthenticated(false)
+    } finally {
+      setIsChecking(false)
     }
+  }, [isLoginPage])
 
+  // Vérification initiale - UNE SEULE FOIS au montage
+  useEffect(() => {
     checkAuth()
-  }, [pathname, isAuthenticated])
+  }, [checkAuth])
 
   // Écouter les changements d'authentification (login/logout)
   useEffect(() => {
-    if (pathname === '/admin/login') {
+    if (isLoginPage) {
       return
     }
 
     const supabase = getClient()
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
+      (event) => {
         if (event === 'SIGNED_IN') {
           setIsAuthenticated(true)
           hasCheckedRef.current = true
+          setIsChecking(false)
         } else if (event === 'SIGNED_OUT') {
           setIsAuthenticated(false)
           hasCheckedRef.current = false
@@ -82,14 +81,14 @@ function AdminLayoutContent({
     return () => {
       subscription.unsubscribe()
     }
-  }, [pathname])
+  }, [isLoginPage])
 
   // Redirection vers login si non authentifié
   useEffect(() => {
-    if (!isChecking && isAuthenticated === false && pathname !== '/admin/login') {
+    if (!isChecking && isAuthenticated === false && !isLoginPage) {
       router.push('/admin/login')
     }
-  }, [isChecking, isAuthenticated, pathname, router])
+  }, [isChecking, isAuthenticated, isLoginPage, router])
 
   // Pendant la vérification de l'auth ou redirection en cours
   if (isChecking || isAuthenticated === false) {

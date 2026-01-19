@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { getClient } from '@/lib/supabase/client'
 import type { LaserRoom } from '@/lib/supabase/types'
 import type { PostgrestError } from '@supabase/supabase-js'
@@ -9,6 +9,7 @@ export function useLaserRooms(branchId: string | null) {
   const [laserRooms, setLaserRooms] = useState<LaserRoom[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const lastBranchIdRef = useRef<string | null>(null)
 
   // Charger les laser rooms
   const fetchLaserRooms = useCallback(async () => {
@@ -117,9 +118,15 @@ export function useLaserRooms(branchId: string | null) {
     }
   }, [branchId])
 
+  // Charger quand branchId change (pas à chaque recréation de fetchLaserRooms)
   useEffect(() => {
+    // Éviter les appels redondants si branchId n'a pas changé
+    if (branchId === lastBranchIdRef.current) {
+      return
+    }
+    lastBranchIdRef.current = branchId
     fetchLaserRooms()
-  }, [fetchLaserRooms])
+  }, [branchId, fetchLaserRooms])
 
   // Vérifier disponibilité d'une laser room sur un créneau
   const checkLaserRoomAvailability = useCallback(async (

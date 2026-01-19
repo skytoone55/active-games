@@ -97,42 +97,42 @@ export function useBranches() {
         return
       }
 
-      // Charger les settings et rooms pour chaque branche
-      const branchesWithDetails: BranchWithDetails[] = await Promise.all(
-        branchesData.map(async (branch) => {
-          // Settings
-          const { data: settings } = await supabase
-            .from('branch_settings')
-            .select('*')
-            .eq('branch_id', branch.id)
-            .single<BranchSettings>()
+      // Charger TOUTES les données en parallèle (3 requêtes au total au lieu de 3 par branche)
+      const branchIds = branchesData.map(b => b.id)
 
-          // Rooms
-          const { data: rooms } = await supabase
-            .from('event_rooms')
-            .select('*')
-            .eq('branch_id', branch.id)
-            .eq('is_active', true)
-            .order('sort_order')
-            .returns<EventRoom[]>()
+      const [settingsResult, roomsResult, laserRoomsResult] = await Promise.all([
+        supabase
+          .from('branch_settings')
+          .select('*')
+          .in('branch_id', branchIds)
+          .returns<BranchSettings[]>(),
+        supabase
+          .from('event_rooms')
+          .select('*')
+          .in('branch_id', branchIds)
+          .eq('is_active', true)
+          .order('sort_order')
+          .returns<EventRoom[]>(),
+        supabase
+          .from('laser_rooms')
+          .select('*')
+          .in('branch_id', branchIds)
+          .eq('is_active', true)
+          .order('sort_order')
+          .returns<LaserRoom[]>()
+      ])
 
-          // Laser Rooms
-          const { data: laserRooms } = await supabase
-            .from('laser_rooms')
-            .select('*')
-            .eq('branch_id', branch.id)
-            .eq('is_active', true)
-            .order('sort_order')
-            .returns<LaserRoom[]>()
+      const allSettings = settingsResult.data || []
+      const allRooms = roomsResult.data || []
+      const allLaserRooms = laserRoomsResult.data || []
 
-          return {
-            ...branch,
-            settings: settings || null,
-            rooms: rooms || [],
-            laserRooms: laserRooms || [],
-          }
-        })
-      )
+      // Mapper les données par branche (en mémoire, rapide)
+      const branchesWithDetails: BranchWithDetails[] = branchesData.map(branch => ({
+        ...branch,
+        settings: allSettings.find(s => s.branch_id === branch.id) || null,
+        rooms: allRooms.filter(r => r.branch_id === branch.id),
+        laserRooms: allLaserRooms.filter(lr => lr.branch_id === branch.id),
+      }))
 
       setBranches(branchesWithDetails)
 
