@@ -1179,7 +1179,9 @@
       },
       "pagination": {
         "showing": "Showing {{from}} to {{to}} of {{total}}"
-      }
+      },
+      "check_status": "Check Status",
+      "checking": "Checking..."
     },
     "settings": {
       "title": "Settings",

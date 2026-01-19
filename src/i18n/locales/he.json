@@ -1299,7 +1299,9 @@
       },
       "pagination": {
         "showing": "מציג {{from}} עד {{to}} מתוך {{total}}"
-      }
+      },
+      "check_status": "בדוק סטטוס",
+      "checking": "בודק..."
     },
     "settings": {
       "title": "הגדרות",

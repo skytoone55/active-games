@@ -193,7 +193,10 @@ export async function sendEmail(params: {
       throw new Error('Brevo did not return a messageId')
     }
 
-    // Mettre à jour le log avec succès
+    const brevoMessageId = response.body.messageId
+    console.log('[EMAIL sendEmail] Brevo messageId:', brevoMessageId)
+
+    // Mettre à jour le log avec succès et stocker le messageId pour les webhooks
     console.log('[EMAIL sendEmail] Updating email log to sent... emailLog.id:', emailLog.id)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error: updateError } = await (supabase as any)
@@ -201,6 +204,10 @@ export async function sendEmail(params: {
       .update({
         status: 'sent',
         sent_at: new Date().toISOString(),
+        metadata: {
+          ...(params.metadata || {}),
+          brevo_message_id: brevoMessageId,
+        },
       })
       .eq('id', emailLog.id)
 

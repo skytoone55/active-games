@@ -1235,7 +1235,9 @@
       },
       "pagination": {
         "showing": "Affichage de {{from}} a {{to}} sur {{total}}"
-      }
+      },
+      "check_status": "Vérifier statut",
+      "checking": "Vérification..."
     },
     "settings": {
       "title": "Parametres",

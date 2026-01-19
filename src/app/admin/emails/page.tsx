@@ -123,6 +123,23 @@ export default function EmailsPage() {
     }
   }
 
+  // Check email status from Brevo API (polling)
+  const [checkingStatus, setCheckingStatus] = useState(false)
+  const handleCheckStatus = async () => {
+    setCheckingStatus(true)
+    try {
+      const response = await fetch('/api/cron/check-email-status')
+      const data = await response.json()
+      console.log('[Email Status Check]', data)
+      // Refresh the list to show updated statuses
+      await refresh()
+    } catch (err) {
+      console.error('Error checking email status:', err)
+    } finally {
+      setCheckingStatus(false)
+    }
+  }
+
   return (
     <div className={`min-h-screen ${isDark ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-900'}`}>
       {/* Header */}
@@ -191,6 +208,21 @@ export default function EmailsPage() {
                 {stats.total}
               </div>
             </div>
+
+            {/* Check Brevo status button */}
+            <button
+              onClick={handleCheckStatus}
+              disabled={checkingStatus || emailsLoading}
+              title={t('admin.emails.check_status')}
+              className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors ${
+                isDark
+                  ? 'bg-purple-600 hover:bg-purple-500 text-white'
+                  : 'bg-purple-500 hover:bg-purple-600 text-white'
+              } disabled:opacity-50`}
+            >
+              <RefreshCw className={`w-4 h-4 ${checkingStatus ? 'animate-spin' : ''}`} />
+              <span className="text-sm">{checkingStatus ? t('admin.emails.checking') : t('admin.emails.check_status')}</span>
+            </button>
 
             {/* Refresh button */}
             <button
