@@ -1,0 +1,140 @@
+openapi: 3.1.0
+info:
+  version: '1.0'
+  title: Customer Relations Management
+servers:
+  - url: 'https://api.icount.co.il/api/v3.php/crm'
+    description: ''
+paths:
+  /event:
+    post:
+      summary: Proxy for crm_event methods
+      operationId: post-event
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                event_method:
+                  type: string
+                  description: Event Method
+              required:
+                - event_method
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/crm'
+          description: ''
+  /task:
+    post:
+      summary: Proxy for crm_task methods
+      operationId: post-task
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                task_method:
+                  type: string
+                  description: Task Method
+              required:
+                - task_method
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/crm'
+          description: ''
+  /notification:
+    post:
+      summary: Proxy for crm_notification methods
+      operationId: post-notification
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                notification_method:
+                  type: string
+                  description: Notification Method
+              required:
+                - notification_method
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/crm'
+          description: ''
+  /client_status:
+    post:
+      summary: Proxy for crm_client_status methods
+      operationId: post-client_status
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                client_status_method:
+                  type: string
+                  description: Client Status Method
+              required:
+                - client_status_method
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/crm'
+          description: ''

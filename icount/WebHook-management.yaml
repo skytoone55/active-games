@@ -1,0 +1,169 @@
+openapi: 3.1.0
+info:
+  version: '1.0'
+  title: WebHook management
+servers:
+  - url: 'https://api.icount.co.il/api/v3.php/webhook'
+paths:
+  /add:
+    post:
+      summary: Add webhook
+      operationId: post-add
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                action:
+                  type: string
+                  description: "WebHook action\r\nSee also: webhook/valid_actions"
+                url:
+                  type: string
+                  description: WebHook URL
+                method:
+                  type: string
+                  description: 'WebHook sending method {GET|POST|JSON|XML}.'
+              required:
+                - action
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/webhook'
+  /info:
+    post:
+      summary: Get WebHook information
+      operationId: post-info
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                webhook_id:
+                  type: integer
+                  description: WebHook ID
+              required:
+                - webhook_id
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/webhook'
+  /delete:
+    post:
+      summary: Delete webhook
+      operationId: post-delete
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                webhook_id:
+                  type: integer
+                  description: WebHook ID
+              required:
+                - webhook_id
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/webhook'
+  /get_list:
+    post:
+      summary: Get webhooks list
+      operationId: post-get_list
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                action:
+                  type: string
+                  description: WebHook action
+                list_type:
+                  type: string
+                  description: List type (array|object).
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/webhook'
+  /valid_actions:
+    post:
+      summary: Get list of valid webhook actions
+      operationId: post-valid_actions
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/webhook'

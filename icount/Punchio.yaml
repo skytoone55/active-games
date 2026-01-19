@@ -1,0 +1,611 @@
+openapi: 3.1.0
+info:
+  version: '1.0'
+  title: Punchio
+servers:
+  - url: 'https://api.icount.co.il/api/v3.php/punchclock'
+paths:
+  /punchIn:
+    post:
+      summary: Punch-In
+      operationId: post-punchIn
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                lat:
+                  type: number
+                  description: Latitude
+                  format: float
+                lon:
+                  type: number
+                  description: Longitude
+                  format: float
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/punchclock'
+  /punchOut:
+    post:
+      summary: Punch-Out
+      operationId: post-punchOut
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                lat:
+                  type: number
+                  description: Latitude
+                  format: float
+                lon:
+                  type: number
+                  description: Longitude
+                  format: float
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/punchclock'
+  /get_punch:
+    post:
+      summary: Delete punchclock report
+      operationId: post-get_punch
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                punch_id:
+                  type: integer
+                  description: Punchclock punch Id
+              required:
+                - punch_id
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/punchclock'
+  /add_punch:
+    post:
+      summary: Add manual punchclock report
+      operationId: post-add_punch
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                in_ts:
+                  type: string
+                  description: Punch-in timestamp (ISO date-time)
+                  format: timestamp
+                out_ts:
+                  type: string
+                  description: Punch-out timestamp (ISO date-time)
+                  format: timestamp
+                user_id:
+                  type: integer
+                  description: User ID. Admin only.
+                comments:
+                  type: string
+                  description: Comments
+              required:
+                - in_ts
+                - out_ts
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/punchclock'
+  /update_punch:
+    post:
+      summary: Update punchclock report manually
+      operationId: post-update_punch
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                punch_id:
+                  type: integer
+                  description: Punchclock punch Id
+                in_ts:
+                  type: string
+                  description: Punch-in timestamp (ISO date-time)
+                  format: "\ttimestamp"
+                out_ts:
+                  type: string
+                  description: Punch-out timestamp (ISO date-time)
+                  format: "\ttimestamp"
+                comments:
+                  type: string
+                  description: Comments
+              required:
+                - punch_id
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/punchclock'
+  /delete_punch:
+    post:
+      summary: Delete punchclock report
+      operationId: post-delete_punch
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                punch_id:
+                  type: integer
+                  description: Punchclock punch Id
+              required:
+                - punch_id
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/punchclock'
+  /punchStatus:
+    post:
+      summary: Get current punchclock status
+      operationId: post-punchStatus
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                get_activity_status:
+                  type: boolean
+                  description: Get activity status (of billable hour reporting). Triggers hour_reporting/status
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/punchclock'
+  /start:
+    post:
+      summary: Start
+      operationId: post-start
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                lat:
+                  type: number
+                  description: Latitude
+                  format: float
+                lon:
+                  type: number
+                  description: Longitude
+                  format: float
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/punchclock'
+  /stop:
+    post:
+      summary: Stop
+      operationId: post-stop
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                lat:
+                  type: number
+                  description: Latitude
+                  format: float
+                lon:
+                  type: number
+                  description: Longitude
+                  format: float
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/punchclock'
+  /status:
+    post:
+      summary: Status
+      operationId: post-status
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                get_activity_status:
+                  type: boolean
+                  description: Get activity status (of billable hour reporting). Triggers hour_reporting/status
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/punchclock'
+  /report:
+    post:
+      summary: Get punchclock report
+      operationId: post-report
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                user_id:
+                  type: integer
+                  description: User to get report for. authenticated user
+                start_date:
+                  type: string
+                  description: 'Report start date. current day is 1st of month - start of previous month, otherwise start of current month'
+                  format: date
+                end_date:
+                  type: string
+                  description: 'Report end date. current day is 1st of month - end of previous month, otherwise end of current month'
+                  format: date
+                get_details:
+                  type: boolean
+                  description: Include detailed information (raw data)
+                split_days:
+                  type: boolean
+                  description: Split shifts spanning over multiple days into per-day summary? If not - everything is summarized to start date.
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/punchclock'
+  /job_types:
+    post:
+      summary: Job Types
+      operationId: post-job_types
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/punchclock'
+  /day_types:
+    post:
+      summary: Day Types
+      operationId: post-day_types
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/punchclock'
+  /get_special_day_requests:
+    post:
+      summary: Get special day requests
+      operationId: post-get_special_day_requests
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                all_users:
+                  type: boolean
+                  description: 'Get requests by all users. If true, takes precedence over user_id.'
+                user_id:
+                  type: integer
+                  description: Get requests made by specific user.
+                status:
+                  type: integer
+                  description: 'Request status. If not passed, returns all statuses. Possible values: 0 - pending, 1 - approved, 2 - declined.'
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/punchclock'
+  /add_special_day:
+    post:
+      summary: Add special day
+      operationId: post-add_special_day
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                day_type_id:
+                  type: integer
+                  description: "ID of day type.\r\nSee also: punchclock/day_types"
+                start_date:
+                  type: string
+                  description: Special date(s) start date
+                  format: date
+                end_date:
+                  type: string
+                  description: Special date(s) end date.
+                  format: date
+                comments:
+                  type: string
+                  description: Comment for special day
+              required:
+                - day_type_id
+                - start_date
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/punchclock'
+  /approve_special_day:
+    post:
+      summary: Approve special day (Manager only)
+      operationId: post-approve_special_day
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                punch_id:
+                  type: integer
+                  description: Punchclock punch Id
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/punchclock'
+  /decline_special_day:
+    post:
+      summary: Decline special day (Manager only)
+      operationId: post-decline_special_day
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                punch_id:
+                  type: integer
+                  description: Punchclock punch Id
+                day_type_id:
+                  type: integer
+                  description: "ID of day type.\r\nSee also: punchclock/day_types"
+                start_date:
+                  type: string
+                  description: Special date(s) start date.
+                  format: date
+                end_date:
+                  type: string
+                  description: Special date(s) end date.
+                  format: date
+              required:
+                - punch_id
+                - day_type_id
+                - start_date
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/punchclock'

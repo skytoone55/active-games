@@ -1,0 +1,126 @@
+openapi: 3.1.0
+info:
+  version: '1.0'
+  title: Geo-coding module
+servers:
+  - url: 'https://api.icount.co.il/api/v3.php/geocoding'
+paths:
+  /get_countries:
+    post:
+      summary: Get countries list
+      operationId: post-get_countries
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                list_type:
+                  type: boolean
+                  description: List type (object|array).
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/geocoding'
+  /get_country_subdivisions:
+    post:
+      summary: Get country subdivisions (States / Provinces)
+      operationId: post-get_country_subdivisions
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                cid:
+                  type: string
+                user:
+                  type: string
+                pass:
+                  type: string
+                country_code:
+                  type: string
+                list_type:
+                  type: boolean
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/geocoding'
+  /get_states:
+    post:
+      summary: Get country states/provinces
+      operationId: post-get_states
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                country_code:
+                  type: string
+                  description: Country code (ISO 3166-1 alpha-2)
+                list_type:
+                  type: boolean
+                  description: List type (object|array).
+              required:
+                - country_code
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/geocoding'
+  /ip_to_location:
+    post:
+      summary: 'Get IPv4 physical location (country, city, latitude/longitude)'
+      operationId: post-ip_to_location
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/geocoding'

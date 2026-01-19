@@ -1,0 +1,339 @@
+openapi: 3.1.0
+info:
+  version: '1.0'
+  title: Authentication
+  summary: ''
+  description: ''
+servers:
+  - url: 'https://api.icount.co.il/api/v3.php/auth'
+paths:
+  /login:
+    post:
+      summary: Start session
+      operationId: post-login
+      requestBody:
+        description: A session ID remains valid for 20 minutes from the last request—each new request resets the expiration timer.
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                require_module:
+                  type: string
+                  description: Require specific module access
+                require_priv:
+                  type: number
+                  description: Require privilege level
+                  format: float
+                get_company_info:
+                  type: boolean
+                  description: Get company information
+                get_settings:
+                  type: boolean
+                  description: Get company settings as well
+                get_bank_accounts:
+                  type: boolean
+                  description: Get company bank accounts list
+                list_type:
+                  type: string
+                  description: List type (array|object).
+              required:
+                - cid
+                - user
+                - pass
+            examples:
+              Example 1:
+                value:
+                  cid: companyname
+                  user: username
+                  pass: password
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                x-examples:
+                  Example 1:
+                    api:
+                      version: 3
+                      tz: 2
+                      ts: 1699275163.1748
+                      lang: he
+                      rid: 831608358
+                      module: auth
+                      method: login
+                    status: true
+                    reason: OK
+                    sid: 6548e19b2c02c922612458
+                    cid: liavy
+                    user: api
+                    user_id: 3
+                    user_info:
+                      user_id: 3
+                      username: api
+                      email: liavapi@icount.co.il
+                      phone: ''
+                      mobile: ''
+                      first_name: Liav
+                      last_name: Liav
+                      full_name: Liav Liav
+                      first_name_he: Liav
+                      last_name_he: Liav
+                      full_name_he: Liav Liav
+                      first_name_en: API
+                      last_name_en: API
+                      full_name_en: API API
+                      profile_image: ''
+                      priv_level: 4
+                      job_type_id: 0
+                      priv_name: מנהל
+                      intercom_user_id: '110144163.3'
+                      intercom_user_hash: 205f9957e7c2667c1f2a69e6de79819435d495c58271df126c5672f1835c8e45
+                      job_type_name: לא מוגדר / כללי
+                      job_type_hours:
+                        '100': 32400
+                        '125': 0
+                        '150': 0
+                        '175': 0
+                        '200': 0
+                    company_info:
+                      about: ''
+                      addressCity: ''
+                      addressCity_en: ''
+                      addressCity_he: ''
+                      addressNum: ''
+                      addressState: ''
+                      addressStreet: ''
+                      addressStreet_en: ''
+                      addressStreet_he: ''
+                      addressZip: '0'
+                      businessName: LIAV TEST
+                      businessNameSubTitle: ''
+                      businessNameSubTitle_en: ''
+                      businessNameSubTitle_he: ''
+                      businessName_en: ''
+                      businessName_he: LIAV TEST
+                      businessType: '1'
+                      businessTypeAbbr: ע.מ.
+                      businessTypeAbbr_en: VAT ID
+                      businessTypeAbbr_he: ע.מ.
+                      businessTypeName: עצמאי / עוסק מורשה
+                      businessTypeName_en: Sole Proprietor
+                      businessTypeName_he: עצמאי / עוסק מורשה
+                      country_en: ''
+                      ecosystem: il
+                      email: liavy@icount.co.il
+                      facebook: ''
+                      fax: ''
+                      logo: null
+                      mobile: ''
+                      operating_hours: ''
+                      phone: ''
+                      site: ''
+                      telegram: ''
+                      twitter: ''
+                      updated: '2023-10-01 15:30:43'
+                      updated_by: '1'
+                      vat_id: '208915843'
+                      youtube: ''
+                      start_date: '2023-10-01'
+                      expiry_date: '2024-12-31'
+                      is_trial: true
+                      require_billing: true
+                      is_non_profit: false
+                      is_tax_exempt: false
+                      is_vat_exempt: false
+                      no_vat_business: false
+                      system_type: std
+                      is_express: false
+                      is_omb: false
+                      icon: null
+              examples:
+                Example 1:
+                  value:
+                    api:
+                      version: 3
+                      tz: 2
+                      ts: 1700143271.9638
+                      lang: he
+                      rid: 838866177
+                      module: auth
+                      method: login
+                    status: true
+                    reason: OK
+                    sid: 655610a1ec910346010129
+                    cid: icount
+                    user: api
+                    user_id: 3
+                    user_info:
+                      user_id: 3
+                      username: api
+                      email: api@icount.co.il
+                      phone: ''
+                      mobile: ''
+                      first_name: API
+                      last_name: iCount
+                      full_name: iCount API
+                      first_name_he: אייקאונט
+                      last_name_he: מערכות
+                      full_name_he: אייקאונט מערכות
+                      first_name_en: API
+                      last_name_en: iCount
+                      full_name_en: iCount API
+                      profile_image: ''
+                      priv_level: 4
+                      job_type_id: 0
+                      priv_name: מנהל
+                      intercom_user_id: '110645163.3'
+                      intercom_user_hash: 205aff57e7c2667c1f2a69e6de714444d495c58271df126c5672f1835c8e45
+                      job_type_name: לא מוגדר / כללי
+                      job_type_hours:
+                        '100': 32400
+                        '125': 0
+                        '150': 0
+                        '175': 0
+                        '200': 0
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/auth'
+  /logout:
+    post:
+      summary: Close session
+      operationId: post-logout
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: boolean
+                  description: Operation status
+                reason:
+                  type: string
+                  description: Error code
+                error_description:
+                  type: string
+                  description: Short error descripion
+                error_details:
+                  type: array
+                  description: Detailed error messages list
+                  items:
+                    type: string
+              required:
+                - status
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+              examples:
+                Example 1:
+                  value:
+                    api:
+                      version: 3
+                      tz: 2
+                      ts: 1700144931.6464
+                      lang: he
+                      rid: 811112851
+                      module: auth
+                      method: logout
+                    status: true
+                    reason: BYE
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/auth'
+  /info:
+    post:
+      summary: Get auth session details
+      operationId: post-info
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                get_company_info:
+                  type: boolean
+                  description: Get company information
+                get_settings:
+                  type: boolean
+                  description: Get company settings as well
+                get_bank_accounts:
+                  type: boolean
+                  description: Get company bank accounts list
+                list_type:
+                  type: string
+                  description: List type (array|object).
+            examples:
+              Example 1:
+                value:
+                  get_company_info: true
+                  get_settings: true
+                  get_bank_accounts: true
+                  list_type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+              examples:
+                Example 1:
+                  value:
+                    api:
+                      version: 3
+                      tz: 2
+                      ts: 17005554725.0502
+                      lang: he
+                      rid: 8384440709
+                      module: auth
+                      method: info
+                    status: true
+                    reason: OK
+                    sid: '654444431062631606'
+                    cid: icount
+                    user: api
+                    user_id: 3
+                    user_info:
+                      user_id: 3
+                      username: api
+                      email: api@icount.co.il
+                      phone: ''
+                      mobile: ''
+                      first_name: iCount
+                      last_name: API
+                      full_name: iCount API
+                      first_name_he: iCount
+                      last_name_he: Hebrew
+                      full_name_he: iCount Hebrew
+                      first_name_en: iCount
+                      last_name_en: English
+                      full_name_en: iCount English
+                      profile_image: ''
+                      priv_level: 4
+                      job_type_id: 0
+                      priv_name: מנהל
+                      intercom_user_id: '110444163.3'
+                      intercom_user_hash: 213f9957e7gagg4g9419435d495c58271df126c5672f1835c14
+                      job_type_name: לא מוגדר / כללי
+                      job_type_hours:
+                        '100': 32400
+                        '125': 0
+                        '150': 0
+                        '175': 0
+                        '200': 0
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/auth'

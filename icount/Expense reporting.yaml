@@ -1,0 +1,506 @@
+openapi: 3.1.0
+info:
+  version: '1.0'
+  title: Expense reporting
+servers:
+  - url: 'https://api.icount.co.il/api/v3.php/expense'
+    description: ''
+paths:
+  /types:
+    post:
+      summary: Get expense types list
+      operationId: post-types
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                permanent_property:
+                  type: boolean
+                  description: Return permanent property types if true. Otherwise regular expense types
+                list_type:
+                  type: string
+                  description: List type (array|object).
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/expense'
+          description: ''
+  /doctypes:
+    post:
+      summary: Get the list of possible values for expense_doctype field
+      operationId: post-doctypes
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/expense'
+          description: ''
+  /create:
+    post:
+      summary: Create expense
+      operationId: post-create
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                supplier_id:
+                  type: integer
+                  description: Supplier ID
+                expense_type_id:
+                  type: integer
+                  description: Expense type ID
+                expense_doctype:
+                  type: string
+                  description: Expense document type (document received from supplier)
+                expense_docnum:
+                  type: string
+                  description: Expense document number (document received from supplier)
+                expense_sum:
+                  type: number
+                  description: Expense sum
+                  format: float
+                currency_id:
+                  type: integer
+                  description: Currency ID
+                currency_code:
+                  type: string
+                  description: Currency Code (ISO-4217)
+                rate:
+                  type: number
+                  description: Currency exchange rate
+                  format: float
+                client_id:
+                  type: integer
+                  description: Client ID
+                project_id:
+                  type: integer
+                  description: Project ID
+                expense_date:
+                  type: string
+                  description: Expense date.
+                  format: date
+                invoice_date:
+                  type: string
+                  description: Invoice date.
+                  format: date
+                vat_date:
+                  type: string
+                  description: VAT date.
+                  format: date
+                is_draft:
+                  type: boolean
+                  description: Is this a draft?
+                is_recurring:
+                  type: boolean
+                  description: Will this expense be recurring?
+                recurring_period:
+                  type: string
+                  description: 'Recurrence period type. d=day, w=week, m=month, y=year.'
+                recurring_number:
+                  type: integer
+                  description: Recurrence period number (expense will repeat itself each recurring_number of recurring_period).
+                recurring_end_date:
+                  type: string
+                  description: Recurrence end date.
+                expense_paid:
+                  type: boolean
+                  description: Is expense paid? True if paid. False otherwise.
+                expense_paid_date:
+                  type: string
+                  description: Expense paid date.
+                cc:
+                  type: string
+                  description: Credit-Card payment information
+                cheques:
+                  type: array
+                  description: Cheques list
+                comment:
+                  type: string
+                  description: Comment
+                scan:
+                  type: string
+                  description: Upload invoice scan
+                  contentMediaType: application/octet-stream
+              required:
+                - supplier_id
+                - expense_type_id
+                - expense_doctype
+                - expense_docnum
+                - expense_sum
+            examples:
+              Example 1: {}
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+              examples:
+                Example 1: {}
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/expense'
+          description: ''
+  /update:
+    post:
+      summary: Update expense
+      operationId: post-update
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                expense_id:
+                  type: integer
+                  description: Expense ID
+                supplier_id:
+                  type: integer
+                  description: Supplier ID
+                expense_type_id:
+                  type: integer
+                  description: Expense type ID
+                expense_doctype:
+                  type: string
+                  description: Expense document type (document received from supplier)
+                expense_docnum:
+                  type: string
+                  description: Expense document number (document received from supplier)
+                expense_sum:
+                  type: number
+                  description: Expense sum
+                  format: float
+                currency_id:
+                  type: integer
+                  description: Currency ID
+                currency_code:
+                  type: string
+                  description: Currency Code (ISO-4217)
+                rate:
+                  type: number
+                  description: Currency exchange rate
+                  format: float
+                client_id:
+                  type: integer
+                  description: Client ID
+                project_id:
+                  type: integer
+                  description: Project ID
+                expense_date:
+                  type: string
+                  description: Expense date.
+                  format: date
+                invoice_date:
+                  type: string
+                  description: Invoice date.
+                  format: date
+                vat_date:
+                  type: string
+                  description: VAT date.
+                  format: date
+                is_draft:
+                  type: boolean
+                  description: Is this a draft?
+                is_recurring:
+                  type: boolean
+                  description: Will this expense be recurring?
+                recurring_period:
+                  type: string
+                  description: 'Recurrence period type. d=day, w=week, m=month, y=year.'
+                  format: date
+                recurring_number:
+                  type: integer
+                  description: Recurrence period number (expense will repeat itself each recurring_number of recurring_period).
+                recurring_end_date:
+                  type: string
+                  description: Recurrence end date.
+                  format: date
+                expense_paid:
+                  type: boolean
+                  description: Is expense paid? True if paid. False otherwise.
+                expense_paid_date:
+                  type: string
+                  description: Expense paid date.
+                cc:
+                  type: string
+                  description: Credit-Card payment information
+                cheques:
+                  type: array
+                  description: Cheques list
+                comment:
+                  type: string
+                  description: Comment
+                delete_scan:
+                  type: boolean
+                  description: Deleted attached document scan.
+                scan:
+                  type: string
+                  description: Upload invoice scan
+              required:
+                - expense_id
+                - supplier_id
+                - expense_type_id
+                - expense_doctype
+                - expense_docnum
+                - expense_sum
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/expense'
+          description: ''
+  /delete:
+    post:
+      summary: Delete an expense
+      operationId: post-delete
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                expense_id:
+                  type: integer
+                  description: Expense ID
+              required:
+                - expense_id
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/expense'
+          description: ''
+  /delete_scan:
+    post:
+      summary: Delete an attached scanned document from expense
+      operationId: post-delete_scan
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                expense_id:
+                  type: integer
+                  description: Expense ID
+              required:
+                - expense_id
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/expense'
+          description: ''
+  /info:
+    post:
+      summary: Get expense information
+      operationId: post-info
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                expense_id:
+                  type: integer
+                  description: Expense ID
+              required:
+                - expense_id
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/expense'
+          description: ''
+  /search:
+    post:
+      summary: Search expenses
+      operationId: post-search
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                expense_id:
+                  type: integer
+                  description: Expense ID
+                expense_id_start:
+                  type: integer
+                  description: Expense ID start (greater or equal this value)
+                expense_id_end:
+                  type: integer
+                  description: Expense ID end (less than or equal this value)
+                expense_type_id:
+                  type: integer
+                  description: Expense type ID
+                client_id:
+                  type: integer
+                  description: Client ID
+                supplier_id:
+                  type: integer
+                  description: Supplier ID
+                project_id:
+                  type: integer
+                  description: Project ID
+                user_id:
+                  type: integer
+                  description: User ID
+                expense_date:
+                  type: string
+                  description: Expense date
+                  format: date
+                start_date:
+                  type: string
+                  description: Start date
+                  format: date
+                end_date:
+                  type: string
+                  description: end date
+                  format: date
+                expense_doctype:
+                  type: string
+                  description: Expense document type (document received from supplier)
+                expense_docnum:
+                  type: string
+                  description: Expense document number (document received from supplier)
+                is_draft:
+                  type: boolean
+                  description: Search for drafts ONLY?
+                show_paid:
+                  type: boolean
+                  description: Include paid expenses in search results?
+                show_unpaid:
+                  type: boolean
+                  description: Include unpaid expenses in search results?
+                show_self_invoices:
+                  type: boolean
+                  description: Include self-invoice related expenses in search results?
+                show_drafts:
+                  type: boolean
+                  description: Include drafts in search results?
+                sort_field:
+                  type: string
+                  description: 'Sort field. Possible values: expense_id|invoice_date|expense_date|expense_paid_date'
+                sort_order:
+                  type: string
+                  description: 'Sort order. Possible values: ASC|DESC.'
+                limit:
+                  type: integer
+                  description: Limit number of results
+                offset:
+                  type: integer
+                  description: Offset results
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/expense'
+          description: ''

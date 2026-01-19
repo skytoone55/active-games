@@ -1,0 +1,296 @@
+openapi: 3.1.0
+info:
+  version: '1.0'
+  title: CRM events management
+servers:
+  - url: 'https://api.icount.co.il/api/v3.php/crm_event'
+    description: ''
+paths:
+  /info:
+    post:
+      summary: Get event information
+      operationId: post-info
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                event_id:
+                  type: integer
+                  description: Event ID
+                get_tags:
+                  type: boolean
+                  description: Get associated tags.
+                get_tasks:
+                  type: boolean
+                  description: Get associated tasks.
+                get_notifications:
+                  type: boolean
+                  description: Get associated notifications.
+                get_files:
+                  type: boolean
+                  description: Get associated files.
+              required:
+                - event_id
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/crm_event'
+          description: ''
+  /get_list:
+    post:
+      summary: Get events list
+      operationId: post-get_list
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                event_id:
+                  type: integer
+                  description: Event ID
+                client_id:
+                  type: integer
+                  description: Client ID
+                created_by:
+                  type: integer
+                  description: Creator user ID
+                created_date:
+                  type: string
+                  description: Created date
+                  format: date
+                created_date_start:
+                  type: string
+                  description: Created date range start
+                  format: date
+                created_date_end:
+                  type: string
+                  description: Created date range end
+                  format: date
+                updated_by:
+                  type: integer
+                  description: Updator user ID
+                updated_date:
+                  type: string
+                  description: Updated date
+                  format: date
+                updated_date_start:
+                  type: string
+                  description: Updated date range start
+                  format: date
+                updated_date_end:
+                  type: string
+                  description: Updated date range end
+                  format: date
+                show_deleted:
+                  type: boolean
+                  description: Show deleted events.
+                get_tags:
+                  type: boolean
+                  description: Get associated tags.
+                get_tasks:
+                  type: boolean
+                  description: Get associated tasks.
+                get_notifications:
+                  type: boolean
+                  description: Get associated notifications.
+                get_files:
+                  type: boolean
+                  description: Get associated files.
+                sort_field:
+                  type: string
+                  description: 'Sort field. Valid values: event_id, event_title, created, updated.'
+                sort_order:
+                  type: string
+                  description: 'Sort order. Valid values: ASC (ascending) or DESC (descending).'
+                offset:
+                  type: integer
+                  description: 'Paging: Offset (0+).'
+                limit:
+                  type: integer
+                  description: 'Paging: Limit number of returned results (0+). 0 = no limit.'
+                list_type:
+                  type: string
+                  description: Result list type (array/object).
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/crm_event'
+          description: ''
+  /add:
+    post:
+      summary: Add CRM event
+      operationId: post-add
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                client_id:
+                  type: integer
+                  description: Client ID
+                custom_client_id:
+                  type: string
+                  description: Custom Client ID (from external system)
+                vat_id:
+                  type: number
+                  description: Client VAT ID
+                email:
+                  type: string
+                  description: Client email
+                client_name:
+                  type: string
+                  description: Client name
+                event_title:
+                  type: string
+                  description: Event title
+                event_description:
+                  type: string
+                  description: Event description
+                crm_client_status_id:
+                  type: integer
+                  description: Client status ID
+                tags:
+                  type: array
+                  description: Tag IDs
+                tasks:
+                  type: array
+                  description: Tasks
+                notifications:
+                  type: array
+                  description: Notifications
+                file:
+                  type: string
+                  description: File to attach
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/crm_event'
+          description: ''
+  /update:
+    post:
+      summary: Update CRM event
+      operationId: post-update
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                event_id:
+                  type: string
+                  description: Event Id
+                event_title:
+                  type: string
+                  description: Event title
+                event_description:
+                  type: string
+                  description: Event description
+                crm_client_status_id:
+                  type: integer
+                  description: Client status ID
+                tags:
+                  type: array
+                  description: Tag IDs
+                tasks:
+                  type: array
+                  description: Tasks
+                notifications:
+                  type: array
+                  description: Notifications
+                file:
+                  type: string
+                  description: File to attach
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/crm_event'
+          description: ''
+  /delete:
+    post:
+      summary: Delete event
+      operationId: post-delete
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                event_id:
+                  type: integer
+                  description: Event ID
+              required:
+                - event_id
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/crm_event'
+          description: ''

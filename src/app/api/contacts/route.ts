@@ -9,7 +9,8 @@ import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { verifyApiPermission } from '@/lib/permissions'
 import { logContactAction, getClientIpFromHeaders } from '@/lib/activity-logger'
 import { validateIsraeliPhone, formatIsraeliPhone } from '@/lib/validation'
-import type { UserRole, Contact } from '@/lib/supabase/types'
+import { syncContactToICountBackground } from '@/lib/icount-sync'
+import type { UserRole, Contact, ClientType } from '@/lib/supabase/types'
 
 /**
  * GET /api/contacts
@@ -196,7 +197,10 @@ export async function POST(request: NextRequest) {
       email,
       notes_client,
       alias,
-      source = 'admin_agenda'
+      source = 'admin_agenda',
+      client_type = 'individual',
+      company_name,
+      vat_id
     } = body
 
     // Validation des champs requis
@@ -240,7 +244,10 @@ export async function POST(request: NextRequest) {
         notes_client: notes_client?.trim() || null,
         alias: alias?.trim() || null,
         source,
-        status: 'active'
+        status: 'active',
+        client_type: client_type as ClientType,
+        company_name: client_type === 'company' ? company_name?.trim() || null : null,
+        vat_id: client_type === 'company' ? vat_id?.trim() || null : null
       })
       .select()
       .single() as { data: Contact | null; error: any }
@@ -265,10 +272,15 @@ export async function POST(request: NextRequest) {
       details: {
         phone: contact.phone,
         email: contact.email,
-        source: contact.source
+        source: contact.source,
+        client_type: contact.client_type,
+        company_name: contact.company_name
       },
       ipAddress
     })
+
+    // Sync to iCount in background (non-blocking)
+    syncContactToICountBackground(contact, branch_id_main)
 
     return NextResponse.json({ success: true, contact }, { status: 201 })
 

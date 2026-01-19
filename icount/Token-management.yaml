@@ -1,0 +1,174 @@
+openapi: 3.1.0
+info:
+  version: '1.0'
+  title: Token management
+servers:
+  - url: 'https://api.icount.co.il/api/v3.php/token'
+paths:
+  /info:
+    post:
+      summary: Get API token information
+      operationId: post-info
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                token_id:
+                  type: integer
+                  description: Token ID
+                access_token:
+                  type: string
+                  description: Access Token
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/token'
+  /create:
+    post:
+      summary: Create new API token
+      operationId: post-create
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                user_id:
+                  type: integer
+                  description: ID of the user to allocate token for. Only account administrator may create tokens for other users.
+                expires_in:
+                  type: integer
+                  description: |-
+                    Expire token in set period (seconds).
+                    By default, token expire in 1 day (86,400 seconds).
+                    Setting expires_in=0 makes them permanent.
+                no_refresh:
+                  type: boolean
+                  description: 'If enabled, no refresh token will be issued.'
+                metadata:
+                  type: object
+                  description: Additional metadata for token.
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/token'
+  /revoke:
+    post:
+      summary: Revoke an existing API token
+      operationId: post-revoke
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                token_id:
+                  type: integer
+                  description: Token ID
+                access_token:
+                  type: string
+                  description: Access Token
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/token'
+  /refresh:
+    post:
+      summary: Refresh API token
+      description: |
+        This method generates a new access_token/refresh_token pair and returns updated token information
+      operationId: post-refresh
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                access_token:
+                  type: string
+                  description: Access token to refresh
+                refresh_token:
+                  type: string
+                  description: Refresh token corresponding to the access_token_above
+              required:
+                - access_token
+                - refresh_token
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/token'
+  /get_list:
+    post:
+      summary: Get list of existing API tokens
+      operationId: post-get_list
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                user_id:
+                  type: integer
+                  description: User ID. Only available for account administrator. Otherwise returns tokens of current user.
+                list_type:
+                  type: string
+                  description: List type (array|object).
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/token'

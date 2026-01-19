@@ -1,0 +1,240 @@
+openapi: 3.1.0
+info:
+  version: '1.0'
+  title: Manage expense types
+servers:
+  - url: 'https://api.icount.co.il/api/v3.php/expense_type'
+paths:
+  /info:
+    post:
+      summary: Get expense type info
+      operationId: post-info
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                expense_type_id:
+                  type: string
+                  description: Expense type ID
+              required:
+                - expense_type_id
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/expense_type'
+  /get_list:
+    post:
+      summary: Get expense types list
+      operationId: post-get_list
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                permanent_property:
+                  type: boolean
+                  description: Return permanent property types if true. Otherwise regular expense types
+                list_type:
+                  type: string
+                  description: List type (array|object).
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/expense_type'
+  /get_permanent_list:
+    post:
+      summary: Get permanent property types list
+      operationId: post-get_permanent_list
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                permanent_property:
+                  type: boolean
+                  description: Return permanent property types if true. Otherwise regular expense types
+                list_type:
+                  type: string
+                  description: List type (array|object).
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/expense_type'
+  /add:
+    post:
+      summary: Add expense type
+      operationId: post-add
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                expense_type_name:
+                  type: string
+                  description: Expense type name
+                deductable_expense:
+                  type: number
+                  description: Deductable expense
+                  format: float
+                deductable_vat:
+                  type: number
+                  description: Deductable VAT
+                  format: float
+                permanent_property:
+                  type: boolean
+                  description: Return permanent property types if true. Otherwise regular expense types
+                no_vat:
+                  type: boolean
+                  description: Expense without VAT.
+                vat_to_expense:
+                  type: boolean
+                  description: Add non-deductable vat amount to expense.
+                sortcode_id:
+                  type: string
+                  description: "Sort code ID.\r\nSee also: accounting_settings/get_sortcodes"
+              required:
+                - expense_type_name
+                - deductable_expense
+                - deductable_vat
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/expense_type'
+  /update:
+    post:
+      summary: Update expense type
+      operationId: post-update
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                expense_type_id:
+                  type: integer
+                  description: Expense type ID
+                expense_type_name:
+                  type: string
+                  description: Expense type name
+                deductable_expense:
+                  type: number
+                  description: Deductable expense
+                  format: float
+                deductable_vat:
+                  type: number
+                  description: Deductable VAT
+                  format: float
+                permanent_property:
+                  type: boolean
+                  description: Return permanent property types if true. Otherwise regular expense types
+              required:
+                - expense_type_id
+                - expense_type_name
+                - deductable_expense
+                - deductable_vat
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/expense_type'
+  /delete:
+    post:
+      summary: Delete expense type
+      operationId: post-delete
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                expense_type_id:
+                  type: integer
+                  description: Expense type ID
+              required:
+                - expense_type_id
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/expense_type'

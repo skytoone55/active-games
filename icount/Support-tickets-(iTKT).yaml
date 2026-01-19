@@ -1,0 +1,502 @@
+openapi: 3.1.0
+info:
+  version: '1.0'
+  title: Support tickets (iTKT)
+servers:
+  - url: 'https://api.icount.co.il/api/v3.php/ticket'
+paths:
+  /search:
+    post:
+      summary: Search tickets
+      operationId: post-search
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                user_id:
+                  type: integer
+                  description: Filter by user ID
+                client_id:
+                  type: integer
+                  description: Filter by client ID
+                status:
+                  type: string
+                  description: Filter by status
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/ticket'
+  /info:
+    post:
+      summary: Get ticket information by ID
+      operationId: post-info
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                ticket_id:
+                  type: integer
+                  description: Ticket ID
+                get_updates:
+                  type: boolean
+                  description: Get ticket updates
+              required:
+                - ticket_id
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/ticket'
+  /create:
+    post:
+      summary: Create new ticket
+      operationId: post-create
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                client_id:
+                  type: integer
+                  description: Client ID
+                title:
+                  type: string
+                  description: Ticket title
+                desc:
+                  type: string
+                  description: Ticket description
+                phone:
+                  type: string
+                  description: Contact phone
+                email:
+                  type: string
+                  description: Contact email
+                email_cc:
+                  type: string
+                  description: Contact email CC
+              required:
+                - client_id
+                - title
+                - desc
+                - phone
+                - email
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/ticket'
+  /update_contact_info:
+    post:
+      summary: Update ticket contact information
+      operationId: post-update_contact_info
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                phone:
+                  type: string
+                  description: Contact phone
+                email:
+                  type: string
+                  description: Contact email
+                email_cc:
+                  type: string
+                  description: Contact email CC
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/ticket'
+  /close:
+    post:
+      summary: Close ticket
+      operationId: post-close
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                ticket_id:
+                  type: integer
+                  description: Ticket ID
+              required:
+                - ticket_id
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/ticket'
+  /delete:
+    post:
+      summary: Delete ticket
+      operationId: post-delete
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                ticket_id:
+                  type: integer
+                  description: Ticket ID
+              required:
+                - ticket_id
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/ticket'
+  /assign:
+    post:
+      summary: Assign ticket to specific user
+      operationId: post-assign
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                ticket_id:
+                  type: integer
+                  description: Ticket ID
+                user_id:
+                  type: integer
+                  description: Assignee user ID.
+              required:
+                - ticket_id
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/ticket'
+  /unassign:
+    post:
+      summary: Unassign ticket
+      operationId: post-unassign
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                ticket_id:
+                  type: integer
+                  description: Ticket ID
+              required:
+                - ticket_id
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/ticket'
+  /get_updates:
+    post:
+      summary: Get ticket updates
+      operationId: post-get_updates
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                ticket_id:
+                  type: integer
+                  description: Ticket ID
+              required:
+                - ticket_id
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/ticket'
+  /add_update:
+    post:
+      summary: Add ticket update
+      description: |
+        $throws missing_ticket_id, update_ticket_failed
+      operationId: post-add_update
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                ticket_id:
+                  type: integer
+                  description: Ticket ID
+                update_type:
+                  type: string
+                  description: 'Update type. Possible values: support|internal_comment.'
+                status:
+                  type: string
+                  description: status - Ticket status
+                desc:
+                  type: string
+                  description: Update description
+                internal_comment:
+                  type: string
+                  description: Update internal comment. For support eyes only
+              required:
+                - ticket_id
+                - desc
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/ticket'
+  /get_statuses:
+    post:
+      summary: Get ticket statuses list
+      operationId: post-get_statuses
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/ticket'
+  /add_status:
+    post:
+      summary: Add ticket status
+      operationId: post-add_status
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                new_status_name:
+                  type: string
+                  description: Ticket status name
+              required:
+                - new_status_name
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/ticket'
+  /edit_status:
+    post:
+      summary: Update ticket status name
+      operationId: post-edit_status
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                existing_status_name:
+                  type: string
+                  description: Existing status name
+                new_status_name:
+                  type: string
+                  description: New status name
+              required:
+                - existing_status_name
+                - new_status_name
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/ticket'
+  /delete_status:
+    post:
+      summary: Delete ticket status
+      operationId: post-delete_status
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                status_name:
+                  type: string
+                  description: Status name
+              required:
+                - status_name
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/ticket'

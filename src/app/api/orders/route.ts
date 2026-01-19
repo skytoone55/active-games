@@ -21,7 +21,8 @@ import { createIsraelDateTime } from '@/lib/dates'
 import { validateIsraeliPhone, formatIsraeliPhone } from '@/lib/validation'
 import { logOrderAction, logBookingAction, logContactAction, getClientIpFromHeaders } from '@/lib/activity-logger'
 import { sendBookingConfirmationEmail } from '@/lib/email-sender'
-import type { EventRoom, LaserRoom, UserRole, Booking, Branch } from '@/lib/supabase/types'
+import { syncContactToICountBackground } from '@/lib/icount-sync'
+import type { EventRoom, LaserRoom, UserRole, Booking, Branch, Contact } from '@/lib/supabase/types'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -145,7 +146,7 @@ async function findOrCreateContact(
 
   console.log("[ORDER API] Creating new contact...")
 
-  // Créer un nouveau contact
+  // Créer un nouveau contact - récupérer toutes les données pour le sync iCount
   const { data: newContact, error } = await supabase
     .from('contacts')
     .insert({
@@ -157,10 +158,10 @@ async function findOrCreateContact(
       notes_client: notes || null,
       source: 'website'
     })
-    .select('id')
+    .select('*')
     .single()
 
-  if (error) {
+  if (error || !newContact) {
     throw new Error('Failed to create contact')
   }
 
@@ -181,6 +182,10 @@ async function findOrCreateContact(
     },
     ipAddress
   })
+
+  // Sync to iCount in background (non-blocking)
+  console.log("[ORDER API] Syncing new contact to iCount...")
+  syncContactToICountBackground(newContact as Contact, branchId)
 
   return { contactId: newContact.id, wasCreated: true }
 }

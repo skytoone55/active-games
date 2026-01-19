@@ -1309,10 +1309,14 @@
       "access_denied": "גישה נדחתה",
       "access_denied_message": "רק מנהלי-על יכולים לגשת להגדרות.",
       "sections": {
-        "templates": "תבניות אימייל",
-        "templates_desc": "נהלו תבניות התראות",
-        "terms": "תנאים והגבלות",
-        "terms_desc": "ניהול תנאים להזמנות מקוונות"
+        "templates": "תבניות",
+        "templates_desc": "אימיילים ותנאים",
+        "credentials": "פרטי תשלום",
+        "credentials_desc": "הגדרות API של iCount לכל סניף"
+      },
+      "templates_tabs": {
+        "emails": "תבניות אימייל",
+        "terms": "תנאים והגבלות"
       },
       "email_templates": {
         "title": "תבניות אימייל",

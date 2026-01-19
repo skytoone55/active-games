@@ -1,0 +1,183 @@
+openapi: 3.1.0
+info:
+  version: '1.0'
+  title: User management
+servers:
+  - url: 'https://api.icount.co.il/api/v3.php/user'
+paths:
+  /info:
+    post:
+      summary: Get user info
+      operationId: post-info
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                user_id:
+                  type: integer
+                  description: User ID
+                username:
+                  type: string
+                  description: Username
+                user_email:
+                  type: string
+                  description: Email
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/user'
+  /get_list:
+    post:
+      summary: Get users list
+      operationId: post-get_list
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                list_type:
+                  type: string
+                  description: List type (array|object).
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/user'
+  /priv_levels:
+    post:
+      summary: Get user privilege levels
+      operationId: post-priv_levels
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                list_type:
+                  type: string
+                  description: List type (array|object).
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/user'
+  /upload_profile_image:
+    post:
+      summary: Upload user profile image
+      operationId: post-upload_profile_image
+      requestBody:
+        description: ''
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                profile_image:
+                  type: string
+                  description: 'User profile image (avatar). Allowed image types: jpg/png. Max filesize: 20000 bytes. Max dimensions: 150x150 px'
+                  format: byte
+              required:
+                - profile_image
+          application/xml:
+            schema:
+              type: object
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                '':
+                  type: string
+                  contentMediaType: application/octet-stream
+                undefined - copy:
+                  type: string
+                  format: byte
+          text/html:
+            schema:
+              type: object
+          text/plain:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/user'
+  /delete_profile_image:
+    post:
+      summary: Delete user profile image
+      operationId: post-delete_profile_image
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/user'

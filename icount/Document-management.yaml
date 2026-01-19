@@ -1,0 +1,1427 @@
+openapi: 3.1.0
+info:
+  version: '1.0'
+  title: Document management
+servers:
+  - url: 'https://api.icount.co.il/api/v3.php/doc'
+    description: ''
+paths:
+  /info:
+    post:
+      summary: Get document information
+      operationId: post-info
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                doctype:
+                  type: string
+                  description: Document type
+                docnum:
+                  type: integer
+                  description: Document number
+                get_items:
+                  type: boolean
+                  description: Get items.
+                  default: true
+                get_payments:
+                  type: boolean
+                  description: Get payment information.
+                  default: true
+                get_custom_info:
+                  type: boolean
+                  description: Get custom fields for document.
+                  default: true
+                get_autoinvoices:
+                  type: boolean
+                  description: Get autoinvoices (for doctype=receipt only).
+                  default: false
+                get_base_doc_url:
+                  type: boolean
+                  description: Get base document URL.
+                  default: false
+                get_doctype_info:
+                  type: boolean
+                  description: Get document type information.
+                  default: false
+                get_pdf_link:
+                  type: boolean
+                  description: Get direct link to document PDF.
+                  default: false
+                get_paynow_link:
+                  type: boolean
+                  description: Get PayNow (self-payment page) URL for invoice/deal
+                get_conversion_options:
+                  type: boolean
+                  description: Get list of doctypes this document can be converted to (convert_to)
+                shortlink:
+                  type: boolean
+                  description: Return shortened URL instead of regular links
+                max_clicks:
+                  type: integer
+                  description: Shortlink max clicks.
+                  default: 30
+                expire_days:
+                  type: integer
+                  description: Shortlink expiration days.
+                  default: 30
+                lang:
+                  type: string
+                  description: Language for pdf link.
+                  default: he
+              required:
+                - doctype
+                - docnum
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/doc'
+          description: ''
+  /search:
+    post:
+      summary: Search documents
+      operationId: post-search
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                client_id:
+                  type: integer
+                  description: Client ID
+                custom_client_id:
+                  type: string
+                  description: Custom Client ID (from external system)
+                vat_id:
+                  type: number
+                  description: Client VAT ID
+                email:
+                  type: string
+                  description: Client email
+                client_name:
+                  type: string
+                  description: Client name
+                client_ids:
+                  type: array
+                  description: Client IDs list (for multi-client search)
+                  items:
+                    type: integer
+                custom_client_ids:
+                  type: array
+                  description: Custom Client IDs list (for multi-client search)
+                  items:
+                    type: string
+                user_id:
+                  type: integer
+                  description: User ID of the employee who issued document(s)
+                username:
+                  type: string
+                  description: Username of the employee who issued document(s)
+                user_email:
+                  type: string
+                  description: Email address of the employee who issued document(s)
+                doc_date:
+                  type: string
+                  description: Document date
+                  format: date
+                start_date:
+                  type: string
+                  description: Start date
+                  format: date
+                end_date:
+                  type: string
+                  description: End date
+                  format: date
+                start_ts:
+                  type: string
+                  description: Start timestamp
+                  format: date-time
+                end_ts:
+                  type: string
+                  description: End timestamp
+                  format: date-time
+                paydate:
+                  type: string
+                  description: Last payment date
+                  format: date
+                start_paydate:
+                  type: string
+                  description: Start paydate
+                  format: date
+                end_paydate:
+                  type: string
+                  description: End paydate
+                  format: date
+                duedate:
+                  type: string
+                  description: Due date
+                  format: date
+                start_duedate:
+                  type: string
+                  description: Start duedate
+                  format: date
+                end_duedate:
+                  type: string
+                  description: End duedate
+                  format: date
+                income_type_id:
+                  type: integer
+                  description: Income type ID
+                status:
+                  type: integer
+                  description: 'Document status. 0=open, 1=closed, 2=partially closed. Note that querying for open documents will also include results that are partially closed'
+                doctype:
+                  description: Document type(s) to query
+                  oneOf:
+                    - type: string
+                    - type: integer
+                docnum:
+                  description: Document number(s) to query
+                  oneOf:
+                    - type: string
+                    - type: integer
+                cc_last4:
+                  type: string
+                  description: Last 4 digits of crdit-card number
+                confirmation_code:
+                  type: string
+                  description: Credit-card transaction confirmation code
+                pp_txn_id:
+                  type: string
+                  description: PayPal transaction ID
+                max_results:
+                  type: integer
+                  description: 'Maximum number of results [0-1000].'
+                  default: 100
+                sort_field:
+                  type: string
+                  description: 'Sorting: Field (dateissued|timeissued|docnum|paydate|client_name).'
+                  default: dateissued
+                sort_order:
+                  type: string
+                  description: 'Sorting: Order (ASC|DESC).'
+                  default: ASC
+                offset:
+                  type: integer
+                  description: 'Paging: Offset (0+).'
+                  default: 0
+                limit:
+                  type: integer
+                  description: 'Paging: Limit number of returned results (0+). 0 = no limit.'
+                  default: 0
+                detail_level:
+                  type: integer
+                  description: 'Level of detail (0-10). 0=doctype+docnum, 1=+date+client_id+currency+total, 2+=client details+detailed totals, 3=+employee+income_type, 4+=totals translated into foreign currency where applicable ... 9=Everything but items+payment details, 10=Everything..'
+                  default: 1
+                get_base_docs:
+                  type: boolean
+                  description: 'Populate base documents (based_on / based_on_this). If enabled, returns doctype+docnum pairs for each base document.'
+                  default: false
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/doc'
+          description: ''
+  /create:
+    post:
+      summary: Create document
+      operationId: post-create
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                  examples:
+                    - COMPANY_ID
+                user:
+                  type: string
+                  description: Username
+                  examples:
+                    - USERNAME
+                pass:
+                  type: string
+                  description: Password
+                doctype:
+                  type: string
+                  description: Document type
+                client_id:
+                  type: integer
+                  description: Client ID
+                custom_client_id:
+                  type: string
+                  description: Custom Client ID (from external system)
+                vat_id:
+                  type: number
+                  description: Client VAT ID
+                email:
+                  type: string
+                  description: Client email
+                client_name:
+                  type: string
+                  description: Client name
+                client_address:
+                  type: string
+                  description: Client address
+                user_id:
+                  type: integer
+                  description: User ID of the employee issuing the document
+                username:
+                  type: string
+                  description: Username of the employee issuing the document
+                user_email:
+                  type: string
+                  description: Email address of the employee issuing the document
+                salesman_id:
+                  type: integer
+                  description: Salesmane ID
+                doc_date:
+                  type: string
+                  description: Document date
+                  format: date
+                  default: today
+                paydate:
+                  type: string
+                  description: 'Last payment date (applicable to doctypes: deal, invoice)'
+                  format: date
+                duedate:
+                  type: string
+                  description: 'Due date (applicable to doctypes: order, offer)'
+                  format: date
+                income_type_id:
+                  type: integer
+                  description: Income type ID
+                income_type_name:
+                  type: string
+                  description: Income type name (only if income_type_id is not passed). The system will lookup income type by name. If it does not exist - it will be created automatically.
+                expense_type_id:
+                  type: integer
+                  description: expense type ID
+                currency_id:
+                  type: integer
+                  description: "Currency ID\t"
+                currency_code:
+                  type: string
+                  description: Currency Code (ISO-4217)
+                rate:
+                  type: number
+                  description: Currency exchange rate
+                  format: float
+                tax_exempt:
+                  type: boolean
+                  description: Tax exempt document?
+                vat_percent:
+                  type: number
+                  description: VAT percent (if applicable)
+                  format: float
+                totalsum:
+                  type: number
+                  description: 'Total excluding VAT, before discount and roundup'
+                  format: float
+                discount:
+                  type: number
+                  description: Discount
+                  format: float
+                discount_incvat:
+                  type: number
+                  description: "Discount (including VAT). If discount_incvat is passed the system will extract VAT and calculate discount automatically\t"
+                  format: float
+                roundup:
+                  type: number
+                  description: "Roundup\t"
+                  format: float
+                afterdiscount:
+                  type: number
+                  description: "Total excluding VAT, after discount and roundup\t"
+                  format: float
+                totalwithvat:
+                  type: number
+                  description: "Total including VAT\t"
+                  format: float
+                "paid\t":
+                  type: number
+                  description: "Total amount paid by all payment methods\t"
+                  format: float
+                totalwht:
+                  type: number
+                  description: 'Total WithHolding Tax amount. If you use multiple deduction types, use deductions parameter instead.'
+                  format: float
+                totalpaid:
+                  type: number
+                  description: Total paid including WithHolding Tax
+                  format: float
+                items:
+                  type: array
+                  description: Document items
+                  items:
+                    $ref: '#/components/schemas/iCountDocItem'
+                cash:
+                  $ref: '#/components/schemas/iCountCashPayment'
+                cheques:
+                  $ref: '#/components/schemas/iCountChequePayment'
+                  description: Cheques
+                banktransfer:
+                  $ref: '#/components/schemas/iCountBankTransferPayment'
+                cc:
+                  $ref: '#/components/schemas/iCountCreditCardPayment'
+                paypal:
+                  $ref: '#/components/schemas/iCountPayPalPayment'
+                barter:
+                  $ref: '#/components/schemas/iCountBarterPayment'
+                deductions:
+                  type: number
+                  description: Deductions. The key is deduction_type_id and value is deduction amount. The amounts should be in document currency. deduction_type_id=0 is withholding tax (aka "nicui")
+                  format: float
+                autoinvoice:
+                  type: boolean
+                  description: "Enable automatic invoices on cheques.\t\n"
+                  default: false
+                autocheque_detail:
+                  type: string
+                  description: "Text for automatic invoices on cheques\t\n"
+                autoinvoice_cc:
+                  type: boolean
+                  description: "Enable automatic invoices on credit-card installments.\t\n"
+                  default: false
+                autocc_detail:
+                  type: string
+                  description: "Text for automatic invoices on credit-card installments.\t\n"
+                "autocc_income_type_id\t":
+                  type: integer
+                  description: "Income type ID for automatic invoices on credit-card installments.\t\n* receipt-only"
+                autocc_exempt:
+                  type: boolean
+                  description: "Tax exempt flag for automatic invoices on credit-card installments.\t\n"
+                enable_paynow:
+                  type: boolean
+                  description: "Enable self-payment ilink by customer (invoice / deal only)\t"
+                based_on:
+                  type: array
+                  description: "Base documents list\t"
+                  items:
+                    $ref: '#/components/schemas/iCountBaseDoc'
+                doc_title:
+                  type: string
+                  description: "Document title\t"
+                hwc:
+                  type: string
+                  description: "Additional comments\t"
+                append_preset_comments:
+                  type: boolean
+                  description: "Append document type preset comments to comments passed in hwc\t"
+                sanity_string:
+                  type: string
+                  description: "Unique sanity string for document. If passed, prevents issuing duplicate documents with same sanity_string value. Max length: 30\t"
+                doc_lang:
+                  type: string
+                  description: "Language of the document version. If not passed, current session language (API lang) will be used.\t"
+                send_email:
+                  type: boolean
+                  description: Send doc original by email?
+                  default: false
+                send_sms:
+                  type: boolean
+                  description: Send doc original by sms?
+                  default: false
+              required:
+                - doctype
+              x-examples:
+                Example 1:
+                  cid: COMPANY_ID
+                  user: USERNAME
+                  pass: PASSWORD
+                  doctype: invrec
+                  vat_id: '123456789'
+                  client_name: Sample Client
+                  email: client@example.com
+                  lang: en
+                  currency_code: USD
+                  tax_exempt: 1
+                  items:
+                    - description: First item
+                      unitprice: 50
+                      quantity: 1
+                    - description: Second item
+                      unitprice: 10
+                      quantity: 5
+                  cc:
+                    sum: 100
+                    card_type: VISA
+                    card_number: '0000'
+                    exp_year: 2020
+                    exp_month: 3
+                    holder_id: '123456789'
+                    holder_name: Israel Israeli
+                    confirmation_code: '875646'
+                  send_email: 1
+                  email_to_client: 1
+                  email_to: additional_recipient@example.com
+                  email_cc_me: 1
+                  email_cc: copy@example.com
+            examples:
+              Creating an invoice/receipt and send it to email:
+                value:
+                  cid: COMPANY_ID
+                  user: USERNAME
+                  pass: PASSWORD
+                  doctype: invrec
+                  vat_id: '123456789'
+                  client_name: Sample Client
+                  email: client@example.com
+                  lang: en
+                  currency_code: USD
+                  tax_exempt: 1
+                  items:
+                    - description: First item
+                      unitprice: 50
+                      quantity: 1
+                    - description: Second item
+                      unitprice: 10
+                      quantity: 5
+                  cc:
+                    sum: 100
+                    card_type: VISA
+                    card_number: '0000'
+                    exp_year: 2020
+                    exp_month: 3
+                    holder_id: '123456789'
+                    holder_name: Israel Israeli
+                    confirmation_code: '875646'
+                  send_email: 1
+                  email_to_client: 1
+                  email_to: additional_recipient@example.com
+                  email_cc_me: 1
+                  email_cc: copy@example.com
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: boolean
+                    default: false
+                  reason:
+                    type: string
+                    examples:
+                      - doc_exists_based_on_sanity_string
+                  client_id:
+                    type: integer
+                    examples:
+                      - 2
+                  custom_client_id:
+                    type: string
+                  doctype:
+                    type: string
+                    examples:
+                      - invoice
+                  docnum:
+                    type: string
+                    examples:
+                      - '1234'
+                  doc_url:
+                    type: string
+                    examples:
+                      - 'https://dev.icount.co.il/hash/p_print.php?code=**DOC_ORIG_MAILCODE**'
+                  doc_copy_url:
+                    type: string
+                    examples:
+                      - 'https://dev.icount.co.il/hash/p_print.php?code=**DOC_COPY_MAILCODE**'
+                  error_description:
+                    type: string
+                    examples:
+                      - מסמך עם מחרוזת שפיות שציינת כבר קיים
+                  error_details:
+                    type: array
+                    items:
+                      type: object
+                x-examples:
+                  Example 1:
+                    status: false
+                    reason: doc_exists_based_on_sanity_string
+                    client_id: 2
+                    custom_client_id: ''
+                    doctype: invoice
+                    docnum: '1234'
+                    doc_url: 'https://dev.icount.co.il/hash/p_print.php?code=**DOC_ORIG_MAILCODE**'
+                    doc_copy_url: 'https://dev.icount.co.il/hash/p_print.php?code=**DOC_COPY_MAILCODE**'
+                    error_description: מסמך עם מחרוזת שפיות שציינת כבר קיים
+                    error_details: []
+              examples:
+                Sample error response on duplicate sanity_string:
+                  value:
+                    status: false
+                    reason: doc_exists_based_on_sanity_string
+                    client_id: 2
+                    custom_client_id: string
+                    doctype: invoice
+                    docnum: '1234'
+                    doc_url: 'https://dev.icount.co.il/hash/p_print.php?code=**DOC_ORIG_MAILCODE**'
+                    doc_copy_url: 'https://dev.icount.co.il/hash/p_print.php?code=**DOC_COPY_MAILCODE**'
+                    error_description: מסמך עם מחרוזת שפיות שציינת כבר קיים
+                    error_details:
+                      - {}
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/doc'
+          description: ''
+  /cancel:
+    post:
+      summary: Cancel a document
+      operationId: post-cancel
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                doctype:
+                  type: string
+                  description: Document type
+                docnum:
+                  type: integer
+                  description: Document number
+                refund_cc:
+                  type: boolean
+                  description: 'Refund credit-card transaction. Will throw an error if there is no cc transaction in document, or if refund failed.'
+                reason:
+                  type: string
+                  description: Cancellation reason
+              required:
+                - doctype
+                - docnum
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/doc'
+          description: ''
+  /close:
+    post:
+      summary: Close document
+      operationId: post-close
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                doctype:
+                  type: string
+                  description: Document type
+                docnum:
+                  type: integer
+                  description: Document number
+                based_on:
+                  type: array
+                  description: Base documents list
+              required:
+                - doctype
+                - docnum
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/doc'
+          description: ''
+  /email:
+    post:
+      summary: Send document by email
+      operationId: post-email
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                doctype:
+                  type: string
+                  description: Document type
+                docnum:
+                  type: integer
+                  description: Document number
+                orig:
+                  type: boolean
+                  description: 'Original if true, copy if false.'
+                hidenis:
+                  type: boolean
+                  description: Hide ILS prices from document (only show foreign currency). Applicable only for documents in foreign currency and for languages other then he.
+                email_lang:
+                  type: string
+                  description: 'Email language. This also affects the language of the document version. If not passed, current session language (API lang) will be used.'
+                email_to:
+                  type: string
+                  description: 'Email TO. If empty, assume email_to_client is true'
+                email_to_client:
+                  type: boolean
+                  description: Send email to default client email?
+                email_to_creator:
+                  type: boolean
+                  description: Send email to document creator?
+                email_to_me:
+                  type: boolean
+                  description: Send email to authenticated user?
+                email_cc:
+                  type: string
+                  description: Email CC (Carbon Copy).
+                email_cc_client:
+                  type: boolean
+                  description: Send CC to default client email?
+                email_cc_creator:
+                  type: boolean
+                  description: Send CC to document creator?
+                email_cc_me:
+                  type: boolean
+                  description: Send CC to authenticated user?
+                email_bcc:
+                  type: string
+                  description: Email BCC (Blind Carbon Copy).
+                email_bcc_client:
+                  type: boolean
+                  description: Send BCC to default client email?
+                email_bcc_creator:
+                  type: boolean
+                  description: Send BCC to document creator?
+                email_bcc_me:
+                  type: boolean
+                  description: Send BCC to authenticated user?
+                email_subject:
+                  type: string
+                  description: 'Subject. If not passed, the system will generate one for You.'
+                email_subject_prefix:
+                  type: string
+                  description: Subject prefix. Only applicable when email_subject is not passed.
+                email_subject_suffix:
+                  type: string
+                  description: Subject suffix. Only applicable when email_subject is not passed.
+                email_comment:
+                  type: string
+                  description: Additional comment to place in the email body.
+              required:
+                - doctype
+                - docnum
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/doc'
+          description: ''
+  /sms:
+    post:
+      summary: Send document link in SMS
+      operationId: post-sms
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                doctype:
+                  type: string
+                  description: Document type
+                docnum:
+                  type: integer
+                  description: Document number
+                orig:
+                  type: boolean
+                  description: 'Original if true, copy if false.'
+                hidenis:
+                  type: boolean
+                  description: Hide ILS prices from document (only show foreign currency). Applicable only for documents in foreign currency and for languages other then he.
+                sms_lang:
+                  type: string
+                  description: 'SMS language. This also affects the language of the document version. If not passed, current session language (API lang) will be used.'
+                sms_to:
+                  type: string
+                  description: 'sms TO. If empty, assume sms_to_client is true'
+                sms_to_client:
+                  type: boolean
+                  description: Send sms to default client mobile number?
+                sms_to_creator:
+                  type: boolean
+                  description: Send sms to document creator?
+                sms_to_me:
+                  type: boolean
+                  description: Send sms to authenticated user?
+                sms_prefix:
+                  type: string
+                  description: Prefix for sms text. Will appear before document link. name + document type + number
+                sms_comment:
+                  type: string
+                  description: Additional comment to place in the sms body.
+              required:
+                - doctype
+                - docnum
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/doc'
+          description: ''
+  /get_doc_url:
+    post:
+      summary: Get doc URL
+      operationId: post-get_doc_url
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                doctype:
+                  type: string
+                  description: Document type
+                docnum:
+                  type: integer
+                  description: Document number
+                orig:
+                  type: boolean
+                  description: 'Original if true, copy if false.'
+                hidenis:
+                  type: boolean
+                  description: Hide ILS prices from document (only show foreign currency). Applicable only for documents in foreign currency and for languages other then he.
+                doc_lang:
+                  type: string
+                  description: 'Language of the document version. If not passed, current session language (API lang) will be used.'
+                email_to:
+                  type: string
+                  description: 'Recipient email address. If not provided, email tracking information will not be added to URL'
+                lang:
+                  type: string
+                  description: Language
+              required:
+                - doctype
+                - docnum
+                - lang
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/doc'
+          description: ''
+  /get_paynow_link:
+    post:
+      summary: Get PayNow (self-payment page) URL for document
+      operationId: post-get_paynow_link
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                doctype:
+                  type: string
+                  description: Document type
+                docnum:
+                  type: integer
+                  description: Document number
+                shortlink:
+                  type: boolean
+                  description: Return shortened URL instead of regular paynow link
+                max_clicks:
+                  type: integer
+                  description: Shortlink max clicks.
+                expire_days:
+                  type: integer
+                  description: Shortlink expiration days.
+              required:
+                - doctype
+                - docnum
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/doc'
+          description: ''
+  /get_doc_iqr:
+    post:
+      summary: Get doc iQR
+      operationId: post-get_doc_iqr
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                doctype:
+                  type: string
+                  description: Document type
+                docnum:
+                  type: integer
+                  description: Document number
+                doc_lang:
+                  type: string
+                  description: 'Language of the document version. If not passed, current session language (API lang) will be used.'
+                lang:
+                  type: string
+                  description: Language
+              required:
+                - doctype
+                - docnum
+                - lang
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/doc'
+          description: ''
+  /get_doc_conversion_options:
+    post:
+      summary: Get document conversion options
+      operationId: post-get_doc_conversion_options
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                doctype:
+                  type: string
+                  description: Document type
+                docnum:
+                  type: integer
+                  description: Document number
+              required:
+                - doctype
+                - docnum
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/doc'
+          description: ''
+  /types:
+    post:
+      summary: Get available doctypes
+      operationId: post-types
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                list_type:
+                  type: string
+                  description: List type (array|object).
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/doc'
+          description: ''
+  /get_next_docnums:
+    post:
+      summary: Get next document numbers for every type
+      operationId: post-get_next_docnums
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                next_docnums:
+                  type: object
+                  description: 'List of next docnums (key=>value, where keys are doctypes and values are document numbers)'
+              required:
+                - next_docnums
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/doc'
+          description: ''
+  /set_next_docnums:
+    post:
+      summary: Set next (initial) document numbers
+      operationId: post-set_next_docnums
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                cid:
+                  type: string
+                user:
+                  type: string
+                pass:
+                  type: string
+                docnums:
+                  type: object
+                  description: 'List of docnums (key=>value, where keys are doctypes and values are document numbers)'
+                next_docnums:
+                  type: object
+                  description: 'List of next docnums (key=>value, where keys are doctypes and values are document numbers)'
+              required:
+                - docnums
+                - next_docnums
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/doc'
+          description: ''
+  /prepare_base_docs_conversion:
+    post:
+      summary: Prepare new document items from base documents
+      operationId: post-prepare_base_docs_conversion
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                cid:
+                  type: string
+                user:
+                  type: string
+                pass:
+                  type: string
+                client_id:
+                  type: integer
+                  description: Client ID
+                doctype:
+                  type: string
+                  description: Document type
+                based_on:
+                  type: array
+                  description: List of base documents for conversion
+              required:
+                - client_id
+                - doctype
+                - based_on
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/doc'
+          description: ''
+  /update_doc_income_type:
+    post:
+      summary: Update document income type
+      operationId: Update document income type
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: "Session ID\t\n"
+                cid:
+                  type: string
+                  description: "Company identifier\t\n"
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: "Password\t\n"
+                doctype:
+                  type: string
+                  description: "Document type\t"
+                docnum:
+                  type: integer
+                  description: "Document number\t"
+                income_type_id:
+                  type: integer
+                  description: "Income type ID\t"
+                income_type_name:
+                  type: string
+                  description: Income type name (only if income_type_id is not passed). The system will lookup income type by name. If it does not exist - it will be created automatically.
+              required:
+                - doctype
+                - docnum
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/doc'
+          description: ''
+components:
+  schemas:
+    iCountDocItem:
+      type: object
+      title: iCountDocItem
+      description: Document Item
+      properties:
+        item_id:
+          type: integer
+          description: 'Document Item ID (automatic, only in existing document information)'
+        inventory_item_id:
+          type: string
+          description: Inventory Item ID
+        sku:
+          type: string
+          description: Item SKU
+        description:
+          type: string
+          description: Item description
+        long_description:
+          type: string
+          description: Item long description
+        currency_id:
+          type: integer
+          description: Currency ID
+        currency_rate:
+          type: string
+          description: 'Rate of conversion from item currency to document currency. For example, if document currency is EUR and the item currency is EUR - this conversion rate will be 1'
+        unitprice:
+          type: string
+          description: Item price (excluding VAT)
+        unitprice_incvat:
+          type: string
+          description: 'Item price (including VAT). If unitprice_incvat is passed, the system will extract VAT and calculate unitprice automatically'
+        unitprice_exempt:
+          type: string
+          description: 'Item price (VAT exempt). NB: Only applicable for Lawyer invoices'
+        tax_exempt:
+          type: boolean
+          description: Is item tax exempt?
+        quantity:
+          type: string
+          description: 'Item quantity. NB: Not applicatble for Lawyer invoices'
+        serial:
+          type: string
+          description: Serial number
+        taxes:
+          type: object
+          description: Item tax rates. Keys are tax type IDs (see tax/types). Values are rates (percent)
+      required:
+        - description
+        - unitprice
+        - quantity
+    iCountCashPayment:
+      type: object
+      title: iCountCashPayment
+      description: Cash payment
+      properties:
+        sum:
+          type: string
+          description: Cash amount
+      required:
+        - sum
+    iCountChequePayment:
+      type: object
+      title: iCountChequePayment
+      description: Cheque payment
+      properties:
+        sum:
+          type: string
+          description: Cheque amount
+        date:
+          type: string
+          description: Cheque date
+          format: date
+        bank:
+          type: integer
+          description: Cheque bank
+        branch:
+          type: integer
+          description: Cheque branch
+        account:
+          type: integer
+          description: Cheque account
+        number:
+          type: integer
+          description: Cheque number
+      required:
+        - sum
+        - date
+        - bank
+        - branch
+        - account
+        - number
+    iCountBankTransferPayment:
+      type: object
+      title: iCountBankTransferPayment
+      description: BankTransfer payment
+      properties:
+        sum:
+          type: string
+          description: BankTransfer amount
+        date:
+          type: string
+          description: BankTransfer date
+          format: date
+        account:
+          type: integer
+          description: Bank account ID where BankTransfer was deposited
+      required:
+        - sum
+        - date
+        - account
+    iCountCreditCardPayment:
+      type: object
+      title: iCountCreditCardPayment
+      description: Credit-Card payment
+      properties:
+        sum:
+          type: string
+          description: Credit-Card transaction amount
+        date:
+          type: string
+          description: Transaction date
+          format: date
+        num_of_payments:
+          type: integer
+          description: Number of installments
+        first_payment:
+          type: string
+          description: First payment amount; Applicable only for installments
+        token_id:
+          type: integer
+          description: Credit-Card token ID. Requires cc_storage module
+        card_number:
+          type: integer
+          description: Credit-Card number
+        card_type:
+          type: string
+          description: Credit-Card type
+        cvv:
+          type: integer
+          description: Credit-Card CVV number
+        exp_year:
+          type: integer
+          description: Card Expiration year
+        exp_month:
+          type: integer
+          description: Card Expiration month
+        holder_id:
+          type: integer
+          description: Card Holder ID
+        holder_name:
+          type: string
+          description: Card Holder name
+        confirmation_code:
+          type: string
+          description: Credit-Card transaction confirmation number
+      required:
+        - sum
+        - num_of_payments
+        - first_payment
+        - card_number
+        - card_type
+        - cvv
+        - exp_year
+        - exp_month
+        - holder_id
+        - holder_name
+        - confirmation_code
+    iCountPayPalPayment:
+      type: object
+      title: iCountPayPalPayment
+      description: PayPal payment method
+      properties:
+        sum:
+          type: string
+          description: PayPal transaction amount
+        date:
+          type: string
+          description: PayPal transaction date
+          format: date
+        txn_id:
+          type: string
+          description: PayPal transaction ID
+        payer_name:
+          type: string
+          description: PayPal payer name
+      required:
+        - sum
+        - date
+        - txn_id
+        - payer_name
+    iCountBarterPayment:
+      type: object
+      title: iCountBarterPayment
+      description: Barter payment method
+      properties:
+        sum:
+          type: string
+          description: Barter amount
+      required:
+        - sum
+    iCountBaseDoc:
+      type: object
+      title: iCountBaseDoc
+      description: Base document info
+      properties:
+        doctype:
+          type: string
+          description: Base document type
+        docnum:
+          type: integer
+          description: Base document number
+        doc_url:
+          type: string
+          description: Base document URL
+      required:
+        - doctype
+        - docnum

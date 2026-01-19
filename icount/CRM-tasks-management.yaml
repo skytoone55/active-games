@@ -1,0 +1,392 @@
+openapi: 3.1.0
+info:
+  version: '1.0'
+  title: CRM tasks management
+servers:
+  - url: 'https://api.icount.co.il/api/v3.php/crm_task'
+    description: ''
+paths:
+  /info:
+    post:
+      summary: Get task information
+      operationId: post-info
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                task_id:
+                  type: integer
+                  description: Task ID
+                get_child_tasks:
+                  type: boolean
+                  description: Get child tasks list (for complex tasks)
+              required:
+                - task_id
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/crm_task'
+          description: ''
+  /get_list:
+    post:
+      summary: Search tasks
+      operationId: post-get_list
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                task_id:
+                  type: integer
+                  description: Task ID
+                event_id:
+                  type: integer
+                  description: Event ID
+                user_id:
+                  type: integer
+                  description: Assignee user ID
+                client_id:
+                  type: integer
+                  description: Client ID
+                supplier_id:
+                  type: integer
+                  description: Supplier ID
+                project_id:
+                  type: integer
+                  description: Project ID
+                created_by:
+                  type: integer
+                  description: Creator user ID
+                created_date:
+                  type: string
+                  description: Created date
+                  format: date
+                created_date_start:
+                  type: string
+                  description: Created date range start
+                  format: date
+                created_date_end:
+                  type: string
+                  description: Created date range end
+                  format: date
+                due_date:
+                  type: string
+                  description: Due date
+                  format: date
+                due_date_start:
+                  type: string
+                  description: Due date range start
+                  format: date
+                due_date_end:
+                  type: string
+                  description: Due date range end
+                  format: date
+                show_tasks_with_no_due_date:
+                  type: boolean
+                  description: Show tasks without due date set? (Only relevant if due date range is specified.
+                get_child_tasks:
+                  type: boolean
+                  description: Get child tasks list (for complex tasks)
+                list_type:
+                  type: string
+                  description: Result list type (array/object).
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/crm_task'
+          description: ''
+  /add:
+    post:
+      summary: Add task
+      operationId: post-add
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                task_name:
+                  type: string
+                  description: Task name
+                task_description:
+                  type: string
+                  description: Task description.
+                user_id:
+                  type: integer
+                  description: Assignee user ID.
+                client_id:
+                  type: integer
+                  description: Client ID.
+                supplier_id:
+                  type: integer
+                  description: Supplier ID.
+                project_id:
+                  type: integer
+                  description: Project ID.
+                doctype:
+                  type: string
+                  description: Related document type.
+                docnum:
+                  type: integer
+                  description: Related document number.
+                task_type:
+                  type: string
+                  description: 'Task type. Possible values: regular, project.'
+                parent:
+                  type: string
+                  description: Parent entity type.
+                parent_id:
+                  type: integer
+                  description: Parent entity ID.
+                due_date:
+                  type: string
+                  description: Due date.
+                  format: date
+                priority:
+                  type: integer
+                  description: Task priority.
+                percent_complete:
+                  type: number
+                  description: Percent complete.
+                  format: float
+                tags:
+                  type: array
+                  description: Tag IDs
+                notifications:
+                  type: array
+                  description: Notifications list
+              required:
+                - task_name
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/crm_task'
+          description: ''
+  /update:
+    post:
+      summary: Update task
+      operationId: post-update
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                task_id:
+                  type: integer
+                  description: Task ID
+                task_name:
+                  type: string
+                  description: Task name.
+                task_description:
+                  type: string
+                  description: Task description.
+                user_id:
+                  type: integer
+                  description: Assignee user ID.
+                client_id:
+                  type: integer
+                  description: Client ID.
+                supplier_id:
+                  type: integer
+                  description: Supplier ID.
+                project_id:
+                  type: integer
+                  description: Project ID.
+                doctype:
+                  type: string
+                  description: Related document type.
+                docnum:
+                  type: integer
+                  description: Related document number.
+                task_type:
+                  type: string
+                  description: 'Task type. Possible values: regular, project.'
+                parent:
+                  type: string
+                  description: Parent entity type.
+                parent_id:
+                  type: integer
+                  description: Parent entity ID.
+                due_date:
+                  type: string
+                  description: Due date.
+                  format: date
+                priority:
+                  type: integer
+                  description: Task priority.
+                percent_complete:
+                  type: number
+                  description: Percent complete.
+                  format: float
+                tags:
+                  type: array
+                  description: Tag IDs
+                notifications:
+                  type: array
+                  description: Notifications list
+              required:
+                - task_id
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/crm_task'
+          description: ''
+  /delete:
+    post:
+      summary: Delete task
+      operationId: post-delete
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                task_id:
+                  type: integer
+                  description: Task ID
+              required:
+                - task_id
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/crm_task'
+          description: ''
+  /get_chat:
+    post:
+      summary: Get task chat messages
+      operationId: post-get_chat
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                task_id:
+                  type: integer
+                  description: Task ID
+              required:
+                - task_id
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/crm_task'
+          description: ''
+  /add_chat_message:
+    post:
+      summary: Add task chat message
+      operationId: post-add_chat_message
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                task_id:
+                  type: integer
+                  description: Task ID
+                text:
+                  type: string
+                  description: Message text
+              required:
+                - task_id
+                - text
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/crm_task'
+          description: ''

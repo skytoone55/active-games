@@ -1,0 +1,116 @@
+openapi: 3.1.0
+info:
+  version: '1.0'
+  title: Manage income types
+servers:
+  - url: 'https://api.icount.co.il/api/v3.php/income_type'
+paths:
+  /get_list:
+    post:
+      summary: Get list of income types
+      operationId: post-get_list
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                list_type:
+                  type: string
+                  description: List type (array|object).
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/income_type'
+  /add:
+    post:
+      summary: Add income type
+      operationId: post-add
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                income_type_name:
+                  type: string
+                  description: Income type name
+                sortcode_id:
+                  type: integer
+                  description: "Sort code\r\nSee also: accounting_settings/get_sortcodes"
+                main_account:
+                  type: integer
+                  description: "Main account\r\nSee also: accounting_settings/get_main_accounts"
+                faccount:
+                  type: integer
+                  description: Foreign Account Number (for external accounting software)
+              required:
+                - income_type_name
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/income_type'
+  /update:
+    post:
+      summary: Update income type
+      operationId: post-update
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                income_type_id:
+                  type: integer
+                  description: Income type Id
+                income_type_name:
+                  type: string
+                  description: Income type name
+                faccount:
+                  type: integer
+                  description: Foreign Account Number (for external accounting software)
+              required:
+                - income_type_id
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/income_type'

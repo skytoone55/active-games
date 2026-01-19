@@ -1,0 +1,261 @@
+openapi: 3.1.0
+info:
+  version: '1.0'
+  title: Suppliers management
+servers:
+  - url: 'https://api.icount.co.il/api/v3.php/supplier'
+paths:
+  /info:
+    post:
+      summary: Get supplier information
+      operationId: post-info
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                supplier_id:
+                  type: integer
+                  description: Supplier ID
+                supplier_vat_id:
+                  type: string
+                  description: Supplier VAT ID
+                supplier_name:
+                  type: string
+                  description: Supplier name
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/supplier'
+  /get_list:
+    post:
+      summary: Get suppliers list
+      operationId: post-get_list
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                detail_level:
+                  type: integer
+                  description: 'Level of detail (0=only name, 1=+basic, 2=+contacts, 3=+address, 4=+bank, 5=+faccount, 10=full).'
+                list_type:
+                  type: string
+                  description: List type (array|object).
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/supplier'
+  /add:
+    post:
+      summary: Add supplier
+      operationId: post-add
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                supplier_name:
+                  type: string
+                  description: Supplier company name
+                vat_id:
+                  type: integer
+                  description: Supplier VAT ID
+                fname:
+                  type: string
+                  description: Supplier first name
+                lname:
+                  type: string
+                  description: Supplier last name
+                email:
+                  type: string
+                  description: Supplier email address
+                phone:
+                  type: string
+                  description: Supplier phone number
+                mobile:
+                  type: string
+                  description: Supplier mobile number
+                fax:
+                  type: string
+                  description: Supplier fax number
+                bus_country:
+                  type: string
+                  description: 'Business address: country'
+                bus_city:
+                  type: string
+                  description: 'Business address: city'
+                bus_zip:
+                  type: integer
+                  description: 'Business address: zip'
+                bus_street:
+                  type: string
+                  description: 'Business address: street'
+                bus_no:
+                  type: string
+                  description: 'Business address: building number'
+                bank:
+                  type: integer
+                  description: Bank number
+                branch:
+                  type: integer
+                  description: Bank branch number
+                account:
+                  type: integer
+                  description: Bank account number
+                faccount:
+                  type: integer
+                  description: Foreign account number (external accounting software identifier)
+                wht_percent:
+                  type: number
+                  description: Withholding tax percent
+                  format: float
+                wht_validity:
+                  type: string
+                  description: Withholding tax validity date
+                  format: date
+                notes:
+                  type: string
+                  description: Additional notes
+              required:
+                - supplier_name
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/supplier'
+  /update:
+    post:
+      summary: Update supplier
+      operationId: post-update
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                supplier_id:
+                  type: integer
+                  description: Supplier ID
+                supplier_name:
+                  type: string
+                  description: Supplier company name
+                vat_id:
+                  type: integer
+                  description: Supplier VAT ID
+                fname:
+                  type: string
+                  description: Supplier first name
+                lname:
+                  type: string
+                  description: Supplier last name
+                email:
+                  type: string
+                  description: Supplier email address
+                phone:
+                  type: string
+                  description: Supplier phone number
+                mobile:
+                  type: string
+                  description: Supplier mobile number
+                fax:
+                  type: string
+                  description: Supplier fax number
+                bus_country:
+                  type: string
+                  description: 'Business address: country'
+                bus_city:
+                  type: string
+                  description: 'Business address: city'
+                bus_zip:
+                  type: integer
+                  description: 'Business address: zip'
+                bus_street:
+                  type: string
+                  description: 'Business address: street'
+                bus_no:
+                  type: string
+                  description: 'Business address: building number'
+                bank:
+                  type: integer
+                  description: Bank number
+                branch:
+                  type: integer
+                  description: Bank branch number
+                account:
+                  type: integer
+                  description: Bank account number
+                faccount:
+                  type: integer
+                  description: Foreign account number (external accounting software identifier)
+                wht_percent:
+                  type: number
+                  description: Withholding tax percent
+                  format: float
+                wht_validity:
+                  type: string
+                  description: Withholding tax validity date
+                  format: date
+                notes:
+                  type: string
+                  description: Additional notes
+              required:
+                - supplier_id
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/supplier'

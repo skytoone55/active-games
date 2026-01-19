@@ -1,0 +1,189 @@
+openapi: 3.1.0
+info:
+  version: '1.0'
+  title: Sub account
+  summary: ''
+servers:
+  - url: 'https://api.icount.co.il/api/'
+paths:
+  /extcc.php:
+    post:
+      summary: Creating a new sub-account
+      description: |-
+        Customers who wish to create a user account in iCount for additional companies they own can register directly through the API.
+
+        In order to be able to create companies with us through the API, you must have a registration code.
+
+        Your registration code can be found under "System->Partnership Program".
+      operationId: extcc
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                option:
+                  type: string
+                  description: actually_register
+                cname:
+                  type: string
+                  description: Company Name
+                cname_en:
+                  type: string
+                  description: |
+                    Company Name in English
+                reg_code:
+                  type: string
+                  description: |
+                    Your Registration Code
+                fname:
+                  type: string
+                  description: |
+                    First Name of the Account Holder
+                lname:
+                  type: string
+                  description: Last Name of the Account Holder
+                uname:
+                  type: string
+                  description: |
+                    Desired Username
+                cid:
+                  type: string
+                  description: |
+                    Desired Company Identifier (yes, the same company identifier from the previous stage, above you received confirmation)
+                pass:
+                  type: string
+                  description: |
+                    Desired Password
+                fname2:
+                  type: string
+                  description: |
+                    First Name for the Second User
+                lname2:
+                  type: string
+                  description: |
+                    Last Name for the Second User
+                uname2:
+                  type: string
+                  description: |
+                    Desired Username for the Second User
+                uemail2:
+                  type: string
+                  description: |
+                    Email Address for the Second User
+                pass2:
+                  type: string
+                  description: |
+                    Desired Password for the Second User
+                hp:
+                  type: string
+                  description: 'VAT number, Corporate ID, or ID number - must be 9 digits, no spaces.'
+                business_type:
+                  type: string
+                  description: 1 = Osek morshe | 2 = Partnership | 3 = Ltd. Company | 4 = Non-Profit Organization | 5 = Osek Patur
+                phone:
+                  type: string
+                  description: |
+                    Business Phone Number
+                email:
+                  type: string
+                  description: |
+                    Email Address
+                cell_phone:
+                  type: string
+                  description: |
+                    Mobile Phone Number
+                city:
+                  type: string
+                  description: |
+                    City - Company Address in Hebrew
+                city_en:
+                  type: string
+                  description: |
+                    City - Company Address in English
+                street:
+                  type: string
+                  description: |
+                    Street - Company Address in Hebrew
+                street_en:
+                  type: string
+                  description: |
+                    Street - Company Address in English
+                address_num:
+                  type: string
+                  description: |
+                    Number - Street Number for Address
+                address_country:
+                  type: string
+                  description: |
+                    Country - Company Address
+                zip:
+                  type: string
+                  description: |
+                    Postal Code - Company Address
+                start_receipt:
+                  type: integer
+                  description: |
+                    First Receipt Number
+                  default: 1000
+                start_trec:
+                  type: integer
+                  description: |
+                    First Donation Receipt Number
+                  default: 1000
+                start_invoice:
+                  type: integer
+                  description: |
+                    First Invoice Number
+                  default: 2000
+                start_refund:
+                  type: integer
+                  description: |
+                    First Credit Note Number
+                  default: 5000
+                start_deal:
+                  type: integer
+                  description: First Transaction Invoice Number
+                  default: 7000
+                start_offer:
+                  type: integer
+                  description: First Offer Number
+                  default: 4000
+                start_delcert:
+                  type: integer
+                  description: First Shipping Document Number
+                  default: 6000
+                start_order:
+                  type: integer
+                  description: |
+                    First Order Number
+                  default: 8000
+                start_invrec:
+                  type: integer
+                  description: |
+                    First Receipt Tax Invoice Number
+                  default: 3000
+                no_email_to_client:
+                  type: string
+                  description: |
+                    To avoid sending 'Welcome' emails to the customer's email we registered, please pass this parameter with a value of "1"
+                  default: 0
+              required:
+                - option
+                - cname
+                - reg_code
+                - fname
+                - lname
+                - uname
+                - cid
+                - pass
+                - hp
+                - business_type
+                - phone
+                - email
+                - cell_phone
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/'

@@ -1,0 +1,192 @@
+openapi: 3.1.0
+info:
+  version: '1.0'
+  title: Autoinvoices for receipts
+servers:
+  - url: 'https://api.icount.co.il/api/v3.php/autoinvoice'
+paths:
+  /search:
+    post:
+      summary: Search autoinvoices
+      operationId: post-search
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                autoinvoice_type:
+                  type: string
+                  description: Autoinvoice type (ch for cheques / cc for credit-card)
+                autoinvoice_id:
+                  type: integer
+                  description: Autoinvoice ID
+                receiptnumber:
+                  type: integer
+                  description: Receipt number
+                date2issue:
+                  type: string
+                  description: Date to issue (specific date)
+                  format: date
+                start_date2issue:
+                  type: string
+                  description: Date to issue range start
+                  format: date
+                end_date2issue:
+                  type: string
+                  description: Date to issue range end
+                  format: date
+                show_issued:
+                  type: boolean
+                  description: Show issued autoinvoices?
+                  default: true
+                show_pending:
+                  type: boolean
+                  description: Show pending autoinvoices?
+                  default: true
+                show_cancelled:
+                  type: boolean
+                  description: Show cancelled autoinvoices?
+                  default: false
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/autoinvoice'
+  /info:
+    post:
+      summary: Get autoinvoice info
+      operationId: post-info
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                autoinvoice_type:
+                  type: string
+                  description: Autoinvoice type (ch for cheques|cc for credit-card)
+                autoinvoice_id:
+                  type: integer
+                  description: Autoinvoice ID
+              required:
+                - autoinvoice_type
+                - autoinvoice_id
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/autoinvoice'
+  /update:
+    post:
+      summary: Update autoinvoice details
+      operationId: post-update
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                autoinvoice_type:
+                  type: string
+                  description: Autoinvoice type (ch for cheques|cc for credit-card)
+                autoinvoice_id:
+                  type: integer
+                  description: Autoinvoice ID
+                date2issue:
+                  type: string
+                  description: Date to issue (specific date)
+                  format: date
+                detail_line:
+                  type: string
+                  description: Autoinvoice item description
+                user_id:
+                  type: integer
+                  description: Issuer user ID
+                income_type_id:
+                  type: integer
+                  description: Income type ID
+                tax_exempt:
+                  type: boolean
+                  description: Tax exempt?
+                  default: true
+              required:
+                - autoinvoice_type
+                - autoinvoice_id
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/autoinvoice'
+  /cancel:
+    post:
+      summary: Cancel autoinvoice
+      operationId: post-cancel
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                autoinvoice_type:
+                  type: string
+                  description: Autoinvoice type (ch for cheques|cc for credit-card)
+                autoinvoice_id:
+                  type: integer
+                  description: Autoinvoice ID
+              required:
+                - autoinvoice_type
+                - autoinvoice_id
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/autoinvoice'

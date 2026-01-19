@@ -1,0 +1,1376 @@
+openapi: 3.1.0
+info:
+  version: '1.0'
+  title: Products inventory management
+servers:
+  - url: 'https://api.icount.co.il/api/v3.php/inventory'
+paths:
+  /get_items:
+    post:
+      summary: Search items
+      operationId: post-get_items
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                inventory_item_id:
+                  type: integer
+                  description: Item ID
+                sku:
+                  type: string
+                  description: Item SKU (use * for wildcard)
+                description:
+                  type: string
+                  description: Item description (use * for wildcard)
+                q:
+                  type: string
+                  description: Search term to look for (in both sku and description) (use * for wildcard)
+                long_description:
+                  type: string
+                  description: Item long description (use * for wildcard)
+                client_id:
+                  type: integer
+                  description: Customer ID. If passed - the system checks if there is special price for this customer
+                manufacturer_id:
+                  type: integer
+                  description: Manufacturer ID
+                type_id:
+                  type: integer
+                  description: Item type ID
+                condition_id:
+                  type: integer
+                  description: Item condition ID
+                unit_type_id:
+                  type: integer
+                  description: Unit type ID
+                warehouse_id:
+                  type: integer
+                  description: Warehouse ID
+                min_stock_alert:
+                  type: boolean
+                  description: Show only items that are below min_stock
+                sort:
+                  type: string
+                  description: 'Sort field. Possible values: inventory_item_id, description, sku, unitprice, quantity'
+                sort_order:
+                  type: string
+                  description: Sort order (ASC|DESC).
+                limit:
+                  type: integer
+                  description: Limit to number of results (0+). 0 = unlimited.
+                offset:
+                  type: integer
+                  description: Offset (0+) - applicable only when limit>0..
+                list_type:
+                  type: string
+                  description: List type (array|object).
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/inventory'
+  /get_item:
+    post:
+      summary: Get inventory item information
+      operationId: post-get_item
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                inventory_item_id:
+                  type: integer
+                  description: Item ID
+              required:
+                - inventory_item_id
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/inventory'
+  /add_item:
+    post:
+      summary: Add item to inventory
+      operationId: post-add_item
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                description:
+                  type: string
+                  description: Item description
+                long_description:
+                  type: string
+                  description: Item description
+                sku:
+                  type: string
+                  description: Item SKU
+                item_type_id:
+                  type: integer
+                  description: Item type ID
+                condition_id:
+                  type: integer
+                  description: Item condition ID
+                unit_type_id:
+                  type: integer
+                  description: Unit type ID
+                unitprice:
+                  type: number
+                  description: Price per unit
+                  format: float
+                tax_exempt:
+                  type: boolean
+                  description: True if this item is tax exempt.
+                unit_price_includes_vat:
+                  type: boolean
+                  description: True if unit price includes VAT.
+                currency_id:
+                  type: integer
+                  description: Price currency
+                cost_amount:
+                  type: number
+                  description: Item cost amount
+                  format: float
+                cost_currency_id:
+                  type: integer
+                  description: Item cost currency
+                stock:
+                  type: number
+                  description: Stock availability (quantity in stock)
+                  format: float
+                entry_date:
+                  type: string
+                  description: Stock entry date
+                  format: date
+                warehouse_id:
+                  type: integer
+                  description: Warehouse ID
+              required:
+                - description
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/inventory'
+  /update_item:
+    post:
+      summary: Update inventory item
+      operationId: post-update_item
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                inventory_item_id:
+                  type: integer
+                  description: Inventory Item ID
+                description:
+                  type: string
+                  description: Item description
+                long_description:
+                  type: string
+                  description: Item description
+                sku:
+                  type: string
+                  description: Item SKU
+                item_type_id:
+                  type: integer
+                  description: Item type ID
+                condition_id:
+                  type: integer
+                  description: Item condition ID
+                unit_type_id:
+                  type: integer
+                  description: Unit type ID
+                unitprice:
+                  type: number
+                  description: Price per unit excluding VAT
+                  format: float
+                tax_exempt:
+                  type: boolean
+                  description: True if this item is tax exempt
+                unit_price_includes_vat:
+                  type: boolean
+                  description: True if unit price includes VAT
+                currency_id:
+                  type: integer
+                  description: Price currency
+                cost_amount:
+                  type: number
+                  description: Item cost amount
+                  format: float
+                cost_currency_id:
+                  type: integer
+                  description: Item cost currency
+                stock:
+                  type: number
+                  description: Stock availability (quantity in stock)
+                  format: float
+                entry_date:
+                  type: string
+                  description: Stock entry date
+                  format: date
+                warehouse_id:
+                  type: integer
+                  description: Warehouse ID
+              required:
+                - inventory_item_id
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/inventory'
+  /delete_item:
+    post:
+      summary: Delete inventory item
+      operationId: post-delete_item
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                inventory_item_id:
+                  type: integer
+                  description: Inventory Item ID
+              required:
+                - inventory_item_id
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/inventory'
+  /delete_items:
+    post:
+      summary: Delete multiple items
+      operationId: post-delete_items
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                inventory_item_ids:
+                  type: array
+                  description: List of item ids to delete
+                  items:
+                    type: integer
+                list_type:
+                  type: string
+                  description: List type (array|object).
+              required:
+                - inventory_item_ids
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/inventory'
+  /move_item:
+    post:
+      summary: Move inventory item to another warehouse
+      operationId: post-move_item
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                inventory_item_id:
+                  type: integer
+                  description: Inventory Item ID
+                warehouse_id:
+                  type: integer
+                  description: Warehouse ID
+                quantity:
+                  type: number
+                  description: 'Quantity to move (default: all)'
+                  format: float
+              required:
+                - inventory_item_id
+                - warehouse_id
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/inventory'
+  /get_item_images:
+    post:
+      summary: Get inventory item images
+      operationId: post-get_item_images
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                inventory_item_id:
+                  type: integer
+                  description: Item ID
+              required:
+                - inventory_item_id
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/inventory'
+  /add_item_image:
+    post:
+      summary: Add item image (upload)
+      operationId: post-add_item_image
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                inventory_item_id:
+                  type: integer
+                  description: Item ID
+                image:
+                  type: string
+                  description: Image upload
+              required:
+                - inventory_item_id
+                - image
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/inventory'
+  /delete_item_image:
+    post:
+      summary: Delete item image
+      operationId: post-delete_item_image
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                inventory_item_id:
+                  type: integer
+                  description: Item ID
+                image_id:
+                  type: integer
+                  description: Image file id
+              required:
+                - inventory_item_id
+                - image_id
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/inventory'
+  /replace_item_image:
+    post:
+      summary: Replace item image with a new one
+      operationId: post-replace_item_image
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                inventory_item_id:
+                  type: integer
+                  description: Item ID
+                image_id:
+                  type: integer
+                  description: Image file id
+                image:
+                  type: string
+                  description: Image upload
+              required:
+                - inventory_item_id
+                - image_id
+                - image
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/inventory'
+  /set_main_image:
+    post:
+      summary: Set image as main item image
+      operationId: post-set_main_image
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                inventory_item_id:
+                  type: integer
+                  description: Item ID
+                image_id:
+                  type: integer
+                  description: Image file id
+              required:
+                - inventory_item_id
+                - image_id
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/inventory'
+  /add_stock:
+    post:
+      summary: Add quantity to item stock
+      operationId: post-add_stock
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                inventory_item_id:
+                  type: integer
+                  description: Inventory item ID
+                quantity:
+                  type: number
+                  description: quntity to add
+                  format: float
+              required:
+                - inventory_item_id
+                - quantity
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/inventory'
+  /reduce_stock:
+    post:
+      summary: Reduce quantity from item stock
+      operationId: post-reduce_stock
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                inventory_item_id:
+                  type: integer
+                  description: Inventory item ID
+                quantity:
+                  type: number
+                  description: quntity to remove
+                  format: float
+              required:
+                - inventory_item_id
+                - quantity
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/inventory'
+  /get_item_types:
+    post:
+      summary: Get item types list
+      operationId: post-get_item_types
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/inventory'
+  /add_item_type:
+    post:
+      summary: Add item type
+      operationId: post-add_item_type
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                item_type_name:
+                  type: string
+                  description: item type name
+              required:
+                - item_type_name
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/inventory'
+  /update_item_type:
+    post:
+      summary: Update item type name
+      operationId: post-update_item_type
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                item_type_id:
+                  type: integer
+                  description: item type id
+                item_type_name:
+                  type: string
+                  description: item type name
+              required:
+                - item_type_id
+                - item_type_name
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/inventory'
+  /delete_item_type:
+    post:
+      summary: Delete item type
+      operationId: post-delete_item_type
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                item_type_id:
+                  type: integer
+                  description: item type id
+              required:
+                - item_type_id
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/inventory'
+  /get_conditions:
+    post:
+      summary: Get Inventory Item conditions list
+      operationId: post-get_conditions
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/inventory'
+  /add_condition:
+    post:
+      summary: Add item condition
+      description: 'throws missing_condition_name, condition_creation_failed'
+      operationId: post-add_condition
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                condition_name:
+                  type: string
+                  description: item condition name
+              required:
+                - condition_name
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/inventory'
+  /inventory/update_condition:
+    post:
+      summary: Update item condition name
+      operationId: post-inventory-update_condition
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                condition_id:
+                  type: integer
+                  description: item condition id
+                condition_name:
+                  type: string
+                  description: item condition name
+              required:
+                - condition_id
+                - condition_name
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/inventory'
+  /delete_condition:
+    post:
+      summary: Delete item condition
+      operationId: post-delete_condition
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                condition_id:
+                  type: integer
+                  description: item condition id
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/inventory'
+  /get_unit_types:
+    post:
+      summary: Get item measurement unit types list
+      operationId: post-get_unit_types
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/inventory'
+  /add_unit_type:
+    post:
+      summary: Add item measurement unit type
+      operationId: post-add_unit_type
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                unit_type_name:
+                  type: string
+                  description: unit type name
+              required:
+                - unit_type_name
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/inventory'
+  /update_unit_type:
+    post:
+      summary: Update unit type name
+      operationId: post-update_unit_type
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                unit_type_id:
+                  type: integer
+                  description: unit type id
+                unit_type_name:
+                  type: string
+                  description: unit type name
+              required:
+                - unit_type_id
+                - unit_type_name
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/inventory'
+  /delete_unit_type:
+    post:
+      summary: Delete unit type
+      operationId: post-delete_unit_type
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                unit_type_id:
+                  type: integer
+                  description: unit type id
+              required:
+                - unit_type_id
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/inventory'
+  /get_manufacturers:
+    post:
+      summary: Get Manufacturers list
+      operationId: post-get_manufacturers
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/inventory'
+  /add_manufacturer:
+    post:
+      summary: Add manufacturer
+      operationId: post-add_manufacturer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                manufacturer_name:
+                  type: string
+                  description: Manufacturer name
+              required:
+                - manufacturer_name
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/inventory'
+  /update_manufacturer:
+    post:
+      summary: Update manufacturer information
+      operationId: post-update_manufacturer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                manufacturer_id:
+                  type: integer
+                  description: Manufacturer id
+                manufacturer_name:
+                  type: string
+                  description: Manufacturer name
+              required:
+                - manufacturer_id
+                - manufacturer_name
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/inventory'
+  /delete_manufacturer:
+    post:
+      summary: Delete manufacturer
+      operationId: post-delete_manufacturer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                manufacturer_id:
+                  type: integer
+                  description: Manufacturer id
+              required:
+                - manufacturer_id
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/inventory'
+  /get_warehouses:
+    post:
+      summary: Get warehouses list
+      operationId: post-get_warehouses
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/inventory'
+  /get_warehouse:
+    post:
+      summary: Get warehouse information
+      operationId: post-get_warehouse
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                warehouse_id:
+                  type: integer
+                  description: Warehouse ID
+              required:
+                - warehouse_id
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/inventory'
+  /add_warehouse:
+    post:
+      summary: Add warehouse
+      operationId: post-add_warehouse
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                warehouse_name:
+                  type: string
+                  description: Warehouse name
+                warehouse_street_name:
+                  type: string
+                  description: Warehouse street name
+                warehouse_street_number:
+                  type: string
+                  description: Warehouse street number (building)
+                warehouse_country_name:
+                  type: string
+                  description: Warehouse country
+                warehouse_city_name:
+                  type: string
+                  description: Warehouse city
+                warehouse_zip:
+                  type: string
+                  description: Warehouse zip code
+              required:
+                - warehouse_name
+                - warehouse_street_name
+                - warehouse_street_number
+                - warehouse_country_name
+                - warehouse_city_name
+                - warehouse_zip
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/inventory'
+  /update_warehouse:
+    post:
+      summary: Update warehouse information
+      operationId: post-update_warehouse
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                warehouse_id:
+                  type: integer
+                  description: Warehouse ID
+                warehouse_name:
+                  type: string
+                  description: Warehouse name
+                warehouse_street_name:
+                  type: string
+                  description: Warehouse street name
+                warehouse_street_number:
+                  type: string
+                  description: Warehouse street number (building)
+                warehouse_country_name:
+                  type: string
+                  description: Warehouse country
+                warehouse_city_name:
+                  type: string
+                  description: Warehouse city
+                warehouse_zip:
+                  type: string
+                  description: Warehouse zip code
+              required:
+                - warehouse_id
+                - warehouse_name
+                - warehouse_street_name
+                - warehouse_street_number
+                - warehouse_country_name
+                - warehouse_city_name
+                - warehouse_zip
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/inventory'
+  /delete_warehouse:
+    post:
+      summary: Delete warehouse
+      operationId: post-delete_warehouse
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                warehouse_id:
+                  type: integer
+                  description: Warehouse ID
+              required:
+                - warehouse_id
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/inventory'
+  /summary_report:
+    post:
+      summary: Inventory summary report
+      operationId: post-summary_report
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                report_date:
+                  type: string
+                  description: Report date in ISO (YYYY-MM-DD) format.
+                  format: date
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/inventory'

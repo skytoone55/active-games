@@ -1,0 +1,77 @@
+openapi: 3.1.0
+info:
+  version: '1.0'
+  title: Reports
+servers:
+  - url: 'https://api.icount.co.il/api/v3.php/reports'
+paths:
+  /vat_report:
+    post:
+      summary: VAT report
+      operationId: post-vat_report
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                start_month:
+                  type: string
+                  description: Report start date
+                  format: month
+                end_month:
+                  type: string
+                  description: Report end date
+                  format: month
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/reports'
+  /income_tax_report:
+    post:
+      summary: Income tax report
+      operationId: post-income_tax_report
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                start_month:
+                  type: string
+                  description: Report start date.
+                  format: month
+                end_month:
+                  type: string
+                  description: Report end date.
+                  format: month
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/reports'

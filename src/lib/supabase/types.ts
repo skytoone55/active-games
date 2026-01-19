@@ -18,6 +18,7 @@ export type BookingStatus = 'DRAFT' | 'CONFIRMED' | 'CANCELLED'
 export type UserRole = string
 export type ContactStatus = 'active' | 'archived'
 export type ContactSource = 'admin_agenda' | 'public_booking' | 'website'
+export type ClientType = 'individual' | 'company'
 export type GameArea = 'ACTIVE' | 'LASER'
 
 // Types pour Orders (commandes en ligne)
@@ -40,6 +41,7 @@ export type ActionType =
   | 'contact_updated'
   | 'contact_archived'
   | 'contact_deleted'
+  | 'contact_synced_icount'
   | 'user_created'
   | 'user_updated'
   | 'user_deleted'
@@ -180,6 +182,10 @@ export interface Database {
           alias: string | null
           status: ContactStatus
           source: ContactSource
+          client_type: ClientType
+          company_name: string | null
+          vat_id: string | null
+          icount_client_id: number | null
           archived_at: string | null
           archived_reason: string | null
           deleted_at: string | null
@@ -188,9 +194,10 @@ export interface Database {
           created_by: string | null
           updated_by: string | null
         }
-        Insert: Omit<Database['public']['Tables']['contacts']['Row'], 'id' | 'created_at' | 'updated_at' | 'status' | 'source'> & {
+        Insert: Omit<Database['public']['Tables']['contacts']['Row'], 'id' | 'created_at' | 'updated_at' | 'status' | 'source' | 'client_type'> & {
           status?: ContactStatus
           source?: ContactSource
+          client_type?: ClientType
         }
         Update: Partial<Database['public']['Tables']['contacts']['Insert']>
       }

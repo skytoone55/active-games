@@ -9,7 +9,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { verifyApiPermission } from '@/lib/permissions'
 import { logContactAction, getClientIpFromHeaders } from '@/lib/activity-logger'
-import type { Contact, ContactStatus, UserRole } from '@/lib/supabase/types'
+import { syncContactToICountBackground } from '@/lib/icount-sync'
+import type { Contact, ContactStatus, UserRole, ClientType } from '@/lib/supabase/types'
 
 /**
  * GET /api/contacts/[id]
@@ -103,6 +104,9 @@ export async function PUT(
     if (body.notes_client !== undefined) updateData.notes_client = body.notes_client?.trim() || null
     if (body.alias !== undefined) updateData.alias = body.alias?.trim() || null
     if (body.source !== undefined) updateData.source = body.source
+    if (body.client_type !== undefined) updateData.client_type = body.client_type as ClientType
+    if (body.company_name !== undefined) updateData.company_name = body.company_name?.trim() || null
+    if (body.vat_id !== undefined) updateData.vat_id = body.vat_id?.trim() || null
 
     // Gestion du status (archivage/désarchivage)
     if (body.status !== undefined) {
@@ -217,6 +221,11 @@ export async function PUT(
       },
       ipAddress
     })
+
+    // Sync to iCount in background (non-blocking) - only if not archiving
+    if (actionType !== 'archived') {
+      syncContactToICountBackground(contact, contact.branch_id_main)
+    }
 
     return NextResponse.json({ success: true, contact })
   } catch (error) {

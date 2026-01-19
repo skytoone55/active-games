@@ -1,0 +1,270 @@
+openapi: 3.1.0
+info:
+  version: '1.0'
+  title: File manager
+servers:
+  - url: 'https://api.icount.co.il/api/v3.php/file_manager'
+    description: ''
+paths:
+  /upload:
+    post:
+      summary: Upload file(s)
+      operationId: post-upload
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                file:
+                  type: string
+                  description: File upload. Note that this is not a POST field - it's a FILE upload (multipart/mixed part). Multiple files can be uploaded in same request - just use multiple parts each with different names.
+                get_quota:
+                  type: boolean
+                  description: Get quota in response?
+              required:
+                - file
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/file_manager'
+          description: ''
+  /get_list:
+    post:
+      summary: Get files list
+      operationId: post-get_list
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                sort_field:
+                  type: string
+                  description: 'Sort field. Valid values: id, filename, file_type, uploaded.'
+                sort_order:
+                  type: string
+                  description: 'Sort order. Valid values: ASC (ascending) or DESC (descending).'
+                file_type:
+                  type: string
+                  description: File extension
+                filename:
+                  type: string
+                  description: File name. Can either be a full filename or a mask (use * char as a wildcard)
+                uploaded_date:
+                  type: string
+                  description: Date the file was uploaded (ISO)
+                uploaded_date_start:
+                  type: string
+                  description: Start of date range when the file was uploaded (ISO)
+                uploaded_date_end:
+                  type: string
+                  description: End of date range when the file was uploaded (ISO)
+                limit:
+                  type: integer
+                  description: 'Limit number of returned results. Defult: 0 (unlimited)'
+                offset:
+                  type: integer
+                  description: Offset from first result.
+                show_deleted:
+                  type: boolean
+                  description: Show deleted files?
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/file_manager'
+          description: ''
+  /info:
+    post:
+      summary: Get file information
+      operationId: post-info
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                file_id:
+                  type: integer
+                  description: File ID
+              required:
+                - file_id
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/file_manager'
+          description: ''
+  /rename:
+    post:
+      summary: Rename file
+      operationId: post-rename
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                file_id:
+                  type: integer
+                  description: File ID
+                filename:
+                  type: string
+                  description: New filename
+              required:
+                - file_id
+                - filename
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/file_manager'
+          description: ''
+  /delete:
+    post:
+      summary: Delete file(s)
+      operationId: post-delete
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                file_id:
+                  type: integer
+                  description: File ID
+                file_ids:
+                  type: array
+                  description: File IDs
+                get_quota:
+                  type: boolean
+                  description: Get quota in response?
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/file_manager'
+          description: ''
+  /download:
+    post:
+      summary: Download a file
+      operationId: post-download
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                file_id:
+                  type: integer
+                  description: File ID
+              required:
+                - file_id
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/file_manager'
+          description: ''
+  /quota:
+    post:
+      summary: Get file manager quota
+      operationId: post-quota
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/file_manager'
+          description: ''

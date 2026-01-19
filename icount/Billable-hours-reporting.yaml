@@ -1,0 +1,538 @@
+openapi: 3.1.0
+info:
+  version: '1.0'
+  title: Billable hours reporting
+servers:
+  - url: 'https://api.icount.co.il/api/v3.php/hour_reporting'
+paths:
+  /get_hour_types:
+    post:
+      summary: Get billable hour types
+      operationId: post-get_hour_types
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/hour_reporting'
+  /add_hour_type:
+    post:
+      summary: Add hour type
+      operationId: post-add_hour_type
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                hour_type_name:
+                  type: string
+                  description: Hour type name
+                hourly_rate:
+                  type: number
+                  description: Hourly rate
+                  format: float
+                client_id:
+                  type: integer
+                  description: Client ID
+                user_id:
+                  type: integer
+                  description: User ID
+              required:
+                - hour_type_name
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/hour_reporting'
+  /update_hour_type:
+    post:
+      summary: Update hour type
+      operationId: post-update_hour_type
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                hour_type_id:
+                  type: integer
+                  description: Hour type id
+                client_id:
+                  type: integer
+                  description: Client ID
+                user_id:
+                  type: integer
+                  description: User ID
+                hour_type_name:
+                  type: string
+                  description: Hour type name
+                hourly_rate:
+                  type: number
+                  description: Hourly rate
+                  format: float
+              required:
+                - hour_type_id
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/hour_reporting'
+  /delete_hour_type:
+    post:
+      summary: Delete hour type
+      operationId: post-delete_hour_type
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                hour_type_id:
+                  type: integer
+                  description: Hour type id
+              required:
+                - hour_type_id
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/hour_reporting'
+  /add_activity:
+    post:
+      summary: Add activity
+      operationId: post-add_activity
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                client_id:
+                  type: integer
+                  description: Client ID
+                custom_client_id:
+                  type: string
+                  description: Custom Client ID (from external system)
+                vat_id:
+                  type: number
+                  description: Client VAT ID
+                email:
+                  type: string
+                  description: Client email
+                client_name:
+                  type: string
+                  description: Client name
+                project_id:
+                  type: integer
+                  description: Project ID (relevant only if project_management module is enabled)
+                user_id:
+                  type: integer
+                  description: User ID of the employee.
+                activity_date:
+                  type: string
+                  description: Activity date (ISO).
+                  format: date
+                start_ts:
+                  type: string
+                  description: Activity start timestamp (ISO)
+                  format: timestamp
+                end_ts:
+                  type: string
+                  description: Activity start timestamp (ISO)
+                  format: timestamp
+                start_lat:
+                  type: number
+                  description: Start latitude
+                  format: float
+                start_lon:
+                  type: number
+                  description: Start longitude
+                  format: float
+                end_lat:
+                  type: number
+                  description: End latitude
+                  format: float
+                end_lon:
+                  type: number
+                  description: End longitude
+                  format: float
+                hour_type_id:
+                  type: integer
+                  description: Hour type ID
+                total_hours:
+                  type: integer
+                  description: Number of hours for activity
+                activity_description:
+                  type: string
+                  description: Activity description
+                expense_sum:
+                  type: number
+                  description: Expense sum
+                  format: float
+                expense_currency_id:
+                  type: integer
+                  description: Currency ID
+                expense_currency_code:
+                  type: string
+                  description: Currency Code (ISO-4217)
+                expense_description:
+                  type: string
+                  description: Expense description
+              required:
+                - hour_type_id
+                - total_hours
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/hour_reporting'
+  /get_activities:
+    post:
+      summary: Get activities list
+      operationId: post-get_activities
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                start_date:
+                  type: string
+                  description: Start date.
+                  format: date
+                end_date:
+                  type: string
+                  description: End date.
+                  format: date
+                all_users:
+                  type: boolean
+                  description: Get activities for all users (admin only).
+                user_id:
+                  type: integer
+                  description: Get activities for specific user (admin only).
+                client_id:
+                  type: integer
+                  description: Get activities for specific client.
+                split_days:
+                  type: boolean
+                  description: Get daily summary.
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/hour_reporting'
+  /update_activity:
+    post:
+      summary: Update activity
+      operationId: post-update_activity
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                activity_id:
+                  type: integer
+                  description: Activity ID
+                client_id:
+                  type: integer
+                  description: Client ID
+                custom_client_id:
+                  type: string
+                  description: Custom Client ID (from external system)
+                vat_id:
+                  type: number
+                  description: Client VAT ID
+                email:
+                  type: string
+                  description: Client email
+                client_name:
+                  type: string
+                  description: Client name
+                project_id:
+                  type: integer
+                  description: Project ID (relevant only if project_management module is enabled)
+                activity_date:
+                  type: string
+                  description: Activity date (ISO)
+                  format: date
+                start_ts:
+                  type: string
+                  description: Activity start timestamp (ISO)
+                  format: timestamp
+                end_ts:
+                  type: string
+                  description: Activity start timestamp (ISO)
+                  format: timestamp
+                start_lat:
+                  type: number
+                  description: Start latitude
+                  format: float
+                start_lon:
+                  type: number
+                  description: Start longitude
+                  format: float
+                end_lat:
+                  type: number
+                  description: End latitude
+                  format: float
+                end_lon:
+                  type: number
+                  description: End longitude
+                  format: float
+                hour_type_id:
+                  type: integer
+                  description: Hour type ID
+                total_hours:
+                  type: integer
+                  description: Number of hours for activity
+                activity_description:
+                  type: string
+                  description: Activity description
+                expense_sum:
+                  type: number
+                  description: Expense sum
+                  format: float
+                expense_currency_id:
+                  type: integer
+                  description: Currency ID
+                expense_currency_code:
+                  type: string
+                  description: Currency Code (ISO-4217)
+                expense_description:
+                  type: string
+                  description: Expense description
+              required:
+                - activity_id
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/hour_reporting'
+  /delete_activity:
+    post:
+      summary: Delete activity
+      operationId: post-delete_activity
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                activity_id:
+                  type: integer
+                  description: Activity ID
+              required:
+                - activity_id
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/hour_reporting'
+  /start_activity:
+    post:
+      summary: Start activity
+      operationId: post-start_activity
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                client_id:
+                  type: integer
+                  description: Client ID
+                start_lat:
+                  type: number
+                  description: Start latitude
+                  format: float
+                start_lon:
+                  type: number
+                  description: Start longitude
+                  format: float
+                activity_description:
+                  type: string
+                  description: Activity description
+                expense_currency_id:
+                  type: integer
+                  description: Currency ID
+                expense_sum:
+                  type: number
+                  description: Expense sum
+                  format: float
+                expense_description:
+                  type: string
+                  description: Expense description
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/hour_reporting'
+  /end_activity:
+    post:
+      summary: End activity
+      operationId: post-end_activity
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/hour_reporting'
+  /status:
+    post:
+      summary: Get current activity status
+      operationId: post-status
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/hour_reporting'

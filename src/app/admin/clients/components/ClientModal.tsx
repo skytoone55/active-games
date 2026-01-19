@@ -1,9 +1,9 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { X, Loader2, User, Phone, Mail, MessageSquare, Save, AlertCircle } from 'lucide-react'
+import { X, Loader2, User, Phone, Mail, MessageSquare, Save, AlertCircle, Building2 } from 'lucide-react'
 import { useContacts } from '@/hooks/useContacts'
-import type { Contact } from '@/lib/supabase/types'
+import type { Contact, ClientType } from '@/lib/supabase/types'
 import { validateEmail, validateIsraeliPhone, formatIsraeliPhone, VALIDATION_MESSAGES } from '@/lib/validation'
 
 interface ClientModalProps {
@@ -30,6 +30,9 @@ export function ClientModal({
   const [phone, setPhone] = useState('')
   const [email, setEmail] = useState('')
   const [notesClient, setNotesClient] = useState('')
+  const [isCompany, setIsCompany] = useState(false)
+  const [companyName, setCompanyName] = useState('')
+  const [vatId, setVatId] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [validationErrors, setValidationErrors] = useState<{ phone?: string; email?: string }>({})
@@ -44,6 +47,9 @@ export function ClientModal({
         setPhone(contact.phone || '')
         setEmail(contact.email || '')
         setNotesClient(contact.notes_client || '')
+        setIsCompany(contact.client_type === 'company')
+        setCompanyName(contact.company_name || '')
+        setVatId(contact.vat_id || '')
       } else {
         // Mode création
         setFirstName('')
@@ -51,8 +57,12 @@ export function ClientModal({
         setPhone('')
         setEmail('')
         setNotesClient('')
+        setIsCompany(false)
+        setCompanyName('')
+        setVatId('')
       }
       setError(null)
+      setValidationErrors({})
     }
   }, [isOpen, contact])
 
@@ -62,12 +72,12 @@ export function ClientModal({
 
     // Validations
     if (!firstName.trim()) {
-      setError('Le prénom est requis')
+      setError('First name is required')
       return
     }
 
     if (!phone.trim()) {
-      setError('Le téléphone est requis')
+      setError('Phone is required')
       return
     }
 
@@ -83,11 +93,24 @@ export function ClientModal({
       return
     }
 
+    // Validation entreprise
+    if (isCompany) {
+      if (!companyName.trim()) {
+        setError('Company name is required for companies')
+        return
+      }
+      if (!vatId.trim()) {
+        setError('VAT ID is required for companies')
+        return
+      }
+    }
+
     setLoading(true)
 
     try {
       const formattedPhone = formatIsraeliPhone(phone)
-      
+      const clientType: ClientType = isCompany ? 'company' : 'individual'
+
       if (contact) {
         // Mise à jour
         const updated = await updateContact(contact.id, {
@@ -96,13 +119,16 @@ export function ClientModal({
           phone: formattedPhone,
           email: email.trim() || null,
           notes_client: notesClient.trim() || null,
+          client_type: clientType,
+          company_name: isCompany ? companyName.trim() : null,
+          vat_id: isCompany ? vatId.trim() : null,
         })
 
         if (updated) {
           await onSave(updated)
           onClose()
         } else {
-          setError('Erreur lors de la mise à jour du contact')
+          setError('Error updating contact')
         }
       } else {
         // Création
@@ -114,18 +140,21 @@ export function ClientModal({
           email: email.trim() || null,
           notes_client: notesClient.trim() || null,
           source: 'admin_agenda',
+          client_type: clientType,
+          company_name: isCompany ? companyName.trim() : null,
+          vat_id: isCompany ? vatId.trim() : null,
         })
 
         if (newContact) {
           await onSave(newContact)
           onClose()
         } else {
-          setError('Erreur lors de la création du contact')
+          setError('Error creating contact')
         }
       }
     } catch (err) {
       console.error('Error saving contact:', err)
-      setError('Une erreur est survenue')
+      setError('An error occurred')
     } finally {
       setLoading(false)
     }
@@ -143,7 +172,7 @@ export function ClientModal({
         {/* Header */}
         <div className={`flex items-center justify-between p-6 border-b ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
           <h2 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-            {contact ? 'Modifier le contact' : 'Nouveau contact'}
+            {contact ? 'Edit Contact' : 'New Contact'}
           </h2>
           <button
             onClick={onClose}
@@ -171,12 +200,73 @@ export function ClientModal({
             </div>
           )}
 
+          {/* Company Checkbox */}
+          <div className={`flex items-center gap-3 p-3 rounded-lg border ${
+            isDark ? 'border-gray-700 bg-gray-700/50' : 'border-gray-200 bg-gray-50'
+          }`}>
+            <input
+              type="checkbox"
+              id="isCompany"
+              checked={isCompany}
+              onChange={(e) => setIsCompany(e.target.checked)}
+              className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            />
+            <label htmlFor="isCompany" className={`flex items-center gap-2 cursor-pointer ${isDark ? 'text-white' : 'text-gray-900'}`}>
+              <Building2 className="w-5 h-5" />
+              <span className="font-medium">Company</span>
+              <span className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                (check if this is a business client)
+              </span>
+            </label>
+          </div>
+
+          {/* Company Fields (conditional) */}
+          {isCompany && (
+            <div className={`grid grid-cols-2 gap-4 p-4 rounded-lg border ${
+              isDark ? 'border-blue-500/30 bg-blue-500/10' : 'border-blue-200 bg-blue-50'
+            }`}>
+              <div>
+                <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                  <Building2 className="w-4 h-4 inline mr-1" />
+                  Company Name *
+                </label>
+                <input
+                  type="text"
+                  value={companyName}
+                  onChange={(e) => setCompanyName(e.target.value)}
+                  className={`w-full px-3 py-2 rounded-lg border ${
+                    isDark
+                      ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-500'
+                      : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'
+                  } focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                  placeholder="Company Ltd."
+                />
+              </div>
+              <div>
+                <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                  VAT ID *
+                </label>
+                <input
+                  type="text"
+                  value={vatId}
+                  onChange={(e) => setVatId(e.target.value)}
+                  className={`w-full px-3 py-2 rounded-lg border ${
+                    isDark
+                      ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-500'
+                      : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'
+                  } focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                  placeholder="51XXXXXXX"
+                />
+              </div>
+            </div>
+          )}
+
           {/* Prénom et Nom */}
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
                 <User className="w-4 h-4 inline mr-1" />
-                Prénom *
+                {isCompany ? 'Contact First Name *' : 'First Name *'}
               </label>
               <input
                 type="text"
@@ -188,12 +278,12 @@ export function ClientModal({
                     ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-500'
                     : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'
                 } focus:outline-none focus:ring-2 focus:ring-blue-500`}
-                placeholder="Prénom"
+                placeholder="First name"
               />
             </div>
             <div>
               <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                Nom
+                {isCompany ? 'Contact Last Name' : 'Last Name'}
               </label>
               <input
                 type="text"
@@ -204,7 +294,7 @@ export function ClientModal({
                     ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-500'
                     : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'
                 } focus:outline-none focus:ring-2 focus:ring-blue-500`}
-                placeholder="Nom (optionnel)"
+                placeholder="Last name (optional)"
               />
             </div>
           </div>
@@ -214,7 +304,7 @@ export function ClientModal({
             <div>
               <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
                 <Phone className="w-4 h-4 inline mr-1" />
-                Téléphone *
+                Phone *
               </label>
               <input
                 type="tel"
@@ -273,7 +363,7 @@ export function ClientModal({
                     ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-500'
                     : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'
                 } focus:outline-none focus:ring-2 focus:ring-blue-500`}
-                placeholder="email@exemple.com"
+                placeholder="email@example.com"
               />
               {validationErrors.email && (
                 <div className="flex items-center gap-1 mt-1 text-red-500 text-sm">
@@ -288,7 +378,7 @@ export function ClientModal({
           <div>
             <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
               <MessageSquare className="w-4 h-4 inline mr-1" />
-              Notes client (préférences, allergies, etc.)
+              Client Notes (preferences, allergies, etc.)
             </label>
             <textarea
               value={notesClient}
@@ -299,7 +389,7 @@ export function ClientModal({
                   ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-500'
                   : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'
               } focus:outline-none focus:ring-2 focus:ring-blue-500`}
-              placeholder="Notes globales sur le client (préférences, allergies, etc.)"
+              placeholder="Global notes about the client (preferences, allergies, etc.)"
             />
           </div>
 
@@ -315,7 +405,7 @@ export function ClientModal({
                   : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
               } disabled:opacity-50`}
             >
-              Annuler
+              Cancel
             </button>
             <button
               type="submit"
@@ -325,12 +415,12 @@ export function ClientModal({
               {loading ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  {contact ? 'Enregistrement...' : 'Création...'}
+                  {contact ? 'Saving...' : 'Creating...'}
                 </>
               ) : (
                 <>
                   <Save className="w-4 h-4" />
-                  {contact ? 'Enregistrer' : 'Créer le contact'}
+                  {contact ? 'Save' : 'Create Contact'}
                 </>
               )}
             </button>

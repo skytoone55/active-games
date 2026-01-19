@@ -1,0 +1,213 @@
+openapi: 3.1.0
+info:
+  version: '1.0'
+  title: Credit-card storage
+servers:
+  - url: 'https://api.icount.co.il/api/v3.php/cc_storage'
+    description: ''
+paths:
+  /store:
+    post:
+      summary: Store Credit-Card information
+      operationId: post-store
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                client_id:
+                  type: integer
+                  description: Client ID
+                custom_client_id:
+                  type: string
+                  description: Custom Client ID (from external system)
+                vat_id:
+                  type: number
+                  description: Client VAT ID
+                email:
+                  type: string
+                  description: Client email
+                client_name:
+                  type: string
+                  description: Client name
+                cc_number:
+                  type: number
+                  description: Credit-Card number
+                cc_type:
+                  type: string
+                  description: Credit-Card type
+                cc_cvv:
+                  type: number
+                  description: CVV - Card Verification number (3 or 4 digits on the back of the card)
+                cc_validity:
+                  type: number
+                  description: Card validity month in either YYYY-MM or MMYY format
+                cc_holder_id:
+                  type: number
+                  description: Card holder ID number
+                cc_holder_name:
+                  type: string
+                  description: Card holder name
+                die_if_exists:
+                  type: boolean
+                  description: Return error if token already exists
+              required:
+                - cc_number
+                - cc_validity
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/cc_storage'
+          description: ''
+  /update:
+    post:
+      summary: Update information for stored card
+      operationId: post-update
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                cc_token_id:
+                  type: integer
+                  description: Stored Token ID
+                cc_validity:
+                  type: number
+                  description: Card validity month in either YYYY-MM or MMYY format
+                cc_holder_id:
+                  type: number
+                  description: Card holder ID number
+                cc_holder_name:
+                  type: string
+                  description: Card holder name
+              required:
+                - cc_token_id
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/cc_storage'
+          description: ''
+  /delete:
+    post:
+      summary: Delete stored credit-card token
+      operationId: post-delete
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                cc_token_id:
+                  type: integer
+                  description: Stored Token ID
+                client_id:
+                  type: integer
+                  description: Client ID
+                custom_client_id:
+                  type: string
+                  description: Custom Client ID (from external system)
+                vat_id:
+                  type: number
+                  description: Client VAT ID
+                email:
+                  type: string
+                  description: Client email
+                client_name:
+                  type: string
+                  description: Client name
+              required:
+                - cc_token_id
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/cc_storage'
+          description: ''
+  /token_info:
+    post:
+      summary: Get stored credit-card token information
+      operationId: post-token_info
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                client_id:
+                  type: integer
+                  description: Client ID
+                custom_client_id:
+                  type: string
+                  description: Custom Client ID (from external system)
+                vat_id:
+                  type: number
+                  description: Client VAT ID
+                email:
+                  type: string
+                  description: Client email
+                client_name:
+                  type: string
+                  description: Client name
+                cc_token_id:
+                  type: integer
+                  description: Stored Token ID
+              required:
+                - cc_token_id
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/cc_storage'
+          description: ''

@@ -1,0 +1,172 @@
+openapi: 3.1.0
+info:
+  version: '1.0'
+  title: Leads management
+servers:
+  - url: 'https://api.icount.co.il/api/v3.php/crm_lead'
+    description: ''
+paths:
+  /add:
+    post:
+      summary: Add
+      operationId: post-add
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                vat_id:
+                  type: number
+                  description: Client VAT ID
+                email:
+                  type: string
+                  description: Client email
+                client_name:
+                  type: string
+                  description: Client name
+                first_name:
+                  type: string
+                  description: Client first name
+                last_name:
+                  type: string
+                  description: Client last name
+                phone:
+                  type: string
+                  description: Contact phone number
+                mobile:
+                  type: string
+                  description: Contact mobile phone
+                fax:
+                  type: string
+                  description: Contact fax number
+                bus_country:
+                  type: string
+                  description: 'Business address: country'
+                bus_city:
+                  type: string
+                  description: 'Business address: city'
+                bus_zip:
+                  type: integer
+                  description: 'Business address: city'
+                bus_street:
+                  type: string
+                  description: 'Business address: street name'
+                bus_no:
+                  type: string
+                  description: 'Business address: building number'
+                home_country:
+                  type: string
+                  description: 'Home address: country'
+                home_city:
+                  type: string
+                  description: 'Home address: city'
+                home_zip:
+                  type: integer
+                  description: 'Home address: city'
+                home_street:
+                  type: string
+                  description: 'Home address: street name'
+                home_no:
+                  type: string
+                  description: 'Home address: building number'
+                bank:
+                  type: integer
+                  description: Bank number
+                branch:
+                  type: integer
+                  description: Bank Branch number
+                account:
+                  type: integer
+                  description: Bank Account number
+                notes:
+                  type: string
+                  description: Client notes
+                custom_info:
+                  type: object
+                  description: "Client custom info.\r\nSee also: client/get_custom_fields"
+              required:
+                - email
+                - client_name
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/crm_lead'
+          description: ''
+  /get_list:
+    post:
+      summary: Get list of leads
+      operationId: post-get_list
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                client_id:
+                  type: integer
+                  description: Client ID
+                custom_client_id:
+                  type: string
+                  description: Custom Client ID (from external system)
+                vat_id:
+                  type: number
+                  description: Client VAT ID
+                email:
+                  type: string
+                  description: Client email
+                phone:
+                  type: string
+                  description: Client phone
+                mobile:
+                  type: string
+                  description: Client mobile phone
+                client_name:
+                  type: string
+                  description: Client name
+                first_name:
+                  type: string
+                  description: First name of primary contact
+                last_name:
+                  type: string
+                  description: Last name of primary contact
+                detail_level:
+                  type: integer
+                  description: 'Level of detail (0=only name, 1=+basic, 2=+contacts, 3=+address, 4=+bank, 5=+faccount, 10=full).'
+                search_contacts_if_not_found:
+                  type: boolean
+                  description: 'If there are no results in primary contact, search in additional contacts as well.'
+                list_type:
+                  type: string
+                  description: List type (array|object).
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/crm_lead'
+          description: ''

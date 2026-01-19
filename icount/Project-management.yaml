@@ -1,0 +1,360 @@
+openapi: 3.1.0
+info:
+  version: '1.0'
+  title: Project management
+servers:
+  - url: 'https://api.icount.co.il/api/v3.php/project'
+paths:
+  /get_projects:
+    post:
+      summary: Get project info
+      operationId: post-get_projects
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                show:
+                  type: string
+                  description: 'Filter by status. Possible values: active,inactive,deleted,archived,all.'
+                start_date:
+                  type: string
+                  description: Show projected with start date on or after given date
+                  format: date
+                end_date:
+                  type: string
+                  description: Show projected with start date on or before given date
+                  format: date
+                user_id:
+                  type: integer
+                  description: Only projects assigned to specific user
+                client_id:
+                  type: integer
+                  description: Only projects linked to specific client
+                list_type:
+                  type: string
+                  description: List type (array|object).
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/project'
+  /create_project:
+    post:
+      summary: Create project
+      operationId: post-create_project
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                project_name:
+                  type: string
+                  description: Project name
+                start_date:
+                  type: string
+                  description: Project start date
+                  format: date
+                end_date:
+                  type: string
+                  description: Project end date
+                  format: date
+                user_id:
+                  type: integer
+                  description: Assign to user
+                client_id:
+                  type: integer
+                  description: Link to client
+                income_type_id:
+                  type: integer
+                  description: Income type
+                budget:
+                  type: number
+                  description: Project budget
+                  format: float
+              required:
+                - project_name
+                - start_date
+                - end_date
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/project'
+  /update_project:
+    post:
+      summary: Update project
+      operationId: post-update_project
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                project_id:
+                  type: integer
+                  description: Project ID
+                project_name:
+                  type: string
+                  description: Project name
+                start_date:
+                  type: string
+                  description: Project start date
+                  format: date
+                end_date:
+                  type: string
+                  description: Project end date
+                  format: date
+                user_id:
+                  type: integer
+                  description: Assign to user
+                client_id:
+                  type: integer
+                  description: Link to client
+                income_type_id:
+                  type: integer
+                  description: Income type
+                budget:
+                  type: number
+                  description: Project budget
+                  format: float
+              required:
+                - project_id
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/project'
+  /delete_project:
+    post:
+      summary: Delete project
+      operationId: post-delete_project
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                project_id:
+                  type: integer
+                  description: Project ID
+              required:
+                - project_id
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/project'
+  /undelete_project:
+    post:
+      summary: Undelete project
+      operationId: post-undelete_project
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                project_id:
+                  type: integer
+                  description: Project ID
+              required:
+                - project_id
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/project'
+  /archive_project:
+    post:
+      summary: Archive project
+      operationId: post-archive_project
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                project_id:
+                  type: integer
+                  description: Project ID
+              required:
+                - project_id
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/project'
+  /unarchive_project:
+    post:
+      summary: Unarchive project
+      operationId: post-unarchive_project
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                project_id:
+                  type: integer
+                  description: Project ID
+              required:
+                - project_id
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/project'
+  /get_project_info:
+    post:
+      summary: Get projects list
+      operationId: post-get_project_info
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                project_id:
+                  type: integer
+                  description: Project ID
+                get_status:
+                  type: boolean
+                  description: "If true, also get project status.\r\nSee also: project_management/get_project_status"
+              required:
+                - project_id
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/project'
+  /get_project_status:
+    post:
+      summary: Get projects list
+      operationId: post-get_project_status
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                project_id:
+                  type: integer
+                  description: Project ID
+              required:
+                - project_id
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/project'

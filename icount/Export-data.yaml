@@ -1,0 +1,95 @@
+openapi: 3.1.0
+info:
+  version: '1.0'
+  title: Export data
+servers:
+  - url: 'https://api.icount.co.il/api/v3.php/export'
+    description: ''
+paths:
+  /accounting_data:
+    post:
+      summary: Export data to external accounting software
+      operationId: post-accounting_data
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                export_type:
+                  type: string
+                  description: "Export type.\r\nSee also: export/accounting_export_types"
+                start_date:
+                  type: string
+                  description: Report start date
+                end_date:
+                  type: string
+                  description: Report end date
+                export_docs:
+                  type: boolean
+                  description: Export accounting documents.
+                export_expenses:
+                  type: boolean
+                  description: Export expenses.
+                export_clients:
+                  type: boolean
+                  description: Export client cards.
+                export_suppliers:
+                  type: boolean
+                  description: Export supplier cards.
+                webhook_url:
+                  type: string
+                  description: URL to send webhook to. The webhook data will be iCountExportAccountingWebhook object
+                webhook_method:
+                  type: string
+                  description: 'Webhook sending method. Possible values: JSON|POST|GET.'
+              required:
+                - export_type
+                - start_date
+                - end_date
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/export'
+          description: ''
+  /accounting_export_types:
+    post:
+      summary: Get available export types
+      operationId: post-accounting_export_types
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/export'
+          description: ''

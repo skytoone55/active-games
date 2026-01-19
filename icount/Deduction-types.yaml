@@ -1,0 +1,127 @@
+openapi: 3.1.0
+info:
+  version: '1.0'
+  title: Deduction types
+servers:
+  - url: 'https://api.icount.co.il/api/v3.php/deduction_type'
+    description: ''
+paths:
+  /get_list:
+    post:
+      summary: List deduction types
+      operationId: post-get_list
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                list_type:
+                  type: string
+                  description: List type (array|object).
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+              examples:
+                Example 1:
+                  value:
+                    api:
+                      version: 3
+                      tz: 2
+                      ts: 1700574018.0475
+                      lang: he
+                      rid: 841837812
+                      module: deduction_type
+                      method: get_list
+                    status: true
+                    reason: OK
+                    deduction_types:
+                      '0':
+                        deduction_type_id: 0
+                        deduction_type_name: ניכוי מס במקור
+                        deduction_percent: 0
+                        card_id: '57'
+                        card_number: '5005'
+                        faccount: '5005'
+                      '2':
+                        deduction_type_id: '2'
+                        deduction_type_name: TestDeducation
+                        deduction_percent: 15
+                        card_id: '77'
+                        card_number: '5010'
+                        faccount: '5010'
+                        assigned_to_doc: false
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/deduction_type'
+          description: ''
+  /add:
+    post:
+      summary: Add deduction type
+      operationId: post-add
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                deduction_type_name:
+                  type: string
+                  description: Deduction type name
+                deduction_percent:
+                  type: number
+                  description: Deduction percent.
+                  format: float
+              required:
+                - deduction_type_name
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+              examples:
+                Example 1:
+                  value:
+                    api:
+                      version: 3
+                      tz: 2
+                      ts: 1700574107.3645
+                      lang: he
+                      rid: 841839483
+                      module: deduction_type
+                      method: add
+                    status: true
+                    reason: OK
+                    deduction_type_id: 3
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/deduction_type'
+          description: ''

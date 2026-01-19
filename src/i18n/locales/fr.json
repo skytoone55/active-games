@@ -1340,10 +1340,14 @@
       "access_denied": "Acces refuse",
       "access_denied_message": "Seuls les super administrateurs peuvent acceder aux parametres.",
       "sections": {
-        "templates": "Templates d'emails",
-        "templates_desc": "Gerez les templates de notifications",
-        "terms": "Conditions Generales",
-        "terms_desc": "Gerez les CGV pour les commandes en ligne"
+        "templates": "Templates",
+        "templates_desc": "Emails & CGV",
+        "credentials": "Identifiants de paiement",
+        "credentials_desc": "Configuration API iCount par branche"
+      },
+      "templates_tabs": {
+        "emails": "Templates d'emails",
+        "terms": "Conditions Generales"
       },
       "email_templates": {
         "title": "Templates d'emails",

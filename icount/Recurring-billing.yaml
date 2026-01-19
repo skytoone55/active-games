@@ -1,0 +1,711 @@
+openapi: 3.1.0
+info:
+  version: '1.0'
+  title: Recurring billing
+servers:
+  - url: 'https://api.icount.co.il/api/v3.php/hk'
+paths:
+  /info:
+    post:
+      summary: Get recurring billing profile information
+      operationId: post-info
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                hk_id:
+                  type: integer
+                  description: Recurring billing profile ID
+                get_transactions:
+                  type: boolean
+                  description: Get detailed list of billing transactions
+                get_billing_cycles:
+                  type: boolean
+                  description: Get billing cycles information with per-cycle status
+                get_debts:
+                  type: boolean
+                  description: Get billing cycles information for failed billing cycles
+              required:
+                - hk_id
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/hk'
+  /create:
+    post:
+      summary: Create new recurring billing profile
+      operationId: post-create
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                client_id:
+                  type: integer
+                  description: Client ID
+                custom_client_id:
+                  type: string
+                  description: Custom Client ID (from external system)
+                vat_id:
+                  type: number
+                  description: Client VAT ID
+                email:
+                  type: string
+                  description: Client email
+                client_name:
+                  type: string
+                  description: Client name
+                doctype:
+                  type: string
+                  description: 'Document type to issue {auto|trec}. Only relevant to non-profit organizations.'
+                tax_exempt:
+                  type: boolean
+                  description: Should the issued document be tax exempt? Relevant only if VAT is applicable
+                incvat:
+                  type: boolean
+                  description: Are prices including VAT? Relevant only if VAT is applicable
+                bank_number:
+                  type: integer
+                  description: Bank number. See bank/get_list
+                bank_branch:
+                  type: integer
+                  description: Bank branch number
+                bank_account:
+                  type: integer
+                  description: Bank account number
+                deposit_to_bank:
+                  type: integer
+                  description: ID of company bank account the funds are deposited to (See bank/accounts).
+                cc_token_id:
+                  type: integer
+                  description: Credit-card stored token ID. See cc_storage module for details
+                cc_number:
+                  type: number
+                  description: Credit-card number
+                cc_cvv:
+                  type: number
+                  description: CVV number
+                cc_type:
+                  type: string
+                  description: Credit-card type. Auto-detected by card number if not passed
+                cc_validity:
+                  type: string
+                  description: Credit-card validity in YYYY-MM format
+                cc_holder_id:
+                  type: number
+                  description: Credit-card holder ID number
+                cc_holder_name:
+                  type: string
+                  description: Credit-card holder name
+                start_date:
+                  type: string
+                  description: Start date
+                  format: date
+                num_of_payments:
+                  type: integer
+                  description: Number of payment cycles. 0 = unlimited.
+                issue_every:
+                  type: integer
+                  description: Payment frequency (in months).
+                currency:
+                  type: string
+                  description: Currency code
+                income_type_id:
+                  type: integer
+                  description: Income type ID
+                employee_assigned:
+                  type: integer
+                  description: Employee responsible for this billing profile.
+                items:
+                  type: array
+                  description: Product/service description lines
+                  items:
+                    $ref: '#/components/schemas/iCountDocItem'
+                price_indexing:
+                  $ref: '#/components/schemas/iCountHKPriceIndexing'
+                  description: Price indexing settings
+                email_to_client:
+                  type: boolean
+                  description: Should the documents be sent to primary client email?
+                email_cc:
+                  type: string
+                  description: List of additional email addresses for sendng documents
+                email_client_on_issue:
+                  type: boolean
+                  description: Send email alerts to the customer on billing failure?
+                lang:
+                  type: string
+                  description: Recurring billing profile language (document and email language)
+                hk_cc_auto_retry:
+                  type: boolean
+                  description: Enable automatic retries in credit card recurring billing.
+                  default: true
+              required:
+                - items
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/hk'
+  /update:
+    post:
+      summary: Update recurring billing profile
+      operationId: post-update
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                hk_id:
+                  type: integer
+                  description: Recurring billing profile ID
+                tax_exempt:
+                  type: boolean
+                  description: Should the issued document be tax exempt? Relevant only if VAT is applicable
+                incvat:
+                  type: boolean
+                  description: Are prices including VAT? Relevant only if VAT is applicable
+                bank_number:
+                  type: integer
+                  description: Bank number. See bank/get_list
+                bank_branch:
+                  type: integer
+                  description: Bank branch number
+                bank_account:
+                  type: integer
+                  description: Bank account number
+                deposit_to_bank:
+                  type: integer
+                  description: ID of company bank account the funds are deposited to (See bank/accounts).
+                cc_token_id:
+                  type: integer
+                  description: Credit-card stored token ID. See cc_storage module for details
+                cc_number:
+                  type: number
+                  description: Credit-card number
+                cc_cvv:
+                  type: number
+                  description: CVV number
+                cc_type:
+                  type: string
+                  description: Credit-card type. Auto-detected by card number if not passed
+                cc_validity:
+                  type: string
+                  description: Credit-card validity in YYYY-MM format
+                cc_holder_id:
+                  type: number
+                  description: Credit-card holder ID number
+                cc_holder_name:
+                  type: string
+                  description: Credit-card holder name
+                start_date:
+                  type: string
+                  description: Start date.
+                num_of_payments:
+                  type: integer
+                  description: Number of payment cycles. 0 = unlimited.
+                issue_every:
+                  type: integer
+                  description: Payment frequency (in months).
+                currency:
+                  type: string
+                  description: Currency code
+                income_type_id:
+                  type: integer
+                  description: Income type ID
+                employee_assigned:
+                  type: integer
+                  description: Employee responsible for this billing profile
+                items:
+                  type: array
+                  description: Product/service description lines
+                  items:
+                    $ref: '#/components/schemas/iCountDocItem'
+                price_indexing:
+                  $ref: '#/components/schemas/iCountHKPriceIndexing'
+                  description: Price indexing settings
+                email_to_client:
+                  type: boolean
+                  description: Should the documents be sent to primary client email?
+                email_cc:
+                  type: string
+                  description: List of additional email addresses for sendng documents
+                email_client_on_issue:
+                  type: boolean
+                  description: Send email alerts to the customer on billing failure?
+                hk_cc_auto_retry:
+                  type: boolean
+                  description: Enable automatic retries in credit card recurring billing.
+              required:
+                - hk_id
+                - items
+                - price_indexing
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/hk'
+  /add_one_time_payment:
+    post:
+      summary: Add a one-time payment
+      description: |-
+        Add a one-time payment based on existing recurring payment profile.
+        This is a shortcut to hk/create with num_of_payments=1 and same payment option
+      operationId: post-add_one_time_payment
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                hk_id:
+                  type: integer
+                  description: Recurring billing profile ID
+                payment_sum:
+                  type: number
+                  description: Payment sum
+                  format: float
+                payment_date:
+                  type: string
+                  description: Payment date.
+                  format: date
+                currency:
+                  type: string
+                  description: Currency code.
+                payment_description:
+                  type: string
+                  description: Payment description
+              required:
+                - hk_id
+                - payment_sum
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/hk'
+  /pause:
+    post:
+      summary: Pause a recurring billing profile
+      operationId: post-pause
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                hk_id:
+                  type: integer
+                  description: Recurring billing profile ID
+              required:
+                - hk_id
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/hk'
+  /resume:
+    post:
+      summary: Resume a recurring billing profile
+      operationId: post-resume
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                hk_id:
+                  type: integer
+                  description: Recurring billing profile ID
+              required:
+                - hk_id
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/hk'
+  /cancel:
+    post:
+      summary: Cancel a recurring billing profile
+      operationId: post-cancel
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                hk_id:
+                  type: integer
+                  description: Recurring billing profile ID
+                client_id:
+                  type: integer
+                  description: Client ID. May be passed to double-check that selected recurring billing profile belongs to specific client.
+              required:
+                - hk_id
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/hk'
+  /restore:
+    post:
+      summary: Restore a cancelled recurring billing profile
+      operationId: post-restore
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                hk_id:
+                  type: integer
+                  description: Recurring billing profile ID
+              required:
+                - hk_id
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/hk'
+  /charge:
+    post:
+      summary: Perform billing attempt manually on credit-card recurring billing profile
+      operationId: post-charge
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                hk_id:
+                  type: integer
+                  description: Recurring billing profile ID
+                force:
+                  type: boolean
+                  description: 'Force billing attempt, even if there was a billing attempt today'
+              required:
+                - hk_id
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/hk'
+  /get_list:
+    post:
+      summary: Get recurring billing profiles list
+      operationId: post-get_list
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                hk_id:
+                  type: integer
+                  description: Recurring billing profile ID
+                client_id:
+                  type: integer
+                  description: Client ID
+                custom_client_id:
+                  type: string
+                  description: Custom Client ID (from external system)
+                vat_id:
+                  type: number
+                  description: Client VAT ID
+                email:
+                  type: string
+                  description: Client email
+                client_name:
+                  type: string
+                  description: Client name
+                show_active:
+                  type: boolean
+                  description: Show active billing profiles.
+                show_paused:
+                  type: boolean
+                  description: Show paused billing profiles.
+                show_finished:
+                  type: boolean
+                  description: Show finished billing profiles.
+                show_deleted:
+                  type: boolean
+                  description: Show deleted billing profiles.
+                show_all:
+                  type: boolean
+                  description: 'Override status filters and return all billing profiles, regardless of status.'
+                list_type:
+                  type: string
+                  description: List type (array|object).
+                limit:
+                  type: integer
+                  description: Limit number of returned results.
+                offset:
+                  type: integer
+                  description: Skip number of results. Used only with limit.
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/hk'
+  /debts_report:
+    post:
+      summary: Debts report
+      operationId: post-debts_report
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                get_details:
+                  type: boolean
+                  description: Get detailed list of debts for each matching billing profile?
+                hk_id:
+                  type: integer
+                  description: Filter results by recurring billing profile ID
+                client_id:
+                  type: integer
+                  description: Filter results by client ID
+                custom_client_id:
+                  type: string
+                  description: Filter results by custom client ID (from external system)
+                last_failure_cycle:
+                  type: string
+                  description: Filter results by last failed billing cycle (YYYY-MM)
+                last_success_cycle:
+                  type: string
+                  description: Filter results by last successful billing cycle (YYYY-MM)
+                last_failure_date:
+                  type: string
+                  description: Filter results by last failure date (YYYY-MM-DD)
+                last_success_date:
+                  type: string
+                  description: Filter results by last success date (YYYY-MM-DD)
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/hk'
+components:
+  schemas:
+    iCountDocItem:
+      type: object
+      title: Document Item
+      properties:
+        item_id:
+          type: integer
+          description: 'Document Item ID (automatic, only in existing document information)'
+        inventory_item_id:
+          type: string
+          description: Inventory Item ID
+        sku:
+          type: string
+          description: Item SKU
+        description:
+          type: string
+          description: Item description
+        long_description:
+          type: string
+          description: Item long description
+        currency_id:
+          type: integer
+          description: Currency ID
+        currency_rate:
+          type: number
+          description: 'Rate of conversion from item currency to document currency. For example, if document currency is EUR and the item currency is EUR - this conversion rate will be 1'
+          format: float
+        unitprice:
+          type: number
+          description: Item price (excluding VAT)
+          format: float
+        unitprice_incvat:
+          type: number
+          description: 'Item price (including VAT). If unitprice_incvat is passed, the system will extract VAT and calculate unitprice automatically'
+          format: float
+        unitprice_exempt:
+          type: number
+          description: 'Item price (VAT exempt). NB: Only applicable for Lawyer invoices'
+          format: float
+        tax_exempt:
+          type: boolean
+          description: Is item tax exempt?
+        quantity:
+          type: number
+          description: 'Item quantity. NB: Not applicatble for Lawyer invoices'
+          format: float
+        serial:
+          type: string
+          description: Serial number
+        taxes:
+          type: object
+          description: Item tax rates. Keys are tax type IDs (see tax/types). Values are rates (percent)
+      required:
+        - description
+        - unitprice
+        - quantity
+    iCountHKPriceIndexing:
+      type: object
+      title: Price indexing settings
+      properties:
+        type:
+          type: string
+          description: 'Price indexing type. Valid values: ,price_index,currency.'
+        adjustment:
+          type: string
+          description: 'Adjustment type {reg|base}. reg = Regular (up and down); base = Only up (not lower than base value).'
+        price_index:
+          type: integer
+          description: Price index ID. See price_index/get_types
+        price_index_base:
+          type: integer
+          description: Price index base ID. See price_index/get_bases
+        price_index_value:
+          type: number
+          description: Price index base value.
+          format: float
+        currency_code:
+          type: string
+          description: Currency code (base for price indexing)
+        currency_rate:
+          type: number
+          description: Base currency rate for price indexing.
+          format: float
+      required:
+        - type
+        - adjustment

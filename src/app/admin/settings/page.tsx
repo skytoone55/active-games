@@ -6,20 +6,19 @@ import {
   Loader2,
   AlertCircle,
   Settings,
-  Mail,
   FileText,
   ChevronRight,
-  ScrollText
+  CreditCard
 } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { useBranches } from '@/hooks/useBranches'
 import { useTranslation } from '@/contexts/LanguageContext'
 import { AdminHeader } from '../components/AdminHeader'
-import { EmailTemplatesSection } from './components/EmailTemplatesSection'
-import { TermsConditionsSection } from './components/TermsConditionsSection'
+import { TemplatesSection } from './components/TemplatesSection'
+import { CredentialsSection } from './components/CredentialsSection'
 import { createClient } from '@/lib/supabase/client'
 
-type SettingsSection = 'templates' | 'terms' | 'credentials'
+type SettingsSection = 'templates' | 'credentials'
 
 export default function SettingsPage() {
   const router = useRouter()
@@ -85,7 +84,7 @@ export default function SettingsPage() {
     )
   }
 
-  const sections: { id: SettingsSection; icon: typeof Mail; label: string; description: string }[] = [
+  const sections: { id: SettingsSection; icon: typeof FileText; label: string; description: string }[] = [
     {
       id: 'templates',
       icon: FileText,
@@ -93,12 +92,11 @@ export default function SettingsPage() {
       description: t('admin.settings.sections.templates_desc')
     },
     {
-      id: 'terms',
-      icon: ScrollText,
-      label: t('admin.settings.sections.terms'),
-      description: t('admin.settings.sections.terms_desc')
+      id: 'credentials',
+      icon: CreditCard,
+      label: t('admin.settings.sections.credentials'),
+      description: t('admin.settings.sections.credentials_desc')
     }
-    // Future: Add more sections like 'credentials' for SMTP settings
   ]
 
   return (
@@ -181,10 +179,10 @@ export default function SettingsPage() {
         {/* Content area */}
         <div className="flex-1 p-6">
           {activeSection === 'templates' && (
-            <EmailTemplatesSection isDark={isDark} />
+            <TemplatesSection isDark={isDark} />
           )}
-          {activeSection === 'terms' && (
-            <TermsConditionsSection isDark={isDark} />
+          {activeSection === 'credentials' && (
+            <CredentialsSection isDark={isDark} />
           )}
         </div>
       </div>

@@ -1,0 +1,713 @@
+openapi: 3.1.0
+info:
+  version: '1.0'
+  title: Banks list
+  summary: Get a list of all banks known to the system
+  description: "#### \U0001F3E6 Get to Know Your Banks with iCount API! \U0001F3E6\nHey financial wizards! \U0001F9D9‍♂️✨ Whether you're balancing the books or just need a quick peek at your banking options, our iCount API is here to turn that pile of bank statements into a neatly organized digital fiesta."
+servers:
+  - url: 'https://api.icount.co.il/api/v3.php/bank'
+    description: ''
+paths:
+  /get_list:
+    post:
+      summary: Get list of banks
+      description: "### \U0001F31F Method: bank/get_list\nWhat it does: This is your digital directory of banks! It’s like having all the banks in the neighborhood waving at you, ready to tell you all about themselves.\nHow to use it: Simply send a request, and back comes a list of all the banks we can chat with. No need to play favorites here; you'll get the whole lineup!"
+      operationId: post-get_list
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                list_type:
+                  type: string
+                  description: List type (array|object).
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                x-examples:
+                  Example 1:
+                    api:
+                      version: 3
+                      tz: 2
+                      ts: 1699275692.2857
+                      lang: he
+                      rid: 831617640
+                      module: bank
+                      method: get_list
+                    status: true
+                    reason: OK
+                    banks:
+                      '1': אחר
+                      '4': יהב
+                      '6': אדנים למשכנתאות
+                      '7': הבנק למסחר
+                      '9': בנק הדואר
+                      '10': לאומי
+                      '11': דיסקונט
+                      '12': הפועלים
+                      '13': אגוד
+                      '14': אוצר החייל
+                      '17': מרכנתיל דיסקונט
+                      '20': מזרחי-טפחות
+                      '22': Citibank N.A
+                      '23': HSBC Bank plc
+                      '25': BNP Paribas Israel
+                      '26': יובנק
+                      '31': הבינלאומי
+                      '34': ערבי ישראלי
+                      '39': SBI State Bank of India
+                      '46': מסד
+                      '50': מרכז סליקה בנקאי (מס"ב)
+                      '52': פועלי אגודת ישראל
+                      '54': בנק ירושלים
+                      '59': שירותי בנק אוטומטיים
+                      '65': חסך קופת חסכון לחינוך
+                      '68': מוניציפל בנק
+                      '77': לאומי למשכנתאות
+                      '89': בנק פלסטין
+                      '90': דיסקונט למשכנתאות
+                      '99': בנק ישראל
+                      '99785': Paybox Wallet
+                      '99786': Bit Wallet
+                      '99787': SEB Bank
+                      '99788': American Business Bank
+                      '99789': PNC
+                      '99790': First Commerce bank
+                      '99791': Revolut
+                      '99792': Silvergate
+                      '99793': Monzo
+                      '99794': Bendura Bank AG
+                      '99795': Quds
+                      '99796': Housing Bank
+                      '99797': Amazon
+                      '99798': BNB
+                      '99799': Zions First National Bank
+                      '99800': Pacific Western
+                      '99801': United Business
+                      '99802': Cross river
+                      '99803': Security Service Federal Credit Union
+                      '99804': Eaglebank
+                      '99805': Pictet
+                      '99806': PKO Bank Polski
+                      '99807': Citibank NY
+                      '99808': VALYUZ
+                      '99809': Banco Popolare Soc. Coop
+                      '99810': UniCredit
+                      '99811': UniCredit Bulbank
+                      '99812': Paxum
+                      '99813': 'MUFG Union Bank, N.A.'
+                      '99814': Industrial Bank Co.
+                      '99815': Bank Hapoalim B.M.
+                      '99816': Georgia Primary Bank
+                      '99817': Bank of China
+                      '99818': Nationwide Building Society
+                      '99819': Hughes Federal Credit Union
+                      '99820': Raiffeisenbank (Bulgaria) EAD
+                      '99821': Regions Bank
+                      '99822': Lombard Odier
+                      '99823': Interactive Brokers
+                      '99824': National Australia Bank
+                      '99825': Arab Islamic Bank
+                      '99826': iCard AD
+                      '99827': SchoolsFirst FCU
+                      '99828': Transferwise - copy
+                      '99829': Belmont Bank & Trust Co
+                      '99830': TransferWise
+                      '99831': EFG
+                      '99832': First National Bank
+                      '99833': Farmers & Merchants Bank
+                      '99834': Bank of Georgia
+                      '99835': Bank of Cyprus
+                      '99836': Postbank BG
+                      '99837': Piraeus Bank Bulgaria SA
+                      '99838': Moneynetint
+                      '99839': Commerzbank
+                      '99840': Merrill Lynch
+                      '99841': Sterling National Bank
+                      '99842': La Caixa
+                      '99843': Commercial Bank of California
+                      '99844': Nordea Bank
+                      '99845': ING Bank
+                      '99846': Bank of Texas
+                      '99847': Apple Bank for Savings
+                      '99848': i-Account
+                      '99849': KeyBank National
+                      '99850': CIC Lyonnaise de banque
+                      '99851': UW Credit Union
+                      '99852': Rietumu Banka
+                      '99853': Coinbase
+                      '99854': Bank Leumi USA
+                      '99855': Independent Bank
+                      '99856': Jordan Commercial Bank
+                      '99857': Fio banka a.s
+                      '99858': Societe General
+                      '99859': Huntington National Bank
+                      '99860': Bank Millennium
+                      '99861': BSP
+                      '99862': First Direct (HSBC)
+                      '99863': Sharon Credit Union
+                      '99864': Unity Trust Bank
+                      '99865': Sovereign Bank
+                      '99866': Bank of India
+                      '99867': Fulton Bank
+                      '99868': Deutsche Bank Trust Co Americas
+                      '99869': WMB Wilson & Muir B&T co
+                      '99870': Sandia Laboratory FCU
+                      '99871': First Century Bank
+                      '99872': UBP
+                      '99873': Valartis Bank
+                      '99874': Bank of Montreal
+                      '99875': Valley National Bank
+                      '99876': Popular Community Bank
+                      '99877': Sabadell United Bank
+                      '99878': Raiffeisen Bank Romania
+                      '99879': BMO Private Bank
+                      '99880': American Community
+                      '99881': Bridge Bank
+                      '99882': Bucks County Bank
+                      '99883': National Penn Bank
+                      '99884': Byline Bank
+                      '99885': SATA Bank
+                      '99886': LCL
+                      '99887': East West Bank
+                      '99888': U.S Bank Miamisburg
+                      '99889': Regal Bank
+                      '99890': Square 1 Bank
+                      '99891': Currencies Direct
+                      '99892': Atlanta
+                      '99893': Fidelity
+                      '99894': מיטב דש טרייד
+                      '99895': Navy Federal Credit Union
+                      '99896': Hancock Bank
+                      '99897': Credit Union
+                      '99898': Country Bank
+                      '99899': USAA Federal Savings Bank
+                      '99900': AS Bank
+                      '99901': ABLV Bank
+                      '99902': BB&T
+                      '99903': IBMSECU
+                      '99904': D.A. Davidson & Co.
+                      '99905': Mountain West Bank
+                      '99906': Exchange Bank
+                      '99907': Bank of the West
+                      '99908': PlainsCapital Bank
+                      '99909': Charles Schwab
+                      '99910': Hudson Valley Bank
+                      '99911': The Bank of Nova Scotia
+                      '99912': Palestine Investment Bank
+                      '99913': Georgia Commerce Bank
+                      '99914': PayPal
+                      '99915': Deutsche Bank
+                      '99916': World First
+                      '99917': World Bank
+                      '99918': NatWest
+                      '99919': Marquette Bank
+                      '99920': Canada Trust
+                      '99921': Volksbank
+                      '99922': Payoneer
+                      '99923': The Northern Trust Company
+                      '99924': Comdirect
+                      '99925': Entrust-Financial Credit Union
+                      '99926': BankFinancial
+                      '99927': Community Federal Savings Bank
+                      '99928': Tatra Banka A.S
+                      '99929': Banca Popolare di Milano
+                      '99930': Western State Bank
+                      '99931': Hellenic Bank
+                      '99932': Cambridge Trust Company
+                      '99933': JPMorgan Chase Bank N.A
+                      '99934': The Bancorp Bank
+                      '99935': Santander
+                      '99936': Sandy Spring Bank
+                      '99937': Wirecard Bank
+                      '99938': M&T Bank
+                      '99939': Sillicon Valley Bank
+                      '99940': Westerra Credit Union
+                      '99941': Winona National Bank
+                      '99942': ABN Amro Bank
+                      '99943': Poalim Swiss
+                      '99944': ABN Amro Bank
+                      '99945': National Bank of Canada
+                      '99946': Halifax
+                      '99947': Astoria Federal Savings
+                      '99948': Venture Bank
+                      '99949': Credit Suisse
+                      '99950': UBS
+                      '99951': BancFirst
+                      '99952': The Berkshire Bank
+                      '99953': Somerset Hilla Bank
+                      '99954': The Bancrop Bank
+                      '99955': First Republic Bank
+                      '99956': United California Bank
+                      '99957': Glen Rock Savings Bank
+                      '99958': PNC Bank
+                      '99959': City National Bank
+                      '99960': 'MB FINANCIAL BANK, NA'
+                      '99961': First Hawaiian Bank
+                      '99962': Harris Bank
+                      '99963': First Republic Bank
+                      '99964': Amalgamated Bank of NY
+                      '99965': Royal Bank of Scotland
+                      '99966': Fifth Third Bank
+                      '99967': The Bank of New York
+                      '99968': SunTrust
+                      '99969': Cortal Consors
+                      '99970': Bank Of Scotland
+                      '99971': American Chartered Bank
+                      '99972': Egyptian Arab Land Bank
+                      '99973': LLOYDS TSB
+                      '99974': Royal Bank of Canada
+                      '99975': Alliant Credit Union
+                      '99976': Capital One Bank
+                      '99977': Canadian Imp. Bank of Commerce
+                      '99978': Silicon Valley Bank
+                      '99980': Barclays
+                      '99981': Yorkshire Bank
+                      '99982': Branch Banking & Trust Company
+                      '99983': Greenfield Savings Bank
+                      '99984': Frost National Bank
+                      '99985': Signature Bank
+                      '99986': Israel Discount Bank of NY
+                      '99987': BANKINTER
+                      '99988': Stellarone Bank
+                      '99989': Bank of America
+                      '99990': Comerica Bank
+                      '99991': JPMorgan Chase
+                      '99992': Highlands Bank
+                      '99993': BBVA/Compass
+                      '99994': Guaranty Bank
+                      '99995': TD
+                      '99996': USBANK
+                      '99997': IBM METRO EMPLOYEES F.C.U.
+                      '99998': Wells Fargo
+                      '99999': Citizens S.B. of Clara city
+                      '100000': Raymond James Bank
+                      '100001': Wallter
+                      '100002': Waterstone Bank
+                      '100003': PayMe
+                      '100004': BANK LEUMI (UK) PLC
+                      '100005': KoalaPays
+                      '100006': N26
+                      '100007': מרקורי
+                      '100008': Ameris
+                      '100009': בלוסנאפ
+                      '100010': Banco de Sabadell
+                      '100011': DirectCash Bank
+                      '100012': Rabobank
+                      '100014': BuyMe
+                      '100017': Julius Baer
+                      '100020': People's United Bank
+                      '100021': St. George Bank
+                      '100024': Corestone
+                      '100027': Bitcoin Wallet
+                      '100030': Mizuho
+                      '100033': פפר
+                      '100036': REYL
+                      '100039': Fédération des caisses Desjardins du Québec
+                      '100042': ARAB BANK
+                      '100045': Monese - PPS EU SA
+                      '100048': Monese - PREPAY TECHNOLOGIES LIMITED
+                      '100051': Evolve Bank and Trust
+                      '100052': ibanq
+                      '100055': Global Netint Uab
+                      '100058': Webster Bank
+                      '100059': Giftcard
+                      '100060': CitiBank Australia
+                      '100061': וואן זירו הבנק הדיגיטלי בע"מ
+                      '100064': Capitalist
+                      '100067': The National Bank
+                      '100070': GLS Bank
+                      '100073': UMB Bank
+                      '100076': Affinity Federal Credit Union
+                      '100079': National Bank Of Arizona
+                      '100082': שוברים
+                      '100085': IBANFLEX UK LTD
+                      '100087': Raiffeisenbank
+                      '100090': AstroBank
+                      '100093': 'Maneuver LT, UAB'
+                      '100096': Eurobank Cyprus Ltd
+                      '100097': KBC Bank
+              examples:
+                Example 1:
+                  value:
+                    api:
+                      version: 3
+                      tz: 2
+                      ts: 1699283647.3407
+                      lang: he
+                      rid: 831739809
+                      module: bank
+                      method: get_list
+                    status: true
+                    reason: OK
+                    banks:
+                      '1': אחר
+                      '4': יהב
+                      '6': אדנים למשכנתאות
+                      '7': הבנק למסחר
+                      '9': בנק הדואר
+                      '10': לאומי
+                      '11': דיסקונט
+                      '12': הפועלים
+                      '13': אגוד
+                      '14': אוצר החייל
+                      '17': מרכנתיל דיסקונט
+                      '20': מזרחי-טפחות
+                      '22': Citibank N.A
+                      '23': HSBC Bank plc
+                      '25': BNP Paribas Israel
+                      '26': יובנק
+                      '31': הבינלאומי
+                      '34': ערבי ישראלי
+                      '39': SBI State Bank of India
+                      '46': מסד
+                      '50': מרכז סליקה בנקאי (מס"ב)
+                      '52': פועלי אגודת ישראל
+                      '54': בנק ירושלים
+                      '59': שירותי בנק אוטומטיים
+                      '65': חסך קופת חסכון לחינוך
+                      '68': מוניציפל בנק
+                      '77': לאומי למשכנתאות
+                      '89': בנק פלסטין
+                      '90': דיסקונט למשכנתאות
+                      '99': בנק ישראל
+                      '99785': Paybox Wallet
+                      '99786': Bit Wallet
+                      '99787': SEB Bank
+                      '99788': American Business Bank
+                      '99789': PNC
+                      '99790': First Commerce bank
+                      '99791': Revolut
+                      '99792': Silvergate
+                      '99793': Monzo
+                      '99794': Bendura Bank AG
+                      '99795': Quds
+                      '99796': Housing Bank
+                      '99797': Amazon
+                      '99798': BNB
+                      '99799': Zions First National Bank
+                      '99800': Pacific Western
+                      '99801': United Business
+                      '99802': Cross river
+                      '99803': Security Service Federal Credit Union
+                      '99804': Eaglebank
+                      '99805': Pictet
+                      '99806': PKO Bank Polski
+                      '99807': Citibank NY
+                      '99808': VALYUZ
+                      '99809': Banco Popolare Soc. Coop
+                      '99810': UniCredit
+                      '99811': UniCredit Bulbank
+                      '99812': Paxum
+                      '99813': 'MUFG Union Bank, N.A.'
+                      '99814': Industrial Bank Co.
+                      '99815': Bank Hapoalim B.M.
+                      '99816': Georgia Primary Bank
+                      '99817': Bank of China
+                      '99818': Nationwide Building Society
+                      '99819': Hughes Federal Credit Union
+                      '99820': Raiffeisenbank (Bulgaria) EAD
+                      '99821': Regions Bank
+                      '99822': Lombard Odier
+                      '99823': Interactive Brokers
+                      '99824': National Australia Bank
+                      '99825': Arab Islamic Bank
+                      '99826': iCard AD
+                      '99827': SchoolsFirst FCU
+                      '99828': Transferwise - copy
+                      '99829': Belmont Bank & Trust Co
+                      '99830': TransferWise
+                      '99831': EFG
+                      '99832': First National Bank
+                      '99833': Farmers & Merchants Bank
+                      '99834': Bank of Georgia
+                      '99835': Bank of Cyprus
+                      '99836': Postbank BG
+                      '99837': Piraeus Bank Bulgaria SA
+                      '99838': Moneynetint
+                      '99839': Commerzbank
+                      '99840': Merrill Lynch
+                      '99841': Sterling National Bank
+                      '99842': La Caixa
+                      '99843': Commercial Bank of California
+                      '99844': Nordea Bank
+                      '99845': ING Bank
+                      '99846': Bank of Texas
+                      '99847': Apple Bank for Savings
+                      '99848': i-Account
+                      '99849': KeyBank National
+                      '99850': CIC Lyonnaise de banque
+                      '99851': UW Credit Union
+                      '99852': Rietumu Banka
+                      '99853': Coinbase
+                      '99854': Bank Leumi USA
+                      '99855': Independent Bank
+                      '99856': Jordan Commercial Bank
+                      '99857': Fio banka a.s
+                      '99858': Societe General
+                      '99859': Huntington National Bank
+                      '99860': Bank Millennium
+                      '99861': BSP
+                      '99862': First Direct (HSBC)
+                      '99863': Sharon Credit Union
+                      '99864': Unity Trust Bank
+                      '99865': Sovereign Bank
+                      '99866': Bank of India
+                      '99867': Fulton Bank
+                      '99868': Deutsche Bank Trust Co Americas
+                      '99869': WMB Wilson & Muir B&T co
+                      '99870': Sandia Laboratory FCU
+                      '99871': First Century Bank
+                      '99872': UBP
+                      '99873': Valartis Bank
+                      '99874': Bank of Montreal
+                      '99875': Valley National Bank
+                      '99876': Popular Community Bank
+                      '99877': Sabadell United Bank
+                      '99878': Raiffeisen Bank Romania
+                      '99879': BMO Private Bank
+                      '99880': American Community
+                      '99881': Bridge Bank
+                      '99882': Bucks County Bank
+                      '99883': National Penn Bank
+                      '99884': Byline Bank
+                      '99885': SATA Bank
+                      '99886': LCL
+                      '99887': East West Bank
+                      '99888': U.S Bank Miamisburg
+                      '99889': Regal Bank
+                      '99890': Square 1 Bank
+                      '99891': Currencies Direct
+                      '99892': Atlanta
+                      '99893': Fidelity
+                      '99894': מיטב דש טרייד
+                      '99895': Navy Federal Credit Union
+                      '99896': Hancock Bank
+                      '99897': Credit Union
+                      '99898': Country Bank
+                      '99899': USAA Federal Savings Bank
+                      '99900': AS Bank
+                      '99901': ABLV Bank
+                      '99902': BB&T
+                      '99903': IBMSECU
+                      '99904': D.A. Davidson & Co.
+                      '99905': Mountain West Bank
+                      '99906': Exchange Bank
+                      '99907': Bank of the West
+                      '99908': PlainsCapital Bank
+                      '99909': Charles Schwab
+                      '99910': Hudson Valley Bank
+                      '99911': The Bank of Nova Scotia
+                      '99912': Palestine Investment Bank
+                      '99913': Georgia Commerce Bank
+                      '99914': PayPal
+                      '99915': Deutsche Bank
+                      '99916': World First
+                      '99917': World Bank
+                      '99918': NatWest
+                      '99919': Marquette Bank
+                      '99920': Canada Trust
+                      '99921': Volksbank
+                      '99922': Payoneer
+                      '99923': The Northern Trust Company
+                      '99924': Comdirect
+                      '99925': Entrust-Financial Credit Union
+                      '99926': BankFinancial
+                      '99927': Community Federal Savings Bank
+                      '99928': Tatra Banka A.S
+                      '99929': Banca Popolare di Milano
+                      '99930': Western State Bank
+                      '99931': Hellenic Bank
+                      '99932': Cambridge Trust Company
+                      '99933': JPMorgan Chase Bank N.A
+                      '99934': The Bancorp Bank
+                      '99935': Santander
+                      '99936': Sandy Spring Bank
+                      '99937': Wirecard Bank
+                      '99938': M&T Bank
+                      '99939': Sillicon Valley Bank
+                      '99940': Westerra Credit Union
+                      '99941': Winona National Bank
+                      '99942': ABN Amro Bank
+                      '99943': Poalim Swiss
+                      '99944': ABN Amro Bank
+                      '99945': National Bank of Canada
+                      '99946': Halifax
+                      '99947': Astoria Federal Savings
+                      '99948': Venture Bank
+                      '99949': Credit Suisse
+                      '99950': UBS
+                      '99951': BancFirst
+                      '99952': The Berkshire Bank
+                      '99953': Somerset Hilla Bank
+                      '99954': The Bancrop Bank
+                      '99955': First Republic Bank
+                      '99956': United California Bank
+                      '99957': Glen Rock Savings Bank
+                      '99958': PNC Bank
+                      '99959': City National Bank
+                      '99960': 'MB FINANCIAL BANK, NA'
+                      '99961': First Hawaiian Bank
+                      '99962': Harris Bank
+                      '99963': First Republic Bank
+                      '99964': Amalgamated Bank of NY
+                      '99965': Royal Bank of Scotland
+                      '99966': Fifth Third Bank
+                      '99967': The Bank of New York
+                      '99968': SunTrust
+                      '99969': Cortal Consors
+                      '99970': Bank Of Scotland
+                      '99971': American Chartered Bank
+                      '99972': Egyptian Arab Land Bank
+                      '99973': LLOYDS TSB
+                      '99974': Royal Bank of Canada
+                      '99975': Alliant Credit Union
+                      '99976': Capital One Bank
+                      '99977': Canadian Imp. Bank of Commerce
+                      '99978': Silicon Valley Bank
+                      '99980': Barclays
+                      '99981': Yorkshire Bank
+                      '99982': Branch Banking & Trust Company
+                      '99983': Greenfield Savings Bank
+                      '99984': Frost National Bank
+                      '99985': Signature Bank
+                      '99986': Israel Discount Bank of NY
+                      '99987': BANKINTER
+                      '99988': Stellarone Bank
+                      '99989': Bank of America
+                      '99990': Comerica Bank
+                      '99991': JPMorgan Chase
+                      '99992': Highlands Bank
+                      '99993': BBVA/Compass
+                      '99994': Guaranty Bank
+                      '99995': TD
+                      '99996': USBANK
+                      '99997': IBM METRO EMPLOYEES F.C.U.
+                      '99998': Wells Fargo
+                      '99999': Citizens S.B. of Clara city
+                      '100000': Raymond James Bank
+                      '100001': Wallter
+                      '100002': Waterstone Bank
+                      '100003': PayMe
+                      '100004': BANK LEUMI (UK) PLC
+                      '100005': KoalaPays
+                      '100006': N26
+                      '100007': מרקורי
+                      '100008': Ameris
+                      '100009': בלוסנאפ
+                      '100010': Banco de Sabadell
+                      '100011': DirectCash Bank
+                      '100012': Rabobank
+                      '100014': BuyMe
+                      '100017': Julius Baer
+                      '100020': People's United Bank
+                      '100021': St. George Bank
+                      '100024': Corestone
+                      '100027': Bitcoin Wallet
+                      '100030': Mizuho
+                      '100033': פפר
+                      '100036': REYL
+                      '100039': Fédération des caisses Desjardins du Québec
+                      '100042': ARAB BANK
+                      '100045': Monese - PPS EU SA
+                      '100048': Monese - PREPAY TECHNOLOGIES LIMITED
+                      '100051': Evolve Bank and Trust
+                      '100052': ibanq
+                      '100055': Global Netint Uab
+                      '100058': Webster Bank
+                      '100059': Giftcard
+                      '100060': CitiBank Australia
+                      '100061': וואן זירו הבנק הדיגיטלי בע"מ
+                      '100064': Capitalist
+                      '100067': The National Bank
+                      '100070': GLS Bank
+                      '100073': UMB Bank
+                      '100076': Affinity Federal Credit Union
+                      '100079': National Bank Of Arizona
+                      '100082': שוברים
+                      '100085': IBANFLEX UK LTD
+                      '100087': Raiffeisenbank
+                      '100090': AstroBank
+                      '100093': 'Maneuver LT, UAB'
+                      '100096': Eurobank Cyprus Ltd
+                      '100097': KBC Bank
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/bank'
+          description: ''
+  /accounts:
+    post:
+      summary: Get list of company bank accounts
+      description: "### \U0001F31F Method: bank/accounts\nWhat it does: Want to see where your money's hanging out? This method brings you a roll-call of all your company's bank accounts. It's like a family reunion for your finances!\nHow to use it: Shoot over a request, and voilà, you’ll get the deets on every account under your company’s wing – think of it as a VIP backstage pass to your business's financial show."
+      operationId: post-accounts
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                list_type:
+                  type: string
+                  description: List type (array|object).
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+              examples:
+                Example 1:
+                  value:
+                    api:
+                      version: 3
+                      tz: 2
+                      ts: 1699284017.2611
+                      lang: he
+                      rid: 831745320
+                      module: bank
+                      method: accounts
+                    status: true
+                    reason: OK
+                    bank_accounts:
+                      '2':
+                        account_id: 2
+                        bank: 31
+                        bank_name: בינלאומי
+                        branch: '10'
+                        account: '123456'
+                        currency_id: 5
+                        currency_code: ILS
+                        title: '31 [10] 123456 - ILS'
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/bank'
+          description: ''
+x-internal: false

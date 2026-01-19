@@ -1,0 +1,233 @@
+openapi: 3.1.0
+info:
+  version: '1.0'
+  title: CRM events/tasks reminders
+servers:
+  - url: 'https://api.icount.co.il/api/v3.php/crm_notification'
+    description: ''
+paths:
+  /info:
+    post:
+      summary: Get notification information
+      operationId: post-info
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                notification_id:
+                  type: integer
+                  description: Notification ID
+              required:
+                - notification_id
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/crm_notification'
+          description: ''
+  /get_list:
+    post:
+      summary: Get notifications list
+      operationId: post-get_list
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                user_id:
+                  type: integer
+                  description: Show notifications for user
+                event_id:
+                  type: integer
+                  description: Show notifications belonging to event
+                task_id:
+                  type: integer
+                  description: Show notifications belonging to task
+                show_all:
+                  type: boolean
+                  description: Show all notifications regardless of status.
+                show_pending:
+                  type: boolean
+                  description: Show pending notifications.
+                show_sent:
+                  type: boolean
+                  description: Show sent notifications.
+                show_deleted:
+                  type: boolean
+                  description: Show deleted notifications.
+                list_type:
+                  type: string
+                  description: Result list type (array/object).
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/crm_notification'
+          description: ''
+  /add:
+    post:
+      summary: Add notification
+      operationId: post-add
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                notification_text:
+                  type: string
+                  description: Notification text
+                notification_time:
+                  type: string
+                  description: Notification time.
+                  format: date-time
+                notification_type:
+                  type: string
+                  description: Notification type.
+                user_id:
+                  type: integer
+                  description: Notify user ID.
+                parent:
+                  type: string
+                  description: Parent entity type.
+                parent_id:
+                  type: integer
+                  description: Parent entity ID.
+                tags:
+                  type: array
+                  description: Tag IDs
+              required:
+                - notification_text
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/crm_notification'
+          description: ''
+  /update:
+    post:
+      summary: Update notification
+      operationId: post-update
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                notification_id:
+                  type: integer
+                  description: Notification ID
+                notification_text:
+                  type: string
+                  description: Notification text.
+                notification_time:
+                  type: string
+                  description: Notification time.
+                  format: date-time
+                notification_type:
+                  type: string
+                  description: Notification type.
+                user_id:
+                  type: integer
+                  description: Notify user ID.
+                parent:
+                  type: string
+                  description: Parent entity type.
+                parent_id:
+                  type: integer
+                  description: Parent entity ID.
+                tags:
+                  type: array
+                  description: Tag IDs
+              required:
+                - notification_id
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/crm_notification'
+          description: ''
+  /delete:
+    post:
+      summary: Delete notification
+      operationId: post-delete
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                notification_id:
+                  type: integer
+                  description: Notification ID
+              required:
+                - notification_id
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/crm_notification'
+          description: ''

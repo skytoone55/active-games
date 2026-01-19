@@ -1,0 +1,1414 @@
+openapi: 3.1.0
+info:
+  version: '1.0'
+  title: Customers management
+servers:
+  - url: 'https://api.icount.co.il/api/v3.php/client'
+    description: ''
+paths:
+  /create:
+    post:
+      summary: Create client
+      operationId: post-create
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                custom_client_id:
+                  type: string
+                  description: Custom Client ID
+                vat_id:
+                  type: number
+                  description: Client VAT ID
+                email:
+                  type: string
+                  description: Client email
+                client_name:
+                  type: string
+                  description: Client name
+                first_name:
+                  type: string
+                  description: Client first name
+                last_name:
+                  type: string
+                  description: Client last name
+                phone:
+                  type: string
+                  description: Contact phone number
+                mobile:
+                  type: string
+                  description: Contact mobile phone
+                fax:
+                  type: string
+                  description: Contact fax number
+                bus_country:
+                  type: string
+                  description: 'Business address: country'
+                bus_state:
+                  type: string
+                  description: 'Business address: state/province (if applicable)'
+                bus_city:
+                  type: string
+                  description: 'Business address: city'
+                bus_zip:
+                  type: integer
+                  description: 'Business address: city'
+                bus_street:
+                  type: string
+                  description: 'Business address: street name'
+                bus_no:
+                  type: string
+                  description: 'Business address: building number'
+                home_country:
+                  type: string
+                  description: 'Home address: country'
+                home_state:
+                  type: string
+                  description: 'Home address: state/province (if applicable)'
+                home_city:
+                  type: string
+                  description: 'Home address: city'
+                home_zip:
+                  type: integer
+                  description: 'Home address: city'
+                home_street:
+                  type: string
+                  description: 'Home address: street name'
+                home_no:
+                  type: string
+                  description: 'Home address: building number'
+                bank:
+                  type: integer
+                  description: Bank number
+                branch:
+                  type: integer
+                  description: Bank Branch number
+                account:
+                  type: integer
+                  description: Bank Account number
+                faccount:
+                  type: integer
+                  description: Foreign Account Number (for external accounting software)
+                notes:
+                  type: string
+                  description: Client notes
+                digsig:
+                  type: boolean
+                  description: Digitally sign documents? (0=No / 1=Yes).
+                custom_info:
+                  type: object
+                  description: Client custom fields info
+              required:
+                - client_name
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+              examples:
+                Example 1:
+                  value:
+                    api:
+                      version: 3
+                      tz: 2
+                      ts: 1701874122.6908
+                      lang: he
+                      rid: 852709926
+                      module: client
+                      method: create
+                    status: true
+                    reason: client_created
+                    client_id: 11
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/client'
+          description: ''
+  /update:
+    post:
+      summary: Update client
+      operationId: post-update
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                client_id:
+                  type: integer
+                  description: Client ID
+                custom_client_id:
+                  type: string
+                  description: Custom Client ID (from external system)
+                vat_id:
+                  type: number
+                  description: Client VAT ID
+                email:
+                  type: string
+                  description: Client email
+                client_name:
+                  type: string
+                  description: Client name
+                first_name:
+                  type: string
+                  description: Client first name
+                last_name:
+                  type: string
+                  description: Client last name
+                phone:
+                  type: string
+                  description: Contact phone number
+                mobile:
+                  type: string
+                  description: Contact mobile phone
+                fax:
+                  type: string
+                  description: Contact fax number
+                bus_country:
+                  type: string
+                  description: 'Business address: country'
+                bus_state:
+                  type: string
+                  description: 'Business address: state/province (if applicable)'
+                bus_city:
+                  type: string
+                  description: 'Business address: city'
+                bus_zip:
+                  type: integer
+                  description: 'Business address: city'
+                bus_street:
+                  type: string
+                  description: 'Business address: street name'
+                bus_no:
+                  type: string
+                  description: 'Business address: building number'
+                home_country:
+                  type: string
+                  description: 'Home address: country'
+                home_state:
+                  type: string
+                  description: 'Home address: state/province (if applicable)'
+                home_city:
+                  type: string
+                  description: 'Home address: city'
+                home_zip:
+                  type: integer
+                  description: 'Home address: city'
+                home_street:
+                  type: string
+                  description: 'Home address: street name'
+                home_no:
+                  type: string
+                  description: 'Home address: building number'
+                bank:
+                  type: integer
+                  description: Bank number
+                branch:
+                  type: integer
+                  description: Bank Branch number
+                account:
+                  type: integer
+                  description: Bank Account number
+                faccount:
+                  type: integer
+                  description: Foreign Account Number (for external accounting software)
+                notes:
+                  type: string
+                  description: Client notes
+                digsig:
+                  type: boolean
+                  description: Digitally sign documents? (0=No / 1=Yes).
+                custom_info:
+                  type: object
+                  description: Client custom fields info
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/client'
+          description: ''
+  /create_or_update:
+    post:
+      summary: Create or update client information
+      operationId: post-create_or_update
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                client_id:
+                  type: integer
+                  description: Client ID
+                custom_client_id:
+                  type: string
+                  description: Custom Client ID (from external system)
+                vat_id:
+                  type: number
+                  description: Client VAT ID
+                email:
+                  type: string
+                  description: Client email
+                client_name:
+                  type: string
+                  description: Client name
+                first_name:
+                  type: string
+                  description: Client first name
+                last_name:
+                  type: string
+                  description: Client last name
+                phone:
+                  type: string
+                  description: Contact phone number
+                mobile:
+                  type: string
+                  description: Contact mobile phone
+                fax:
+                  type: string
+                  description: Contact fax number
+                bus_country:
+                  type: string
+                  description: 'Business address: country'
+                bus_state:
+                  type: string
+                  description: 'Business address: state/province (if applicable)'
+                bus_city:
+                  type: string
+                  description: 'Business address: city'
+                bus_zip:
+                  type: integer
+                  description: 'Business address: city'
+                bus_street:
+                  type: string
+                  description: 'Business address: street name'
+                bus_no:
+                  type: string
+                  description: 'Business address: building number'
+                home_country:
+                  type: string
+                  description: 'Home address: country'
+                home_state:
+                  type: string
+                  description: 'Home address: state/province (if applicable)'
+                home_city:
+                  type: string
+                  description: 'Home address: city'
+                home_zip:
+                  type: integer
+                  description: 'Home address: city'
+                home_street:
+                  type: string
+                  description: 'Home address: street name'
+                home_no:
+                  type: string
+                  description: 'Home address: building number'
+                bank:
+                  type: integer
+                  description: Bank number
+                branch:
+                  type: integer
+                  description: Bank Branch number
+                account:
+                  type: integer
+                  description: Bank Account number
+                faccount:
+                  type: integer
+                  description: Foreign Account Number (for external accounting software)
+                employee_assigned:
+                  type: integer
+                  description: User ID of responsible employee
+                client_type_id:
+                  type: string
+                  description: Client type ID
+                client_type_name:
+                  type: string
+                  description: Client type name.
+                payment_terms:
+                  type: integer
+                  description: Payment terms. -1 = immediate / 0+ = days since end of current month
+                client_type_discount:
+                  type: number
+                  description: Discount percent.
+                  format: float
+                notes:
+                  type: string
+                  description: Client notes
+                digsig:
+                  type: boolean
+                  description: Digitally sign documents? (0=No / 1=Yes)
+                custom_info:
+                  type: object
+                  description: Client custom fields info
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/client'
+          description: ''
+  /delete:
+    post:
+      summary: Delete a client
+      operationId: post-delete
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                client_id:
+                  type: integer
+                  description: Client ID
+              required:
+                - client_id
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/client'
+          description: ''
+  /info:
+    post:
+      summary: Get client information
+      operationId: post-info
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                client_id:
+                  type: integer
+                  description: Client ID
+                custom_client_id:
+                  type: string
+                  description: Custom Client ID (from external system)
+                vat_id:
+                  type: number
+                  description: Client VAT ID
+                email:
+                  type: string
+                  description: Client email
+                client_name:
+                  type: string
+                  description: Client name
+                get_custom_info:
+                  type: boolean
+                  description: Get client custom info
+                get_balance:
+                  type: boolean
+                  description: Get client balance
+                get_contacts:
+                  type: boolean
+                  description: Get client contacts
+                get_cc_tokens:
+                  type: boolean
+                  description: Get client tokens. Requires Credit-Card Storage module
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/client'
+          description: ''
+  /types:
+    post:
+      summary: Get client types list
+      operationId: post-types
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                list_type:
+                  type: string
+                  description: List type (array|object).
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/client'
+          description: ''
+  /add_type:
+    post:
+      summary: Add client type
+      operationId: post-add_type
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                client_type_name:
+                  type: string
+                  description: Client type name
+                client_type_discount:
+                  type: number
+                  description: Discount percent
+                  format: float
+              required:
+                - client_type_name
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/client'
+          description: ''
+  /update_type:
+    post:
+      summary: Update client type
+      operationId: post-update_type
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                client_type_name:
+                  type: string
+                  description: Client type name
+                client_type_discount:
+                  type: number
+                  description: Discount percent
+                  format: float
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/client'
+          description: ''
+  /get_custom_fields:
+    post:
+      summary: Get client custom fields definitions
+      operationId: post-get_custom_fields
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/client'
+          description: ''
+  /get_custom_info:
+    post:
+      summary: Get client custom info
+      operationId: post-get_custom_info
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                client_id:
+                  type: integer
+                  description: Client ID
+                custom_client_id:
+                  type: string
+                  description: Custom Client ID (from external system)
+                vat_id:
+                  type: number
+                  description: Client VAT ID
+                email:
+                  type: string
+                  description: Client email
+                client_name:
+                  type: string
+                  description: Client name
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/client'
+          description: ''
+  /set_custom_info:
+    post:
+      summary: Set client custom info
+      operationId: post-set_custom_info
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                client_id:
+                  type: integer
+                  description: Client ID
+                custom_client_id:
+                  type: string
+                  description: Custom Client ID (from external system)
+                vat_id:
+                  type: number
+                  description: Client VAT ID
+                email:
+                  type: string
+                  description: Client email
+                client_name:
+                  type: string
+                  description: Client name
+                custom_info:
+                  type: object
+                  description: Client custom fields info
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/client'
+          description: ''
+  /get_contacts:
+    post:
+      summary: Get client contacts
+      operationId: post-get_contacts
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                client_id:
+                  type: integer
+                  description: Client ID
+                custom_client_id:
+                  type: string
+                  description: Custom Client ID (from external system)
+                vat_id:
+                  type: number
+                  description: Client VAT ID
+                email:
+                  type: string
+                  description: Client email
+                client_name:
+                  type: string
+                  description: Client name
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/client'
+          description: ''
+  /contact_types:
+    post:
+      summary: Contact Types
+      operationId: post-contact_types
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/client'
+          description: ''
+  /add_contact:
+    post:
+      summary: Add Contact
+      operationId: post-add_contact
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                client_id:
+                  type: integer
+                  description: Client ID
+                custom_client_id:
+                  type: string
+                  description: Custom Client ID (from external system)
+                vat_id:
+                  type: number
+                  description: Client VAT ID
+                contact_type:
+                  type: string
+                  description: "Contact type.\r\nSee also: client/contact_types"
+                contact_uuid:
+                  type: string
+                  description: Unique identifier for contact. Useful if You are managing contacts by an external CRM system
+                email:
+                  type: string
+                  description: Contact email
+                phone:
+                  type: string
+                  description: Contact phone
+                mobile:
+                  type: string
+                  description: Contact fax
+                id_no:
+                  type: number
+                  description: Contact VAT ID
+                company_name:
+                  type: string
+                  description: Contact company name
+                first_name:
+                  type: string
+                  description: Contact first name
+                last_name:
+                  type: string
+                  description: Contact last name
+                bus_country:
+                  type: string
+                  description: 'Business address: country'
+                bus_city:
+                  type: string
+                  description: 'Business address: city'
+                bus_zip:
+                  type: integer
+                  description: 'Business address: city'
+                bus_street:
+                  type: string
+                  description: 'Business address: street name'
+                bus_no:
+                  type: string
+                  description: 'Business address: building number'
+                home_country:
+                  type: string
+                  description: 'Home address: country'
+                home_city:
+                  type: string
+                  description: 'Home address: city'
+                home_zip:
+                  type: integer
+                  description: 'Home address: city'
+                home_street:
+                  type: string
+                  description: 'Home address: street name'
+                home_no:
+                  type: string
+                  description: 'Home address: building number'
+                dob:
+                  type: string
+                  description: Date of birth
+                  format: date
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/client'
+          description: ''
+  /update_contact:
+    post:
+      summary: Update client contact
+      operationId: post-update_contact
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                client_id:
+                  type: integer
+                  description: Client ID
+                custom_client_id:
+                  type: string
+                  description: Custom Client ID (from external system)
+                vat_id:
+                  type: number
+                  description: Client VAT ID
+                email:
+                  type: string
+                  description: Contact email
+                contact_id:
+                  type: integer
+                  description: Contact ID
+                contact_uuid:
+                  type: string
+                  description: Unique identifier for contact. Useful if You are managing contacts by an external CRM system
+                phone:
+                  type: string
+                  description: Contact phone
+                mobile:
+                  type: string
+                  description: Contact fax
+                id_no:
+                  type: number
+                  description: Contact VAT ID
+                company_name:
+                  type: string
+                  description: Contact company name
+                first_name:
+                  type: string
+                  description: Contact first name
+                last_name:
+                  type: string
+                  description: Contact last name
+                bus_country:
+                  type: string
+                  description: 'Business address: country'
+                bus_city:
+                  type: string
+                  description: 'Business address: city'
+                bus_zip:
+                  type: integer
+                  description: 'Business address: city'
+                bus_street:
+                  type: string
+                  description: 'Business address: street name'
+                bus_no:
+                  type: string
+                  description: 'Business address: building number'
+                home_country:
+                  type: string
+                  description: 'Home address: country'
+                home_city:
+                  type: string
+                  description: 'Home address: city'
+                home_zip:
+                  type: integer
+                  description: 'Home address: city'
+                home_street:
+                  type: string
+                  description: 'Home address: street name'
+                home_no:
+                  type: string
+                  description: 'Home address: building number'
+                dob:
+                  type: string
+                  description: Date of birth
+                  format: date
+              required:
+                - contact_id
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/client'
+          description: ''
+  /delete_contact:
+    post:
+      summary: Delete client contact
+      operationId: post-delete_contact
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                client_id:
+                  type: integer
+                  description: Client ID
+                custom_client_id:
+                  type: string
+                  description: Custom Client ID (from external system)
+                vat_id:
+                  type: number
+                  description: Client VAT ID
+                email:
+                  type: string
+                  description: Contact email
+                contact_id:
+                  type: integer
+                  description: Contact ID
+              required:
+                - contact_id
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/client'
+          description: ''
+  /get_cc_tokens:
+    post:
+      summary: Get client stored Credit-Card tokens information
+      operationId: post-get_cc_tokens
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                client_id:
+                  type: integer
+                  description: Client ID
+                custom_client_id:
+                  type: string
+                  description: Custom Client ID (from external system)
+                vat_id:
+                  type: number
+                  description: Client VAT ID
+                email:
+                  type: string
+                  description: Client email
+                client_name:
+                  type: string
+                  description: Client name
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/client'
+          description: ''
+  /get_balance:
+    post:
+      summary: Get client balance
+      operationId: post-get_balance
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                client_id:
+                  type: integer
+                  description: Client ID
+                custom_client_id:
+                  type: string
+                  description: Custom Client ID (from external system)
+                vat_id:
+                  type: number
+                  description: Client VAT ID
+                email:
+                  type: string
+                  description: Client email
+                client_name:
+                  type: string
+                  description: Client name
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/client'
+          description: ''
+  /get_list:
+    post:
+      summary: Get clients list
+      operationId: post-get_list
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                client_id:
+                  type: integer
+                  description: Client ID
+                custom_client_id:
+                  type: string
+                  description: Custom Client ID (from external system)
+                vat_id:
+                  type: number
+                  description: Client VAT ID
+                email:
+                  type: string
+                  description: Client email
+                phone:
+                  type: string
+                  description: Client phone
+                mobile:
+                  type: string
+                  description: Client mobile phone
+                client_name:
+                  type: string
+                  description: Client name
+                first_name:
+                  type: string
+                  description: First name of primary contact
+                last_name:
+                  type: string
+                  description: Last name of primary contact
+                is_lead:
+                  type: boolean
+                  description: Search for leads instead of clients.
+                include_leads:
+                  type: boolean
+                  description: Show both clients and leads in
+                detail_level:
+                  type: integer
+                  description: 'Level of detail (0=only name, 1=+basic, 2=+contacts, 3=+address, 4=+bank, 5=+faccount, 10=full).'
+                search_contacts_if_not_found:
+                  type: boolean
+                  description: 'If there are no results in primary contact, search in additional contacts as well.'
+                list_type:
+                  type: string
+                  description: List type (array|object).
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/client'
+          description: ''
+  /get_open_docs:
+    post:
+      summary: Get the list of client open docs
+      operationId: post-get_open_docs
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                client_id:
+                  type: integer
+                  description: Client ID
+                custom_client_id:
+                  type: string
+                  description: Custom Client ID (from external system)
+                vat_id:
+                  type: number
+                  description: Client VAT ID
+                email:
+                  type: string
+                  description: Client email
+                client_name:
+                  type: string
+                  description: Client name
+                doctype:
+                  type: string
+                  description: Target document type (to return only documents that type can be based on)
+                get_items:
+                  type: boolean
+                  description: Also include items for each open document
+                list_type:
+                  type: string
+                  description: List type (array|object).
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/client'
+          description: ''
+  /ledger:
+    post:
+      summary: Get client ledger report
+      operationId: post-get_open_docs
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                client_id:
+                  type: integer
+                  description: Client ID
+                custom_client_id:
+                  type: string
+                  description: Custom Client ID (from external system)
+                vat_id:
+                  type: number
+                  description: Client VAT ID
+                email:
+                  type: string
+                  description: Client email
+                client_name:
+                  type: string
+                  description: Client name
+                start_date:
+                  type: string
+                  description: "Start date for report\t"
+                  format: date
+                end_date:
+                  type: string
+                  description: End date for report
+                  format: date
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: boolean
+                    description: "Operation status\t"
+                  reason:
+                    type: string
+                    description: "Error code\t"
+                  error_description:
+                    type: string
+                    description: "Short error descripion\t"
+                  error_details:
+                    type: array
+                    description: "Detailed error messages list\t"
+                    items:
+                      type: string
+                  client_ledger:
+                    $ref: '#/components/schemas/iCountClientLedgerReport'
+                    description: Client ledger
+                required:
+                  - status
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/client'
+          description: ''
+components:
+  schemas:
+    iCountClientLedgerReport:
+      type: object
+      title: iCountClientLedgerReport
+      description: 'Client ledger report '
+      properties:
+        "opening_balance\t":
+          type: number
+          description: |
+            Opening balance
+          format: float
+        "opening_balance_date\t":
+          type: string
+          description: |
+            Opening balance date
+          format: date
+        "total_debit\t":
+          type: number
+          description: |
+            Total debit during report period
+          format: float
+        "total_credit\t":
+          type: number
+          description: |
+            Total credit during report period
+          format: float
+        closing_balance:
+          type: number
+          description: |
+            Cosing balance
+          format: float
+        closing_balance_date:
+          type: string
+          description: |
+            Closing balance date (date of last transaction if any, otherwise equal to opening balance date)
+          format: date
+        ledger_entries:
+          type: array
+          description: |
+            Ledger entries
+          items:
+            $ref: '#/components/schemas/iCountClientLedgerEntry'
+      required:
+        - "opening_balance\t"
+        - "opening_balance_date\t"
+        - "total_debit\t"
+        - "total_credit\t"
+        - closing_balance
+        - closing_balance_date
+        - ledger_entries
+    iCountClientLedgerEntry:
+      type: object
+      title: iCountClientLedgerEntry
+      description: Client ledger entry
+      properties:
+        "entry_type\t\t":
+          type: string
+          description: |
+            Ledger entry type. Possible values: open_credit, doc, movement
+        entry_date:
+          type: string
+          description: |
+            Ledger entry date
+        doctype:
+          type: string
+          description: |
+            Document type
+        docnum:
+          type: integer
+          description: |
+            Document number
+        currency_rate:
+          type: number
+          description: |
+            Entry currency rate
+          format: float
+        debit_sum:
+          type: number
+          description: |
+            Entry debit sum
+          format: float
+        credit_sum:
+          type: number
+          description: |
+            Entry credit sum
+          format: float
+        currency_id:
+          type: integer
+          description: |
+            Entry currency id (if different from base currency)
+        currency_code:
+          type: string
+          description: |
+            Entry currency code (if different from base currency)
+        currency_debit_sum:
+          type: number
+          description: |
+            Entry debit sum in original currency (if different from base currency)
+          format: float
+        currency_credit_sum:
+          type: number
+          description: |
+            Entry credit sum in original currency (if different from base currency)
+          format: float
+        balance:
+          type: number
+          description: |
+            Balance after entry
+          format: float
+        details:
+          type: string
+          description: Entry detailed description
+      required:
+        - "entry_type\t\t"
+        - entry_date
+        - doctype
+        - docnum
+        - currency_rate
+        - debit_sum
+        - credit_sum
+        - balance
+        - details

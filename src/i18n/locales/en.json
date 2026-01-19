@@ -1284,10 +1284,14 @@
       "access_denied": "Access Denied",
       "access_denied_message": "Only super administrators can access settings.",
       "sections": {
-        "templates": "Email Templates",
-        "templates_desc": "Manage notification templates",
-        "terms": "Terms & Conditions",
-        "terms_desc": "Manage terms for online orders"
+        "templates": "Templates",
+        "templates_desc": "Emails & Terms",
+        "credentials": "Payment Credentials",
+        "credentials_desc": "iCount API settings per branch"
+      },
+      "templates_tabs": {
+        "emails": "Email Templates",
+        "terms": "Terms & Conditions"
       },
       "email_templates": {
         "title": "Email Templates",

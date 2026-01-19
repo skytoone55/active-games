@@ -1,0 +1,51 @@
+openapi: 3.1.0
+info:
+  version: '1.0'
+  title: Send SMS
+servers:
+  - url: 'https://api.icount.co.il/api/v3.php/sms'
+paths:
+  /credit:
+    post:
+      summary: Credit
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+              examples:
+                Example 1:
+                  value:
+                    api:
+                      version: 3
+                      tz: 2
+                      ts: 1700572475.0206
+                      lang: he
+                      rid: 841813365
+                      module: sms
+                      method: credit
+                    status: true
+                    reason: OK
+                    sms_credit: 10
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/sms'

@@ -1,0 +1,158 @@
+openapi: 3.1.0
+info:
+  version: '1.0'
+  title: Report charts data
+servers:
+  - url: 'https://api.icount.co.il/api/v3.php/chart'
+paths:
+  /monthly_profitability:
+    post:
+      summary: Get company monthly profitability chart data
+      operationId: post-monthly_profitability
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                start_date:
+                  type: string
+                  description: Report start date.
+                  format: date
+                end_date:
+                  type: string
+                  description: Report end date.
+                  format: date
+              required:
+                - start_date
+                - end_date
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+              examples:
+                Example 1:
+                  value:
+                    api:
+                      version: 3
+                      tz: 2
+                      ts: 1700573532.4027
+                      lang: he
+                      rid: 841741914
+                      module: chart
+                      method: monthly_profitability
+                    status: true
+                    reason: OK
+                    start_date: '2023-01-01'
+                    end_date: '2024-01-01'
+                    monthly_profitability:
+                      chart_type: line
+                      labels:
+                        - 01/23
+                        - 02/23
+                        - 03/23
+                        - 04/23
+                        - 05/23
+                        - 06/23
+                        - 07/23
+                        - 08/23
+                        - 09/23
+                        - 10/23
+                        - 11/23
+                        - 12/23
+                        - 01/24
+                      datasets:
+                        invoice:
+                          title: חשבוניות
+                          color: '#0a99d1'
+                          bgcolor: '#0a99d1'
+                          fgcolor: '#ffffff'
+                        receipt:
+                          title: קבלות
+                          color: '#e8af2d'
+                          bgcolor: '#e8af2d'
+                          fgcolor: '#ffffff'
+                        expense:
+                          title: הוצאות
+                          color: '#0a4466'
+                          bgcolor: '#0a4466'
+                          fgcolor: '#ffffff'
+                        profit:
+                          title: ריווחיות
+                          color: '#82ad3a'
+                          bgcolor: '#82ad3a'
+                          fgcolor: '#000000'
+                      data:
+                        invoice:
+                          - 30401.24
+                          - 27749.26
+                          - 39223.28
+                          - 31724.11
+                          - 37361.95
+                          - 40613.51
+                          - 48921.59
+                          - 39500.71
+                          - 35883.83
+                          - 60677.58
+                          - 45428.06
+                          - 0
+                          - 0
+                        receipt:
+                          - 30779.98
+                          - 27749.26
+                          - 38384.28
+                          - 32000.11
+                          - 37382.95
+                          - 40586.51
+                          - 49566.59
+                          - 39500.71
+                          - 35883.83
+                          - 60677.58
+                          - 45607.06
+                          - 0
+                          - 0
+                        expense:
+                          - 0
+                          - 0
+                          - 0
+                          - 0
+                          - 0
+                          - 0
+                          - 0
+                          - 0
+                          - 0
+                          - 0
+                          - 0
+                          - 0
+                          - 0
+                        profit:
+                          - 30401.24
+                          - 27749.26
+                          - 39223.28
+                          - 31724.11
+                          - 37361.95
+                          - 40613.51
+                          - 48921.59
+                          - 39500.71
+                          - 35883.83
+                          - 60677.58
+                          - 45428.06
+                          - 0
+                          - 0
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/chart'

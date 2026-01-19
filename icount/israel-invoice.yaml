@@ -1,0 +1,311 @@
+openapi: 3.1.0
+info:
+  version: '1.0'
+  title: Israel Tax Authority (ITA) Israel Invoice regulation
+  description: 'More info: https://www.gov.il/he/departments/topics/israel-invoice/govil-landing-page'
+servers:
+  - url: 'https://api.icount.co.il/api/v3.php/israel_invoice'
+    description: ''
+paths:
+  /status:
+    post:
+      summary: Get Israel Invoice connection status (current token metadata)
+      operationId: status
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  $ref: '#/components/schemas/sid'
+                cid:
+                  $ref: '#/components/schemas/cid'
+                user:
+                  $ref: '#/components/schemas/user'
+                pass:
+                  $ref: '#/components/schemas/pass'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: boolean
+                    description: "Operation status\t"
+                  reason:
+                    type: string
+                    description: "Error code\t"
+                  error_description:
+                    type: string
+                    description: "Short error descripion\t"
+                  error_details:
+                    type: array
+                    description: "Detailed error messages list\t"
+                    items:
+                      type: string
+                  ita_token:
+                    type: string
+                    description: ITA token information
+                x-examples:
+                  Example 1:
+                    api:
+                      version: 3
+                      tz: 3
+                      ts: 1716895350.4637
+                      lang: he
+                      rid: 1046001076
+                      module: israel_invoice
+                      method: status
+                      messages:
+                        - ts: 1716895350.532
+                          delta: 0
+                          type: ERROR
+                          data: |-
+                            JSON REQUEST: array (
+                              'cid' => 'liavy',
+                              'user' => 'liavy',
+                              'pass' => 'Liav.y!123',
+                            )
+                        - ts: 1716895350.5321
+                          delta: 0.000097990036010742
+                          type: ERROR
+                          data: israel_invoice_disabled
+                    status: false
+                    reason: israel_invoice_disabled
+                    error_description: Israel invoice disabled
+                    error_details:
+                      - |-
+                        JSON REQUEST: array (
+                          'cid' => 'liavy',
+                          'user' => 'liavy',
+                          'pass' => 'Liav.y!123',
+                        )
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/israel_invoice'
+          description: ''
+  /connect:
+    post:
+      summary: Start ITA connection process
+      operationId: connect
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  $ref: '#/components/schemas/sid_2'
+                cid:
+                  $ref: '#/components/schemas/cid_2'
+                user:
+                  $ref: '#/components/schemas/user_2'
+                pass:
+                  $ref: '#/components/schemas/pass_2'
+                success_url:
+                  type: string
+                  description: "URL to redirect the user on success (if consent was granted)\t"
+                failure_url:
+                  type: string
+                  description: URL to redirect the user on failure (if consent could not be granted)
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: boolean
+                    description: Operation status
+                  reason:
+                    type: string
+                    description: "Error code\t"
+                  error_description:
+                    type: string
+                    description: "Short error descripion\t"
+                  error_details:
+                    type: array
+                    description: "Detailed error messages list\t"
+                    items:
+                      type: string
+                  redirect_url:
+                    type: string
+                    description: "Redirect URL to initiate the connection\t"
+                required:
+                  - status
+                  - redirect_url
+                x-examples:
+                  Example 1:
+                    status: false
+                    reason: INVALID_REQUEST
+                    error_description: The request parameters are invalid.
+                    error_details:
+                      - 'Missing required parameter: user_id'
+                      - 'Invalid format for parameter: date'
+                    redirect_url: 'https://example.com/initiate-connection'
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/israel_invoice'
+          description: ''
+  /disconnect:
+    post:
+      summary: Revoke current ITA token
+      operationId: disconnect
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  $ref: '#/components/schemas/sid_3'
+                cid:
+                  $ref: '#/components/schemas/cid_3'
+                user:
+                  $ref: '#/components/schemas/user_3'
+                pass:
+                  $ref: '#/components/schemas/pass_3'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: boolean
+                    description: "Operation status\t"
+                  reason:
+                    type: string
+                    description: "Error code\t"
+                  error_description:
+                    type: string
+                    description: "Short error descripion\t"
+                  error_details:
+                    type: array
+                    description: "Detailed error messages list\t"
+                    items:
+                      type: string
+                required:
+                  - status
+                x-examples:
+                  Example 1:
+                    status: false
+                    reason: ERROR_CODE
+                    error_description: A short description of the error.
+                    error_details:
+                      - Detailed error message 1
+                      - Detailed error message 2
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/israel_invoice'
+          description: ''
+  /invoice_reference_number:
+    post:
+      summary: Get / Issue Israel Tax Authority invoice_reference_number for existing document
+      operationId: invoice_reference_number
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                doctype:
+                  type: string
+                  description: Document type
+                docnum:
+                  type: string
+                  description: Document number
+              required:
+                - doctype
+                - docnum
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: boolean
+                    description: "Operation status\t"
+                  reason:
+                    type: string
+                    description: "Error code\t"
+                  error_description:
+                    type: string
+                    description: "Short error descripion\t"
+                  error_details:
+                    type: array
+                    description: "Detailed error messages list\t"
+                    items:
+                      type: string
+                  invoice_reference_number:
+                    type: string
+                x-examples:
+                  Example 1:
+                    status: false
+                    reason: ERROR_CODE
+                    error_description: A short description of the error.
+                    error_details:
+                      - Detailed error message 1
+                      - Detailed error message 2
+                    invoice_reference_number: INV123456789
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/israel_invoice'
+          description: ''
+components:
+  schemas:
+    sid:
+      type: string
+      description: Session ID
+    cid:
+      type: string
+      description: Company identifier
+    user:
+      type: string
+      description: Username
+    pass:
+      type: string
+      description: Password
+    sid_2:
+      type: string
+      description: Session ID
+    cid_2:
+      type: string
+      description: Company identifier
+    user_2:
+      type: string
+      description: Username
+    pass_2:
+      type: string
+      description: Password
+    sid_3:
+      type: string
+      description: Session ID
+    cid_3:
+      type: string
+      description: Company identifier
+    user_3:
+      type: string
+      description: Username
+    pass_3:
+      type: string
+      description: Password

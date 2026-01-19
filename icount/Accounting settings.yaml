@@ -1,0 +1,771 @@
+openapi: 3.1.0
+info:
+  version: '1.0'
+  title: Accounting settings
+servers:
+  - url: 'https://api.icount.co.il/api/v3.php/accounting_settings'
+paths:
+  /get_sortcodes:
+    post:
+      summary: Get Sortcodes
+      operationId: post-get_sortcodes
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                  examples:
+                    - 1234e19b2c02c922612458
+                cid:
+                  type: string
+                  description: Company identifier
+                  examples:
+                    - MyCompanyID
+                user:
+                  type: string
+                  description: Username
+                  examples:
+                    - MyUser
+                pass:
+                  type: string
+                  description: Password
+                  examples:
+                    - MyPassword
+                list_type:
+                  type: string
+                  description: |-
+                    Return list type (object|array).
+                    Default (object)
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  api:
+                    type: object
+                    properties:
+                      version:
+                        type: integer
+                      tz:
+                        type: integer
+                      ts:
+                        type: number
+                      lang:
+                        type: string
+                      rid:
+                        type: integer
+                      module:
+                        type: string
+                      method:
+                        type: string
+                  status:
+                    type: boolean
+                  reason:
+                    type: string
+                  sortcodes:
+                    type: object
+                    properties:
+                      '0':
+                        type: object
+                        properties:
+                          id:
+                            type: integer
+                          code:
+                            type: integer
+                          name:
+                            type: string
+                      '1':
+                        type: object
+                        properties:
+                          id:
+                            type: integer
+                          code:
+                            type: integer
+                          name:
+                            type: string
+                      '2':
+                        type: object
+                        properties:
+                          id:
+                            type: integer
+                          code:
+                            type: integer
+                          name:
+                            type: string
+                      '3':
+                        type: object
+                        properties:
+                          id:
+                            type: integer
+                          code:
+                            type: integer
+                          name:
+                            type: string
+                      '4':
+                        type: object
+                        properties:
+                          id:
+                            type: integer
+                          code:
+                            type: integer
+                          name:
+                            type: string
+                      '5':
+                        type: object
+                        properties:
+                          id:
+                            type: integer
+                          code:
+                            type: integer
+                          name:
+                            type: string
+                      '6':
+                        type: object
+                        properties:
+                          id:
+                            type: integer
+                          code:
+                            type: integer
+                          name:
+                            type: string
+                      '7':
+                        type: object
+                        properties:
+                          id:
+                            type: integer
+                          code:
+                            type: integer
+                          name:
+                            type: string
+                      '8':
+                        type: object
+                        properties:
+                          id:
+                            type: integer
+                          code:
+                            type: integer
+                          name:
+                            type: string
+                      '9':
+                        type: object
+                        properties:
+                          id:
+                            type: integer
+                          code:
+                            type: integer
+                          name:
+                            type: string
+                      '10':
+                        type: object
+                        properties:
+                          id:
+                            type: integer
+                          code:
+                            type: integer
+                          name:
+                            type: string
+                      '11':
+                        type: object
+                        properties:
+                          id:
+                            type: integer
+                          code:
+                            type: integer
+                          name:
+                            type: string
+                      '12':
+                        type: object
+                        properties:
+                          id:
+                            type: integer
+                          code:
+                            type: integer
+                          name:
+                            type: string
+                      '13':
+                        type: object
+                        properties:
+                          id:
+                            type: integer
+                          code:
+                            type: integer
+                          name:
+                            type: string
+                      '14':
+                        type: object
+                        properties:
+                          id:
+                            type: integer
+                          code:
+                            type: integer
+                          name:
+                            type: string
+                      '15':
+                        type: object
+                        properties:
+                          id:
+                            type: integer
+                          code:
+                            type: integer
+                          name:
+                            type: string
+                      '16':
+                        type: object
+                        properties:
+                          id:
+                            type: integer
+                          code:
+                            type: integer
+                          name:
+                            type: string
+                      '17':
+                        type: object
+                        properties:
+                          id:
+                            type: integer
+                          code:
+                            type: integer
+                          name:
+                            type: string
+                      '18':
+                        type: object
+                        properties:
+                          id:
+                            type: integer
+                          code:
+                            type: integer
+                          name:
+                            type: string
+                      '19':
+                        type: object
+                        properties:
+                          id:
+                            type: integer
+                          code:
+                            type: integer
+                          name:
+                            type: string
+                      '20':
+                        type: object
+                        properties:
+                          id:
+                            type: integer
+                          code:
+                            type: integer
+                          name:
+                            type: string
+                      '21':
+                        type: object
+                        properties:
+                          id:
+                            type: integer
+                          code:
+                            type: integer
+                          name:
+                            type: string
+                      '22':
+                        type: object
+                        properties:
+                          id:
+                            type: integer
+                          code:
+                            type: integer
+                          name:
+                            type: string
+                      '23':
+                        type: object
+                        properties:
+                          id:
+                            type: integer
+                          code:
+                            type: integer
+                          name:
+                            type: string
+                      '24':
+                        type: object
+                        properties:
+                          id:
+                            type: integer
+                          code:
+                            type: integer
+                          name:
+                            type: string
+                      '25':
+                        type: object
+                        properties:
+                          id:
+                            type: integer
+                          code:
+                            type: integer
+                          name:
+                            type: string
+                      '26':
+                        type: object
+                        properties:
+                          id:
+                            type: integer
+                          code:
+                            type: integer
+                          name:
+                            type: string
+                      '27':
+                        type: object
+                        properties:
+                          id:
+                            type: integer
+                          code:
+                            type: integer
+                          name:
+                            type: string
+                      '28':
+                        type: object
+                        properties:
+                          id:
+                            type: integer
+                          code:
+                            type: integer
+                          name:
+                            type: string
+                      '29':
+                        type: object
+                        properties:
+                          id:
+                            type: integer
+                          code:
+                            type: integer
+                          name:
+                            type: string
+                      '30':
+                        type: object
+                        properties:
+                          id:
+                            type: integer
+                          code:
+                            type: integer
+                          name:
+                            type: string
+                      '31':
+                        type: object
+                        properties:
+                          id:
+                            type: integer
+                          code:
+                            type: integer
+                          name:
+                            type: string
+                      '32':
+                        type: object
+                        properties:
+                          id:
+                            type: integer
+                          code:
+                            type: integer
+                          name:
+                            type: string
+                x-examples:
+                  Example 1:
+                    api:
+                      version: 3
+                      tz: 2
+                      ts: 1699281747.2287
+                      lang: he
+                      rid: 831706728
+                      module: accounting_settings
+                      method: get_sortcodes
+                    status: true
+                    reason: OK
+                    sortcodes:
+                      '0':
+                        id: 0
+                        code: 910
+                        name: עלות המכר
+                      '1':
+                        id: 1
+                        code: 920
+                        name: הוצאות הפעלה
+                      '2':
+                        id: 2
+                        code: 930
+                        name: הוצאות מכירה
+                      '3':
+                        id: 3
+                        code: 940
+                        name: הוצאות משכורת
+                      '4':
+                        id: 4
+                        code: 950
+                        name: הוצאות הנהלה וכלליות
+                      '5':
+                        id: 5
+                        code: 960
+                        name: הוצאות רכב
+                      '6':
+                        id: 6
+                        code: 970
+                        name: הוצאות מימון
+                      '7':
+                        id: 7
+                        code: 0
+                        name: שונות
+                      '8':
+                        id: 8
+                        code: 915
+                        name: הוצאות יבוא
+                      '9':
+                        id: 9
+                        code: 980
+                        name: נסיעות לחו"ל
+                      '10':
+                        id: 10
+                        code: 990
+                        name: הוצאות אחרות לתאום
+                      '11':
+                        id: 11
+                        code: 700
+                        name: רכוש קבוע ושוטף
+                      '12':
+                        id: 12
+                        code: 100
+                        name: קופות ובנקים
+                      '13':
+                        id: 13
+                        code: 101
+                        name: קופות
+                      '14':
+                        id: 14
+                        code: 110
+                        name: בנקים
+                      '15':
+                        id: 15
+                        code: 200
+                        name: לקוחות
+                      '16':
+                        id: 16
+                        code: 300
+                        name: ספקים
+                      '17':
+                        id: 17
+                        code: 400
+                        name: עובדים
+                      '18':
+                        id: 18
+                        code: 500
+                        name: מוסדות
+                      '19':
+                        id: 19
+                        code: 501
+                        name: מוסדות מס
+                      '20':
+                        id: 20
+                        code: 505
+                        name: מוסדות שונים
+                      '21':
+                        id: 21
+                        code: 550
+                        name: מע"מ
+                      '22':
+                        id: 22
+                        code: 600
+                        name: הון ועודפים
+                      '23':
+                        id: 23
+                        code: 650
+                        name: בעלי מניות
+                      '24':
+                        id: 24
+                        code: 610
+                        name: הון
+                      '25':
+                        id: 25
+                        code: 660
+                        name: עודפים
+                      '26':
+                        id: 26
+                        code: 710
+                        name: רכוש קבוע
+                      '27':
+                        id: 27
+                        code: 720
+                        name: רכוש שוטף
+                      '28':
+                        id: 28
+                        code: 800
+                        name: הכנסות
+                      '29':
+                        id: 29
+                        code: 810
+                        name: הכנסות פטורות ממע"מ
+                      '30':
+                        id: 30
+                        code: 820
+                        name: הכנסות חייבות במע"מ
+                      '31':
+                        id: 31
+                        code: 900
+                        name: הוצאות
+                      '32':
+                        id: 32
+                        code: 120
+                        name: השקעות
+              examples:
+                Example 1:
+                  value:
+                    api:
+                      version: 3
+                      tz: 2
+                      ts: 1699281747.2287
+                      lang: he
+                      rid: 831706728
+                      module: accounting_settings
+                      method: get_sortcodes
+                    status: true
+                    reason: OK
+                    sortcodes:
+                      '0':
+                        id: 0
+                        code: 910
+                        name: עלות המכר
+                      '1':
+                        id: 1
+                        code: 920
+                        name: הוצאות הפעלה
+                      '2':
+                        id: 2
+                        code: 930
+                        name: הוצאות מכירה
+                      '3':
+                        id: 3
+                        code: 940
+                        name: הוצאות משכורת
+                      '4':
+                        id: 4
+                        code: 950
+                        name: הוצאות הנהלה וכלליות
+                      '5':
+                        id: 5
+                        code: 960
+                        name: הוצאות רכב
+                      '6':
+                        id: 6
+                        code: 970
+                        name: הוצאות מימון
+                      '7':
+                        id: 7
+                        code: 0
+                        name: שונות
+                      '8':
+                        id: 8
+                        code: 915
+                        name: הוצאות יבוא
+                      '9':
+                        id: 9
+                        code: 980
+                        name: נסיעות לחו"ל
+                      '10':
+                        id: 10
+                        code: 990
+                        name: הוצאות אחרות לתאום
+                      '11':
+                        id: 11
+                        code: 700
+                        name: רכוש קבוע ושוטף
+                      '12':
+                        id: 12
+                        code: 100
+                        name: קופות ובנקים
+                      '13':
+                        id: 13
+                        code: 101
+                        name: קופות
+                      '14':
+                        id: 14
+                        code: 110
+                        name: בנקים
+                      '15':
+                        id: 15
+                        code: 200
+                        name: לקוחות
+                      '16':
+                        id: 16
+                        code: 300
+                        name: ספקים
+                      '17':
+                        id: 17
+                        code: 400
+                        name: עובדים
+                      '18':
+                        id: 18
+                        code: 500
+                        name: מוסדות
+                      '19':
+                        id: 19
+                        code: 501
+                        name: מוסדות מס
+                      '20':
+                        id: 20
+                        code: 505
+                        name: מוסדות שונים
+                      '21':
+                        id: 21
+                        code: 550
+                        name: מע"מ
+                      '22':
+                        id: 22
+                        code: 600
+                        name: הון ועודפים
+                      '23':
+                        id: 23
+                        code: 650
+                        name: בעלי מניות
+                      '24':
+                        id: 24
+                        code: 610
+                        name: הון
+                      '25':
+                        id: 25
+                        code: 660
+                        name: עודפים
+                      '26':
+                        id: 26
+                        code: 710
+                        name: רכוש קבוע
+                      '27':
+                        id: 27
+                        code: 720
+                        name: רכוש שוטף
+                      '28':
+                        id: 28
+                        code: 800
+                        name: הכנסות
+                      '29':
+                        id: 29
+                        code: 810
+                        name: הכנסות פטורות ממע"מ
+                      '30':
+                        id: 30
+                        code: 820
+                        name: הכנסות חייבות במע"מ
+                      '31':
+                        id: 31
+                        code: 900
+                        name: הוצאות
+                      '32':
+                        id: 32
+                        code: 120
+                        name: השקעות
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/accounting_settings'
+  /get_main_accounts:
+    post:
+      summary: Get Main Accounts
+      operationId: post-get_main_accounts
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                  examples:
+                    - 1234e19b2c02c922612458
+                cid:
+                  type: string
+                  description: Company identifier
+                  examples:
+                    - MyCompanyID
+                user:
+                  type: string
+                  description: Username
+                  examples:
+                    - MyUser
+                pass:
+                  type: string
+                  description: Password
+                  examples:
+                    - MyPassword
+                list_type:
+                  type: string
+                  description: |-
+                    Return list type (object|array).
+                    Default (object)
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+              examples:
+                Example 1:
+                  value:
+                    api:
+                      version: 3
+                      tz: 2
+                      ts: 1699282093.2645
+                      lang: he
+                      rid: 831711849
+                      module: accounting_settings
+                      method: get_main_accounts
+                    status: true
+                    reason: OK
+                    main_accounts:
+                      '1': ללא
+                      '2': לקוחות
+                      '3': ספקים
+                      '4': הוצאות
+                      '5': בנקים
+                      '6': קופות
+                      '7': הכנסות חייבות במע"מ
+                      '8': הכנסות פטורות ממע"מ
+                      '9': מימון/ריבית
+                      '10': הכנסות חייבות במע"מ ופטורות ממקדמות
+                      '11': הכנסות פטורות ממע"מ ופטורות ממקדמות
+                      '12': מע"מ עסקאות
+                      '13': מע"מ תשומות
+                      '14': מע"מ תשומות לנכסים
+                      '15': מע"מ חו"ז
+                      '16': עסקאות חייבות שדווחו
+                      '17': עסקאות פטורות שדווחו
+                      '18': נכוי במקור מספקים - שרותים ונכסים
+                      '19': ניכוי במקור מספקים - סופרים
+                      '20': ניכוי במקור מספקים - ריבית
+                      '21': ניכוי במקור מספקים - ביטוח
+                      '22': ניכוי במקור ע"י לקוחות
+                      '23': מקדמות למס הכנסה
+                      '24': יתרת פתיחה
+                      '25': לקוחות וספקים
+                      '26': הכנסות חשבונית עצמית
+                      '27': הפרשי שער/תרגום
+                      '28': עמלות בנק
+                      '29': חשבונות חסומים
+                      '30': חו"ז - חייבים וזכאים
+                      '31': עודפים
+                      '32': 'נ.במקור - תשלומים לתושב חוץ: ע"י החברה 0%'
+                      '33': 'נ.במקור - תשלומים לתושב חוץ: ע"י החברה 0-25%'
+                      '34': 'נ.במקור - תשלומים לתושב חוץ: ע"י החברה מעל 25%'
+                      '35': 'נ.במקור - תשלומים לתושב חוץ: ע"י הבנק 0%'
+                      '36': 'נ.במקור - תשלומים לתושב חוץ: ע"י הבנק 0-25%'
+                      '37': 'נ.במקור - תשלומים לתושב חוץ: ע"י הבנק מעל 25%'
+                      '38': נ.במקור - תשלום שלא כדין מקופת גמל
+                      '39': נ.במקור - החזר תשלום למעביד מקופת גמל לפיצויים
+                      '40': נ.במקור - תש' משכירות מקרקעין שניתן לקבוע כהוצאה
+                      '41': נ.במקור - תשלום מקרן השתלמות לעצמאי
+                      '42': נ.במקור - רווח מהימורים והגרלות
+                      '43': הכנסות פטורות שאינן מדווחות למע"מ
+                      '44': נ.במקור - תשלום דיבידנד
+                      '45': רכוש קבוע
+                      '46': קופות שיקים
+                      '47': קופות מזומן
+                      '48': קופת פקדון
+                      '49': קופות כרטיסי אשראי
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/accounting_settings'

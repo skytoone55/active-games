@@ -1,0 +1,223 @@
+openapi: 3.1.0
+info:
+  version: '1.0'
+  title: Company information
+  description: ''
+servers:
+  - url: 'https://api.icount.co.il/api/v3.php/company'
+    description: ''
+paths:
+  /info:
+    post:
+      summary: Get company information
+      operationId: post-info
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                get_settings:
+                  type: boolean
+                  description: Also get settings
+                get_bank_accounts:
+                  type: boolean
+                  description: Also get bank accounts
+                list_type:
+                  type: string
+                  description: List type (array|object).
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/company'
+          description: ''
+  /settings:
+    post:
+      summary: Get company settings
+      operationId: post-settings
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/company'
+          description: ''
+  /bank_accounts:
+    post:
+      summary: Get company bank accounts
+      operationId: post-bank_accounts
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                list_type:
+                  type: string
+                  description: List type (array|object).
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/company'
+          description: ''
+  /new_customers_counter:
+    post:
+      summary: Get new customers counter
+      operationId: post-new_customers_counter
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/company'
+          description: ''
+  /business_types:
+    post:
+      summary: List business types
+      operationId: post-business_types
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/company'
+          description: ''
+  /upload_logo:
+    post:
+      summary: Upload company logo
+      operationId: post-upload_logo
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                logo:
+                  type: string
+                  description: 'Company logo. Allowed image types: jpg/png. Max filesize: 200000 bytes. Max dimensions: 1000x300 px'
+                  contentMediaType: application/octet-stream
+              required:
+                - logo
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/company'
+          description: ''
+  /stored_files:
+    post:
+      summary: List company approval documents
+      operationId: post-stored_files
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/company'
+          description: ''

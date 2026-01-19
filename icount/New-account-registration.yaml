@@ -1,0 +1,254 @@
+openapi: 3.1.0
+info:
+  version: '1.0'
+  title: New account registration
+servers:
+  - url: 'https://api.icount.co.il/api/v3.php/registration'
+paths:
+  /cid_valid:
+    post:
+      summary: Check if cid is valid
+      operationId: post-cid_valid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password to test
+              required:
+                - cid
+                - pass
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/registration'
+  /cid_available:
+    post:
+      summary: Check if cid is available
+      operationId: post-cid_available
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password to test
+              required:
+                - cid
+                - pass
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/registration'
+  /password_policy:
+    post:
+      summary: Password Policy
+      operationId: post-password_policy
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password to test
+              required:
+                - cid
+                - pass
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/registration'
+  /password_strength:
+    post:
+      summary: Password Strength
+      operationId: post-password_strength
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password to test
+              required:
+                - cid
+                - pass
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/registration'
+  /register:
+    post:
+      summary: Perform registration
+      operationId: post-register
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password to test
+                email:
+                  type: string
+                  description: Email address
+                business_type:
+                  type: integer
+                  description: 'Business type. Possible values: 1 - Sole Proprietor, 2 - Partnership, 3 - Company, 4 - Non-profit, 5 - VAT-exempt business (IL only).'
+              required:
+                - cid
+                - pass
+                - email
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/registration'
+  /wizard:
+    post:
+      summary: Initial setup wizard
+      operationId: post-wizard
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password to test
+                company_name:
+                  type: string
+                  description: Company name
+                company_name_en:
+                  type: string
+                  description: Company name in english
+                vat_id:
+                  type: string
+                  description: Company VAT ID
+                business_type_id:
+                  type: integer
+                  description: "Company business type.\r\nSee also: company/business_types"
+                first_name:
+                  type: string
+                  description: User first name
+                first_name_en:
+                  type: string
+                  description: User first name in english
+                last_name:
+                  type: string
+                  description: User last name
+                last_name_en:
+                  type: string
+                  description: User last name in english
+                email:
+                  type: string
+                  description: Email address
+                mobile:
+                  type: string
+                  description: Mobile phone
+                password1:
+                  type: string
+                  description: New password
+                password2:
+                  type: string
+                  description: New password (again)
+                sales_tax:
+                  type: number
+                  description: Sales tax
+                  format: float
+                logo:
+                  type: string
+                  description: 'Company logo. Allowed image types: jpg/png. Max filesize: 200000 bytes. Max dimensions: 1000x300 px'
+                  contentMediaType: application/octet-stream
+                profile_image:
+                  type: string
+                  description: 'User profile image (avatar). Allowed image types: jpg/png. Max filesize: 20000 bytes. Max dimensions: 150x150 px'
+                  contentMediaType: application/octet-stream
+              required:
+                - cid
+                - pass
+                - company_name
+                - company_name_en
+                - vat_id
+                - business_type_id
+                - first_name
+                - first_name_en
+                - last_name
+                - last_name_en
+                - email
+                - mobile
+                - password1
+                - password2
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/registration'

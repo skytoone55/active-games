@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useCallback } from 'react'
-import type { Contact, ContactStatus, ContactSource } from '@/lib/supabase/types'
+import type { Contact, ContactStatus, ContactSource, ClientType } from '@/lib/supabase/types'
 
 export interface SearchContactsParams {
   query?: string
@@ -32,6 +32,9 @@ export interface CreateContactData {
   notes_client?: string | null
   alias?: string | null
   source?: ContactSource
+  client_type?: ClientType
+  company_name?: string | null
+  vat_id?: string | null
 }
 
 export interface UpdateContactData extends Partial<CreateContactData> {

@@ -1,0 +1,626 @@
+openapi: 3.1.0
+info:
+  version: '1.0'
+  title: Credit-card billing
+servers:
+  - url: 'https://api.icount.co.il/api/v3.php/cc'
+    description: ''
+paths:
+  /provider:
+    post:
+      summary: Provider
+      operationId: post-provider
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/cc'
+          description: ''
+  /j5:
+    post:
+      summary: Create J5 Preapproval Transaction
+      operationId: j5-preapproval
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                cc_number:
+                  type: number
+                  description: "Credit-Card number\t"
+                cc_validity:
+                  type: number
+                  description: "Card validity month in either YYYY-MM or MMYY format\t"
+                cc_cvv:
+                  type: number
+                  description: "CVV - Card Verification number (3 or 4 digits on the back of the card)\t"
+                cc_holder_id:
+                  type: number
+                  description: "Card holder ID number\t"
+                sum:
+                  type: number
+                  description: Amount to preapprove..00 ILS
+                  format: float
+                  default: 5
+                currency_id:
+                  type: integer
+                  description: "Currency ID\t"
+                currency_code:
+                  type: string
+                  description: "Currency Code (3-letter code)\t\n"
+              required:
+                - cc_number
+                - cc_validity
+                - cc_cvv
+                - cc_holder_id
+            examples:
+              Example 1:
+                value:
+                  cid: mycompanyid
+                  user: myuserid
+                  pass: mypassword
+                  cc_number: 4580458045804580
+                  cc_validity: 231
+                  cc_cvv: 123
+                  cc_holder_id: 208915123
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/cc'
+          description: ''
+  /store_card_info:
+    post:
+      summary: Store Credt-Card information
+      operationId: post-store_card_info
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                client_id:
+                  type: integer
+                  description: Client ID
+                custom_client_id:
+                  type: string
+                  description: Custom Client ID (from external system)
+                vat_id:
+                  type: number
+                  description: Client VAT ID
+                email:
+                  type: string
+                  description: Client email
+                client_name:
+                  type: string
+                  description: Client name
+                cc_number:
+                  type: number
+                  description: Credit-Card number
+                cc_type:
+                  type: string
+                  description: Credit-Card type
+                cc_cvv:
+                  type: number
+                  description: CVV - Card Verification number (3 or 4 digits on the back of the card)
+                cc_validity:
+                  type: number
+                  description: Card validity month in either YYYY-MM or MMYY format
+                cc_holder_id:
+                  type: number
+                  description: Card holder ID number
+                cc_holder_name:
+                  type: string
+                  description: Card holder name
+                die_if_exists:
+                  type: boolean
+                  description: Return error if token already exists
+              required:
+                - cc_number
+                - cc_validity
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/cc'
+          description: ''
+  /get_token_info:
+    post:
+      summary: Get stored Credit-Card token
+      operationId: post-get_token_info
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                client_id:
+                  type: integer
+                  description: Client ID
+                custom_client_id:
+                  type: string
+                  description: Custom Client ID (from external system)
+                vat_id:
+                  type: number
+                  description: Client VAT ID
+                email:
+                  type: string
+                  description: Client email
+                client_name:
+                  type: string
+                  description: Client name
+                cc_token_id:
+                  type: integer
+                  description: Stored Token ID
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/cc'
+          description: ''
+  /bill:
+    post:
+      summary: Charge Credit-Card
+      operationId: post-bill
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                client_id:
+                  type: integer
+                  description: Client ID
+                custom_client_id:
+                  type: string
+                  description: Custom Client ID (from external system)
+                vat_id:
+                  type: number
+                  description: Client VAT ID
+                  format: float
+                email:
+                  type: string
+                  description: Client email
+                client_name:
+                  type: string
+                  description: Client name
+                sum:
+                  type: number
+                  description: Amount to charge
+                  format: float
+                use_j5_if_available:
+                  type: boolean
+                  description: Use preapproved transaction (J5) if available
+                num_of_payments:
+                  type: integer
+                  description: Number of installments.
+                first_payment:
+                  type: number
+                  description: First payment amount. Applicable only if num_of_payments>1. If not passed - defaults to all installments being equal amount
+                  format: float
+                is_credit:
+                  type: boolean
+                  description: Is Credit? Applicable only if num_of_payments>1.
+                currency_id:
+                  type: integer
+                  description: Currency ID
+                currency_code:
+                  type: string
+                  description: Currency Code (3-letter code defined by ISO-4217)
+                currency:
+                  type: string
+                  description: 'Currency identified (either ID, or Code, or name)'
+                cc_token_id:
+                  type: integer
+                  description: Stored card token ID. -storage
+                cc_number:
+                  type: number
+                  description: Credit-Card number
+                cc_type:
+                  type: string
+                  description: Credit-Card type
+                cc_cvv:
+                  type: number
+                  description: CVV - Card Verification number (3 or 4 digits on the back of the card)
+                cc_validity:
+                  type: number
+                  description: Card validity month in either YYYY-MM or MMYY format
+                cc_holder_id:
+                  type: number
+                  description: Card holder ID number
+                cc_holder_name:
+                  type: string
+                  description: Card holder name
+                payment_description:
+                  type: string
+                  description: Payment description
+                is_test:
+                  type: boolean
+                  description: 'Is test transaction? If true, the system will not call credit-card providers and success/failure will depend only on card number validity.'
+              required:
+                - sum
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/cc'
+          description: ''
+  /transactions:
+    post:
+      summary: Search Credit-Card transactions
+      operationId: post-transactions
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                client_id:
+                  type: integer
+                  description: Client ID
+                custom_client_id:
+                  type: string
+                  description: Custom Client ID (from external system)
+                vat_id:
+                  type: number
+                  description: Client VAT ID
+                email:
+                  type: string
+                  description: Client email
+                client_name:
+                  type: string
+                  description: Client name
+                start_date:
+                  type: string
+                  description: Report start date
+                  format: date
+                end_date:
+                  type: string
+                  description: Report end date
+                  format: date
+                cc_last4:
+                  type: integer
+                  description: Last 4 digits of Credit-Card
+                confirmation_code:
+                  type: string
+                  description: Confirmation code
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/cc'
+          description: ''
+  /card_types:
+    post:
+      summary: Get Credit-Card types
+      operationId: post-card_types
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                list_type:
+                  type: string
+                  description: List type (array|object).
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/cc'
+          description: ''
+  /detect_cc_type:
+    post:
+      summary: Detect card type by number
+      operationId: post-detect_cc_type
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                cc_number:
+                  type: number
+                  description: Credit-Card number
+              required:
+                - cc_number
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/cc'
+          description: ''
+  /detect_cc_issuer:
+    post:
+      summary: Detect card type by number
+      operationId: post-detect_cc_issuer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                cc_number:
+                  type: number
+                  description: Credit-Card number
+              required:
+                - cc_number
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/cc'
+          description: ''
+  /validate_card_info:
+    post:
+      summary: Validate Credit-Card number and validity and discover card type
+      operationId: post-validate_card_info
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                cc_number:
+                  type: number
+                  description: Credit-Card number
+                cc_validity:
+                  type: number
+                  description: Card validity month in either YYYY-MM or MMYY format
+                cc_cvv:
+                  type: number
+                  description: Card verification code (CVV/CSC)
+                cc_holder_id:
+                  type: number
+                  description: Card holder VAT ID
+              required:
+                - cc_number
+                - cc_validity
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/cc'
+          description: ''
+  /validate_card_cvv:
+    post:
+      summary: Perform authorization transaction to check if the card can actually be charged
+      operationId: post-validate_card_cvv
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                cc_number:
+                  type: number
+                  description: Card number
+                cc_validity:
+                  type: number
+                  description: Card validity month in either YYYY-MM or MMYY format
+                cc_cvv:
+                  type: number
+                  description: Card verivication code (CVV/CSC)
+                cc_holder_id:
+                  type: number
+                  description: Card holder VAT ID
+              required:
+                - cc_number
+                - cc_validity
+                - cc_cvv
+                - cc_holder_id
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/cc'
+          description: ''
+  /validate_cc_number:
+    post:
+      summary: Validate Credit-Card number
+      operationId: post-validate_cc_number
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                cc_number:
+                  type: number
+                  description: Credit-Card number
+              required:
+                - cc_number
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/cc'
+          description: ''
+  /validate_cc_validity:
+    post:
+      summary: Validate Credit-Card validity
+      operationId: post-validate_cc_validity
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                cc_validity:
+                  type: number
+                  description: Card validity month in either YYYY-MM or MMYY format
+              required:
+                - cc_validity
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/cc'
+          description: ''

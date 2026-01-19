@@ -1,0 +1,840 @@
+openapi: 3.1.0
+info:
+  version: '1.0'
+  title: PayPages API
+servers:
+  - url: 'https://api.icount.co.il/api/v3.php/paypage'
+paths:
+  /get_list:
+    post:
+      summary: Get list of PayPages
+      operationId: post-get_list
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/paypage'
+  /info:
+    post:
+      summary: Get Paypage info
+      operationId: post-info
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                paypage_id:
+                  type: integer
+                  description: Paypage ID
+              required:
+                - paypage_id
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/paypage'
+  /create:
+    post:
+      summary: Create new Paypage
+      operationId: post-create
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                page_name:
+                  type: string
+                  description: Page name
+                page_name_en:
+                  type: string
+                  description: Page name (english). Defaults to page_name if not passed
+                header_text:
+                  type: string
+                  description: Page header text
+                header_text_en:
+                  type: string
+                  description: Page header text (english). Defaults to header_text if not passed
+                extended_description:
+                  type: string
+                  description: Page extended description
+                extended_description_en:
+                  type: string
+                  description: Page extended description (english). Defaults to extended_description if not passed
+                currency_id:
+                  type: integer
+                  description: Currency ID
+                items:
+                  type: array
+                  description: "Page items list. Optional if you plan to pass sale items dynamically\r\nSee also: paypage/generate_sale"
+                  items:
+                    $ref: '#/components/schemas/iCountPayPageItem'
+                tax_exempt:
+                  type: string
+                  description: 'true = always exempt, false = always taxable, "auto" = automatic based on buyer country.'
+                  format: mixed
+                require_id:
+                  type: boolean
+                  description: Require customer social ID?
+                require_fname_lname:
+                  type: boolean
+                  description: Require customer first and last name?
+                require_phone:
+                  type: boolean
+                  description: Require customer phone number?
+                request_address:
+                  type: boolean
+                  description: Request customer address? (add billing address fields to the page).
+                display_delivery_address:
+                  type: boolean
+                  description: Request shipping address? (add Shipping box to the page)
+                delivery_methods:
+                  type: array
+                  description: Delivery methods definition
+                  items:
+                    $ref: '#/components/schemas/iCountPayPageDeliveryMethod'
+                require_3ds:
+                  type: number
+                  description: Enable 3DS credit-card protection starting from this amount. 0 = 3DS disabled.
+                  format: float
+                captcha:
+                  type: boolean
+                  description: Enable CAPTCHA?
+                require_tos:
+                  type: boolean
+                  description: Require accepting TOS.
+                tos_link:
+                  type: string
+                  description: URL to Terms of Service document
+                max_payments:
+                  type: integer
+                  description: Maximum number of installments.
+                max_payments_advanced:
+                  type: string
+                  description: 'Advanced max-payments rules. If not empty, overrides max_payments. May contain one or more rules in format SUM:NUM (where SUM represents minimum sale amount and NUM - max installments for that amount), separated by semicolon (;)'
+                installments_interest_rate:
+                  type: string
+                  description: Rules to define additional fee for installments.
+                doctype:
+                  type: string
+                  description: Document type to issue.
+                user_id:
+                  type: integer
+                  description: User account used to issue documents.
+                income_type_id:
+                  type: integer
+                  description: Income type ID
+                client_type_id:
+                  type: integer
+                  description: Client type ID
+                page_lang:
+                  type: integer
+                  description: 'language {en|he|auto}. auto = Based on buyer country. Default: auto'
+                hide_lang:
+                  type: boolean
+                  description: Hide language picker from page.
+                hk_start_date:
+                  type: string
+                  description: Recurring billing start date.
+                  format: date
+                hk_billing_day:
+                  type: integer
+                  description: Recurring billing day of month.
+                hk_start_after:
+                  type: integer
+                  description: Recurring billing start after X days from subscribing.
+                hk_issue_every:
+                  type: integer
+                  description: Recurring billing frequency (months).
+                hk_payments:
+                  type: string
+                  description: 'Either int for preset number of payments, or string in form of X-Y where X is a minimum allowed payments and Y is a maximum. 0 means unlimited.'
+                  format: mixed
+                hk_payment_sum_calc:
+                  type: string
+                  description: "Recurring billing payment sum calculation mode.\r\nPossible values: FULL|PART.\r\nFULL means every individual payment is the whole items list (gross total will be the items total times number of payments).\r\nPART means the items list define the gross total and individual payment is the gross total divided by number of installments.\r\nApplicable only if the recurring profile is not infinite (neither min or max hk_payments is 0)."
+                custom_css:
+                  type: string
+                  description: Custom CSS for PayPage
+                success_url:
+                  type: string
+                  description: URL to redirect customer on success
+                ipn_url:
+                  type: string
+                  description: |-
+                    IPN (Instant Payment Notifications) URL for server-to-server updates.
+                    See also [paypage-ipn](https://apiv3.icount.co.il/docs/iCount/mob2fhh9epizj-ipn-message-post-data-fields)
+              required:
+                - page_name
+                - currency_id
+                - items
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/paypage'
+  /update:
+    post:
+      summary: Update Paypage
+      operationId: post-update
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                paypage_id:
+                  type: integer
+                  description: Paypage ID
+                page_name:
+                  type: string
+                  description: Page name
+                page_name_en:
+                  type: string
+                  description: Page name (english). Defaults to page_name if not passed
+                header_text:
+                  type: string
+                  description: Page header text
+                header_text_en:
+                  type: string
+                  description: Page header text (english). Defaults to header_text if not passed
+                extended_description:
+                  type: string
+                  description: Page extended description
+                extended_description_en:
+                  type: string
+                  description: Page extended description (english). Defaults to extended_description if not passed
+                currency_id:
+                  type: integer
+                  description: Currency ID
+                items:
+                  type: array
+                  description: Page items list
+                  items:
+                    $ref: '#/components/schemas/iCountPayPageItem'
+                tax_exempt:
+                  type: string
+                  description: 'true = always exempt, false = always taxable, "auto" = automatic based on buyer country.'
+                  format: mixed
+                require_id:
+                  type: boolean
+                  description: Require customer social ID?
+                require_fname_lname:
+                  type: boolean
+                  description: Require customer first and last name?
+                require_phone:
+                  type: boolean
+                  description: Require customer phone number?
+                request_address:
+                  type: boolean
+                  description: Request customer address? (add billing address fields to the page).
+                display_delivery_address:
+                  type: boolean
+                  description: Request shipping address? (add Shipping box to the page)
+                delivery_methods:
+                  type: array
+                  description: Delivery methods definition
+                  items:
+                    $ref: '#/components/schemas/iCountPayPageDeliveryMethod'
+                require_3ds:
+                  type: number
+                  description: Enable 3DS credit-card protection starting from this amount. 0 = 3DS disabled.
+                  format: float
+                captcha:
+                  type: boolean
+                  description: Enable CAPTCHA?
+                require_tos:
+                  type: boolean
+                  description: Require accepting TOS.
+                tos_link:
+                  type: string
+                  description: URL to Terms of Service document
+                max_payments:
+                  type: integer
+                  description: Maximum number of installments.
+                max_payments_advanced:
+                  type: string
+                  description: 'Advanced max-payments rules. If not empty, overrides max_payments. May contain one or more rules in format SUM:NUM (where SUM represents minimum sale amount and NUM - max installments for that amount), separated by semicolon (;)'
+                installments_interest_rate:
+                  type: string
+                  description: Rules to define additional fee for installments.
+                doctype:
+                  type: string
+                  description: Document type to issue.
+                user_id:
+                  type: integer
+                  description: User account used to issue documents.
+                income_type_id:
+                  type: integer
+                  description: Income type ID
+                client_type_id:
+                  type: integer
+                  description: Client type ID
+                page_lang:
+                  type: integer
+                  description: 'language {en|he|auto}. auto = Based on buyer country. Default: auto'
+                hide_lang:
+                  type: boolean
+                  description: Hide language picker from page.
+                hk_start_date:
+                  type: string
+                  description: Recurring billing start date.
+                  format: date
+                hk_billing_day:
+                  type: integer
+                  description: Recurring billing day of month.
+                hk_start_after:
+                  type: integer
+                  description: Recurring billing start after X days from subscribing.
+                hk_issue_every:
+                  type: integer
+                  description: Recurring billing frequency (months).
+                hk_payments:
+                  type: string
+                  description: 'Either int for preset number of payments, or string in form of X-Y where X is a minimum allowed payments and Y is a maximum. 0 means unlimited.'
+                  format: mixed
+                hk_payment_sum_calc:
+                  type: string
+                  description: "Recurring billing payment sum calculation mode.\r\nPossible values: FULL|PART.\r\nFULL means every individual payment is the whole items list (gross total will be the items total times number of payments).\r\nPART means the items list define the gross total and individual payment is the gross total divided by number of installments.\r\nApplicable only if the recurring profile is not infinite (neither min or max hk_payments is 0)."
+                custom_css:
+                  type: string
+                  description: Custom CSS for PayPage
+                success_url:
+                  type: string
+                  description: URL to redirect customer on success
+                ipn_url:
+                  type: string
+                  description: |-
+                    IPN (Instant Payment Notifications) URL for server-to-server updates.
+                    See also [paypage-ipn](https://apiv3.icount.co.il/docs/iCount/mob2fhh9epizj-ipn-message-post-data-fields)
+              required:
+                - paypage_id
+                - currency_id
+                - items
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/paypage'
+  /add_image:
+    post:
+      summary: Add image to PayPage
+      operationId: post-add_image
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                paypage_id:
+                  type: integer
+                  description: PayPage ID
+                file_id:
+                  type: integer
+                  description: Image file ID (if already exists in file_manager module). The file must NOT be associated with any other entity
+                url:
+                  type: string
+                  description: Image URL
+              required:
+                - paypage_id
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/paypage'
+  /delete_image:
+    post:
+      summary: Delete image from PayPage
+      operationId: post-delete_image
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                paypage_id:
+                  type: integer
+                  description: PayPage ID
+                image_id:
+                  type: integer
+                  description: Image file ID (if already exists in file_manager module). The file must NOT be associated with any other entity
+              required:
+                - paypage_id
+                - image_id
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/paypage'
+  /delete:
+    post:
+      summary: Delete Paypage
+      operationId: post-delete
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                paypage_id:
+                  type: integer
+                  description: Paypage ID
+              required:
+                - paypage_id
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/paypage'
+  /enable:
+    post:
+      summary: Enable Paypage
+      operationId: post-enable
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                paypage_id:
+                  type: integer
+                  description: Paypage ID
+              required:
+                - paypage_id
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/paypage'
+  /disable:
+    post:
+      summary: Disable Paypage
+      operationId: post-disable
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                paypage_id:
+                  type: integer
+                  description: Paypage ID
+              required:
+                - paypage_id
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/paypage'
+  /generate_sale:
+    post:
+      summary: Generate sale
+      description: Generated sale URL expires after 2 hours
+      operationId: post-generate_sale
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sid:
+                  type: string
+                  description: Session ID
+                cid:
+                  type: string
+                  description: Company identifier
+                user:
+                  type: string
+                  description: Username
+                pass:
+                  type: string
+                  description: Password
+                paypage_id:
+                  type: integer
+                  description: Paypage ID
+                currency_id:
+                  type: integer
+                  description: Currency ID
+                currency_code:
+                  type: string
+                  description: Currency Code (ISO-4217)
+                items:
+                  type: array
+                  description: Items list
+                  items:
+                    $ref: '#/components/schemas/iCountPayPageItem'
+                sum:
+                  type: number
+                  description: Sale item price
+                  format: float
+                description:
+                  type: string
+                  description: Sale item description
+                client_type_id:
+                  type: integer
+                  description: "Client type ID. Applicable if sale will create new customer\r\nSee also: client/types"
+                income_type_id:
+                  type: integer
+                  description: "Income type ID\r\nSee also: income_type/get_list"
+                vat_id:
+                  type: string
+                  description: Customer VAT ID
+                client_name:
+                  type: string
+                  description: Customer full name / company name (name on invoice)
+                first_name:
+                  type: string
+                  description: Customer first name
+                last_name:
+                  type: string
+                  description: Customer last name
+                email:
+                  type: string
+                  description: Customer contact email
+                phone:
+                  type: string
+                  description: Customer contact phone
+                country_code:
+                  type: string
+                  description: 'Customer address: country (2-letter code)'
+                city:
+                  type: string
+                  description: 'Customer address: city'
+                zip:
+                  type: string
+                  description: 'Customer address: zip code'
+                street:
+                  type: string
+                  description: 'Customer address: street name'
+                street_num:
+                  type: string
+                  description: 'Customer address: street number'
+                delivery_methods:
+                  type: array
+                  description: Delivery methods definition
+                  items:
+                    $ref: '#/components/schemas/iCountPayPageDeliveryMethod'
+                max_payments:
+                  type: integer
+                  description: Maximum number of installments. 0 = no installments.
+                max_payments_advanced:
+                  type: string
+                  description: 'Advanced max-payments rules. If passed, overrides max_payments. May contain one or more rules in format SUM:NUM (where SUM represents minimum sale amount and NUM - max installments for that amount), separated by semicolon (;).'
+                hk_start_date:
+                  type: string
+                  description: Recurring billing start date.
+                  format: date
+                hk_billing_day:
+                  type: integer
+                  description: Recurring billing day of month.
+                hk_start_after:
+                  type: integer
+                  description: Recurring billing start after X days from subscribing.
+                hk_issue_every:
+                  type: integer
+                  description: Recurring billing frequency (months).
+                hk_payments:
+                  type: string
+                  description: 'Either int for preset number of payments, or string in form of X-Y where X is a minimum allowed payments and Y is a maximum. 0 means unlimited.'
+                  format: mixed
+                hk_payment_sum_calc:
+                  type: string
+                  description: "Recurring billing payment sum calculation mode.\r\nPossible values: FULL|PART.\r\nFULL means every individual payment is the whole items list (gross total will be the items total times number of payments).\r\nPART means the items list define the gross total and individual payment is the gross total divided by number of installments.\r\nApplicable only if the recurring profile is not infinite (neither min or max hk_payments is 0)."
+                page_lang:
+                  type: integer
+                  description: 'Default page language {en|he|auto}. auto = Based on buyer country.'
+                success_url:
+                  type: string
+                  description: URL to redirect customer on success
+                failure_url:
+                  type: string
+                  description: URL to redirect customer on failure
+                cancel_url:
+                  type: string
+                  description: 'URL to redirect customer on cancellation. If provided, this will add Cancel button to the page'
+                ipn_url:
+                  type: string
+                  description: URL for server-to-server IPN requests upon successful billing
+                is_iframe:
+                  type: boolean
+                  description: Pass is_iframe=1 if you intend to perform the sale in iframe
+                utm_campaign:
+                  type: string
+                  description: Campaign name
+                utm_source:
+                  type: string
+                  description: Campaign source
+                utm_medium:
+                  type: string
+                  description: Campaign medium
+                utm_term:
+                  type: string
+                  description: Campaign term
+                utm_content:
+                  type: string
+                  description: Campaign content
+              required:
+                - paypage_id
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  api:
+                    type: object
+                    properties:
+                      version:
+                        type: integer
+                      tz:
+                        type: integer
+                      ts:
+                        type: number
+                      lang:
+                        type: string
+                      rid:
+                        type: integer
+                      module:
+                        type: string
+                      method:
+                        type: string
+                  status:
+                    type: boolean
+                  reason:
+                    type: string
+                  paypage_id:
+                    type: string
+                  sale_uniqid:
+                    type: string
+                  sale_sid:
+                    type: string
+                  sale_url:
+                    type: string
+                x-examples:
+                  Example 1:
+                    api:
+                      version: 3
+                      tz: 3
+                      ts: 1713181072.8257
+                      lang: he
+                      rid: 992582208
+                      module: paypage
+                      method: generate_sale
+                    status: true
+                    reason: OK
+                    paypage_id: '16'
+                    sale_uniqid: c110144163p16u661d1
+                    sale_sid: bputi9ndsvrr2p48lbn4leh2h1
+                    sale_url: 'https://app.icount.co.il/m/gen/QmRPb3ZHMXptSThrNUlIbnpBQWx0bFBjSzBMWmNOZ1k0MGxnbzNTMDYzVGZLamNYSXBWb3YvYVRJZklGMmRFbjhUdGUzMDJmZExmZU01cGNMK1N3SHc9PQ=='
+              examples:
+                Example 1:
+                  value:
+                    api:
+                      version: 3
+                      tz: 3
+                      ts: 1713181072.8257
+                      lang: he
+                      rid: 992582208
+                      module: paypage
+                      method: generate_sale
+                    status: true
+                    reason: OK
+                    paypage_id: '16'
+                    sale_uniqid: c110144163p16u661d1
+                    sale_sid: bputi9ndsvrr2p48lbn4leh2h1
+                    sale_url: 'https://app.icount.co.il/m/gen/xxxxxxx'
+      servers:
+        - url: 'https://api.icount.co.il/api/v3.php/paypage'
+components:
+  schemas:
+    iCountPayPageItem:
+      type: object
+      title: PayPage item information
+      properties:
+        id:
+          type: integer
+          description: Item ID
+        inventory_item_id:
+          type: integer
+          description: Inventory item ID (if linked to inventory)
+        sku:
+          type: string
+          description: Inventory item SKU
+        description:
+          type: string
+          description: Item description (all languages)
+        description_en:
+          type: string
+          description: Item description (english)
+        description_he:
+          type: string
+          description: Item description (hebrew)
+        unitprice:
+          type: number
+          description: 'Item sale price excluding taxes. If both unitprice_incl and unitprice are specified, unitprice_incltaxes precedence.'
+          format: float
+        unitprice_incl:
+          type: number
+          description: 'Item sale price including taxes. If both unitprice_incl and unitprice are specified, unitprice_incltaxes precedence.'
+          format: float
+        orig_price:
+          type: number
+          description: 'Original price. If provided, it will appear on the page next to current price striked out'
+          format: float
+        quantity:
+          type: number
+          description: Item quantity. If min_quantity and max_quantity provided they override this setting
+          format: float
+        min_quantity:
+          type: number
+          description: Item minimum quantity for sale.
+          format: float
+        max_quantity:
+          type: number
+          description: Item maximum quantity for sale.
+          format: float
+        default_quantity:
+          type: number
+          description: Item default quantity.
+          format: float
+        quantity_step:
+          type: number
+          description: Item quantity.
+          format: float
+    iCountPayPageDeliveryMethod:
+      type: object
+      title: Delivery method
+      properties:
+        he:
+          type: string
+          description: Delivery method name (hebrew)
+        en:
+          type: string
+          description: Delivery method name (english)
+        price:
+          type: number
+          description: Delivery method price.
+          format: float
+        self_pickup:
+          type: boolean
+          description: Is this a self-pickup option?
+      required:
+        - he
+        - en
