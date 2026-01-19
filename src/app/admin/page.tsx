@@ -2,13 +2,16 @@
 
 import { useState, useEffect, Fragment, useMemo } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Loader2, Plus, LogOut, User, ChevronDown, Sun, Moon, ChevronLeft, ChevronRight, Calendar, Users, PartyPopper, Gamepad2, Search, Trash2, Settings, Sliders } from 'lucide-react'
+import { Loader2, ChevronLeft, ChevronRight, Calendar, Settings, Sliders } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useBookings, type BookingWithSlots, type CreateBookingData } from '@/hooks/useBookings'
 import { BookingModal } from './components/BookingModal'
 import { AdminHeader } from './components/AdminHeader'
 import { ConfirmationModal } from './components/ConfirmationModal'
 import { SettingsModal } from './components/SettingsModal'
+import { AgendaStats } from './components/AgendaStats'
+import { GridSettingsPopup } from './components/GridSettingsPopup'
+import { AgendaSearch } from './components/AgendaSearch'
 import { useBranches } from '@/hooks/useBranches'
 import { useAuth } from '@/hooks/useAuth'
 import { useLaserRooms } from '@/hooks/useLaserRooms'
@@ -2060,153 +2063,22 @@ export default function AdminPage() {
       {/* Contenu principal */}
       <main className="p-6">
         {/* Barre de recherche */}
-        <div className={`${isDark ? 'bg-gray-800' : 'bg-white'} rounded-xl p-6 border ${isDark ? 'border-gray-700' : 'border-gray-200'} mb-6`}>
-          <div className="flex items-start gap-4">
-            <div className="flex-1 relative">
-              <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 ${isDark ? 'text-gray-400' : 'text-gray-600'}`} />
-              <input
-                type="text"
-                value={agendaSearchQuery}
-                onChange={(e) => setAgendaSearchQuery(e.target.value)}
-                placeholder={t('admin.agenda.search_placeholder')}
-                className={`w-full pl-10 pr-4 py-3 ${isDark ? 'bg-gray-700 border-gray-600 text-white' : 'bg-gray-50 border-gray-300 text-gray-900'} border rounded-lg text-base placeholder-gray-500 focus:border-blue-500 focus:outline-none`}
-              />
-            </div>
-            
-            {/* Liste des résultats de recherche */}
-            {agendaSearchQuery && searchResults.length > 0 && (
-              <div className={`w-96 ${isDark ? 'bg-gray-800' : 'bg-white'} border ${isDark ? 'border-gray-700' : 'border-gray-200'} rounded-lg shadow-xl max-h-96 overflow-y-auto`}>
-                <div className={`px-3 py-2 border-b ${isDark ? 'border-gray-700' : 'border-gray-200'} ${isDark ? 'text-white' : 'text-gray-900'} font-semibold text-sm`}>
-                  {searchResults.length} {t('admin.agenda.results_found')}
-                </div>
-                <div className="divide-y divide-gray-700">
-                  {searchResults.map((booking) => {
-                    const bookingDate = new Date(booking.start_datetime)
-                    const dateFormatted = bookingDate.toLocaleDateString(getDateLocale(), {
-                      day: '2-digit',
-                      month: 'short',
-                      year: 'numeric'
-                    })
-                    const timeFormatted = `${String(bookingDate.getHours()).padStart(2, '0')}:${String(bookingDate.getMinutes()).padStart(2, '0')}`
-                    const contactData = getContactDisplayData(booking)
-                    const customerName = `${contactData.firstName || ''} ${contactData.lastName || ''}`.trim() || t('admin.agenda.booking.no_name')
-                    
-                    return (
-                      <button
-                        key={booking.id}
-                        type="button"
-                        onClick={() => {
-                          setSelectedDate(bookingDate)
-                          setCalendarMonth(bookingDate.getMonth())
-                          setCalendarYear(bookingDate.getFullYear())
-                          setAgendaSearchQuery('')
-                          // Ouvrir le modal de la réservation
-                          openBookingModal(undefined, undefined, booking)
-                        }}
-                        className={`w-full text-left px-3 py-2 ${isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-50'} transition-colors`}
-                      >
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="flex-1 min-w-0">
-                            <div className={`font-semibold ${isDark ? 'text-white' : 'text-gray-900'} truncate`}>
-                              {customerName}
-                            </div>
-                            <div className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'} mt-0.5`}>
-                              {dateFormatted} à {timeFormatted}
-                            </div>
-                            {booking.reference_code && (
-                              <div className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'} mt-0.5`}>
-                                {t('admin.agenda.ref')}: {booking.reference_code}
-                              </div>
-                            )}
-                          </div>
-                          <div className="flex-shrink-0">
-                            <div
-                              className="w-3 h-3 rounded-full"
-                              style={{ backgroundColor: booking.status === 'CANCELLED' ? '#ef4444' : (booking.color || (booking.type === 'EVENT' ? '#22c55e' : '#3b82f6')) }}
-                            />
-                          </div>
-                        </div>
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-            )}
-            
-            {/* Message si aucun résultat */}
-            {agendaSearchQuery && searchResults.length === 0 && (
-              <div className={`w-96 ${isDark ? 'bg-gray-800' : 'bg-white'} border ${isDark ? 'border-gray-700' : 'border-gray-200'} rounded-lg shadow-xl px-4 py-3 ${isDark ? 'text-gray-400' : 'text-gray-600'} text-sm`}>
-                {t('admin.agenda.no_results')}
-              </div>
-            )}
-          </div>
-        </div>
+        <AgendaSearch
+          searchQuery={agendaSearchQuery}
+          onSearchChange={setAgendaSearchQuery}
+          searchResults={searchResults}
+          onSelectBooking={(booking, bookingDate) => {
+            setSelectedDate(bookingDate)
+            setCalendarMonth(bookingDate.getMonth())
+            setCalendarYear(bookingDate.getFullYear())
+            setAgendaSearchQuery('')
+            openBookingModal(undefined, undefined, booking)
+          }}
+          isDark={isDark}
+        />
 
         {/* Statistiques Agenda (Jour, Semaine, Mois) */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          {/* Jour */}
-          <div className={`${isDark ? 'bg-gray-800' : 'bg-white'} rounded-xl p-4 border ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
-            <div className={`${isDark ? 'text-gray-400' : 'text-gray-600'} text-base mb-2`}>
-              {stats.day.dateStr}
-            </div>
-            <div className="space-y-1">
-              <div className="flex items-center justify-between">
-                <span className={`${isDark ? 'text-gray-400' : 'text-gray-600'} text-sm`}>{t('admin.agenda.stats.with_room')}:</span>
-                <span className={`text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>{stats.day.withRoom}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className={`${isDark ? 'text-gray-400' : 'text-gray-600'} text-sm`}>{t('admin.agenda.stats.without_room')}:</span>
-                <span className={`text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>{stats.day.withoutRoom}</span>
-              </div>
-              <div className={`flex items-center justify-between pt-2 border-t ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
-                <span className={`${isDark ? 'text-gray-400' : 'text-gray-600'} text-sm font-semibold`}>{t('admin.agenda.stats.total_people')}:</span>
-                <span className={`text-2xl font-bold ${isDark ? 'text-blue-400' : 'text-blue-600'}`}>{stats.day.totalParticipants}</span>
-              </div>
-            </div>
-          </div>
-          
-          {/* Semaine */}
-          <div className={`${isDark ? 'bg-gray-800' : 'bg-white'} rounded-xl p-4 border ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
-            <div className={`${isDark ? 'text-gray-400' : 'text-gray-600'} text-base mb-2`}>
-              {t('admin.agenda.week')} ({stats.week.period})
-            </div>
-            <div className="space-y-1">
-              <div className="flex items-center justify-between">
-                <span className={`${isDark ? 'text-gray-400' : 'text-gray-600'} text-sm`}>{t('admin.agenda.stats.with_room')}:</span>
-                <span className={`text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>{stats.week.withRoom}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className={`${isDark ? 'text-gray-400' : 'text-gray-600'} text-sm`}>{t('admin.agenda.stats.without_room')}:</span>
-                <span className={`text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>{stats.week.withoutRoom}</span>
-              </div>
-              <div className={`flex items-center justify-between pt-2 border-t ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
-                <span className={`${isDark ? 'text-gray-400' : 'text-gray-600'} text-sm font-semibold`}>{t('admin.agenda.stats.total_people')}:</span>
-                <span className={`text-2xl font-bold ${isDark ? 'text-blue-400' : 'text-blue-600'}`}>{stats.week.totalParticipants}</span>
-              </div>
-            </div>
-          </div>
-          
-          {/* Mois */}
-          <div className={`${isDark ? 'bg-gray-800' : 'bg-white'} rounded-xl p-4 border ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
-            <div className={`${isDark ? 'text-gray-400' : 'text-gray-600'} text-base mb-2`}>
-              {t('admin.agenda.month')} ({stats.month.period})
-            </div>
-            <div className="space-y-1">
-              <div className="flex items-center justify-between">
-                <span className={`${isDark ? 'text-gray-400' : 'text-gray-600'} text-sm`}>{t('admin.agenda.stats.with_room')}:</span>
-                <span className={`text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>{stats.month.withRoom}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className={`${isDark ? 'text-gray-400' : 'text-gray-600'} text-sm`}>{t('admin.agenda.stats.without_room')}:</span>
-                <span className={`text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>{stats.month.withoutRoom}</span>
-              </div>
-              <div className={`flex items-center justify-between pt-2 border-t ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
-                <span className={`${isDark ? 'text-gray-400' : 'text-gray-600'} text-sm font-semibold`}>{t('admin.agenda.stats.total_people')}:</span>
-                <span className={`text-2xl font-bold ${isDark ? 'text-blue-400' : 'text-blue-600'}`}>{stats.month.totalParticipants}</span>
-              </div>
-            </div>
-          </div>
-        </div>
+        <AgendaStats stats={stats} isDark={isDark} />
 
         {/* Navigation de date */}
         <div className="flex items-center justify-between mb-6 gap-4">
@@ -3123,177 +2995,16 @@ export default function AdminPage() {
       </main>
 
       {/* Popup Paramètres de grille - petit popup non-bloquant */}
-      {showGridSettingsModal && (
-        <>
-          {/* Zone cliquable transparente pour fermer */}
-          <div 
-            className="fixed inset-0 z-40"
-            onClick={() => setShowGridSettingsModal(false)}
-          />
-          <div className="fixed top-20 left-4 z-50 w-80">
-            <div className={`rounded-xl shadow-2xl border-2 ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-300'}`}>
-              <div className="p-4">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                    {t('admin.agenda.settings.settings_title')}
-                  </h3>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      setShowGridSettingsModal(false)
-                    }}
-                    className={`p-1 rounded-lg ${isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                </div>
-              
-              {/* Largeur ACTIVE */}
-              <div className="mb-3">
-                <label className={`block text-xs font-medium mb-1 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                  {t('admin.agenda.settings.active_width')}: {gridWidths.active}%
-                </label>
-                <input
-                  type="range"
-                  min="5"
-                  max="500"
-                  step="5"
-                  value={gridWidths.active}
-                  onChange={(e) => {
-                    const newValue = parseInt(e.target.value)
-                    setGridWidths(prev => ({ ...prev, active: newValue }))
-                    // Sauvegarde automatique
-                    if (selectedBranchId) {
-                      localStorage.setItem(`gridSettings_${selectedBranchId}`, JSON.stringify({ 
-                        gridWidths: { ...gridWidths, active: newValue }, 
-                        rowHeight 
-                      }))
-                    }
-                  }}
-                  className="w-full h-2 bg-blue-200 rounded-lg appearance-none cursor-pointer"
-                />
-                <div className={`flex justify-between text-xs mt-1 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
-                  <span>5%</span>
-                  <span>100% ({t('admin.agenda.settings.normal')})</span>
-                  <span>500%</span>
-                </div>
-              </div>
-
-              {/* Largeur LASER */}
-              <div className="mb-3">
-                <label className={`block text-xs font-medium mb-1 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                  {t('admin.agenda.settings.laser_width')}: {gridWidths.laser}%
-                </label>
-                <input
-                  type="range"
-                  min="5"
-                  max="800"
-                  step="5"
-                  value={gridWidths.laser}
-                  onChange={(e) => {
-                    const newValue = parseInt(e.target.value)
-                    setGridWidths(prev => ({ ...prev, laser: newValue }))
-                    // Sauvegarde automatique
-                    if (selectedBranchId) {
-                      localStorage.setItem(`gridSettings_${selectedBranchId}`, JSON.stringify({ 
-                        gridWidths: { ...gridWidths, laser: newValue }, 
-                        rowHeight 
-                      }))
-                    }
-                  }}
-                  className="w-full h-2 bg-purple-200 rounded-lg appearance-none cursor-pointer"
-                />
-                <div className={`flex justify-between text-xs mt-1 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
-                  <span>5%</span>
-                  <span>100% ({t('admin.agenda.settings.normal')})</span>
-                  <span>800%</span>
-                </div>
-              </div>
-
-              {/* Largeur ROOMS */}
-              <div className="mb-3">
-                <label className={`block text-xs font-medium mb-1 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                  {t('admin.agenda.settings.rooms_width')}: {gridWidths.rooms}%
-                </label>
-                <input
-                  type="range"
-                  min="5"
-                  max="500"
-                  step="5"
-                  value={gridWidths.rooms}
-                  onChange={(e) => {
-                    const newValue = parseInt(e.target.value)
-                    setGridWidths(prev => ({ ...prev, rooms: newValue }))
-                    // Sauvegarde automatique
-                    if (selectedBranchId) {
-                      localStorage.setItem(`gridSettings_${selectedBranchId}`, JSON.stringify({ 
-                        gridWidths: { ...gridWidths, rooms: newValue }, 
-                        rowHeight 
-                      }))
-                    }
-                  }}
-                  className="w-full h-2 bg-green-200 rounded-lg appearance-none cursor-pointer"
-                />
-                <div className={`flex justify-between text-xs mt-1 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
-                  <span>5%</span>
-                  <span>100% ({t('admin.agenda.settings.normal')})</span>
-                  <span>500%</span>
-                </div>
-              </div>
-
-              {/* Hauteur des lignes */}
-              <div className="mb-4">
-                <label className={`block text-xs font-medium mb-1 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                  {t('admin.agenda.settings.row_height')}: {rowHeight}px
-                </label>
-                <input
-                  type="range"
-                  min="10"
-                  max="50"
-                  value={rowHeight}
-                  onChange={(e) => {
-                    const newValue = parseInt(e.target.value)
-                    setRowHeight(newValue)
-                    // Sauvegarde automatique
-                    if (selectedBranchId) {
-                      localStorage.setItem(`gridSettings_${selectedBranchId}`, JSON.stringify({ 
-                        gridWidths, 
-                        rowHeight: newValue 
-                      }))
-                    }
-                  }}
-                  className="w-full h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer"
-                />
-              </div>
-              
-              {/* Bouton Réinitialiser */}
-              <button
-                onClick={() => {
-                  setGridWidths({ active: 100, laser: 100, rooms: 100 })
-                  setRowHeight(20)
-                  // Sauvegarder les valeurs par défaut
-                  if (selectedBranchId) {
-                    localStorage.setItem(`gridSettings_${selectedBranchId}`, JSON.stringify({ 
-                      gridWidths: { active: 100, laser: 100, rooms: 100 }, 
-                      rowHeight: 20 
-                    }))
-                  }
-                }}
-                className={`w-full px-3 py-2 rounded-lg text-sm ${
-                  isDark
-                    ? 'bg-gray-700 hover:bg-gray-600 text-gray-300'
-                    : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
-                }`}
-              >
-                {t('admin.agenda.settings.reset')}
-              </button>
-            </div>
-          </div>
-        </div>
-        </>
-      )}
+      <GridSettingsPopup
+        isOpen={showGridSettingsModal}
+        onClose={() => setShowGridSettingsModal(false)}
+        gridWidths={gridWidths}
+        setGridWidths={setGridWidths}
+        rowHeight={rowHeight}
+        setRowHeight={setRowHeight}
+        selectedBranchId={selectedBranchId}
+        isDark={isDark}
+      />
 
       {/* Modal Paramètres de la branche */}
       {showBranchSettingsModal && selectedBranchId && (

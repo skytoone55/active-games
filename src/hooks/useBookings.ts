@@ -150,20 +150,28 @@ export function useBookings(branchId: string | null, date?: string) {
 
       // Créer un map des contacts par booking_id
       const contactsByBooking = new Map<string, { primary: Contact | null; all: Contact[] }>()
-      
-      bookingContactsData?.forEach((bc: any) => {
+
+      interface BookingContactRow {
+        booking_id: string
+        contact_id: string
+        is_primary: boolean
+        role: string | null
+        contact: Contact | null
+      }
+
+      (bookingContactsData as BookingContactRow[] | null)?.forEach((bc) => {
         if (!bc.contact) return
-        
-        const contact = bc.contact as Contact
+
+        const contact = bc.contact
         const bookingId = bc.booking_id
-        
+
         if (!contactsByBooking.has(bookingId)) {
           contactsByBooking.set(bookingId, { primary: null, all: [] })
         }
-        
+
         const contacts = contactsByBooking.get(bookingId)!
         contacts.all.push(contact)
-        
+
         if (bc.is_primary) {
           contacts.primary = contact
         }
