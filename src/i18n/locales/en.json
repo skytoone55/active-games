@@ -325,7 +325,9 @@
       "subtitle": "Thank you for your reservation",
       "reservation_number": "Reservation Number",
       "back_to_site": "Back to Site",
-      "finished": "Finished"
+      "finished": "Finished",
+      "download_reservation": "Download Reservation",
+      "download_order": "Download Order"
     },
     "arrival_note": "Please arrive at least 10 minutes before your scheduled time",
     "summary": {
@@ -937,7 +939,10 @@
         "active": "Active Games",
         "laser": "Laser",
         "rooms": "Birthday Rooms",
-        "pricing": "Pricing"
+        "pricing": "Pricing",
+        "hours": "Opening Hours",
+        "capacity": "Capacity",
+        "notifications": "Notifications"
       },
       "general": {
         "branch_name": "Branch name",
@@ -982,16 +987,58 @@
         "weight_bold": "Bold"
       },
       "success": "Settings saved successfully",
-      "error": "Error saving settings"
+      "error": "Error saving settings",
+      "hours": {
+        "title": "Opening Hours",
+        "day": "Day",
+        "open": "Open",
+        "close": "Close",
+        "closed": "Closed",
+        "days": {
+          "sunday": "Sunday",
+          "monday": "Monday",
+          "tuesday": "Tuesday",
+          "wednesday": "Wednesday",
+          "thursday": "Thursday",
+          "friday": "Friday",
+          "saturday": "Saturday"
+        }
+      },
+      "capacity": {
+        "title": "Capacity Settings",
+        "max_concurrent_players": "Max concurrent players",
+        "slot_duration": "Slot duration (minutes)",
+        "game_duration": "Game duration (minutes)",
+        "buffer_time": "Buffer time (minutes)"
+      },
+      "notifications": {
+        "title": "Notification Settings",
+        "email_notifications": "Email notifications",
+        "sms_notifications": "SMS notifications",
+        "booking_confirmation": "Booking confirmation",
+        "booking_reminder": "Booking reminder",
+        "booking_cancellation": "Booking cancellation"
+      }
     },
     "contact_modal": {
       "title": "Contact details",
+      "title_new": "New contact",
+      "title_edit": "Edit contact",
+      "title_view": "Contact details",
       "edit_title": "Edit contact",
       "create_title": "New contact",
       "full_name": "Full name",
       "phone": "Phone",
       "email": "Email",
       "notes": "Client notes",
+      "fields": {
+        "first_name": "First name",
+        "last_name": "Last name",
+        "phone": "Phone",
+        "email": "Email",
+        "notes": "Notes",
+        "source": "Source"
+      },
       "statistics": {
         "title": "Statistics",
         "total_bookings": "Total bookings",
@@ -1002,7 +1049,17 @@
       },
       "history": {
         "title": "Booking history",
-        "no_bookings": "No bookings"
+        "no_bookings": "No bookings",
+        "total_bookings": "Total bookings",
+        "total_participants": "Total participants",
+        "last_visit": "Last visit"
+      },
+      "validation": {
+        "required_first_name": "First name is required",
+        "required_phone": "Phone is required",
+        "invalid_phone": "Invalid phone number",
+        "invalid_email": "Invalid email",
+        "phone_exists": "This phone number already exists"
       }
     },
     "confirmation_modal": {
@@ -1067,10 +1124,48 @@
     },
     "validation": {
       "required": "This field is required",
+      "email": "Please enter a valid email address",
       "email_invalid": "Invalid email address",
+      "phone": "Please enter a valid phone number",
       "phone_invalid": "Invalid phone number (format: 05XXXXXXXX)",
-      "min_length": "Minimum {{min}} characters",
-      "max_length": "Maximum {{max}} characters"
+      "min_length": "Must be at least {{min}} characters",
+      "max_length": "Must be at most {{max}} characters",
+      "min_value": "Must be at least {{min}}",
+      "max_value": "Must be at most {{max}}",
+      "date_past": "Date must be in the future",
+      "date_future": "Date must be in the past",
+      "passwords_match": "Passwords must match"
+    },
+    "notifications": {
+      "booking_created": "Booking created successfully",
+      "booking_updated": "Booking updated successfully",
+      "booking_deleted": "Booking deleted successfully",
+      "booking_confirmed": "Booking confirmed successfully",
+      "booking_cancelled": "Booking cancelled successfully",
+      "contact_created": "Contact created successfully",
+      "contact_updated": "Contact updated successfully",
+      "contact_deleted": "Contact deleted successfully",
+      "user_created": "User created successfully",
+      "user_updated": "User updated successfully",
+      "user_deleted": "User deleted successfully",
+      "settings_saved": "Settings saved successfully",
+      "order_confirmed": "Order confirmed",
+      "order_rejected": "Order rejected"
+    },
+    "time": {
+      "just_now": "Just now",
+      "minutes_ago": "{{count}} minutes ago",
+      "hours_ago": "{{count}} hours ago",
+      "days_ago": "{{count}} days ago",
+      "weeks_ago": "{{count}} weeks ago"
+    },
+    "pagination": {
+      "page": "Page",
+      "of": "of",
+      "items_per_page": "Items per page",
+      "showing": "Showing",
+      "to": "to",
+      "entries": "entries"
     },
     "logs": {
       "title": "Activity Logs",
@@ -1255,6 +1350,7 @@
       "access_denied_message": "Only super administrators can manage permissions.",
       "info_title": "Granular Permission Control",
       "info_description": "Super Admin permissions are locked and cannot be modified. Branch Admin and Agent permissions can be customized. Changes take effect immediately.",
+      "no_roles": "No roles defined",
       "super_admin_locked": "Super Admin permissions cannot be modified",
       "locked": "Locked",
       "all_permissions_locked": "All permissions locked",

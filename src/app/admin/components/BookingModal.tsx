@@ -187,6 +187,7 @@ export function BookingModal({
   const [laserAllocationMode, setLaserAllocationMode] = useState<'auto' | 'petit' | 'grand' | 'maxi'>('auto') // Mode d'allocation manuelle pour LASER
   const [showSpareVestsPopup, setShowSpareVestsPopup] = useState(false) // Popup pour demander si spare vests disponibles
   const [pendingSpareVestsData, setPendingSpareVestsData] = useState<{ currentUsage: number; maxVests: number; spareVests: number; totalVests: number } | null>(null) // Données pour le popup spare vests
+  const [spareVestsAuthorized, setSpareVestsAuthorized] = useState(false) // Flag pour bypasser la vérification des vests après autorisation
   const [gameDurations, setGameDurations] = useState<string[]>(['30', '30']) // Durée de chaque jeu (en minutes)
   const [gamePauses, setGamePauses] = useState<number[]>([]) // Pause après chaque jeu (en minutes)
   const [laserRoomIds, setLaserRoomIds] = useState<string[]>([]) // IDs des salles laser pour chaque jeu (si LASER)
@@ -421,6 +422,8 @@ export function BookingModal({
     prevIsOpenRef.current = isOpen
     
     if (justOpened) {
+      // Reset spare vests authorization flag
+      setSpareVestsAuthorized(false)
       // Initialiser la branche de la réservation
       const initialBranchId = editingBooking ? (editingBooking.branch_id || branchId) : branchId
       setBookingBranchId(initialBranchId)
@@ -1683,8 +1686,8 @@ export function BookingModal({
       return
     }
 
-    // Validation Laser : contrainte hard vests
-    if (bookingType === 'GAME' && gameArea === 'LASER' && checkLaserVestsConstraint) {
+    // Validation Laser : contrainte hard vests (skip si spare vests déjà autorisées)
+    if (bookingType === 'GAME' && gameArea === 'LASER' && checkLaserVestsConstraint && !spareVestsAuthorized) {
       const gameStartDate = new Date(localDate)
       gameStartDate.setHours(hour, minute, 0, 0)
       const { endHour: gameEndHour, endMinute: gameEndMinute } = calculateGameEndTime()
@@ -4095,10 +4098,12 @@ export function BookingModal({
                   onClick={() => {
                     setShowSpareVestsPopup(false)
                     setPendingSpareVestsData(null)
-                    // Continuer la soumission en ignorant la limite principale (spare vests autorisées)
-                    // On peut appeler handleSubmit à nouveau mais il faut éviter la boucle infinie
-                    // Pour simplifier, on va juste fermer le popup et laisser l'utilisateur re-soumettre
-                    // TODO: Améliorer pour soumettre automatiquement
+                    // Activer le flag pour bypasser la vérification des vests
+                    setSpareVestsAuthorized(true)
+                    // Soumettre automatiquement le formulaire
+                    setTimeout(() => {
+                      formRef.current?.requestSubmit()
+                    }, 0)
                   }}
                   className="px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white"
                 >

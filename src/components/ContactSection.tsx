@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
 import Image from 'next/image'
-import { Send } from 'lucide-react'
+import { Send, Check, AlertCircle, Loader2 } from 'lucide-react'
 
 interface ContactSectionProps {
   translations: {
@@ -24,16 +24,45 @@ interface ContactSectionProps {
   }
 }
 
+type FormStatus = 'idle' | 'loading' | 'success' | 'error'
+
 export default function ContactSection({ translations }: ContactSectionProps) {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     message: '',
   })
+  const [status, setStatus] = useState<FormStatus>('idle')
+  const [errorMessage, setErrorMessage] = useState('')
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // TODO: Implement form submission
+    setStatus('loading')
+    setErrorMessage('')
+
+    try {
+      const response = await fetch('/api/contact', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      })
+
+      if (response.ok) {
+        setStatus('success')
+        setFormData({ name: '', email: '', message: '' })
+        // Reset to idle after 5 seconds
+        setTimeout(() => setStatus('idle'), 5000)
+      } else {
+        const data = await response.json()
+        setErrorMessage(data.error || 'An error occurred')
+        setStatus('error')
+      }
+    } catch {
+      setErrorMessage('Network error. Please try again.')
+      setStatus('error')
+    }
   }
 
   return (
@@ -126,15 +155,44 @@ export default function ContactSection({ translations }: ContactSectionProps) {
               </div>
 
               {/* Submit Button */}
-              <div className="flex justify-center">
+              <div className="flex flex-col items-center gap-3">
                 <button
                   type="submit"
-                  className="glow-button w-auto px-8 flex items-center justify-center gap-2 text-dark font-semibold"
+                  disabled={status === 'loading'}
+                  className="glow-button w-auto px-8 flex items-center justify-center gap-2 text-dark font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                   style={{ fontFamily: 'Poppins, sans-serif' }}
                 >
-                  <Send size={18} />
-                  {translations.contact.form.send}
+                  {status === 'loading' ? (
+                    <Loader2 size={18} className="animate-spin" />
+                  ) : status === 'success' ? (
+                    <Check size={18} />
+                  ) : (
+                    <Send size={18} />
+                  )}
+                  {status === 'loading' ? 'Sending...' : status === 'success' ? 'Sent!' : translations.contact.form.send}
                 </button>
+
+                {status === 'success' && (
+                  <motion.p
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="text-green-300 text-sm flex items-center gap-2"
+                  >
+                    <Check size={16} />
+                    Message sent successfully!
+                  </motion.p>
+                )}
+
+                {status === 'error' && (
+                  <motion.p
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="text-red-300 text-sm flex items-center gap-2"
+                  >
+                    <AlertCircle size={16} />
+                    {errorMessage}
+                  </motion.p>
+                )}
               </div>
             </form>
           </motion.div>

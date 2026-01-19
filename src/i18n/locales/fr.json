@@ -382,7 +382,9 @@
       "subtitle": "Merci pour votre reservation",
       "reservation_number": "Numero de reservation",
       "back_to_site": "Retour au site",
-      "finished": "Termine"
+      "finished": "Termine",
+      "download_reservation": "Telecharger la reservation",
+      "download_order": "Telecharger la commande"
     },
     "arrival_note": "Veuillez arriver au moins 10 minutes avant l'heure prevue",
     "summary": {
@@ -993,7 +995,10 @@
         "active": "Active Games",
         "laser": "Laser",
         "rooms": "Salles Anniversaire",
-        "pricing": "Tarifs"
+        "pricing": "Tarifs",
+        "hours": "Horaires d'ouverture",
+        "capacity": "Capacite",
+        "notifications": "Notifications"
       },
       "general": {
         "branch_name": "Nom de l'agence",
@@ -1038,16 +1043,58 @@
         "weight_bold": "Gras"
       },
       "success": "Parametres enregistres avec succes",
-      "error": "Erreur lors de l'enregistrement des parametres"
+      "error": "Erreur lors de l'enregistrement des parametres",
+      "hours": {
+        "title": "Horaires d'ouverture",
+        "day": "Jour",
+        "open": "Ouverture",
+        "close": "Fermeture",
+        "closed": "Ferme",
+        "days": {
+          "sunday": "Dimanche",
+          "monday": "Lundi",
+          "tuesday": "Mardi",
+          "wednesday": "Mercredi",
+          "thursday": "Jeudi",
+          "friday": "Vendredi",
+          "saturday": "Samedi"
+        }
+      },
+      "capacity": {
+        "title": "Parametres de capacite",
+        "max_concurrent_players": "Joueurs simultanes max",
+        "slot_duration": "Duree du creneau (minutes)",
+        "game_duration": "Duree du jeu (minutes)",
+        "buffer_time": "Temps tampon (minutes)"
+      },
+      "notifications": {
+        "title": "Parametres de notifications",
+        "email_notifications": "Notifications email",
+        "sms_notifications": "Notifications SMS",
+        "booking_confirmation": "Confirmation de reservation",
+        "booking_reminder": "Rappel de reservation",
+        "booking_cancellation": "Annulation de reservation"
+      }
     },
     "contact_modal": {
       "title": "Details du contact",
+      "title_new": "Nouveau contact",
+      "title_edit": "Modifier le contact",
+      "title_view": "Details du contact",
       "edit_title": "Modifier le contact",
       "create_title": "Nouveau contact",
       "full_name": "Nom complet",
       "phone": "Telephone",
       "email": "Email",
       "notes": "Notes client",
+      "fields": {
+        "first_name": "Prenom",
+        "last_name": "Nom",
+        "phone": "Telephone",
+        "email": "Email",
+        "notes": "Notes",
+        "source": "Source"
+      },
       "statistics": {
         "title": "Statistiques",
         "total_bookings": "Reservations totales",
@@ -1058,7 +1105,17 @@
       },
       "history": {
         "title": "Historique des reservations",
-        "no_bookings": "Aucune reservation"
+        "no_bookings": "Aucune reservation",
+        "total_bookings": "Reservations totales",
+        "total_participants": "Participants totaux",
+        "last_visit": "Derniere visite"
+      },
+      "validation": {
+        "required_first_name": "Le prenom est requis",
+        "required_phone": "Le telephone est requis",
+        "invalid_phone": "Numero de telephone invalide",
+        "invalid_email": "Email invalide",
+        "phone_exists": "Ce numero de telephone existe deja"
       }
     },
     "confirmation_modal": {
@@ -1123,10 +1180,48 @@
     },
     "validation": {
       "required": "Ce champ est requis",
+      "email": "Veuillez entrer une adresse email valide",
       "email_invalid": "Adresse email invalide",
+      "phone": "Veuillez entrer un numero de telephone valide",
       "phone_invalid": "Numero de telephone invalide (format: 05XXXXXXXX)",
-      "min_length": "Minimum {{min}} caracteres",
-      "max_length": "Maximum {{max}} caracteres"
+      "min_length": "Doit contenir au moins {{min}} caracteres",
+      "max_length": "Doit contenir au plus {{max}} caracteres",
+      "min_value": "Doit etre au moins {{min}}",
+      "max_value": "Doit etre au plus {{max}}",
+      "date_past": "La date doit etre dans le futur",
+      "date_future": "La date doit etre dans le passe",
+      "passwords_match": "Les mots de passe doivent correspondre"
+    },
+    "notifications": {
+      "booking_created": "Reservation creee avec succes",
+      "booking_updated": "Reservation mise a jour avec succes",
+      "booking_deleted": "Reservation supprimee avec succes",
+      "booking_confirmed": "Reservation confirmee avec succes",
+      "booking_cancelled": "Reservation annulee avec succes",
+      "contact_created": "Contact cree avec succes",
+      "contact_updated": "Contact mis a jour avec succes",
+      "contact_deleted": "Contact supprime avec succes",
+      "user_created": "Utilisateur cree avec succes",
+      "user_updated": "Utilisateur mis a jour avec succes",
+      "user_deleted": "Utilisateur supprime avec succes",
+      "settings_saved": "Parametres enregistres avec succes",
+      "order_confirmed": "Commande confirmee",
+      "order_rejected": "Commande rejetee"
+    },
+    "time": {
+      "just_now": "A l'instant",
+      "minutes_ago": "Il y a {{count}} minutes",
+      "hours_ago": "Il y a {{count}} heures",
+      "days_ago": "Il y a {{count}} jours",
+      "weeks_ago": "Il y a {{count}} semaines"
+    },
+    "pagination": {
+      "page": "Page",
+      "of": "sur",
+      "items_per_page": "Elements par page",
+      "showing": "Affichage de",
+      "to": "a",
+      "entries": "entrees"
     },
     "logs": {
       "title": "Journal d'activite",
@@ -1311,6 +1406,7 @@
       "access_denied_message": "Seuls les super administrateurs peuvent gerer les permissions.",
       "info_title": "Controle granulaire des permissions",
       "info_description": "Les permissions des roles systeme sont verrouillees et ne peuvent pas etre modifiees. Les autres roles peuvent etre personnalises. Les modifications prennent effet immediatement.",
+      "no_roles_defined": "Aucun role defini",
       "super_admin_locked": "Les permissions des roles systeme ne peuvent pas etre modifiees",
       "locked": "Verrouille",
       "all_permissions_locked": "Toutes les permissions verrouillees",
