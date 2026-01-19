@@ -2,3 +2,5 @@
 node_modules
 *.log
 data/
+.env.local
+.env*.local

@@ -12,7 +12,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { verifyApiPermission } from '@/lib/permissions'
 import { logBookingAction, logContactAction, logOrderAction, getClientIpFromHeaders } from '@/lib/activity-logger'
-import { sendBookingConfirmationEmail } from '@/lib/email-sender'
+// Email de confirmation envoyé par /api/orders pour éviter doublons
 import type {
   UserRole,
   Booking,
@@ -349,38 +349,8 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 7. ENVOYER L'EMAIL DE CONFIRMATION
-    let emailSent = false
-    let emailLogId: string | undefined
-
-    if (body.customer_email) {
-      // Récupérer la branche pour l'email
-      const { data: branch } = await supabase
-        .from('branches')
-        .select('*')
-        .eq('id', body.branch_id)
-        .single<Branch>()
-
-      if (branch) {
-        try {
-          const emailResult = await sendBookingConfirmationEmail({
-            booking: newBooking,
-            branch,
-            triggeredBy: user.id,
-            locale: body.locale || 'en'
-          })
-
-          emailSent = emailResult.success
-          emailLogId = emailResult.emailLogId
-
-          if (!emailResult.success) {
-            console.error('Email send failed:', emailResult.error)
-          }
-        } catch (emailErr) {
-          console.error('Email send exception:', emailErr)
-        }
-      }
-    }
+    // NOTE: L'email de confirmation est envoyé par /api/orders, pas ici
+    // pour éviter les doublons
 
     // Récupérer les slots et sessions créés pour la réponse
     const { data: slots } = await supabase
@@ -403,8 +373,6 @@ export async function POST(request: NextRequest) {
       orderId,
       contactId,
       contactCreated: contactWasCreated,
-      emailSent,
-      emailLogId,
     })
 
   } catch (error) {
