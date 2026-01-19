@@ -111,7 +111,8 @@ export function TermsConditionsSection({ isDark }: TermsConditionsSectionProps) 
     setSaving(true)
 
     try {
-      const { error: updateError } = await supabase
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error: updateError } = await (supabase as any)
         .from('email_templates')
         .update({
           body_template: formData.body_template,
@@ -134,7 +135,8 @@ export function TermsConditionsSection({ isDark }: TermsConditionsSectionProps) 
 
   const handleToggleActive = async (template: EmailTemplate) => {
     try {
-      const { error: updateError } = await supabase
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error: updateError } = await (supabase as any)
         .from('email_templates')
         .update({
           is_active: !template.is_active,
