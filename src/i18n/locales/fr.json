@@ -487,6 +487,7 @@
       "agent": "Agent",
       "manager": "Manager",
       "employee": "Employe",
+      "website": "Site Web",
       "title": "Gestion des roles",
       "subtitle": "Gerez les roles et leurs niveaux hierarchiques",
       "create": "Creer un role",

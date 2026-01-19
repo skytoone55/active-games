@@ -168,7 +168,7 @@ async function findOrCreateContact(
   const contactName = `${firstName} ${lastName || ''}`.trim()
   await logContactAction({
     userId: null,
-    userRole: 'agent' as UserRole,
+    userRole: 'website' as UserRole,
     userName: 'Website',
     action: 'created',
     contactId: newContact.id,
@@ -362,7 +362,7 @@ export async function POST(request: NextRequest) {
         // Logger la création de l'order (pending - room unavailable)
         await logOrderAction({
           userId: null,
-          userRole: 'agent' as UserRole,
+          userRole: 'website' as UserRole,
           userName: 'Website',
           action: 'created',
           orderId: order.id,
@@ -504,7 +504,7 @@ export async function POST(request: NextRequest) {
             // Logger la création de l'order (pending - laser unavailable)
             await logOrderAction({
               userId: null,
-              userRole: 'agent' as UserRole,
+              userRole: 'website' as UserRole,
               userName: 'Website',
               action: 'created',
               orderId: order.id,
@@ -670,7 +670,7 @@ export async function POST(request: NextRequest) {
       // Logger la création de l'order (EVENT confirmé)
       await logOrderAction({
         userId: null,
-        userRole: 'agent' as UserRole,
+        userRole: 'website' as UserRole,
         userName: 'Website',
         action: 'created',
         orderId: order.id,
@@ -691,7 +691,7 @@ export async function POST(request: NextRequest) {
       // Logger aussi la création du booking
       await logBookingAction({
         userId: null,
-        userRole: 'agent' as UserRole,
+        userRole: 'website' as UserRole,
         userName: 'Website',
         action: 'created',
         bookingId: booking.id,
@@ -903,7 +903,7 @@ export async function POST(request: NextRequest) {
         // Logger la création de l'order (pending - overbooking)
         await logOrderAction({
           userId: null,
-          userRole: 'agent' as UserRole,
+          userRole: 'website' as UserRole,
           userName: 'Website',
           action: 'created',
           orderId: order.id,
@@ -994,7 +994,7 @@ export async function POST(request: NextRequest) {
       // Logger la création de l'order (pending - slot unavailable)
       await logOrderAction({
         userId: null,
-        userRole: 'agent' as UserRole,
+        userRole: 'website' as UserRole,
         userName: 'Website',
         action: 'created',
         orderId: order.id,
@@ -1156,7 +1156,7 @@ export async function POST(request: NextRequest) {
     // Logger la création de l'order (GAME confirmé)
     await logOrderAction({
       userId: null,
-      userRole: 'agent' as UserRole,
+      userRole: 'website' as UserRole,
       userName: 'Website',
       action: 'created',
       orderId: order.id,
@@ -1178,7 +1178,7 @@ export async function POST(request: NextRequest) {
     // Logger aussi la création du booking
     await logBookingAction({
       userId: null,
-      userRole: 'agent' as UserRole,
+      userRole: 'website' as UserRole,
       userName: 'Website',
       action: 'created',
       bookingId: booking.id,

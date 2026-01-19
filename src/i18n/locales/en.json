@@ -430,6 +430,8 @@
       "agent": "Agent",
       "manager": "Manager",
       "employee": "Employee",
+      "website": "Website",
+      "system": "System",
       "title": "Role Management",
       "subtitle": "Manage roles and their hierarchy levels",
       "create": "Create Role",
