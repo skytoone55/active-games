@@ -470,3 +470,70 @@ export interface RoleHierarchyCheck {
   targetLevel: number
   canManage: boolean
 }
+
+// Types pour Email System (Phase 2)
+export type EmailStatus = 'pending' | 'sent' | 'delivered' | 'failed' | 'bounced'
+export type EmailEntityType = 'booking' | 'order' | 'contact'
+
+export interface EmailLog {
+  id: string
+  recipient_email: string
+  recipient_name: string | null
+  template_id: string | null
+  template_code: string | null
+  subject: string
+  body_preview: string | null
+  body_html: string | null
+  entity_type: EmailEntityType | null
+  entity_id: string | null
+  branch_id: string | null
+  attachments: Json
+  status: EmailStatus
+  error_message: string | null
+  metadata: Json
+  sent_at: string | null
+  created_at: string
+  triggered_by: string | null
+}
+
+export interface EmailTemplate {
+  id: string
+  code: string
+  name: string
+  description: string | null
+  subject_template: string
+  body_template: string
+  is_active: boolean
+  is_system: boolean
+  branch_id: string | null
+  available_variables: Json
+  created_at: string
+  updated_at: string
+  created_by: string | null
+}
+
+export interface EmailSettings {
+  id: string
+  smtp_user: string | null
+  smtp_password: string | null
+  smtp_host: string
+  smtp_port: number
+  from_email: string | null
+  from_name: string
+  logo_activegames_url: string | null
+  logo_lasercity_url: string | null
+  is_enabled: boolean
+  created_at: string
+  updated_at: string
+}
+
+export type EmailLogInsert = Omit<EmailLog, 'id' | 'created_at'>
+export type EmailLogUpdate = Partial<EmailLogInsert>
+export type EmailTemplateInsert = Omit<EmailTemplate, 'id' | 'created_at' | 'updated_at'>
+export type EmailTemplateUpdate = Partial<EmailTemplateInsert>
+
+// Type étendu pour EmailLog avec relations
+export interface EmailLogWithRelations extends EmailLog {
+  branch?: Branch | null
+  template?: EmailTemplate | null
+}
