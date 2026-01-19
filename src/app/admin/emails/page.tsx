@@ -69,6 +69,9 @@ export default function EmailsPage() {
   const [dateTo, setDateTo] = useState('')
   const [showFilters, setShowFilters] = useState(false)
 
+  // Check email status from Brevo API (polling)
+  const [checkingStatus, setCheckingStatus] = useState(false)
+
   // Apply filters with debounce for search
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -123,8 +126,6 @@ export default function EmailsPage() {
     }
   }
 
-  // Check email status from Brevo API (polling)
-  const [checkingStatus, setCheckingStatus] = useState(false)
   const handleCheckStatus = async () => {
     setCheckingStatus(true)
     try {
