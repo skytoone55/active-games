@@ -180,6 +180,7 @@ export async function sendEmail(params: {
 
     const sendSmtpEmail = new Brevo.SendSmtpEmail()
     sendSmtpEmail.sender = { email: fromEmail, name: fromName }
+    sendSmtpEmail.replyTo = { email: fromEmail, name: fromName }
     sendSmtpEmail.to = [{ email: params.to, name: params.toName || params.to }]
     sendSmtpEmail.subject = params.subject
     sendSmtpEmail.htmlContent = params.html
