@@ -446,12 +446,175 @@ src/i18n/locales/he.json (added roles translations)
 
 ---
 
-## Phase 2: Documents & Email Infrastructure [NOT STARTED]
+## Phase 2: Documents & Email Infrastructure (COMPLETED)
 
-(As per roadmap: PDF generation, email templates, Resend/SendGrid integration)
+**Date completed:** 2026-01-19
+
+### What was implemented:
+
+#### 1. Email System with Resend
+
+**Database Tables:**
+- `email_templates` - Stores email templates with:
+  - `code` (unique slug), `name`, `description`
+  - `subject_template`, `body_template` (HTML with {{variables}})
+  - `is_active`, `is_system`, `branch_id`
+  - `available_variables` (JSONB array)
+- `email_logs` - Tracks all sent emails:
+  - `recipient_email`, `recipient_name`
+  - `template_id`, `template_code`
+  - `subject`, `body_preview`, `body_html`
+  - `entity_type` (booking/order/contact), `entity_id`
+  - `status` (pending/sent/delivered/failed/bounced)
+  - `error_message`, `sent_at`, `triggered_by`
+
+**Email Sender Utility (`src/lib/email-sender.ts`):**
+- `sendEmail()` - Send email via Resend, logs to database
+- `sendBookingConfirmationEmail()` - Send booking confirmation with:
+  - Template selection by locale (en/fr/he)
+  - Variable replacement (booking details, client info, branch info)
+  - Terms & conditions included
+  - Activity logging
+- `resendEmail()` - Resend a previous email from logs
+- `getTermsConditions()` - Fetch T&C from database by type and locale
+
+**Email Templates Created (6 booking confirmations):**
+- `booking_confirmation_en` - English
+- `booking_confirmation_fr` - French
+- `booking_confirmation_he` - Hebrew (RTL support)
+
+**Template Variables Available:**
+- `{{booking_reference}}`, `{{booking_date}}`, `{{booking_time}}`
+- `{{participants}}`, `{{booking_type}}`, `{{game_type}}`
+- `{{branch_name}}`, `{{branch_address}}`, `{{branch_phone}}`
+- `{{client_name}}`, `{{client_first_name}}`, `{{client_last_name}}`, `{{client_email}}`
+- `{{logo_activegames_url}}`, `{{logo_lasercity_url}}`
+- `{{current_year}}`, `{{terms_conditions}}`
+
+#### 2. Terms & Conditions Templates
+
+**Database Templates (6 T&C templates):**
+- `terms_game_he`, `terms_game_en`, `terms_game_fr` - For GAME bookings
+- `terms_event_he`, `terms_event_en`, `terms_event_fr` - For EVENT bookings
+
+**Content Differences:**
+- **GAME templates**: Basic rules (participation, Laser/Active/Mix info, payment, cancellation)
+- **EVENT templates**: Everything from GAME + event-specific sections:
+  - Event room conditions (food, drinks, decoration)
+  - Allergies warning
+  - Event conditions (arrival time, min 15 participants, duration)
+  - Deposit requirements (1/3 of cost)
+
+**Styling (Dark Theme):**
+- Text color: `#ffffff` (white)
+- List items: `#e0e0e0` (light gray)
+- Headings: `#00f0ff` (cyan accent)
+- Laser City: `#a855f7` (purple)
+- Active Games: `#f97316` (orange)
+- Mix Package: `#14b8a6` (teal)
+- Allergies warning: `#fbbf24` (yellow)
+
+#### 3. Terms Display on Reservation Page
+
+**API Route (`/api/terms`):**
+- GET `/api/terms?lang=xx` - Returns `{ game: string, event: string }`
+- Fetches T&C from database based on language
+- Fallback to English if locale not found
+
+**Reservation Page Updates (`/src/app/reservation/page.tsx`):**
+- Added `termsContent` state for fetched terms
+- Added `termsLoading` state for loading indicator
+- Modal displays HTML from database instead of hardcoded content
+- CSS styles for HTML content (dark theme compatible)
+- Different terms shown for GAME vs EVENT bookings
+
+#### 4. Admin Email Management
+
+**Settings Page - Email Templates Section:**
+- `/admin/settings` → "Email Templates" tab
+- View/edit all email templates
+- Preview rendered HTML
+- Toggle active/inactive status
+- Template variables reference
+
+**Settings Page - Terms & Conditions Section:**
+- `/admin/settings` → "Terms & Conditions" tab
+- Tabs for GAME vs EVENT
+- Language selector (HE/EN/FR) with flag icons
+- Edit HTML content
+- Preview rendered output
+- Toggle active status
+
+#### 5. Automatic Email Sending
+
+**On Order Creation (`/api/orders`):**
+- Sends confirmation email if customer has email
+- Uses booking type (GAME/EVENT) for appropriate terms
+- Supports locale parameter for language selection
+
+**On Order Resend (`/api/orders/[id]/resend-email`):**
+- Resends confirmation email for existing orders
+- Logs the resend action
+
+**From Admin (`/api/emails`):**
+- Manual send confirmation for any booking
+- Resend any previous email from logs
+
+#### 6. Activity Logging for Emails
+
+**Added to `activity-logger.ts`:**
+- `logEmailSent()` - Logs email send events
+- Includes: recipient, subject, template, entity type/id
+
+### Files Created:
+```
+src/lib/email-sender.ts
+src/app/api/terms/route.ts
+src/app/api/emails/route.ts
+src/app/api/orders/[id]/resend-email/route.ts
+src/app/admin/settings/page.tsx
+src/app/admin/settings/components/EmailTemplatesSection.tsx
+src/app/admin/settings/components/TermsConditionsSection.tsx
+supabase/migrations/20240118_email_system.sql
+supabase/migrations/20250119_add_terms_conditions_templates.sql
+supabase/migrations/20250119_add_terms_to_booking_emails.sql
+```
+
+### Files Modified:
+```
+src/lib/supabase/types.ts (added EmailTemplate, EmailLog types)
+src/lib/activity-logger.ts (added logEmailSent, email action types)
+src/app/reservation/page.tsx (terms modal with DB content)
+src/app/api/orders/route.ts (send confirmation email on creation)
+src/i18n/locales/en.json (added settings translations)
+src/i18n/locales/fr.json (added settings translations)
+src/i18n/locales/he.json (added settings translations)
+```
+
+### Environment Variables:
+```
+RESEND_API_KEY=re_xxxxx
+RESEND_FROM_EMAIL=ActiveGames <noreply@activegames.co.il>
+```
+
+### Build Status:
+**✓ BUILD PASS** - TypeScript: No errors
+
+---
+
+## Phase 2: CERTIFIED COMPLETE
+
+**All Phase 2 components implemented:**
+- ✅ Email system with Resend integration
+- ✅ Email templates (multi-language: EN/FR/HE)
+- ✅ Terms & Conditions templates (GAME vs EVENT)
+- ✅ Email logging and tracking
+- ✅ Admin UI for template management
+- ✅ Automatic confirmation emails on booking
+- ✅ Terms display on reservation page from database
 
 ---
 
 ## Phase 3: Automated Communication [NOT STARTED]
 
-(As per roadmap: automatic emails, confirmation links, client signature)
+(As per roadmap: automatic reminders, confirmation links, client signature)
