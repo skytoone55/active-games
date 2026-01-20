@@ -153,7 +153,11 @@ export function BookingModal({
   const [notes, setNotes] = useState('')
   const [contactId, setContactId] = useState('') // ID unique du contact (auto-généré)
   const [color, setColor] = useState(COLORS[0].value) // Couleur par défaut bleu
-  
+
+  // Discount (remise)
+  const [discountType, setDiscountType] = useState<'percent' | 'fixed' | null>(null)
+  const [discountValue, setDiscountValue] = useState<string>('')
+
   // Branche de la réservation (peut être différente de branchId si on modifie)
   const [bookingBranchId, setBookingBranchId] = useState<string>(branchId)
   const [isEditingBranch, setIsEditingBranch] = useState(false)
@@ -736,6 +740,10 @@ export function BookingModal({
         
         // Couleur : utiliser celle de la base de données si disponible, sinon couleur par défaut selon le type
         setColor(editingBooking.color || (editingBooking.type === 'GAME' ? COLORS[0].value : COLORS[1].value))
+
+        // Discount : charger les valeurs existantes
+        setDiscountType((editingBooking as unknown as { discount_type?: string }).discount_type as 'percent' | 'fixed' | null || null)
+        setDiscountValue((editingBooking as unknown as { discount_value?: number }).discount_value?.toString() || '')
       } else {
         // Mode création : réinitialiser le formulaire
         setLocalDate(selectedDate)
@@ -797,7 +805,10 @@ export function BookingModal({
         setIsEditingEvent(false) // Réinitialiser le mode édition événement
         // Couleur par défaut selon le type
         setColor(defaultBookingType === 'GAME' ? COLORS[0].value : COLORS[1].value)
-        
+        // Réinitialiser le discount
+        setDiscountType(null)
+        setDiscountValue('')
+
         // Vérifier s'il y a des données de réactivation
         const reactivateDataStr = localStorage.getItem('booking-reactivate-data')
         if (reactivateDataStr) {
@@ -1623,6 +1634,9 @@ export function BookingModal({
         primary_contact_id: contactIdToLink || undefined,
         notes: bookingNotes || undefined,
         color: color,
+        // Discount (remise)
+        discount_type: discountType || undefined,
+        discount_value: discountValue ? parseFloat(discountValue) : undefined,
         slots: slots.length > 0 ? slots : [],
         game_sessions: game_sessions.length > 0 ? game_sessions : [],
         // Données de réactivation si présentes
@@ -2407,14 +2421,63 @@ export function BookingModal({
                     type="button"
                     onClick={() => setColor(c.value)}
                     className={`w-7 h-7 rounded-full transition-all border-2 flex-shrink-0 ${
-                      color === c.value 
-                        ? `${isDark ? 'ring-2 ring-offset-2 ring-white ring-offset-gray-800' : 'ring-2 ring-offset-2 ring-gray-800 ring-offset-white'} scale-125 border-white shadow-lg` 
+                      color === c.value
+                        ? `${isDark ? 'ring-2 ring-offset-2 ring-white ring-offset-gray-800' : 'ring-2 ring-offset-2 ring-gray-800 ring-offset-white'} scale-125 border-white shadow-lg`
                         : `${isDark ? 'border-gray-600 hover:border-gray-500' : 'border-gray-300 hover:border-gray-400'} hover:scale-110`
                     }`}
                     style={{ backgroundColor: c.value }}
                     title={c.name}
                   />
                 ))}
+              </div>
+            </div>
+
+            {/* Remise (Discount) */}
+            <div className="flex items-center gap-3 mt-3">
+              <span className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Remise:</span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setDiscountType(discountType === 'percent' ? null : 'percent')}
+                  className={`px-3 py-1 rounded-lg text-sm transition-all ${
+                    discountType === 'percent'
+                      ? 'bg-purple-500 text-white'
+                      : isDark ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  %
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDiscountType(discountType === 'fixed' ? null : 'fixed')}
+                  className={`px-3 py-1 rounded-lg text-sm transition-all ${
+                    discountType === 'fixed'
+                      ? 'bg-purple-500 text-white'
+                      : isDark ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  ₪
+                </button>
+                {discountType && (
+                  <input
+                    type="number"
+                    value={discountValue}
+                    onChange={(e) => setDiscountValue(e.target.value)}
+                    placeholder={discountType === 'percent' ? 'Ex: 10' : 'Ex: 50'}
+                    className={`w-20 px-2 py-1 rounded-lg border text-sm ${
+                      isDark
+                        ? 'bg-gray-800 border-gray-600 text-white'
+                        : 'bg-white border-gray-300 text-gray-900'
+                    }`}
+                    min="0"
+                    max={discountType === 'percent' ? '100' : undefined}
+                  />
+                )}
+                {discountType && discountValue && (
+                  <span className={`text-xs ${isDark ? 'text-purple-400' : 'text-purple-600'}`}>
+                    {discountType === 'percent' ? `${discountValue}%` : `${discountValue}₪`}
+                  </span>
+                )}
               </div>
             </div>
           </div>

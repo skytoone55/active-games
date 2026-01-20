@@ -45,6 +45,9 @@ export interface CreateBookingData {
   primary_contact_id?: string // ID du contact principal (CRM)
   notes?: string
   color?: string
+  // Discount (remise)
+  discount_type?: 'percent' | 'fixed' | null
+  discount_value?: number | null
   slots: {
     slot_start: string
     slot_end: string
@@ -307,6 +310,8 @@ export function useBookings(branchId: string | null, date?: string) {
           primary_contact_id: data.primary_contact_id,
           notes: data.notes,
           color: data.color,
+          discount_type: data.discount_type,
+          discount_value: data.discount_value,
           reactivateReference: data.reactivateReference,
           reactivateOrderId: data.reactivateOrderId,
           slots: data.slots,
@@ -362,6 +367,8 @@ export function useBookings(branchId: string | null, date?: string) {
       if (data.customer_email !== undefined) apiBody.customer_email = data.customer_email
       if (data.notes !== undefined) apiBody.notes = data.notes
       if (data.color !== undefined) apiBody.color = data.color
+      if (data.discount_type !== undefined) apiBody.discount_type = data.discount_type
+      if (data.discount_value !== undefined) apiBody.discount_value = data.discount_value
       if (data.primary_contact_id !== undefined) apiBody.primary_contact_id = data.primary_contact_id
       if (data.slots !== undefined) apiBody.slots = data.slots
       if (data.game_sessions !== undefined) apiBody.game_sessions = data.game_sessions

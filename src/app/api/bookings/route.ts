@@ -13,6 +13,7 @@ import { createClient } from '@supabase/supabase-js'
 import { verifyApiPermission } from '@/lib/permissions'
 import { logBookingAction, logContactAction, logOrderAction, getClientIpFromHeaders } from '@/lib/activity-logger'
 import { sendBookingConfirmationEmail } from '@/lib/email-sender'
+import { createOfferForBookingBackground } from '@/lib/icount-documents'
 import type {
   UserRole,
   Booking,
@@ -54,6 +55,8 @@ interface CreateBookingBody {
   primary_contact_id?: string
   notes?: string
   color?: string
+  discount_type?: 'percent' | 'fixed' | null
+  discount_value?: number | null
   reactivateReference?: string
   reactivateOrderId?: string
   slots: Array<{
@@ -183,6 +186,11 @@ export async function POST(request: NextRequest) {
 
     if (body.color) {
       bookingData.color = body.color
+    }
+
+    if (body.discount_type) {
+      bookingData.discount_type = body.discount_type
+      bookingData.discount_value = body.discount_value || 0
     }
 
     const { data: newBooking, error: bookingError } = await supabase
@@ -392,6 +400,17 @@ export async function POST(request: NextRequest) {
       .from('game_sessions')
       .select('*')
       .eq('booking_id', newBooking.id)
+
+    // Create iCount offer in background (non-blocking)
+    console.log('[BOOKINGS API] Creating iCount offer for booking:', newBooking.id)
+    const bookingWithSessions = {
+      ...newBooking,
+      game_sessions: (sessions || []).map(s => ({
+        game_area: s.game_area as 'ACTIVE' | 'LASER',
+        session_order: s.session_order,
+      })),
+    }
+    createOfferForBookingBackground(bookingWithSessions, body.branch_id)
 
     return NextResponse.json({
       success: true,

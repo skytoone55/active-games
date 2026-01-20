@@ -1410,6 +1410,88 @@
         "settings": "הגדרות",
         "permissions": "הרשאות"
       }
+    },
+    "icount_catalog": {
+      "title": "קטלוג iCount",
+      "subtitle": "מוצרים ונוסחאות עבור {{branch}}",
+      "tabs": {
+        "products": "מוצרי GAME",
+        "rooms": "חדרים",
+        "formulas": "נוסחאות EVENT"
+      },
+      "products": {
+        "add": "הוסף מוצר",
+        "edit": "ערוך מוצר",
+        "new": "מוצר חדש",
+        "code": "קוד",
+        "name_fr": "שם (צרפתית)",
+        "name_he": "שם (עברית)",
+        "name_en": "שם (אנגלית)",
+        "price_per_person": "מחיר/אדם",
+        "order": "סדר",
+        "active": "פעיל",
+        "status": "סטטוס",
+        "actions": "פעולות",
+        "none": "אין מוצרים"
+      },
+      "rooms": {
+        "add": "הוסף חדר",
+        "edit": "ערוך חדר",
+        "new": "חדר חדש",
+        "code": "קוד",
+        "name_fr": "שם (צרפתית)",
+        "name_he": "שם (עברית)",
+        "name_en": "שם (אנגלית)",
+        "price": "מחיר",
+        "free": "חינם",
+        "order": "סדר",
+        "active": "פעיל",
+        "status": "סטטוס",
+        "actions": "פעולות",
+        "none": "אין חדרים"
+      },
+      "formulas": {
+        "add": "הוסף נוסחת EVENT",
+        "edit": "ערוך נוסחה",
+        "new": "נוסחת EVENT חדשה",
+        "name": "שם",
+        "game_type": "סוג משחק",
+        "participants": "משתתפים",
+        "min_participants": "מינימום משתתפים",
+        "max_participants": "מקסימום משתתפים",
+        "price_per_person": "מחיר/אדם",
+        "room": "חדר",
+        "no_room": "ללא חדר",
+        "priority": "עדיפות",
+        "active": "פעיל",
+        "status": "סטטוס",
+        "actions": "פעולות",
+        "none": "אין נוסחאות EVENT",
+        "calculation": "חישוב EVENT: (משתתפים × מחיר/אדם) + מחיר חדר",
+        "priority_info": "הנוסחה עם העדיפות הגבוהה ביותר המתאימה למספר המשתתפים תשמש."
+      },
+      "sync": {
+        "button": "סנכרן עם iCount",
+        "syncing": "מסנכרן...",
+        "success": "סנכרון: {{synced}} מוצר(ים) סונכרנו",
+        "success_with_failures": "סנכרון: {{synced}} מוצר(ים) סונכרנו, {{failed}} כשלון(ות)",
+        "no_products": "אין מוצרים פעילים לסנכרן"
+      },
+      "status": {
+        "active": "פעיל",
+        "inactive": "לא פעיל"
+      },
+      "game_types": {
+        "laser": "לייזר",
+        "active": "אקטיב",
+        "both": "לייזר + אקטיב"
+      },
+      "save": "שמור",
+      "cancel": "ביטול",
+      "delete_confirm": "האם ברצונך לבטל פריט זה?",
+      "element_deactivated": "הפריט בוטל",
+      "error_loading": "שגיאה בטעינת הנתונים",
+      "error_delete": "שגיאה במחיקה"
     }
   }
 }

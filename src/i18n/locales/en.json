@@ -1386,6 +1386,88 @@
         "settings": "Settings",
         "permissions": "Permissions"
       }
+    },
+    "icount_catalog": {
+      "title": "iCount Catalog",
+      "subtitle": "Products and formulas for {{branch}}",
+      "tabs": {
+        "products": "GAME Products",
+        "rooms": "Rooms",
+        "formulas": "EVENT Formulas"
+      },
+      "products": {
+        "add": "Add product",
+        "edit": "Edit product",
+        "new": "New product",
+        "code": "Code",
+        "name_fr": "Name (FR)",
+        "name_he": "Name (HE)",
+        "name_en": "Name (EN)",
+        "price_per_person": "Price/person",
+        "order": "Order",
+        "active": "Active",
+        "status": "Status",
+        "actions": "Actions",
+        "none": "No products"
+      },
+      "rooms": {
+        "add": "Add room",
+        "edit": "Edit room",
+        "new": "New room",
+        "code": "Code",
+        "name_fr": "Name (FR)",
+        "name_he": "Name (HE)",
+        "name_en": "Name (EN)",
+        "price": "Price",
+        "free": "Free",
+        "order": "Order",
+        "active": "Active",
+        "status": "Status",
+        "actions": "Actions",
+        "none": "No rooms"
+      },
+      "formulas": {
+        "add": "Add EVENT formula",
+        "edit": "Edit formula",
+        "new": "New EVENT formula",
+        "name": "Name",
+        "game_type": "Game type",
+        "participants": "Participants",
+        "min_participants": "Min participants",
+        "max_participants": "Max participants",
+        "price_per_person": "Price/person",
+        "room": "Room",
+        "no_room": "No room",
+        "priority": "Priority",
+        "active": "Active",
+        "status": "Status",
+        "actions": "Actions",
+        "none": "No EVENT formulas",
+        "calculation": "EVENT calculation: (Participants × Price/person) + Room price",
+        "priority_info": "The formula with the highest priority matching the number of participants will be used."
+      },
+      "sync": {
+        "button": "Sync with iCount",
+        "syncing": "Syncing...",
+        "success": "Sync: {{synced}} product(s) synced",
+        "success_with_failures": "Sync: {{synced}} product(s) synced, {{failed}} failure(s)",
+        "no_products": "No active products to sync"
+      },
+      "status": {
+        "active": "Active",
+        "inactive": "Inactive"
+      },
+      "game_types": {
+        "laser": "Laser",
+        "active": "Active",
+        "both": "Laser + Active"
+      },
+      "save": "Save",
+      "cancel": "Cancel",
+      "delete_confirm": "Do you want to deactivate this item?",
+      "element_deactivated": "Item deactivated",
+      "error_loading": "Error loading data",
+      "error_delete": "Error during deletion"
     }
   }
 }

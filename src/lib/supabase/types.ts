@@ -235,6 +235,8 @@ export interface Database {
           notes: string | null
           color: string | null
           primary_contact_id: string | null
+          icount_offer_id: number | null
+          icount_invrec_id: number | null
           created_at: string
           updated_at: string
           cancelled_at: string | null
@@ -368,6 +370,46 @@ export interface Database {
         Insert: Omit<Database['public']['Tables']['role_permissions']['Row'], 'id' | 'created_at' | 'updated_at'>
         Update: Partial<Database['public']['Tables']['role_permissions']['Insert']>
       }
+      icount_products: {
+        Row: {
+          id: string
+          branch_id: string | null
+          code: string
+          name: string
+          name_he: string | null
+          description: string | null
+          unit_price: number
+          price_type: 'per_person' | 'flat' | 'per_game'
+          category: 'game' | 'room' | 'event_tariff' | 'other'
+          is_active: boolean
+          sort_order: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['icount_products']['Row'], 'id' | 'created_at' | 'updated_at'>
+        Update: Partial<Database['public']['Tables']['icount_products']['Insert']>
+      }
+      icount_formulas: {
+        Row: {
+          id: string
+          branch_id: string | null
+          code: string
+          name: string
+          name_he: string | null
+          description: string | null
+          booking_type: 'EVENT' | 'GAME'
+          game_area: 'LASER' | 'ACTIVE' | 'BOTH' | null
+          min_participants: number
+          max_participants: number
+          priority: number
+          is_active: boolean
+          items: { product_code: string; quantity: number | 'participants' }[]
+          created_at: string
+          updated_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['icount_formulas']['Row'], 'id' | 'created_at' | 'updated_at'>
+        Update: Partial<Database['public']['Tables']['icount_formulas']['Insert']>
+      }
     }
     Views: {}
     Functions: {}
@@ -393,6 +435,8 @@ export type UserBranch = Database['public']['Tables']['user_branches']['Row']
 export type Order = Database['public']['Tables']['orders']['Row']
 export type ActivityLog = Database['public']['Tables']['activity_logs']['Row']
 export type RolePermission = Database['public']['Tables']['role_permissions']['Row']
+export type ICountProduct = Database['public']['Tables']['icount_products']['Row']
+export type ICountFormula = Database['public']['Tables']['icount_formulas']['Row']
 
 // Types Insert (création)
 export type BookingInsert = Database['public']['Tables']['bookings']['Insert']
@@ -404,6 +448,8 @@ export type OrderInsert = Database['public']['Tables']['orders']['Insert']
 export type ProfileInsert = Database['public']['Tables']['profiles']['Insert']
 export type ActivityLogInsert = Database['public']['Tables']['activity_logs']['Insert']
 export type RolePermissionInsert = Database['public']['Tables']['role_permissions']['Insert']
+export type ICountProductInsert = Database['public']['Tables']['icount_products']['Insert']
+export type ICountFormulaInsert = Database['public']['Tables']['icount_formulas']['Insert']
 
 // Types Update (modification)
 export type BookingUpdate = Database['public']['Tables']['bookings']['Update']
@@ -412,6 +458,8 @@ export type ContactUpdate = Database['public']['Tables']['contacts']['Update']
 export type OrderUpdate = Database['public']['Tables']['orders']['Update']
 export type ProfileUpdate = Database['public']['Tables']['profiles']['Update']
 export type RolePermissionUpdate = Database['public']['Tables']['role_permissions']['Update']
+export type ICountProductUpdate = Database['public']['Tables']['icount_products']['Update']
+export type ICountFormulaUpdate = Database['public']['Tables']['icount_formulas']['Update']
 
 // Helper types complexes
 export type UserWithBranches = Profile & {

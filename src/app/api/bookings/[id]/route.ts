@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { verifyApiPermission } from '@/lib/permissions'
 import { logBookingAction, logOrderAction, getClientIpFromHeaders } from '@/lib/activity-logger'
+import { cancelOfferDirectBackground } from '@/lib/icount-documents'
 import type { UserRole, Booking, BookingSlot, GameSession } from '@/lib/supabase/types'
 
 /**
@@ -186,6 +187,12 @@ export async function PUT(
     }
     if (body.color !== undefined) {
       updateData.color = body.color
+    }
+    if (body.discount_type !== undefined) {
+      updateData.discount_type = body.discount_type
+    }
+    if (body.discount_value !== undefined) {
+      updateData.discount_value = body.discount_value
     }
     if (body.primary_contact_id !== undefined) {
       updateData.primary_contact_id = body.primary_contact_id
@@ -464,6 +471,11 @@ export async function DELETE(
         )
       }
 
+      // Annuler le devis iCount si existant (en arrière-plan)
+      if (booking.icount_offer_id && booking.branch_id) {
+        cancelOfferDirectBackground(booking.icount_offer_id, booking.branch_id, reason || 'Booking supprimé')
+      }
+
       // Logger la suppression
       await logBookingAction({
         userId: user.id,
@@ -511,6 +523,11 @@ export async function DELETE(
           updated_at: new Date().toISOString(),
         })
         .eq('booking_id', id)
+
+      // Annuler le devis iCount si existant (en arrière-plan)
+      if (booking.icount_offer_id && booking.branch_id) {
+        cancelOfferDirectBackground(booking.icount_offer_id, booking.branch_id, reason || 'Booking annulé')
+      }
 
       // Logger l'annulation
       await logBookingAction({

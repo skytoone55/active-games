@@ -47,6 +47,9 @@ export function SettingsModal({
   const [textSize, setTextSize] = useState<'xs' | 'sm' | 'base' | 'lg'>('sm')
   const [textWeight, setTextWeight] = useState<'normal' | 'semibold' | 'bold'>('bold')
   const [textAlign, setTextAlign] = useState<'left' | 'center' | 'right'>('left')
+
+  // Paramètres iCount
+  const [icountAutoSendQuote, setIcountAutoSendQuote] = useState<boolean>(true)
   
   // Onglet actif
   const [activeTab, setActiveTab] = useState<SettingsTab>('general')
@@ -76,12 +79,15 @@ export function SettingsModal({
       setLaserTotalVests(settings.laser_total_vests || 0)
       setLaserExclusiveThreshold(settings.laser_exclusive_threshold || 10)
       setLaserEnabled(settings.laser_enabled || false)
+      // iCount settings - default to true if not set
+      setIcountAutoSendQuote((settings as unknown as { icount_auto_send_quote?: boolean }).icount_auto_send_quote ?? true)
     } else {
       setPlayersPerSlot(6) // Valeur par défaut si pas de settings
       setTotalSlots(14) // Valeur par défaut si pas de settings
       setLaserTotalVests(0)
       setLaserExclusiveThreshold(10)
       setLaserEnabled(false)
+      setIcountAutoSendQuote(true) // Par défaut activé
     }
   }, [settings, branchId]) // Recharger quand branchId change pour avoir les bons paramètres
 
@@ -215,7 +221,8 @@ export function SettingsModal({
           max_concurrent_players: maxConcurrentPlayers,
           laser_total_vests: laserTotalVests,
           laser_exclusive_threshold: laserExclusiveThreshold,
-          laser_enabled: laserEnabled
+          laser_enabled: laserEnabled,
+          icount_auto_send_quote: icountAutoSendQuote
         })
         .eq('branch_id', branchId)
 
@@ -833,14 +840,44 @@ export function SettingsModal({
 
           {/* ONGLET: Tarifs */}
           {activeTab === 'pricing' && (
-          <div>
-            <div className={`p-8 text-center rounded-lg ${isDark ? 'bg-gray-700/30' : 'bg-gray-50'}`}>
-              <DollarSign className={`w-12 h-12 mx-auto mb-4 ${isDark ? 'text-gray-500' : 'text-gray-400'}`} />
-              <h3 className={`text-lg font-semibold mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                Gestion des tarifs
+          <div className="space-y-6">
+            {/* Paramètres iCount */}
+            <div>
+              <h3 className={`text-lg font-semibold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                Facturation iCount
               </h3>
-              <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                Section en cours de développement. Les tarifs seront configurables prochainement.
+              <div className="space-y-4">
+                {/* Toggle envoi auto */}
+                <div className={`flex items-center justify-between p-4 rounded-lg ${isDark ? 'bg-gray-700/50' : 'bg-gray-50'}`}>
+                  <div>
+                    <label className={`text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                      Envoi automatique des devis
+                    </label>
+                    <p className={`text-xs mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                      Envoyer automatiquement le devis par email à la confirmation de la réservation
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIcountAutoSendQuote(!icountAutoSendQuote)}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                      icountAutoSendQuote ? 'bg-blue-600' : isDark ? 'bg-gray-600' : 'bg-gray-300'
+                    }`}
+                  >
+                    <span
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                        icountAutoSendQuote ? 'translate-x-6' : 'translate-x-1'
+                      }`}
+                    />
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Info sur le catalogue */}
+            <div className={`p-4 rounded-lg ${isDark ? 'bg-gray-700/30 border border-gray-600' : 'bg-blue-50 border border-blue-200'}`}>
+              <p className={`text-sm ${isDark ? 'text-gray-300' : 'text-blue-800'}`}>
+                Le catalogue de produits et formules iCount est configuré dans la section &quot;Catalogue iCount&quot; des paramètres généraux.
               </p>
             </div>
           </div>

@@ -1443,6 +1443,88 @@
         "settings": "Parametres",
         "permissions": "Permissions"
       }
+    },
+    "icount_catalog": {
+      "title": "Catalogue iCount",
+      "subtitle": "Produits et formules pour {{branch}}",
+      "tabs": {
+        "products": "Produits GAME",
+        "rooms": "Salles",
+        "formulas": "Formules EVENT"
+      },
+      "products": {
+        "add": "Ajouter un produit",
+        "edit": "Modifier le produit",
+        "new": "Nouveau produit",
+        "code": "Code",
+        "name_fr": "Nom (FR)",
+        "name_he": "Nom (HE)",
+        "name_en": "Nom (EN)",
+        "price_per_person": "Prix/pers",
+        "order": "Ordre",
+        "active": "Actif",
+        "status": "Statut",
+        "actions": "Actions",
+        "none": "Aucun produit"
+      },
+      "rooms": {
+        "add": "Ajouter une salle",
+        "edit": "Modifier la salle",
+        "new": "Nouvelle salle",
+        "code": "Code",
+        "name_fr": "Nom (FR)",
+        "name_he": "Nom (HE)",
+        "name_en": "Nom (EN)",
+        "price": "Prix",
+        "free": "Gratuit",
+        "order": "Ordre",
+        "active": "Actif",
+        "status": "Statut",
+        "actions": "Actions",
+        "none": "Aucune salle"
+      },
+      "formulas": {
+        "add": "Ajouter une formule EVENT",
+        "edit": "Modifier la formule",
+        "new": "Nouvelle formule EVENT",
+        "name": "Nom",
+        "game_type": "Type de jeu",
+        "participants": "Participants",
+        "min_participants": "Min participants",
+        "max_participants": "Max participants",
+        "price_per_person": "Prix/pers",
+        "room": "Salle",
+        "no_room": "Pas de salle",
+        "priority": "Priorite",
+        "active": "Actif",
+        "status": "Statut",
+        "actions": "Actions",
+        "none": "Aucune formule EVENT",
+        "calculation": "Calcul EVENT: (Participants x Prix/pers) + Prix salle",
+        "priority_info": "La formule avec la plus haute priorite correspondant au nombre de participants sera utilisee."
+      },
+      "sync": {
+        "button": "Synchroniser avec iCount",
+        "syncing": "Synchronisation...",
+        "success": "Synchronisation: {{synced}} produit(s) synchronise(s)",
+        "success_with_failures": "Synchronisation: {{synced}} produit(s) synchronise(s), {{failed}} echec(s)",
+        "no_products": "Aucun produit actif a synchroniser"
+      },
+      "status": {
+        "active": "Actif",
+        "inactive": "Inactif"
+      },
+      "game_types": {
+        "laser": "Laser",
+        "active": "Active",
+        "both": "Laser + Active"
+      },
+      "save": "Enregistrer",
+      "cancel": "Annuler",
+      "delete_confirm": "Voulez-vous desactiver cet element?",
+      "element_deactivated": "Element desactive",
+      "error_loading": "Erreur lors du chargement des donnees",
+      "error_delete": "Erreur lors de la suppression"
     }
   }
 }

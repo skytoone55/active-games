@@ -10,6 +10,7 @@ import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { verifyApiPermission } from '@/lib/permissions'
 import { logOrderAction, logBookingAction, getClientIpFromHeaders } from '@/lib/activity-logger'
 import { sendBookingConfirmationEmail } from '@/lib/email-sender'
+import { cancelOfferDirectBackground } from '@/lib/icount-documents'
 import type { UserRole, Booking, Branch } from '@/lib/supabase/types'
 
 /**
@@ -152,6 +153,18 @@ export async function PATCH(
 
       // Si un booking existe, l'annuler aussi
       if (order.booking_id) {
+        // Récupérer les infos du booking pour annuler le devis
+        const { data: bookingToCancel } = await supabase
+          .from('bookings')
+          .select('icount_offer_id, branch_id')
+          .eq('id', order.booking_id)
+          .single()
+
+        // Annuler le devis iCount si présent (en background)
+        if (bookingToCancel?.icount_offer_id && bookingToCancel?.branch_id) {
+          cancelOfferDirectBackground(bookingToCancel.icount_offer_id, bookingToCancel.branch_id, 'Order cancelled')
+        }
+
         await supabase
           .from('bookings')
           .update({
@@ -567,6 +580,20 @@ export async function DELETE(
           },
           { status: 403 }
         )
+      }
+    }
+
+    // Annuler le devis iCount si un booking est associé (en background)
+    if (order.booking_id) {
+      // Récupérer les infos du booking avant suppression
+      const { data: booking } = await supabase
+        .from('bookings')
+        .select('icount_offer_id, branch_id')
+        .eq('id', order.booking_id)
+        .single()
+
+      if (booking?.icount_offer_id) {
+        cancelOfferDirectBackground(booking.icount_offer_id, booking.branch_id, 'Order deleted')
       }
     }
 

@@ -22,6 +22,7 @@ import { validateIsraeliPhone, formatIsraeliPhone } from '@/lib/validation'
 import { logOrderAction, logBookingAction, logContactAction, getClientIpFromHeaders } from '@/lib/activity-logger'
 import { sendBookingConfirmationEmail } from '@/lib/email-sender'
 import { syncContactToICountBackground } from '@/lib/icount-sync'
+import { createOfferForBookingBackground } from '@/lib/icount-documents'
 import type { EventRoom, LaserRoom, UserRole, Booking, Branch, Contact } from '@/lib/supabase/types'
 
 const supabase = createClient(
@@ -711,6 +712,36 @@ export async function POST(request: NextRequest) {
         ipAddress
       })
 
+      // Créer un objet booking complet (utilisé pour email et iCount)
+      const eventBookingData: Booking = {
+        id: booking.id,
+        branch_id,
+        type: 'EVENT',
+        status: 'CONFIRMED',
+        start_datetime: roomStartDateTime.toISOString(),
+        end_datetime: roomEndDateTime.toISOString(),
+        game_start_datetime: gameStartDateTime.toISOString(),
+        game_end_datetime: gameEndDateTime.toISOString(),
+        participants_count,
+        event_room_id: eventRoomId,
+        customer_first_name,
+        customer_last_name: customer_last_name || '',
+        customer_phone: formattedPhone,
+        customer_email: customer_email || null,
+        customer_notes_at_booking: eventNotes,
+        reference_code: referenceCode,
+        total_price: null,
+        notes: null,
+        color,
+        primary_contact_id: contactId,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        cancelled_at: null,
+        cancelled_reason: null,
+        icount_offer_id: null,
+        icount_invrec_id: null
+      }
+
       // Envoyer l'email de confirmation si le client a un email
       console.log('[ORDER API EVENT] === EMAIL SECTION START ===')
       console.log('[ORDER API EVENT] customer_email:', customer_email)
@@ -729,39 +760,11 @@ export async function POST(request: NextRequest) {
         console.log('[ORDER API EVENT] Branch fetch result - name:', branch?.name, 'error:', branchError?.message)
 
         if (branch) {
-          // Créer un objet booking complet pour l'envoi d'email
-          const bookingForEmail: Booking = {
-            id: booking.id,
-            branch_id,
-            type: 'EVENT',
-            status: 'CONFIRMED',
-            start_datetime: roomStartDateTime.toISOString(),
-            end_datetime: roomEndDateTime.toISOString(),
-            game_start_datetime: gameStartDateTime.toISOString(),
-            game_end_datetime: gameEndDateTime.toISOString(),
-            participants_count,
-            event_room_id: eventRoomId,
-            customer_first_name,
-            customer_last_name: customer_last_name || '',
-            customer_phone: formattedPhone,
-            customer_email,
-            customer_notes_at_booking: eventNotes,
-            reference_code: referenceCode,
-            total_price: null,
-            notes: null,
-            color,
-            primary_contact_id: contactId,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-            cancelled_at: null,
-            cancelled_reason: null
-          }
-
           console.log('[ORDER API EVENT] Calling sendBookingConfirmationEmail with locale:', locale)
           // Envoyer l'email (attendre pour que le status soit mis à jour)
           try {
             const emailResult = await sendBookingConfirmationEmail({
-              booking: bookingForEmail,
+              booking: eventBookingData,
               branch: branch as Branch,
               locale
             })
@@ -776,6 +779,17 @@ export async function POST(request: NextRequest) {
         console.log('[ORDER API EVENT] No customer email provided, skipping email')
       }
       console.log('[ORDER API EVENT] === EMAIL SECTION END ===')
+
+      // Create iCount offer in background (non-blocking)
+      console.log('[ORDER API EVENT] Creating iCount offer...')
+      const bookingWithSessions = {
+        ...eventBookingData,
+        game_sessions: eventGameSessions.map(s => ({
+          game_area: s.game_area,
+          session_order: s.session_order,
+        })),
+      }
+      createOfferForBookingBackground(bookingWithSessions, branch_id)
 
       return NextResponse.json({
         success: true,
@@ -1242,7 +1256,9 @@ export async function POST(request: NextRequest) {
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
           cancelled_at: null,
-          cancelled_reason: null
+          cancelled_reason: null,
+          icount_offer_id: null,
+          icount_invrec_id: null
         }
 
         console.log('[ORDER API GAME] Calling sendBookingConfirmationEmail with locale:', locale)
@@ -1264,6 +1280,42 @@ export async function POST(request: NextRequest) {
       console.log('[ORDER API GAME] No customer email provided, skipping email')
     }
     console.log('[ORDER API GAME] === EMAIL SECTION END ===')
+
+    // Create iCount offer in background (non-blocking)
+    console.log('[ORDER API GAME] Creating iCount offer...')
+    const gameBookingForOffer = {
+      id: booking.id,
+      branch_id,
+      type: order_type,
+      status: 'CONFIRMED' as const,
+      start_datetime: startDateTime.toISOString(),
+      end_datetime: endDateTime.toISOString(),
+      game_start_datetime: startDateTime.toISOString(),
+      game_end_datetime: endDateTime.toISOString(),
+      participants_count,
+      event_room_id: null,
+      customer_first_name,
+      customer_last_name: customer_last_name || '',
+      customer_phone: formattedPhone,
+      customer_email: customer_email || null,
+      customer_notes_at_booking: customer_notes || null,
+      reference_code: referenceCode,
+      total_price: null,
+      notes: null,
+      color,
+      primary_contact_id: contactId,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      cancelled_at: null,
+      cancelled_reason: null,
+      icount_offer_id: null,
+      icount_invrec_id: null,
+      game_sessions: sessionResult.game_sessions.map(s => ({
+        game_area: s.game_area as 'ACTIVE' | 'LASER',
+        session_order: s.session_order,
+      })),
+    }
+    createOfferForBookingBackground(gameBookingForOffer, branch_id)
 
     return NextResponse.json({
       success: true,
