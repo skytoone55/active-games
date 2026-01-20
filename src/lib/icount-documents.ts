@@ -167,6 +167,85 @@ async function getEventFormulas(branchId: string): Promise<ICountEventFormula[]>
 }
 
 /**
+ * Convert HTML to plain text for iCount documents
+ * Strips HTML tags and decodes entities
+ */
+function htmlToPlainText(html: string): string {
+  if (!html) return ''
+
+  let text = html
+    // Replace <br>, <br/>, <br /> with newlines
+    .replace(/<br\s*\/?>/gi, '\n')
+    // Replace </p>, </div>, </li> with newlines
+    .replace(/<\/(p|div|li|h[1-6])>/gi, '\n')
+    // Replace <li> with bullet point
+    .replace(/<li[^>]*>/gi, '• ')
+    // Remove all remaining HTML tags
+    .replace(/<[^>]+>/g, '')
+    // Decode common HTML entities
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    // Clean up multiple newlines
+    .replace(/\n{3,}/g, '\n\n')
+    // Trim whitespace from each line
+    .split('\n')
+    .map(line => line.trim())
+    .join('\n')
+    // Final trim
+    .trim()
+
+  return text
+}
+
+/**
+ * Get terms & conditions for a booking type
+ * Returns plain text version for iCount documents
+ */
+async function getTermsConditionsForOffer(
+  bookingType: 'GAME' | 'EVENT',
+  locale: string = 'he'
+): Promise<string> {
+  const supabase = createRawServiceClient()
+
+  // Determine template code
+  const templateType = bookingType === 'EVENT' ? 'event' : 'game'
+  const langCode = ['en', 'fr', 'he'].includes(locale) ? locale : 'he'
+  const templateCode = `terms_${templateType}_${langCode}`
+
+  // Fetch terms template
+  const { data: template } = await supabase
+    .from('email_templates')
+    .select('body_template')
+    .eq('code', templateCode)
+    .eq('is_active', true)
+    .single()
+
+  if (template?.body_template) {
+    return htmlToPlainText(template.body_template)
+  }
+
+  // Fallback to Hebrew if not found
+  if (langCode !== 'he') {
+    const { data: fallbackTemplate } = await supabase
+      .from('email_templates')
+      .select('body_template')
+      .eq('code', `terms_${templateType}_he`)
+      .eq('is_active', true)
+      .single()
+
+    if (fallbackTemplate?.body_template) {
+      return htmlToPlainText(fallbackTemplate.body_template)
+    }
+  }
+
+  return ''
+}
+
+/**
  * Find the best matching EVENT formula for a booking
  */
 function findMatchingEventFormula(
@@ -557,11 +636,26 @@ export async function createOfferForBooking(
 
     // Build description (hwc = hand written comment)
     const gameInfo = booking.game_sessions?.map(s => s.game_area).join(' + ') || booking.type
-    const hwc = [
+
+    // Get terms & conditions for the offer (in Hebrew)
+    const termsConditions = await getTermsConditionsForOffer(booking.type as 'GAME' | 'EVENT', 'he')
+
+    // Build hwc with booking info + terms
+    const hwcParts = [
       `הזמנה #${booking.reference_code}`,
       `${booking.participants_count} משתתפים`,
       gameInfo,
-    ].join('\n')
+    ]
+
+    // Add separator and terms if available
+    if (termsConditions) {
+      hwcParts.push('')
+      hwcParts.push('─'.repeat(40))
+      hwcParts.push('')
+      hwcParts.push(termsConditions)
+    }
+
+    const hwc = hwcParts.join('\n')
 
     // Use contact ID for linking if available
     const offerParams = {
