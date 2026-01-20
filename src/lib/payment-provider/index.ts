@@ -6,4 +6,13 @@
 export * from './types'
 
 // iCount Client & Modules
-export { ICountClient, ICountClientsModule } from './icount'
+export { ICountClient, ICountClientsModule, ICountDocumentsModule, ICountItemsModule } from './icount'
+export type {
+  ICountDocType,
+  ICountDocumentItem,
+  CreateDocumentParams,
+  DocumentResult,
+  DocumentInfo,
+  ItemData,
+  SyncItemResult,
+} from './icount'
