@@ -3,6 +3,9 @@
 import { useState, useEffect, useCallback } from 'react'
 import type { UserRole, ResourceType, PermissionSet } from '@/lib/supabase/types'
 
+// Re-export UserRole pour faciliter l'import
+export type { UserRole } from '@/lib/supabase/types'
+
 interface UseUserPermissionsReturn {
   permissions: Record<ResourceType, PermissionSet>
   loading: boolean

@@ -146,6 +146,47 @@ export async function POST(request: NextRequest) {
 
     const supabase = createServiceRoleClient()
 
+    // Validate participant ranges don't overlap with existing formulas
+    const newMin = min_participants ?? 1
+    const newMax = max_participants ?? 999
+
+    if (newMin > newMax) {
+      return NextResponse.json(
+        { success: false, error: 'min_participants cannot be greater than max_participants' },
+        { status: 400 }
+      )
+    }
+
+    // Check for overlapping ranges with same game_type (or BOTH)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: existingFormulas } = await (supabase as any)
+      .from('icount_event_formulas')
+      .select('id, name, game_type, min_participants, max_participants')
+      .eq('branch_id', branch_id)
+      .eq('is_active', true)
+
+    if (existingFormulas) {
+      for (const existing of existingFormulas) {
+        // Each game_type creates a separate product, so only check same game_type
+        // LASER, ACTIVE, and BOTH are 3 different product types
+        if (game_type === existing.game_type) {
+          // Check if participant ranges overlap
+          // Two ranges [a,b] and [c,d] overlap if a <= d AND c <= b
+          const rangesOverlap = newMin <= existing.max_participants && existing.min_participants <= newMax
+
+          if (rangesOverlap) {
+            return NextResponse.json(
+              {
+                success: false,
+                error: `Range ${newMin}-${newMax} overlaps with existing ${game_type} formula "${existing.name}" (${existing.min_participants}-${existing.max_participants})`
+              },
+              { status: 400 }
+            )
+          }
+        }
+      }
+    }
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: formula, error } = await (supabase as any)
       .from('icount_event_formulas')

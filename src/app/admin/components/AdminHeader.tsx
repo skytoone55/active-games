@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, memo } from 'react'
-import { LogOut, User, ChevronDown, Sun, Moon, Users, Calendar, Menu, X, ShoppingCart, Shield, Globe, FileText, Lock, Crown, Settings } from 'lucide-react'
+import { LogOut, User, ChevronDown, Sun, Moon, Users, Calendar, Menu, X, ShoppingCart, Shield, Globe, FileText, Lock, Crown, Settings, Trash2 } from 'lucide-react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
@@ -374,7 +374,7 @@ function AdminHeaderComponent({
                   </div>
                 )}
 
-                {/* Lien Paramètres - super_admin uniquement */}
+                {/* Liens super_admin uniquement */}
                 {user.role === 'super_admin' && (
                   <div className={`py-2 border-b ${
                     theme === 'dark' ? 'border-gray-700' : 'border-gray-200'
@@ -392,6 +392,20 @@ function AdminHeaderComponent({
                     >
                       <Settings className="w-4 h-4" />
                       {t('admin.header.settings')}
+                    </Link>
+                    <Link
+                      href="/admin/data-management"
+                      onClick={() => setShowUserMenu(false)}
+                      className={`w-full px-4 py-2 text-left flex items-center gap-2 transition-colors ${
+                        pathname === '/admin/data-management'
+                          ? 'bg-red-600 text-white'
+                          : theme === 'dark'
+                            ? 'text-red-400 hover:bg-gray-700'
+                            : 'text-red-600 hover:bg-gray-100'
+                      }`}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      {t('admin.header.data_management') || 'Gestion des données'}
                     </Link>
                   </div>
                 )}

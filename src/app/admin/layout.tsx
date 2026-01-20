@@ -6,6 +6,7 @@ import { getClient } from '@/lib/supabase/client'
 import { Loader2 } from 'lucide-react'
 import { LanguageProvider, useTranslation } from '@/contexts/LanguageContext'
 import { useSessionPersistence } from '@/hooks/useSessionPersistence'
+import { useInactivityTimeout } from '@/hooks/useInactivityTimeout'
 
 function AdminLayoutContent({
   children,
@@ -23,6 +24,9 @@ function AdminLayoutContent({
 
   // Maintenir la session active en arrière-plan
   useSessionPersistence()
+
+  // Déconnexion automatique après 5 minutes d'inactivité (sauf sur page login)
+  useInactivityTimeout()
 
   // Vérification initiale - UNE SEULE FOIS au montage
   useEffect(() => {

@@ -20,7 +20,8 @@ import {
   Zap,
   RefreshCw,
   Send,
-  Loader2
+  Loader2,
+  FileText
 } from 'lucide-react'
 import { useTranslation } from '@/contexts/LanguageContext'
 import type { OrderWithRelations } from '@/lib/supabase/types'
@@ -34,6 +35,8 @@ interface OrderDetailModalProps {
   onGoToAgenda: (date: string, bookingId?: string) => void
   onGoToClient: (contactId: string) => void
   isDark: boolean
+  canEdit?: boolean // Permission de modifier (recréer, renvoyer email)
+  canDelete?: boolean // Permission d'annuler une commande
 }
 
 export function OrderDetailModal({
@@ -45,6 +48,8 @@ export function OrderDetailModal({
   onGoToAgenda,
   onGoToClient,
   isDark,
+  canEdit = true,
+  canDelete = true,
 }: OrderDetailModalProps) {
   const { t, locale } = useTranslation()
   const [sendingEmail, setSendingEmail] = useState(false)
@@ -347,11 +352,15 @@ export function OrderDetailModal({
                   {/* Bouton Réactiver - seulement si annulé */}
                   {order.status === 'cancelled' && onRecreate && (
                     <button
-                      onClick={() => onRecreate(order.id)}
+                      onClick={() => canEdit && onRecreate(order.id)}
+                      disabled={!canEdit}
+                      title={!canEdit ? t('admin.common.no_permission') : undefined}
                       className={`w-full mb-3 flex items-center gap-3 p-3 rounded-xl transition-colors ${
-                        isDark 
-                          ? 'bg-green-600/20 hover:bg-green-600/30 text-green-400' 
-                          : 'bg-green-50 hover:bg-green-100 text-green-600'
+                        !canEdit
+                          ? 'opacity-50 cursor-not-allowed bg-gray-200 dark:bg-gray-700 text-gray-400'
+                          : isDark
+                            ? 'bg-green-600/20 hover:bg-green-600/30 text-green-400'
+                            : 'bg-green-50 hover:bg-green-100 text-green-600'
                       }`}
                     >
                       <RefreshCw className="w-5 h-5" />
@@ -403,6 +412,29 @@ export function OrderDetailModal({
                   </div>
                   <ExternalLink className="w-4 h-4" />
                 </button>
+              )}
+
+              {/* Bouton vers Devis iCount */}
+              {order.booking?.icount_offer_url && (
+                <a
+                  href={order.booking.icount_offer_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`w-full mb-3 flex items-center gap-3 p-3 rounded-xl transition-colors ${
+                    isDark
+                      ? 'bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400'
+                      : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-600'
+                  }`}
+                >
+                  <FileText className="w-5 h-5" />
+                  <div className="text-left flex-1">
+                    <p className="font-medium">{t('admin.orders.view_offer')}</p>
+                    <p className={`text-xs ${isDark ? 'text-emerald-400/70' : 'text-emerald-500/70'}`}>
+                      {t('admin.orders.open_icount_offer')}
+                    </p>
+                  </div>
+                  <ExternalLink className="w-4 h-4" />
+                </a>
               )}
 
               {/* Bouton Renvoyer Email de confirmation */}
@@ -461,36 +493,29 @@ export function OrderDetailModal({
               )}
             </div>
 
-            {/* Actions sur la commande */}
-            {order.status === 'pending' && (
+            {/* Action Confirmer pour commandes pending */}
+            {order.status === 'pending' && onRecreate && (
               <div className={`p-4 rounded-xl ${isDark ? 'bg-gray-800' : 'bg-gray-50'}`}>
                 <h3 className={`text-sm font-semibold uppercase tracking-wider mb-4 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
                   {t('admin.common.actions')}
                 </h3>
-                <div className="space-y-2">
-                  {onRecreate && (
-                    <button
-                      onClick={() => {
-                        onRecreate(order.id)
-                        onClose()
-                      }}
-                      className="w-full py-3 px-4 bg-green-600 hover:bg-green-700 text-white rounded-xl font-medium transition-colors flex items-center justify-center gap-2"
-                    >
-                      <RefreshCw className="w-5 h-5" />
-                      {t('admin.orders.actions.confirm')}
-                    </button>
-                  )}
-                  <button
-                    onClick={() => {
-                      onCancel(order.id)
-                      onClose()
-                    }}
-                    className="w-full py-3 px-4 bg-red-600 hover:bg-red-700 text-white rounded-xl font-medium transition-colors flex items-center justify-center gap-2"
-                  >
-                    <XCircle className="w-5 h-5" />
-                    {t('admin.orders.actions.cancel')}
-                  </button>
-                </div>
+                <button
+                  onClick={() => {
+                    if (!canEdit) return
+                    onRecreate(order.id)
+                    onClose()
+                  }}
+                  disabled={!canEdit}
+                  title={!canEdit ? t('admin.common.no_permission') : undefined}
+                  className={`w-full py-3 px-4 rounded-xl font-medium transition-colors flex items-center justify-center gap-2 ${
+                    !canEdit
+                      ? 'bg-gray-400 cursor-not-allowed opacity-50 text-white'
+                      : 'bg-green-600 hover:bg-green-700 text-white'
+                  }`}
+                >
+                  <RefreshCw className="w-5 h-5" />
+                  {t('admin.orders.actions.confirm')}
+                </button>
               </div>
             )}
 
@@ -528,6 +553,29 @@ export function OrderDetailModal({
             </div>
           </div>
         </div>
+
+        {/* Footer avec bouton d'annulation */}
+        {order.status !== 'cancelled' && (
+          <div className={`px-6 py-4 border-t ${isDark ? 'border-gray-700 bg-gray-900' : 'border-gray-200 bg-gray-50'}`}>
+            <button
+              onClick={() => {
+                if (!canDelete) return
+                onCancel(order.id)
+                onClose()
+              }}
+              disabled={!canDelete}
+              title={!canDelete ? t('admin.common.no_permission') : undefined}
+              className={`py-2 px-4 rounded-lg font-medium transition-colors flex items-center gap-2 text-sm ${
+                !canDelete
+                  ? 'bg-gray-400 cursor-not-allowed opacity-50 text-white'
+                  : 'bg-red-600 hover:bg-red-700 text-white'
+              }`}
+            >
+              <XCircle className="w-4 h-4" />
+              {t('admin.orders.actions.cancel')}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   )

@@ -330,9 +330,20 @@ export async function DELETE(
       )
     }
 
-    // Vérifier le paramètre force_remove pour mettre les utilisateurs sans rôle
+    // Vérifier les paramètres
     const url = new URL(request.url)
     const forceRemove = url.searchParams.get('force_remove') === 'true'
+    const checkOnly = url.searchParams.get('check_only') === 'true'
+
+    // Si check_only, retourner les informations sans supprimer (pour confirmation en deux étapes)
+    if (checkOnly) {
+      return NextResponse.json({
+        success: true,
+        users_count: usersWithRole?.length || 0,
+        role_name: targetRole.display_name,
+        requires_confirmation: true
+      })
+    }
 
     if (usersWithRole && usersWithRole.length > 0) {
       if (!forceRemove) {

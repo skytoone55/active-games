@@ -323,7 +323,11 @@ export function useBookings(branchId: string | null, date?: string) {
       const result = await response.json()
 
       if (!response.ok || !result.success) {
-        throw new Error(result.error || 'Failed to create booking')
+        // Erreur de validation (400) = erreur métier, pas une erreur technique
+        // On affiche le message à l'utilisateur sans console.error pour éviter l'overlay Next.js
+        const errorMessage = result.error || 'Failed to create booking'
+        setError(errorMessage)
+        return null
       }
 
       // Rafraîchir la liste
@@ -331,13 +335,14 @@ export function useBookings(branchId: string | null, date?: string) {
 
       return result.booking as BookingWithSlots
     } catch (err: unknown) {
+      // Vraie erreur technique (réseau, etc.)
       const errorMessage = err instanceof Error
         ? err.message
         : typeof err === 'object' && err !== null
           ? JSON.stringify(err, Object.getOwnPropertyNames(err))
           : String(err)
       console.error('Error creating booking:', errorMessage, err)
-      setError(`Erreur: ${errorMessage}`)
+      setError(`Erreur technique: ${errorMessage}`)
       return null
     }
   }, [fetchBookings])

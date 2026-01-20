@@ -315,10 +315,14 @@ export function syncProductToICountBackground(product: ProductToSync): void {
 
 /**
  * Sync all products for a branch to iCount
+ * - Creates new products on iCount
+ * - Updates existing products
+ * - Deletes products that no longer exist in Supabase (admin is source of truth)
  */
 export async function syncAllProductsToICount(branchId: string): Promise<{
   success: boolean
   synced: number
+  deleted: number
   failed: number
   errors: string[]
 }> {
@@ -327,9 +331,17 @@ export async function syncAllProductsToICount(branchId: string): Promise<{
   const supabase = createRawServiceClient()
   const errors: string[] = []
   let synced = 0
+  let deleted = 0
   let failed = 0
 
-  // Get all active products for this branch
+  // Get credentials for this branch
+  const credentials = await getICountCredentials(branchId)
+  if (!credentials) {
+    console.log('[ICOUNT SYNC] No iCount credentials for branch, skipping sync')
+    return { success: true, synced: 0, deleted: 0, failed: 0, errors: [] }
+  }
+
+  // Get all active products for this branch from Supabase (source of truth)
   const { data: products, error } = await supabase
     .from('icount_products')
     .select('*')
@@ -340,12 +352,16 @@ export async function syncAllProductsToICount(branchId: string): Promise<{
     return {
       success: false,
       synced: 0,
+      deleted: 0,
       failed: 0,
       errors: [error?.message || 'Failed to fetch products'],
     }
   }
 
-  // Sync each product
+  // Create set of active product codes from Supabase
+  const activeProductCodes = new Set(products.map(p => p.code))
+
+  // Sync each product to iCount (create/update)
   for (const product of products) {
     const result = await syncProductToICount(product as ProductToSync)
     if (result.success && result.icount_item_id) {
@@ -354,14 +370,40 @@ export async function syncAllProductsToICount(branchId: string): Promise<{
       failed++
       errors.push(`${product.code}: ${result.error}`)
     }
-    // If success but no icount_item_id, iCount not configured - don't count as failure
   }
 
-  console.log('[ICOUNT SYNC] Sync complete:', { synced, failed })
+  // Get all products from iCount
+  const icountClient = new ICountClient(credentials)
+  const itemsModule = new ICountItemsModule(icountClient)
+  const icountItemsResult = await itemsModule.listItems()
+
+  if (icountItemsResult.success && icountItemsResult.data) {
+    // Find items on iCount that don't exist in Supabase
+    const itemsToDelete = icountItemsResult.data.filter(
+      item => !activeProductCodes.has(item.code)
+    )
+
+    if (itemsToDelete.length > 0) {
+      console.log('[ICOUNT SYNC] Found orphan items to delete:', itemsToDelete.map(i => i.code))
+
+      const idsToDelete = itemsToDelete.map(item => parseInt(item.providerId, 10))
+      const deleteResult = await itemsModule.deleteItems(idsToDelete)
+
+      if (deleteResult.success && deleteResult.data) {
+        deleted = deleteResult.data.deleted.length
+        console.log('[ICOUNT SYNC] Deleted orphan items:', deleted)
+      } else {
+        errors.push(`Delete failed: ${deleteResult.error?.message || 'Unknown error'}`)
+      }
+    }
+  }
+
+  console.log('[ICOUNT SYNC] Sync complete:', { synced, deleted, failed })
 
   return {
     success: failed === 0,
     synced,
+    deleted,
     failed,
     errors,
   }
@@ -545,6 +587,58 @@ export async function updateEventProductPrice(
       ...product,
       unit_price: newPrice,
     } as ProductToSync)
+
+    return { success: true }
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : 'Unknown error'
+    return { success: false, error: errorMsg }
+  }
+}
+
+/**
+ * Delete a product linked to a formula
+ * Called when a formula is deleted/deactivated
+ * - Deactivates product in Supabase
+ * - iCount sync will delete it when next sync runs
+ */
+export async function deleteEventProduct(
+  productId: string,
+  branchId: string
+): Promise<{ success: boolean; error?: string }> {
+  console.log('[ICOUNT SYNC] deleteEventProduct:', productId)
+
+  const supabase = createRawServiceClient()
+
+  try {
+    // Get the product to check it's an EVENT product
+    const { data: product, error: findError } = await supabase
+      .from('icount_products')
+      .select('*')
+      .eq('id', productId)
+      .single()
+
+    if (findError || !product) {
+      return { success: false, error: findError?.message || 'Product not found' }
+    }
+
+    // Safety check: only delete products that start with 'event_'
+    if (!product.code.startsWith('event_')) {
+      console.warn('[ICOUNT SYNC] Refusing to delete non-event product:', product.code)
+      return { success: false, error: 'Can only delete EVENT products' }
+    }
+
+    // Deactivate the product (soft delete)
+    const { error: updateError } = await supabase
+      .from('icount_products')
+      .update({ is_active: false })
+      .eq('id', productId)
+
+    if (updateError) {
+      return { success: false, error: updateError.message }
+    }
+
+    console.log('[ICOUNT SYNC] Product deactivated:', product.code)
+    console.log('[ICOUNT SYNC] Note: Product will be deleted from iCount on next sync')
 
     return { success: true }
   } catch (error) {

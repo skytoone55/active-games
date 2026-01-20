@@ -325,6 +325,10 @@ export interface Database {
           pending_details: string | null
           terms_accepted: boolean
           terms_accepted_at: string | null
+          cgv_token: string | null
+          cgv_validated_at: string | null
+          cgv_reminder_sent_at: string | null
+          cgv_reminder_count: number
           processed_at: string | null
           processed_by: string | null
           created_at: string

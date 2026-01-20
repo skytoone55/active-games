@@ -44,12 +44,7 @@ export default function RolesPage() {
 
   const isDark = theme === 'dark'
 
-  // Redirect if not authenticated
-  useEffect(() => {
-    if (!authLoading && !user) {
-      router.push('/admin/login')
-    }
-  }, [user, authLoading, router])
+  // Note: L'auth est gérée par le layout parent, pas de redirection ici
 
   const handleSignOut = async () => {
     const supabase = createClient()
@@ -66,23 +61,18 @@ export default function RolesPage() {
   }
 
   const handleDelete = async (role: Role) => {
+    // Toujours afficher la confirmation en deux étapes
     // Premier appel pour vérifier si des utilisateurs ont ce rôle
     try {
-      const response = await fetch(`/api/roles/${role.id}`, {
+      const response = await fetch(`/api/roles/${role.id}?check_only=true`, {
         method: 'DELETE',
       })
       const data = await response.json()
 
-      if (data.success) {
-        refreshRoles()
-      } else if (data.requires_confirmation) {
-        // Des utilisateurs ont ce rôle, afficher le popup de confirmation
-        setSelectedRole(role)
-        setDeleteUserCount(data.users_count || 0)
-        setShowDeleteConfirm(true)
-      } else {
-        alert(data.error || 'Erreur lors de la suppression')
-      }
+      // Toujours afficher le popup de confirmation
+      setSelectedRole(role)
+      setDeleteUserCount(data.users_count || 0)
+      setShowDeleteConfirm(true)
     } catch {
       alert('Erreur de connexion')
     }

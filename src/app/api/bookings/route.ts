@@ -11,6 +11,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { verifyApiPermission } from '@/lib/permissions'
+import { validateBookingPrice } from '@/lib/booking-validation'
 import { logBookingAction, logContactAction, logOrderAction, getClientIpFromHeaders } from '@/lib/activity-logger'
 import { sendBookingConfirmationEmail } from '@/lib/email-sender'
 import { createOfferForBooking, createOfferForBookingBackground } from '@/lib/icount-documents'
@@ -36,6 +37,16 @@ function generateReferenceCode(): string {
     code += chars.charAt(Math.floor(Math.random() * chars.length))
   }
   return code
+}
+
+// Générer un token CGV sécurisé (64 caractères hex)
+function generateCgvToken(): string {
+  const chars = 'abcdef0123456789'
+  let token = ''
+  for (let i = 0; i < 64; i++) {
+    token += chars.charAt(Math.floor(Math.random() * chars.length))
+  }
+  return token
 }
 
 interface CreateBookingBody {
@@ -105,6 +116,33 @@ export async function POST(request: NextRequest) {
         { status: 403 }
       )
     }
+
+    // === VALIDATION PRIX OBLIGATOIRE ===
+    // Vérifier qu'une formule/produit existe AVANT de créer le booking
+    if (body.game_sessions && body.game_sessions.length > 0) {
+      const priceValidation = await validateBookingPrice(
+        supabase,
+        body.type,
+        body.branch_id,
+        body.participants_count,
+        body.game_sessions.map(s => ({
+          game_area: s.game_area,
+          start_datetime: s.start_datetime,
+          end_datetime: s.end_datetime
+        }))
+      )
+
+      if (!priceValidation.valid) {
+        console.error('[BOOKINGS API] Price validation failed:', priceValidation.error)
+        return NextResponse.json({
+          success: false,
+          error: priceValidation.error,
+          errorKey: priceValidation.errorKey
+        }, { status: 400 })
+      }
+      console.log('[BOOKINGS API] Price validation passed')
+    }
+    // === FIN VALIDATION PRIX ===
 
     // 1. CRÉER OU TROUVER LE CONTACT
     let contactId = body.primary_contact_id
@@ -282,6 +320,7 @@ export async function POST(request: NextRequest) {
     // 6. CRÉER L'ORDER
     const bookingDate = new Date(body.start_datetime)
     let orderId: string | null = null
+    let orderCgvToken: string | null = null
 
     if (body.reactivateOrderId) {
       // Réactivation: mettre à jour l'order existant
@@ -307,7 +346,9 @@ export async function POST(request: NextRequest) {
 
       orderId = updatedOrder?.id || body.reactivateOrderId
     } else {
-      // Nouvelle création
+      // Nouvelle création - générer un token CGV pour que le client puisse valider
+      const cgvToken = generateCgvToken()
+
       const { data: newOrder, error: orderError } = await supabase
         .from('orders')
         .insert({
@@ -328,14 +369,18 @@ export async function POST(request: NextRequest) {
           customer_email: body.customer_email || null,
           customer_notes: body.customer_notes_at_booking || null,
           request_reference: referenceCode,
-          terms_accepted: true,
-          terms_accepted_at: new Date().toISOString(),
+          // CGV non acceptées - le client doit valider via le lien email
+          terms_accepted: false,
+          terms_accepted_at: null,
+          cgv_token: cgvToken,
+          cgv_validated_at: null,
         })
-        .select('id')
+        .select('id, cgv_token')
         .single()
 
       if (!orderError && newOrder) {
         orderId = newOrder.id
+        orderCgvToken = newOrder.cgv_token
 
         // LOG: Order créé
         await logOrderAction({
@@ -377,6 +422,8 @@ export async function POST(request: NextRequest) {
       game_sessions: (sessions || []).map(s => ({
         game_area: s.game_area as 'ACTIVE' | 'LASER',
         session_order: s.session_order,
+        start_datetime: s.start_datetime,
+        end_datetime: s.end_datetime,
       })),
     }
 
@@ -429,7 +476,8 @@ export async function POST(request: NextRequest) {
             booking: bookingForEmail,
             branch,
             triggeredBy: user.id,
-            locale: body.locale || 'he'
+            locale: body.locale || 'he',
+            cgvToken: orderCgvToken // Lien de validation CGV pour les orders admin
           })
 
           emailSent = emailResult.success

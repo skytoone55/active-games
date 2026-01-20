@@ -208,9 +208,23 @@ export async function POST(request: NextRequest) {
     }))
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (serviceClient as any)
+    const { error: permissionsError } = await (serviceClient as any)
       .from('role_permissions')
       .insert(permissionsToInsert)
+
+    if (permissionsError) {
+      console.error('Error creating permissions for role:', permissionsError)
+      // Rollback: delete the created role since permissions failed
+      await serviceClient.from('roles').delete().eq('id', createdRole.id)
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Failed to create role permissions. Please ensure the database constraint "role_permissions_role_check" has been removed to allow dynamic roles.',
+          details: permissionsError.message
+        },
+        { status: 500 }
+      )
+    }
 
     return NextResponse.json({
       success: true,

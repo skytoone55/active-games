@@ -12,6 +12,8 @@ interface UsersTableProps {
   onEdit: (user: UserWithBranches) => void
   onDelete: (user: UserWithBranches) => void
   currentUserId: string
+  canEdit?: boolean // Permission de modifier un utilisateur
+  canDelete?: boolean // Permission de supprimer un utilisateur
 }
 
 export function UsersTable({
@@ -20,6 +22,8 @@ export function UsersTable({
   onEdit,
   onDelete,
   currentUserId,
+  canEdit = true,
+  canDelete = true,
 }: UsersTableProps) {
   const { t } = useTranslation()
   const [searchQuery, setSearchQuery] = useState('')
@@ -323,27 +327,30 @@ export function UsersTable({
                   <td className="px-4 py-4 whitespace-nowrap text-right">
                     <div className="flex items-center justify-end gap-2">
                       <button
-                        onClick={() => onEdit(user)}
+                        onClick={() => canEdit && onEdit(user)}
+                        disabled={!canEdit}
                         className={`p-2 rounded-lg transition-colors ${
-                          isDark
-                            ? 'hover:bg-gray-600 text-gray-400 hover:text-white'
-                            : 'hover:bg-gray-100 text-gray-500 hover:text-gray-700'
+                          !canEdit
+                            ? 'opacity-50 cursor-not-allowed text-gray-400'
+                            : isDark
+                              ? 'hover:bg-gray-600 text-gray-400 hover:text-white'
+                              : 'hover:bg-gray-100 text-gray-500 hover:text-gray-700'
                         }`}
-                        title={t('admin.common.edit')}
+                        title={!canEdit ? t('admin.common.no_permission') : t('admin.common.edit')}
                       >
                         <Edit2 className="w-4 h-4" />
                       </button>
                       <button
-                        onClick={() => onDelete(user)}
-                        disabled={user.id === currentUserId}
+                        onClick={() => canDelete && onDelete(user)}
+                        disabled={user.id === currentUserId || !canDelete}
                         className={`p-2 rounded-lg transition-colors ${
-                          user.id === currentUserId
-                            ? 'opacity-50 cursor-not-allowed'
+                          user.id === currentUserId || !canDelete
+                            ? 'opacity-50 cursor-not-allowed text-gray-400'
                             : isDark
                             ? 'hover:bg-red-900/30 text-gray-400 hover:text-red-400'
                             : 'hover:bg-red-50 text-gray-500 hover:text-red-600'
                         }`}
-                        title={user.id === currentUserId ? t('admin.users.cannot_delete_self') : t('admin.common.delete')}
+                        title={!canDelete ? t('admin.common.no_permission') : user.id === currentUserId ? t('admin.users.cannot_delete_self') : t('admin.common.delete')}
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { getClient } from '@/lib/supabase/client'
 import { Loader2, Lock as LockIcon, Mail, AlertCircle, Globe, ChevronDown } from 'lucide-react'
@@ -22,6 +22,20 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [showLanguageMenu, setShowLanguageMenu] = useState(false)
+  const [rememberMe, setRememberMe] = useState(false)
+
+  // Charger les identifiants sauvegardés au montage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedEmail = localStorage.getItem('remembered_email')
+      const savedPassword = localStorage.getItem('remembered_password')
+      if (savedEmail && savedPassword) {
+        setEmail(savedEmail)
+        setPassword(savedPassword)
+        setRememberMe(true)
+      }
+    }
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -45,6 +59,15 @@ export default function LoginPage() {
         }
         setLoading(false)
         return
+      }
+
+      // Sauvegarder ou supprimer les identifiants selon "Se souvenir de moi"
+      if (rememberMe) {
+        localStorage.setItem('remembered_email', email)
+        localStorage.setItem('remembered_password', password)
+      } else {
+        localStorage.removeItem('remembered_email')
+        localStorage.removeItem('remembered_password')
       }
 
       // Connexion réussie - redirection vers admin
@@ -98,13 +121,21 @@ export default function LoginPage() {
       <div className="w-full max-w-md">
         {/* Logo/Title */}
         <div className="text-center mb-8">
-          <div className="flex justify-center mb-6">
+          <div className="flex justify-center items-center gap-6 mb-6">
             <Image
               src="/images/logo-activegames.png"
               alt="Active Games"
-              width={213}
-              height={81}
-              className="h-20 w-auto object-contain"
+              width={160}
+              height={60}
+              className="h-16 w-auto object-contain"
+              priority
+            />
+            <Image
+              src="/images/logo_laser_city.png"
+              alt="Laser City"
+              width={160}
+              height={60}
+              className="h-16 w-auto object-contain"
               priority
             />
           </div>
@@ -142,7 +173,7 @@ export default function LoginPage() {
           </div>
 
           {/* Password Field */}
-          <div className="mb-6">
+          <div className="mb-4">
             <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-2">
               {t('admin.login.password')}
             </label>
@@ -159,6 +190,19 @@ export default function LoginPage() {
                 className="w-full pl-11 pr-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-colors"
               />
             </div>
+          </div>
+
+          {/* Remember Me Checkbox */}
+          <div className="mb-6">
+            <label className="flex items-center gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                className="w-4 h-4 rounded border-gray-600 bg-gray-700 text-cyan-500 focus:ring-cyan-500 focus:ring-offset-gray-800"
+              />
+              <span className="text-sm text-gray-300">{t('admin.login.remember_me')}</span>
+            </label>
           </div>
 
           {/* Submit Button */}

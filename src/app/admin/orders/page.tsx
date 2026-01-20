@@ -19,6 +19,8 @@ import {
 import { useOrders } from '@/hooks/useOrders'
 import { useBranches } from '@/hooks/useBranches'
 import { useAuth } from '@/hooks/useAuth'
+import { useUserPermissions } from '@/hooks/useUserPermissions'
+import type { UserRole } from '@/hooks/useUserPermissions'
 import { useTranslation } from '@/contexts/LanguageContext'
 import { AdminHeader } from '../components/AdminHeader'
 import { OrdersTable } from './components/OrdersTable'
@@ -82,14 +84,19 @@ export default function OrdersPage() {
     onConfirm: () => {}
   })
   
-  const { 
-    orders, 
-    loading, 
-    error, 
-    stats, 
+  const {
+    orders,
+    loading,
+    error,
+    stats,
     pendingCount,
     cancelOrder
   } = useOrders(selectedBranchId)
+
+  // Permissions
+  const { hasPermission } = useUserPermissions(user?.role as UserRole || null)
+  const canEditOrder = hasPermission('orders', 'can_edit')
+  const canDeleteOrder = hasPermission('orders', 'can_delete')
 
   // Charger le thème depuis localStorage
   useEffect(() => {
@@ -106,12 +113,7 @@ export default function OrdersPage() {
     localStorage.setItem('admin-theme', newTheme)
   }
 
-  // Rediriger si pas authentifié
-  useEffect(() => {
-    if (!authLoading && !user) {
-      router.push('/admin/login')
-    }
-  }, [user, authLoading, router])
+  // Note: L'auth est gérée par le layout parent, pas de redirection ici
 
   // Sélectionner la première branche par défaut si aucune n'est sélectionnée
   useEffect(() => {
@@ -515,6 +517,7 @@ export default function OrdersPage() {
             onCancel={handleCancel}
             onViewOrder={handleViewOrder}
             onViewClient={handleViewClient}
+            canDelete={canDeleteOrder}
           />
         )}
       </main>
@@ -530,6 +533,8 @@ export default function OrdersPage() {
           onGoToAgenda={handleGoToAgenda}
           onGoToClient={handleViewClient}
           isDark={isDark}
+          canEdit={canEditOrder}
+          canDelete={canDeleteOrder}
         />
       )}
 

@@ -7,6 +7,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { useUsers } from '@/hooks/useUsers'
 import { useBranches } from '@/hooks/useBranches'
 import { useRoles } from '@/hooks/useRoles'
+import { useUserPermissions, type UserRole } from '@/hooks/useUserPermissions'
 import { useTranslation } from '@/contexts/LanguageContext'
 import { AdminHeader } from '../components/AdminHeader'
 import { UsersTable } from './components/UsersTable'
@@ -26,6 +27,12 @@ export default function UsersPage() {
 
   // Get the current user's level for hierarchy checks
   const currentUserLevel = user?.role ? getRoleLevel(user.role) : 10
+
+  // Permissions
+  const { hasPermission } = useUserPermissions(user?.role as UserRole || null)
+  const canCreateUser = hasPermission('users', 'can_create')
+  const canEditUser = hasPermission('users', 'can_edit')
+  const canDeleteUser = hasPermission('users', 'can_delete')
   
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
@@ -51,12 +58,7 @@ export default function UsersPage() {
 
   const isDark = theme === 'dark'
 
-  // Rediriger si pas authentifié
-  useEffect(() => {
-    if (!authLoading && !user) {
-      router.push('/admin/login')
-    }
-  }, [user, authLoading, router])
+  // Note: L'auth est gérée par le layout parent, pas de redirection ici
 
   const handleSignOut = async () => {
     const supabase = createClient()
@@ -151,10 +153,12 @@ export default function UsersPage() {
             </div>
           </div>
           <button
-            onClick={() => setShowCreateModal(true)}
+            onClick={() => canCreateUser && setShowCreateModal(true)}
+            disabled={!canCreateUser}
+            title={!canCreateUser ? t('admin.common.no_permission') : undefined}
             className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
-              isDark
-                ? 'bg-blue-600 hover:bg-blue-700 text-white'
+              !canCreateUser
+                ? 'bg-gray-500 text-gray-300 cursor-not-allowed opacity-50'
                 : 'bg-blue-600 hover:bg-blue-700 text-white'
             }`}
           >
@@ -193,6 +197,8 @@ export default function UsersPage() {
             onEdit={handleEdit}
             onDelete={handleDelete}
             currentUserId={user.id}
+            canEdit={canEditUser}
+            canDelete={canDeleteUser}
           />
         )}
       </div>

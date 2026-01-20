@@ -13,7 +13,9 @@ import {
   Target,
   PartyPopper,
   Zap,
-  XCircle
+  XCircle,
+  FileCheck,
+  AlertTriangle
 } from 'lucide-react'
 import { useTranslation } from '@/contexts/LanguageContext'
 import type { OrderWithRelations, OrderStatus, GameArea } from '@/lib/supabase/types'
@@ -27,6 +29,7 @@ interface OrdersTableProps {
   onCancel: (orderId: string) => void
   onViewOrder: (order: OrderWithRelations) => void
   onViewClient: (contactId: string) => void
+  canDelete?: boolean // Permission d'annuler une commande
 }
 
 // Composant Dropdown pour les filtres (position fixed pour éviter overflow)
@@ -114,7 +117,7 @@ function FilterDropdown({
 
 const PAGE_SIZE_OPTIONS = [10, 20, 50, 100, 200, 500, 1000]
 
-export function OrdersTable({ orders, isDark, onCancel, onViewOrder, onViewClient }: OrdersTableProps) {
+export function OrdersTable({ orders, isDark, onCancel, onViewOrder, onViewClient, canDelete = true }: OrdersTableProps) {
   const { t, locale } = useTranslation()
   const [sortField, setSortField] = useState<SortField>('created')
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
@@ -135,6 +138,7 @@ export function OrdersTable({ orders, isDark, onCancel, onViewOrder, onViewClien
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [gameAreaFilter, setGameAreaFilter] = useState<string>('all')
   const [sourceFilter, setSourceFilter] = useState<string>('all')
+  const [cgvFilter, setCgvFilter] = useState<string>('all')
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -152,9 +156,14 @@ export function OrdersTable({ orders, isDark, onCancel, onViewOrder, onViewClien
       if (statusFilter !== 'all' && order.status !== statusFilter) return false
       if (gameAreaFilter !== 'all' && order.game_area !== gameAreaFilter) return false
       if (sourceFilter !== 'all' && order.source !== sourceFilter) return false
+      // Filtre CGV (pour orders admin seulement)
+      if (cgvFilter !== 'all') {
+        if (cgvFilter === 'pending' && (order.source !== 'admin_agenda' || order.cgv_validated_at)) return false
+        if (cgvFilter === 'validated' && !order.cgv_validated_at) return false
+      }
       return true
     })
-  }, [orders, typeFilter, statusFilter, gameAreaFilter, sourceFilter])
+  }, [orders, typeFilter, statusFilter, gameAreaFilter, sourceFilter, cgvFilter])
 
   // Trier
   const sortedOrders = useMemo(() => {
@@ -200,7 +209,7 @@ export function OrdersTable({ orders, isDark, onCancel, onViewOrder, onViewClien
   // Reset page when filters change
   React.useEffect(() => {
     setCurrentPage(1)
-  }, [typeFilter, statusFilter, gameAreaFilter, sourceFilter, itemsPerPage])
+  }, [typeFilter, statusFilter, gameAreaFilter, sourceFilter, cgvFilter, itemsPerPage])
 
   const SortIcon = ({ field }: { field: SortField }) => {
     if (sortField !== field) return null
@@ -270,14 +279,21 @@ export function OrdersTable({ orders, isDark, onCancel, onViewOrder, onViewClien
     { value: 'website', label: t('admin.orders.source_website') },
   ]
 
+  const cgvOptions = [
+    { value: 'all', label: t('admin.common.all') },
+    { value: 'pending', label: t('admin.orders.cgv.pending') || 'En attente' },
+    { value: 'validated', label: t('admin.orders.cgv.validated') || 'Validées' },
+  ]
+
   // Vérifier si des filtres sont actifs
-  const hasActiveFilters = typeFilter !== 'all' || statusFilter !== 'all' || gameAreaFilter !== 'all' || sourceFilter !== 'all'
+  const hasActiveFilters = typeFilter !== 'all' || statusFilter !== 'all' || gameAreaFilter !== 'all' || sourceFilter !== 'all' || cgvFilter !== 'all'
 
   const clearAllFilters = () => {
     setTypeFilter('all')
     setStatusFilter('all')
     setGameAreaFilter('all')
     setSourceFilter('all')
+    setCgvFilter('all')
   }
 
   if (orders.length === 0) {
@@ -365,12 +381,19 @@ export function OrdersTable({ orders, isDark, onCancel, onViewOrder, onViewClien
             </span>
           )}
         </div>
-        <div className="col-span-1">
+        <div className="col-span-1 flex flex-col gap-1">
           <FilterDropdown
             label={t('admin.orders.table.source')}
             options={sourceOptions}
             value={sourceFilter}
             onChange={setSourceFilter}
+            isDark={isDark}
+          />
+          <FilterDropdown
+            label="CGV"
+            options={cgvOptions}
+            value={cgvFilter}
+            onChange={setCgvFilter}
             isDark={isDark}
           />
         </div>
@@ -494,15 +517,29 @@ export function OrdersTable({ orders, isDark, onCancel, onViewOrder, onViewClien
                   )}
                 </div>
 
-                {/* Source */}
-                <div className="col-span-1">
-                  <span className={`text-xs px-2 py-0.5 rounded ${
+                {/* Source + CGV Badge */}
+                <div className="col-span-1 flex flex-col gap-1">
+                  <span className={`text-xs px-2 py-0.5 rounded w-fit ${
                     order.source === 'admin_agenda'
                       ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400'
                       : 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400'
                   }`}>
                     {order.source === 'admin_agenda' ? 'Admin' : 'Site'}
                   </span>
+                  {/* Badge CGV pour orders admin */}
+                  {order.source === 'admin_agenda' && (
+                    <span className={`text-xs px-1.5 py-0.5 rounded flex items-center gap-1 w-fit ${
+                      order.cgv_validated_at
+                        ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                        : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+                    }`}>
+                      {order.cgv_validated_at ? (
+                        <><FileCheck className="w-3 h-3" /> CGV</>
+                      ) : (
+                        <><AlertTriangle className="w-3 h-3" /> CGV</>
+                      )}
+                    </span>
+                  )}
                 </div>
 
                 {/* Référence */}

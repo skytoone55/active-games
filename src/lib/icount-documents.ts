@@ -307,15 +307,16 @@ function calculateActiveDurationMinutes(sessions: BookingWithSessions['game_sess
 
 /**
  * Find the best product for ACTIVE games based on duration
- * Products have codes like: active_30m, active_1h, active_1h30, active_2h
+ * Products have codes like: active_30, active_60, active_90, active_120
+ * MUST match price-calculator.ts codes exactly
  */
 function findActiveProduct(products: ICountProduct[], durationMinutes: number): ICountProduct | null {
-  // Map duration to product codes
+  // Map duration to product codes - MUST match price-calculator.ts
   const durationMap: { [key: string]: number } = {
-    'active_30m': 30,
-    'active_1h': 60,
-    'active_1h30': 90,
-    'active_2h': 120,
+    'active_30': 30,
+    'active_60': 60,
+    'active_90': 90,
+    'active_120': 120,
   }
 
   // Find product that matches duration (rounded to nearest standard duration)
@@ -333,9 +334,10 @@ function findActiveProduct(products: ICountProduct[], durationMinutes: number): 
     }
   }
 
-  // If no duration-based match, try to find any active product
+  // NO FALLBACK - if product not found, return null and let caller handle it
+  // This prevents silent wrong pricing
   if (!bestProduct) {
-    bestProduct = products.find(p => p.code.startsWith('active_')) || null
+    console.error('[ICOUNT DOCS] CRITICAL: No Active product found for duration:', durationMinutes, 'min. Available products:', products.filter(p => p.code.startsWith('active_')).map(p => p.code).join(', '))
   }
 
   return bestProduct
@@ -343,23 +345,33 @@ function findActiveProduct(products: ICountProduct[], durationMinutes: number): 
 
 /**
  * Find the best product for LASER games based on number of parties
- * Products have codes like: laser_1p, laser_2p, laser_3p, laser_4p
+ * Products have codes like: laser_1, laser_2, laser_3, laser_4
+ * MUST match price-calculator.ts codes exactly
  */
 function findLaserProduct(products: ICountProduct[], numberOfParties: number): ICountProduct | null {
-  const code = `laser_${Math.min(numberOfParties, 4)}p`
-  return products.find(p => p.code === code) || null
+  const code = `laser_${Math.min(numberOfParties, 4)}`
+  const product = products.find(p => p.code === code)
+
+  // NO FALLBACK - if product not found, log error and return null
+  if (!product) {
+    console.error('[ICOUNT DOCS] CRITICAL: No Laser product found for code:', code, '. Available products:', products.filter(p => p.code.startsWith('laser_')).map(p => p.code).join(', '))
+  }
+
+  return product || null
 }
 
 /**
  * Calculate price and build items for a booking
  * Returns the items to put on the iCount document
+ * Now returns errors array to prevent silent failures
  */
 async function calculateBookingItems(
   booking: BookingWithSessions,
   branchId: string
-): Promise<{ items: ICountDocumentItem[]; total: number; discountAmount: number }> {
+): Promise<{ items: ICountDocumentItem[]; total: number; discountAmount: number; errors: string[] }> {
   const products = await getProducts(branchId)
   const items: ICountDocumentItem[] = []
+  const errors: string[] = []
   let subtotal = 0
   let discountAmount = 0
 
@@ -424,19 +436,13 @@ async function calculateBookingItems(
           quantity: booking.participants_count,
         })
       } else {
-        // Fallback: use formula info without SKU link
+        // NO FALLBACK - report error instead of using unlinked formula
         const expectedCode = formula.product_id
           ? `product_id:${formula.product_id}`
           : `event_${formula.game_type.toLowerCase()}_${formula.min_participants}_${formula.max_participants}`
-        console.warn('[ICOUNT DOCS] No EVENT product found for:', expectedCode, '- using formula directly')
-        const lineTotal = formula.price_per_person * booking.participants_count
-        subtotal += lineTotal
-
-        items.push({
-          description: formula.name,
-          unitprice_incvat: formula.price_per_person,
-          quantity: booking.participants_count,
-        })
+        const errorMsg = `Produit EVENT non trouvé pour la formule "${formula.name}". Code attendu: ${expectedCode}. Exécutez la synchronisation iCount.`
+        console.error('[ICOUNT DOCS] CRITICAL:', errorMsg)
+        errors.push(errorMsg)
       }
 
       // Add room price if formula has a room
@@ -458,25 +464,18 @@ async function calculateBookingItems(
               quantity: 1,
             })
           } else {
-            // Fallback: use room info without SKU link
-            console.warn('[ICOUNT DOCS] No ROOM product found for:', roomProductCode, '- using room directly')
-            subtotal += room.price
-            items.push({
-              description: room.name_he || room.name,
-              unitprice_incvat: room.price,
-              quantity: 1,
-            })
+            // NO FALLBACK - report error for missing room product
+            const errorMsg = `Produit salle non trouvé pour "${room.name_he || room.name}". Code attendu: ${roomProductCode}. Créez le produit salle dans la configuration.`
+            console.error('[ICOUNT DOCS] CRITICAL:', errorMsg)
+            errors.push(errorMsg)
           }
         }
       }
     } else {
-      console.warn('[ICOUNT DOCS] No matching EVENT formula found')
-      // Fallback: generic line
-      items.push({
-        description: 'אירוע',
-        unitprice_incvat: 0,
-        quantity: booking.participants_count,
-      })
+      // NO FALLBACK - report error for missing formula
+      const errorMsg = `Aucune formule EVENT trouvée pour ${booking.participants_count} participants. Créez une formule dans la configuration.`
+      console.error('[ICOUNT DOCS] CRITICAL:', errorMsg)
+      errors.push(errorMsg)
     }
 
   } else if (booking.type === 'GAME') {
@@ -500,7 +499,9 @@ async function calculateBookingItems(
           quantity,
         })
       } else {
-        console.warn('[ICOUNT DOCS] No Laser product found for', laserSessions.length, 'parties')
+        const errorMsg = `Produit Laser non trouvé pour ${laserSessions.length} partie(s). Code attendu: laser_${Math.min(laserSessions.length, 4)}`
+        console.error('[ICOUNT DOCS] CRITICAL:', errorMsg)
+        errors.push(errorMsg)
       }
     }
 
@@ -523,19 +524,18 @@ async function calculateBookingItems(
           quantity,
         })
       } else {
-        console.warn('[ICOUNT DOCS] No Active product found for duration:', totalDuration, 'min')
+        const errorMsg = `Produit Active non trouvé pour ${totalDuration} minutes. Codes attendus: active_30, active_60, active_90, active_120`
+        console.error('[ICOUNT DOCS] CRITICAL:', errorMsg)
+        errors.push(errorMsg)
       }
     }
   }
 
-  // If no items found, create a generic line
-  if (items.length === 0) {
-    console.warn('[ICOUNT DOCS] No products matched for booking, creating generic line')
-    items.push({
-      description: booking.type === 'EVENT' ? 'אירוע' : 'משחק',
-      unitprice_incvat: 0,
-      quantity: booking.participants_count,
-    })
+  // NEVER create generic fallback items - this hides pricing errors
+  if (items.length === 0 && errors.length === 0) {
+    const errorMsg = `Aucun produit trouvé pour la réservation ${booking.reference_code} (type: ${booking.type})`
+    console.error('[ICOUNT DOCS] CRITICAL:', errorMsg)
+    errors.push(errorMsg)
   }
 
   // Apply discount if present
@@ -560,7 +560,7 @@ async function calculateBookingItems(
 
   const total = subtotal - discountAmount
 
-  return { items, total, discountAmount }
+  return { items, total, discountAmount, errors }
 }
 
 /**
@@ -623,9 +623,25 @@ export async function createOfferForBooking(
     }
 
     // Calculate items and total
-    const { items, total } = await calculateBookingItems(booking, branchId)
+    const { items, total, errors } = await calculateBookingItems(booking, branchId)
     console.log('[ICOUNT DOCS] Calculated items:', items.length, 'Total:', total)
     console.log('[ICOUNT DOCS] Items:', JSON.stringify(items))
+
+    // CRITICAL: Block document creation if there are pricing errors
+    if (errors.length > 0) {
+      const errorMessage = `Erreurs de configuration produits: ${errors.join('; ')}`
+      console.error('[ICOUNT DOCS] BLOCKING document creation due to errors:', errors)
+      await logICountDocument(booking, branchId, 'offer_created', false, undefined, errorMessage)
+      return { success: false, error: errorMessage }
+    }
+
+    // Additional safety check: refuse to create 0₪ documents
+    if (total <= 0 && items.length > 0) {
+      const errorMessage = 'Le total calculé est 0₪ - vérifiez les prix des produits'
+      console.error('[ICOUNT DOCS] BLOCKING document creation - total is 0')
+      await logICountDocument(booking, branchId, 'offer_created', false, undefined, errorMessage)
+      return { success: false, error: errorMessage }
+    }
 
     // Create iCount client and module
     const icountClient = new ICountClient(credentials)

@@ -51,6 +51,8 @@ export interface BookingEmailVariables {
   terms_conditions: string // HTML content of terms & conditions
   offer_url: string // iCount offer document URL (for EVENT bookings)
   offer_section: string // HTML section for offer link (empty if no offer URL)
+  cgv_url: string // URL for CGV validation (admin-created orders only)
+  cgv_section: string // HTML section for CGV validation link
 }
 
 // Remplace les variables {{variable}} dans le template
@@ -259,8 +261,9 @@ export async function sendBookingConfirmationEmail(params: {
   branch: Branch
   triggeredBy?: string
   locale?: string // 'fr' | 'en' | 'he'
+  cgvToken?: string | null // Token pour validation CGV (orders admin seulement)
 }): Promise<{ success: boolean; emailLogId?: string; error?: string }> {
-  const { booking, branch, triggeredBy, locale = 'en' } = params
+  const { booking, branch, triggeredBy, locale = 'en', cgvToken } = params
 
   console.log('[EMAIL CONFIRMATION] === START ===')
   console.log('[EMAIL CONFIRMATION] booking.id:', booking.id)
@@ -417,6 +420,66 @@ export async function sendBookingConfirmationEmail(params: {
     }
   }
 
+  // Generate CGV validation section HTML (only for admin-created orders with cgvToken)
+  const cgvUrl = cgvToken ? `${baseUrl}/cgv/${cgvToken}` : ''
+  let cgvSectionHtml = ''
+
+  if (cgvToken) {
+    // CGV section should appear right after booking reference
+    if (locale === 'he') {
+      cgvSectionHtml = `
+        <tr>
+          <td style="padding: 20px 40px 0 40px;">
+            <div style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-radius: 12px; padding: 20px; border: 2px solid #f59e0b;">
+              <h3 style="color: #92400e; margin: 0 0 12px 0; font-size: 16px; text-align: right;">⚠️ פעולה נדרשת: אישור תנאי שירות</h3>
+              <p style="color: #78350f; margin: 0 0 15px 0; font-size: 14px; line-height: 1.6; text-align: right;">
+                כדי להשלים את ההזמנה שלך, אנא אשר את תנאי השירות שלנו על ידי לחיצה על הכפתור למטה:
+              </p>
+              <div style="text-align: center;">
+                <a href="${cgvUrl}" target="_blank" style="display: inline-block; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: #ffffff; padding: 14px 30px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 16px;">
+                  אישור תנאי שירות
+                </a>
+              </div>
+            </div>
+          </td>
+        </tr>`
+    } else if (locale === 'fr') {
+      cgvSectionHtml = `
+        <tr>
+          <td style="padding: 20px 40px 0 40px;">
+            <div style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-radius: 12px; padding: 20px; border: 2px solid #f59e0b;">
+              <h3 style="color: #92400e; margin: 0 0 12px 0; font-size: 16px;">⚠️ Action requise : Validation des CGV</h3>
+              <p style="color: #78350f; margin: 0 0 15px 0; font-size: 14px; line-height: 1.6;">
+                Pour finaliser votre réservation, merci de confirmer les conditions générales de vente en cliquant sur le bouton ci-dessous :
+              </p>
+              <div style="text-align: center;">
+                <a href="${cgvUrl}" target="_blank" style="display: inline-block; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: #ffffff; padding: 14px 30px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 16px;">
+                  Valider les CGV
+                </a>
+              </div>
+            </div>
+          </td>
+        </tr>`
+    } else {
+      cgvSectionHtml = `
+        <tr>
+          <td style="padding: 20px 40px 0 40px;">
+            <div style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-radius: 12px; padding: 20px; border: 2px solid #f59e0b;">
+              <h3 style="color: #92400e; margin: 0 0 12px 0; font-size: 16px;">⚠️ Action Required: Terms & Conditions</h3>
+              <p style="color: #78350f; margin: 0 0 15px 0; font-size: 14px; line-height: 1.6;">
+                To complete your booking, please confirm our terms and conditions by clicking the button below:
+              </p>
+              <div style="text-align: center;">
+                <a href="${cgvUrl}" target="_blank" style="display: inline-block; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: #ffffff; padding: 14px 30px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 16px;">
+                  Accept Terms & Conditions
+                </a>
+              </div>
+            </div>
+          </td>
+        </tr>`
+    }
+  }
+
   // Préparer les variables
   const variables: BookingEmailVariables = {
     booking_reference: booking.reference_code,
@@ -439,6 +502,8 @@ export async function sendBookingConfirmationEmail(params: {
     terms_conditions: termsConditions,
     offer_url: offerUrl,
     offer_section: offerSectionHtml, // Complete HTML section (empty if no URL)
+    cgv_url: cgvUrl,
+    cgv_section: cgvSectionHtml, // Complete HTML section for CGV validation
   }
 
   // Générer le sujet et le body

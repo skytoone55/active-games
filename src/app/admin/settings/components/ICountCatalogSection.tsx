@@ -149,10 +149,12 @@ export function ICountCatalogSection({ isDark }: ICountCatalogSectionProps) {
     setError(null)
 
     try {
+      // Add cache-busting timestamp to prevent stale data
+      const ts = Date.now()
       const [productsRes, roomsRes, formulasRes] = await Promise.all([
-        fetch(`/api/icount-products?branchId=${selectedBranch.id}&includeInactive=true`),
-        fetch(`/api/icount-rooms?branchId=${selectedBranch.id}&includeInactive=true`),
-        fetch(`/api/icount-event-formulas?branchId=${selectedBranch.id}&includeInactive=true`),
+        fetch(`/api/icount-products?branchId=${selectedBranch.id}&includeInactive=true&_t=${ts}`),
+        fetch(`/api/icount-rooms?branchId=${selectedBranch.id}&includeInactive=true&_t=${ts}`),
+        fetch(`/api/icount-event-formulas?branchId=${selectedBranch.id}&includeInactive=true&_t=${ts}`),
       ])
 
       const productsData = productsRes.ok ? await productsRes.json() : { data: [] }
@@ -673,6 +675,10 @@ function ProductModal({ isDark, product, saving, onSave, onClose }: {
     is_active: product?.is_active ?? true,
   })
 
+  // Code is read-only for existing products (code is the key linking everything)
+  const isEventProduct = product?.code?.startsWith('event_') || false
+  const isEditing = !!product?.id
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     onSave({
@@ -687,18 +693,27 @@ function ProductModal({ isDark, product, saving, onSave, onClose }: {
   }
 
   return (
-    <Modal isDark={isDark} title={product ? 'Modifier le produit' : 'Nouveau produit'} onClose={onClose}>
+    <Modal isDark={isDark} title={product ? 'Edit Product' : 'New Product'} onClose={onClose}>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="grid grid-cols-2 gap-4">
-          <Input isDark={isDark} label="Code" value={form.code} onChange={v => setForm(p => ({ ...p, code: v }))} required placeholder="laser_1" />
-          <Input isDark={isDark} label="Prix/personne (₪)" type="number" value={form.unit_price} onChange={v => setForm(p => ({ ...p, unit_price: v }))} required placeholder="70" />
+          <Input
+            isDark={isDark}
+            label="Code"
+            value={form.code}
+            onChange={v => setForm(p => ({ ...p, code: v }))}
+            required
+            placeholder="laser_1"
+            readOnly={isEditing}
+            hint={isEditing ? (isEventProduct ? 'Auto-generated from formula' : 'Code cannot be changed') : undefined}
+          />
+          <Input isDark={isDark} label="Price/person (₪)" type="number" value={form.unit_price} onChange={v => setForm(p => ({ ...p, unit_price: v }))} required placeholder="70" />
         </div>
-        <Input isDark={isDark} label="Nom (FR)" value={form.name} onChange={v => setForm(p => ({ ...p, name: v }))} required placeholder="Laser 1 partie" />
-        <Input isDark={isDark} label="Nom (HE)" value={form.name_he} onChange={v => setForm(p => ({ ...p, name_he: v }))} placeholder="לייזר משחק 1" dir="rtl" />
-        <Input isDark={isDark} label="Nom (EN)" value={form.name_en} onChange={v => setForm(p => ({ ...p, name_en: v }))} placeholder="Laser 1 game" />
+        <Input isDark={isDark} label="Name (EN)" value={form.name_en} onChange={v => setForm(p => ({ ...p, name_en: v }))} placeholder="Laser 1 game" />
+        <Input isDark={isDark} label="Name (HE)" value={form.name_he} onChange={v => setForm(p => ({ ...p, name_he: v }))} placeholder="לייזר משחק 1" dir="rtl" />
+        <Input isDark={isDark} label="Name (FR)" value={form.name} onChange={v => setForm(p => ({ ...p, name: v }))} required placeholder="Laser 1 partie" />
         <div className="flex items-center gap-4">
-          <Input isDark={isDark} label="Ordre" type="number" value={form.sort_order} onChange={v => setForm(p => ({ ...p, sort_order: v }))} className="w-24" />
-          <Checkbox isDark={isDark} label="Actif" checked={form.is_active} onChange={v => setForm(p => ({ ...p, is_active: v }))} />
+          <Input isDark={isDark} label="Order" type="number" value={form.sort_order} onChange={v => setForm(p => ({ ...p, sort_order: v }))} className="w-24" />
+          <Checkbox isDark={isDark} label="Active" checked={form.is_active} onChange={v => setForm(p => ({ ...p, is_active: v }))} />
         </div>
         <ModalFooter isDark={isDark} saving={saving} onClose={onClose} />
       </form>
@@ -724,6 +739,8 @@ function RoomModal({ isDark, room, saving, onSave, onClose }: {
     is_active: room?.is_active ?? true,
   })
 
+  const isEditing = !!room?.id
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     onSave({
@@ -738,18 +755,18 @@ function RoomModal({ isDark, room, saving, onSave, onClose }: {
   }
 
   return (
-    <Modal isDark={isDark} title={room ? 'Modifier la salle' : 'Nouvelle salle'} onClose={onClose}>
+    <Modal isDark={isDark} title={room ? 'Edit Room' : 'New Room'} onClose={onClose}>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="grid grid-cols-2 gap-4">
-          <Input isDark={isDark} label="Code" value={form.code} onChange={v => setForm(p => ({ ...p, code: v }))} required placeholder="room_1" />
-          <Input isDark={isDark} label="Prix (₪)" type="number" value={form.price} onChange={v => setForm(p => ({ ...p, price: v }))} placeholder="0 = gratuit" />
+          <Input isDark={isDark} label="Code" value={form.code} onChange={v => setForm(p => ({ ...p, code: v }))} required placeholder="room_1" readOnly={isEditing} hint={isEditing ? 'Code cannot be changed' : undefined} />
+          <Input isDark={isDark} label="Price (₪)" type="number" value={form.price} onChange={v => setForm(p => ({ ...p, price: v }))} placeholder="0 = free" />
         </div>
-        <Input isDark={isDark} label="Nom (FR)" value={form.name} onChange={v => setForm(p => ({ ...p, name: v }))} required placeholder="Salle 1" />
-        <Input isDark={isDark} label="Nom (HE)" value={form.name_he} onChange={v => setForm(p => ({ ...p, name_he: v }))} placeholder="חדר 1" dir="rtl" />
-        <Input isDark={isDark} label="Nom (EN)" value={form.name_en} onChange={v => setForm(p => ({ ...p, name_en: v }))} placeholder="Room 1" />
+        <Input isDark={isDark} label="Name (EN)" value={form.name_en} onChange={v => setForm(p => ({ ...p, name_en: v }))} placeholder="Room 1" />
+        <Input isDark={isDark} label="Name (HE)" value={form.name_he} onChange={v => setForm(p => ({ ...p, name_he: v }))} placeholder="חדר 1" dir="rtl" />
+        <Input isDark={isDark} label="Name (FR)" value={form.name} onChange={v => setForm(p => ({ ...p, name: v }))} required placeholder="Salle 1" />
         <div className="flex items-center gap-4">
-          <Input isDark={isDark} label="Ordre" type="number" value={form.sort_order} onChange={v => setForm(p => ({ ...p, sort_order: v }))} className="w-24" />
-          <Checkbox isDark={isDark} label="Actif" checked={form.is_active} onChange={v => setForm(p => ({ ...p, is_active: v }))} />
+          <Input isDark={isDark} label="Order" type="number" value={form.sort_order} onChange={v => setForm(p => ({ ...p, sort_order: v }))} className="w-24" />
+          <Checkbox isDark={isDark} label="Active" checked={form.is_active} onChange={v => setForm(p => ({ ...p, is_active: v }))} />
         </div>
         <ModalFooter isDark={isDark} saving={saving} onClose={onClose} />
       </form>
@@ -793,13 +810,13 @@ function FormulaModal({ isDark, formula, rooms, gameTypes, saving, onSave, onClo
   }
 
   return (
-    <Modal isDark={isDark} title={formula ? 'Modifier la formule' : 'Nouvelle formule EVENT'} onClose={onClose}>
+    <Modal isDark={isDark} title={formula ? 'Edit Formula' : 'New EVENT Formula'} onClose={onClose}>
       <form onSubmit={handleSubmit} className="space-y-4">
-        <Input isDark={isDark} label="Nom" value={form.name} onChange={v => setForm(p => ({ ...p, name: v }))} required placeholder="Laser 15-29 pers" />
+        <Input isDark={isDark} label="Name" value={form.name} onChange={v => setForm(p => ({ ...p, name: v }))} required placeholder="Laser 15-29 pers" />
 
         <div>
           <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-            Type de jeu
+            Game Type
           </label>
           <div className="flex gap-2">
             {gameTypes.map(gt => (
@@ -821,32 +838,32 @@ function FormulaModal({ isDark, formula, rooms, gameTypes, saving, onSave, onClo
 
         <div className="grid grid-cols-2 gap-4">
           <Input isDark={isDark} label="Min participants" type="number" value={form.min_participants} onChange={v => setForm(p => ({ ...p, min_participants: v }))} required />
-          <Input isDark={isDark} label="Max participants" type="number" value={form.max_participants} onChange={v => setForm(p => ({ ...p, max_participants: v }))} placeholder="999 = illimité" />
+          <Input isDark={isDark} label="Max participants" type="number" value={form.max_participants} onChange={v => setForm(p => ({ ...p, max_participants: v }))} placeholder="999 = unlimited" />
         </div>
 
-        <Input isDark={isDark} label="Prix par personne (₪)" type="number" value={form.price_per_person} onChange={v => setForm(p => ({ ...p, price_per_person: v }))} required placeholder="110" />
+        <Input isDark={isDark} label="Price per person (₪)" type="number" value={form.price_per_person} onChange={v => setForm(p => ({ ...p, price_per_person: v }))} required placeholder="110" />
 
         <div>
           <label className={`block text-sm font-medium mb-1 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-            Salle (optionnel)
+            Room (optional)
           </label>
           <select
             value={form.room_id}
             onChange={e => setForm(p => ({ ...p, room_id: e.target.value }))}
             className={`w-full px-3 py-2 rounded-lg border ${isDark ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'}`}
           >
-            <option value="">Pas de salle</option>
+            <option value="">No room</option>
             {rooms.map(r => (
               <option key={r.id} value={r.id}>
-                {r.name} {r.price > 0 ? `(+₪${r.price})` : '(gratuit)'}
+                {r.name} {r.price > 0 ? `(+₪${r.price})` : '(free)'}
               </option>
             ))}
           </select>
         </div>
 
         <div className="flex items-center gap-4">
-          <Input isDark={isDark} label="Priorité" type="number" value={form.priority} onChange={v => setForm(p => ({ ...p, priority: v }))} className="w-24" />
-          <Checkbox isDark={isDark} label="Actif" checked={form.is_active} onChange={v => setForm(p => ({ ...p, is_active: v }))} />
+          <Input isDark={isDark} label="Priority" type="number" value={form.priority} onChange={v => setForm(p => ({ ...p, priority: v }))} className="w-24" />
+          <Checkbox isDark={isDark} label="Active" checked={form.is_active} onChange={v => setForm(p => ({ ...p, is_active: v }))} />
         </div>
 
         <ModalFooter isDark={isDark} saving={saving} onClose={onClose} />
@@ -873,8 +890,8 @@ function Modal({ isDark, title, onClose, children }: { isDark: boolean; title: s
   )
 }
 
-function Input({ isDark, label, value, onChange, required, placeholder, type = 'text', dir, className }: {
-  isDark: boolean; label: string; value: string; onChange: (v: string) => void; required?: boolean; placeholder?: string; type?: string; dir?: string; className?: string
+function Input({ isDark, label, value, onChange, required, placeholder, type = 'text', dir, className, readOnly, hint }: {
+  isDark: boolean; label: string; value: string; onChange: (v: string) => void; required?: boolean; placeholder?: string; type?: string; dir?: string; className?: string; readOnly?: boolean; hint?: string
 }) {
   return (
     <div className={className}>
@@ -887,8 +904,10 @@ function Input({ isDark, label, value, onChange, required, placeholder, type = '
         placeholder={placeholder}
         dir={dir}
         step={type === 'number' ? '0.01' : undefined}
-        className={`w-full px-3 py-2 rounded-lg border ${isDark ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'}`}
+        readOnly={readOnly}
+        className={`w-full px-3 py-2 rounded-lg border ${isDark ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'} ${readOnly ? 'opacity-60 cursor-not-allowed' : ''}`}
       />
+      {hint && <p className={`text-xs mt-1 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>{hint}</p>}
     </div>
   )
 }
@@ -910,7 +929,7 @@ function ModalFooter({ isDark, saving, onClose }: { isDark: boolean; saving: boo
         onClick={onClose}
         className={`px-4 py-2 rounded-lg font-medium ${isDark ? 'bg-gray-700 hover:bg-gray-600 text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-800'}`}
       >
-        Annuler
+        Cancel
       </button>
       <button
         type="submit"
@@ -918,7 +937,7 @@ function ModalFooter({ isDark, saving, onClose }: { isDark: boolean; saving: boo
         className="flex items-center gap-2 px-4 py-2 rounded-lg font-medium bg-orange-500 hover:bg-orange-600 text-white disabled:opacity-50"
       >
         {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-        Enregistrer
+        Save
       </button>
     </div>
   )

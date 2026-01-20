@@ -49,12 +49,7 @@ export default function LogsPage() {
   const [dateTo, setDateTo] = useState<string>('')
   const [searchTerm, setSearchTerm] = useState('')
 
-  // Redirect if not authenticated
-  useEffect(() => {
-    if (!authLoading && !user) {
-      router.push('/admin/login')
-    }
-  }, [user, authLoading, router])
+  // Note: L'auth est gérée par le layout parent, pas de redirection ici
 
   const handleSignOut = async () => {
     const supabase = createClient()

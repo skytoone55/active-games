@@ -87,6 +87,8 @@ export function PermissionsTable({ permissions, isDark, onSavePermissions }: Per
 
   // Initialize local permissions from props
   useEffect(() => {
+    console.log('[PermissionsTable] Received permissions:', permissions.length, 'items')
+    console.log('[PermissionsTable] Unique roles in permissions:', [...new Set(permissions.map(p => p.role))])
     const permMap = new Map<string, RolePermission>()
     permissions.forEach(p => permMap.set(p.id, { ...p }))
     setLocalPermissions(permMap)
@@ -95,7 +97,11 @@ export function PermissionsTable({ permissions, isDark, onSavePermissions }: Per
 
   // Get permission for a specific role and resource
   const getPermission = useCallback((roleName: UserRole, resource: ResourceType): RolePermission | undefined => {
-    return Array.from(localPermissions.values()).find(p => p.role === roleName && p.resource === resource)
+    const found = Array.from(localPermissions.values()).find(p => p.role === roleName && p.resource === resource)
+    if (!found) {
+      console.log('[PermissionsTable] Permission NOT FOUND for role:', roleName, 'resource:', resource)
+    }
+    return found
   }, [localPermissions])
 
   // Get all permissions for the selected role

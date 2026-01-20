@@ -17,9 +17,6 @@ interface UsePermissionsReturn {
 // Resource display order
 const RESOURCE_ORDER: ResourceType[] = ['agenda', 'orders', 'clients', 'users', 'logs', 'settings', 'permissions']
 
-// Role display order
-const ROLE_ORDER: UserRole[] = ['super_admin', 'branch_admin', 'agent']
-
 export function usePermissions(): UsePermissionsReturn {
   const [permissions, setPermissions] = useState<RolePermission[]>([])
   const [loading, setLoading] = useState(true)
@@ -41,10 +38,13 @@ export function usePermissions(): UsePermissionsReturn {
       const perms = data.permissions || []
       setPermissions(perms)
 
-      // Organize permissions by role
+      // Organize permissions by role - dynamically from the permissions data
       const byRole: Record<UserRole, PermissionsByResource> = {} as Record<UserRole, PermissionsByResource>
 
-      for (const role of ROLE_ORDER) {
+      // Extract unique roles from permissions data (supports dynamic roles)
+      const uniqueRoles = [...new Set(perms.map((p: RolePermission) => p.role))] as UserRole[]
+
+      for (const role of uniqueRoles) {
         byRole[role] = {} as PermissionsByResource
         for (const resource of RESOURCE_ORDER) {
           const perm = perms.find((p: RolePermission) => p.role === role && p.resource === resource)
@@ -146,4 +146,4 @@ export function usePermissions(): UsePermissionsReturn {
 }
 
 // Export constants for use in components
-export { RESOURCE_ORDER, ROLE_ORDER }
+export { RESOURCE_ORDER }

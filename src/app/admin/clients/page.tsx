@@ -6,6 +6,7 @@ import { Search, Edit2, Archive, User, Phone, Mail, Loader2, Eye, ChevronLeft, C
 import { useContacts, type SearchContactsResult } from '@/hooks/useContacts'
 import { useBranches } from '@/hooks/useBranches'
 import { useAuth } from '@/hooks/useAuth'
+import { useUserPermissions } from '@/hooks/useUserPermissions'
 import { useTranslation } from '@/contexts/LanguageContext'
 import { AdminHeader } from '../components/AdminHeader'
 import { ContactDetailsModal } from '../components/ContactDetailsModal'
@@ -20,6 +21,7 @@ export default function ClientsPage() {
   const router = useRouter()
   const { t, locale } = useTranslation()
   const { user, loading: authLoading, signOut } = useAuth()
+  const { hasPermission, loading: permissionsLoading } = useUserPermissions(user?.role || null)
 
   // Helper pour obtenir la locale de date en fonction de la langue
   const getDateLocale = () => {
@@ -70,12 +72,7 @@ export default function ClientsPage() {
 
   const pageSize = 20
 
-  // Rediriger si pas authentifié
-  useEffect(() => {
-    if (!authLoading && !user) {
-      router.push('/admin/login')
-    }
-  }, [user, authLoading, router])
+  // Note: L'auth est gérée par le layout parent, pas de redirection ici
 
   // Rechercher les contacts
   const performSearch = useCallback(async () => {
@@ -263,7 +260,12 @@ export default function ClientsPage() {
   // Calculer effectiveSelectedBranch avec fallback
   const effectiveSelectedBranch = selectedBranch || (branches.length > 0 ? branches[0] : null)
 
-  if (authLoading || branchesLoading || !user || !effectiveSelectedBranch) {
+  // Permissions pour la ressource 'clients'
+  const canCreateClient = hasPermission('clients', 'can_create')
+  const canEditClient = hasPermission('clients', 'can_edit')
+  const canDeleteClient = hasPermission('clients', 'can_delete')
+
+  if (authLoading || branchesLoading || permissionsLoading || !user || !effectiveSelectedBranch) {
     return (
       <div className={`min-h-screen flex items-center justify-center ${isDark ? 'bg-gray-900' : 'bg-gray-100'}`}>
         <Loader2 className={`w-8 h-8 animate-spin ${isDark ? 'text-blue-400' : 'text-blue-600'}`} />
@@ -347,7 +349,13 @@ export default function ClientsPage() {
             </button>
             <button
               onClick={() => handleOpenEditModal(null)}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors flex items-center gap-2"
+              disabled={!canCreateClient}
+              className={`px-4 py-2 rounded-lg transition-colors flex items-center gap-2 ${
+                canCreateClient
+                  ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                  : 'bg-gray-500 text-gray-300 cursor-not-allowed opacity-50'
+              }`}
+              title={!canCreateClient ? t('admin.common.no_permission') : undefined}
             >
               <Plus className="w-4 h-4" />
               {t('admin.clients.new_contact')}
@@ -622,10 +630,13 @@ export default function ClientsPage() {
                           </button>
                           <button
                             onClick={() => handleOpenEditModal(contact)}
+                            disabled={!canEditClient}
                             className={`p-2 rounded-lg transition-colors ${
-                              isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100'
+                              canEditClient
+                                ? isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100'
+                                : 'cursor-not-allowed opacity-30'
                             }`}
-                            title={t('admin.clients.actions.edit')}
+                            title={!canEditClient ? t('admin.common.no_permission') : t('admin.clients.actions.edit')}
                           >
                             <Edit2 className={`w-4 h-4 ${
                               isDark ? 'text-gray-400' : 'text-gray-600'
@@ -634,22 +645,28 @@ export default function ClientsPage() {
                           {contact.status === 'archived' ? (
                             <button
                               onClick={() => handleUnarchive(contact)}
+                              disabled={!canDeleteClient}
                               className={`p-2 rounded-lg transition-colors ${
-                                isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100'
+                                canDeleteClient
+                                  ? isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100'
+                                  : 'cursor-not-allowed opacity-30'
                               }`}
-                              title={t('admin.clients.actions.unarchive')}
+                              title={!canDeleteClient ? t('admin.common.no_permission') : t('admin.clients.actions.unarchive')}
                             >
-                              <Archive className="w-4 h-4 text-green-400" />
+                              <Archive className={`w-4 h-4 ${canDeleteClient ? 'text-green-400' : 'text-gray-500'}`} />
                             </button>
                           ) : (
                             <button
                               onClick={() => handleArchive(contact)}
+                              disabled={!canDeleteClient}
                               className={`p-2 rounded-lg transition-colors ${
-                                isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100'
+                                canDeleteClient
+                                  ? isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100'
+                                  : 'cursor-not-allowed opacity-30'
                               }`}
-                              title={t('admin.clients.actions.archive')}
+                              title={!canDeleteClient ? t('admin.common.no_permission') : t('admin.clients.actions.archive')}
                             >
-                              <Archive className="w-4 h-4 text-yellow-400" />
+                              <Archive className={`w-4 h-4 ${canDeleteClient ? 'text-yellow-400' : 'text-gray-500'}`} />
                             </button>
                           )}
                         </div>

@@ -1,13 +1,15 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { X, Loader2, Users, Clock, User, Phone, Mail, MessageSquare, Gamepad2, PartyPopper, Palette, Home, Calendar, ChevronLeft, ChevronRight, Trash2, Edit2, RefreshCw, AlertTriangle, ChevronDown, Building2, Zap, Target } from 'lucide-react'
 import type { CreateBookingData, BookingWithSlots } from '@/hooks/useBookings'
 import { ContactFieldAutocomplete } from './ContactFieldAutocomplete'
 import { useContacts } from '@/hooks/useContacts'
 import type { Contact, GameArea, LaserRoom } from '@/lib/supabase/types'
 import { useTranslation } from '@/contexts/LanguageContext'
-import { validateIsraeliPhone, VALIDATION_MESSAGES } from '@/lib/validation'
+import { validateIsraeliPhone, validateEmail, VALIDATION_MESSAGES } from '@/lib/validation'
+import { usePricingData } from '@/hooks/usePricingData'
+import { calculateBookingPrice, type PriceCalculationResult } from '@/lib/price-calculator'
 
 interface OverbookingInfo {
   willCauseOverbooking: boolean
@@ -41,6 +43,10 @@ interface BookingModalProps {
   laserRooms?: LaserRoom[] // Liste des laser rooms de la branche
   maxPlayersPerSlot?: number // Max players per slot (dynamique)
   totalSlots?: number // Total slots (dynamique)
+  // Permissions
+  canCreate?: boolean // Permission de créer une réservation
+  canEdit?: boolean // Permission de modifier une réservation
+  canDelete?: boolean // Permission de supprimer une réservation
 }
 
 type BookingType = 'GAME' | 'EVENT'
@@ -81,7 +87,7 @@ export function BookingModal({
   editingBooking = null,
   isDark,
   defaultBookingType = 'GAME',
-  defaultGameArea = 'ACTIVE',
+  defaultGameArea, // Pas de valeur par défaut - forcer le commercial à choisir
   findBestAvailableRoom,
   findRoomAvailability,
   calculateOverbooking,
@@ -92,7 +98,10 @@ export function BookingModal({
   checkLaserRoomCapacity,
   laserRooms = [],
   maxPlayersPerSlot = 6,
-  totalSlots = 14
+  totalSlots = 14,
+  canCreate = true,
+  canEdit = true,
+  canDelete = true
 }: BookingModalProps) {
   const { t, locale } = useTranslation()
 
@@ -150,6 +159,7 @@ export function BookingModal({
   const [phone, setPhone] = useState('')
   const [phoneError, setPhoneError] = useState<string | null>(null)
   const [email, setEmail] = useState('')
+  const [emailError, setEmailError] = useState<string | null>(null)
   const [notes, setNotes] = useState('')
   const [contactId, setContactId] = useState('') // ID unique du contact (auto-généré)
   const [color, setColor] = useState(COLORS[0].value) // Couleur par défaut bleu
@@ -175,6 +185,9 @@ export function BookingModal({
   const [pendingEventRoomId, setPendingEventRoomId] = useState<string | null | undefined>(null)
   // Utiliser bookingBranchId pour les opérations sur les contacts (peut changer si on modifie la branche)
   const { createContact, checkDuplicates, updateContact, getContact } = useContacts(bookingBranchId)
+
+  // Prix pour le calcul
+  const { products, eventFormulas, rooms: pricingRooms } = usePricingData(bookingBranchId)
   
   // Les champs sont gelés si un contact est sélectionné ET qu'on n'est pas en mode édition
   const areFieldsFrozen = selectedContact !== null && !isEditingContact
@@ -271,7 +284,15 @@ export function BookingModal({
         setPhoneError(null)
       }
     }
-    else if (field === 'email') setEmail(value)
+    else if (field === 'email') {
+      setEmail(value)
+      // Valider le format email si c'est un EVENT et que le champ n'est pas vide
+      if (value.trim() && !validateEmail(value)) {
+        setEmailError(VALIDATION_MESSAGES.email.invalid)
+      } else {
+        setEmailError(null)
+      }
+    }
   }
 
   // CRM: Activer le mode modification de contact
@@ -1145,6 +1166,71 @@ export function BookingModal({
   const parsedParticipants = parseInt(participants) || 0
   const parsedDuration = parseInt(durationMinutes) || 60
   const parsedRoomDuration = parseInt(roomDurationMinutes) || 120 // Durée salle modifiable, par défaut 2 heures
+
+  // Calcul du prix en temps réel
+  const priceCalculation = useMemo(() => {
+    if (parsedParticipants < 1) return null
+
+    const result = calculateBookingPrice({
+      bookingType,
+      participants: parsedParticipants,
+      // GAME params
+      gameArea: gameArea as 'ACTIVE' | 'LASER' | 'CUSTOM' | null,
+      numberOfGames,
+      gameDurations,
+      // GAME CUSTOM params
+      customGameAreas: gameCustomGameArea as ('ACTIVE' | 'LASER')[],
+      customGameDurations: gameCustomGameDurations,
+      // EVENT params
+      eventQuickPlan,
+      eventRoomId: editingBooking?.event_room_id || null,
+      // Discount
+      discountType,
+      discountValue,
+      // Pricing data
+      products,
+      eventFormulas,
+      rooms: pricingRooms,
+    })
+    console.log('[PRICE CALC]', { bookingType, parsedParticipants, gameArea, numberOfGames, products: products.length, result })
+    return result
+  }, [
+    bookingType,
+    parsedParticipants,
+    gameArea,
+    numberOfGames,
+    gameDurations,
+    gameCustomGameArea,
+    gameCustomGameDurations,
+    eventQuickPlan,
+    editingBooking?.event_room_id,
+    discountType,
+    discountValue,
+    products,
+    eventFormulas,
+    pricingRooms,
+  ])
+
+  // Validation des participants EVENT - calculer les limites min/max
+  const eventParticipantsValidation = useMemo(() => {
+    if (bookingType !== 'EVENT' || eventFormulas.length === 0) {
+      return { valid: true, minParticipants: 0, maxParticipants: Infinity }
+    }
+
+    const minParticipants = Math.min(...eventFormulas.map(f => f.min_participants))
+    const maxParticipants = Math.max(...eventFormulas.map(f => f.max_participants))
+
+    const valid = parsedParticipants >= minParticipants && parsedParticipants <= maxParticipants
+
+    return {
+      valid,
+      minParticipants,
+      maxParticipants,
+      message: valid
+        ? null
+        : `Nombre de participants invalide. Minimum: ${minParticipants}, Maximum: ${maxParticipants}`
+    }
+  }, [bookingType, eventFormulas, parsedParticipants])
 
   // Calculer les slots nécessaires (logique Tetris)
   const calculateSlots = () => {
@@ -3649,6 +3735,7 @@ export function BookingModal({
                 <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
                   <Mail className="w-4 h-4 inline mr-1" />
                   {t('admin.booking_modal.fields.email')}
+                  {bookingType === 'EVENT' && <span className="text-red-500 ml-1">*</span>}
                 </label>
                 <ContactFieldAutocomplete
                   branchId={bookingBranchId}
@@ -3662,6 +3749,9 @@ export function BookingModal({
                   disabled={areFieldsFrozen}
                   onEnterKey={handleEnterKeyWrapper}
                 />
+                {emailError && (
+                  <p className="mt-1 text-sm text-red-500">{emailError}</p>
+                )}
               </div>
             </div>
           </div>
@@ -3708,6 +3798,24 @@ export function BookingModal({
               {error}
             </div>
           )}
+
+          {/* Avertissement participants EVENT invalides */}
+          {bookingType === 'EVENT' && parsedParticipants > 0 && !eventParticipantsValidation.valid && (
+            <div className={`p-3 rounded-xl ${isDark ? 'bg-orange-900/20 border border-orange-500/30' : 'bg-orange-50 border border-orange-200'}`}>
+              <div className={`text-center text-sm ${isDark ? 'text-orange-300' : 'text-orange-700'}`}>
+                ⚠️ {eventParticipantsValidation.message}
+              </div>
+            </div>
+          )}
+
+          {/* Calcul du prix */}
+          {priceCalculation && priceCalculation.valid && (
+            <div className={`p-3 rounded-xl ${isDark ? 'bg-green-900/20 border border-green-500/30' : 'bg-green-50 border border-green-200'}`}>
+              <div className={`text-center font-mono text-sm ${isDark ? 'text-green-300' : 'text-green-700'}`}>
+                {priceCalculation.breakdown} = <span className="font-bold text-base">{priceCalculation.total.toLocaleString()}₪</span>
+              </div>
+            </div>
+          )}
         </form>
 
         {/* Footer */}
@@ -3717,11 +3825,14 @@ export function BookingModal({
               <button
                 type="button"
                 onClick={handleDeleteClick}
-                disabled={loading}
+                disabled={loading || !canDelete}
+                title={!canDelete ? t('admin.common.no_permission') : undefined}
                 className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-colors ${
-                  isDark
-                    ? 'text-red-400 hover:bg-red-900/20 hover:text-red-300'
-                    : 'text-red-600 hover:bg-red-50 hover:text-red-700'
+                  !canDelete
+                    ? 'opacity-50 cursor-not-allowed text-gray-400'
+                    : isDark
+                      ? 'text-red-400 hover:bg-red-900/20 hover:text-red-300'
+                      : 'text-red-600 hover:bg-red-50 hover:text-red-700'
                 } disabled:opacity-50 disabled:cursor-not-allowed`}
               >
                 <Trash2 className="w-4 h-4" />
@@ -3745,9 +3856,12 @@ export function BookingModal({
             <button
               type="submit"
               onClick={handleSubmit}
-              disabled={loading || parsedParticipants < 1}
-              className="px-6 py-2 rounded-lg text-white flex items-center gap-2 disabled:opacity-50"
-              style={{ backgroundColor: color }}
+              disabled={loading || parsedParticipants < 1 || (bookingType === 'EVENT' && !eventParticipantsValidation.valid) || (bookingType === 'EVENT' && (!email.trim() || !!emailError)) || (editingBooking ? !canEdit : !canCreate)}
+              title={(editingBooking ? !canEdit : !canCreate) ? t('admin.common.no_permission') : undefined}
+              className={`px-6 py-2 rounded-lg text-white flex items-center gap-2 disabled:opacity-50 ${
+                (editingBooking ? !canEdit : !canCreate) ? 'cursor-not-allowed' : ''
+              }`}
+              style={{ backgroundColor: (editingBooking ? !canEdit : !canCreate) ? '#6B7280' : color }}
             >
               {loading ? (
                 <>

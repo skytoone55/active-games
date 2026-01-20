@@ -296,4 +296,41 @@ export class ICountItemsModule {
       error: result.error,
     }
   }
+
+  /**
+   * Supprimer plusieurs items par leurs IDs
+   */
+  async deleteItems(inventoryItemIds: number[]): Promise<ProviderResult<{ deleted: number[] }>> {
+    if (inventoryItemIds.length === 0) {
+      return { success: true, data: { deleted: [] } }
+    }
+
+    console.log('[ICOUNT INVENTORY] Deleting items:', inventoryItemIds)
+
+    const result = await this.client.request<ICountInventoryResponse & { delete_status?: Record<string, boolean> }>(
+      'inventory',
+      'delete_items',
+      {
+        inventory_item_ids: inventoryItemIds,
+      }
+    )
+
+    if (result.success && result.data?.delete_status) {
+      const deleted = Object.entries(result.data.delete_status)
+        .filter(([, success]) => success)
+        .map(([id]) => parseInt(id, 10))
+
+      console.log('[ICOUNT INVENTORY] Deleted items:', deleted)
+      return {
+        success: true,
+        data: { deleted },
+      }
+    }
+
+    console.error('[ICOUNT INVENTORY] Delete failed:', result.error)
+    return {
+      success: false,
+      error: result.error,
+    }
+  }
 }

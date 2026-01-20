@@ -44,6 +44,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: result.success,
       synced: result.synced,
+      deleted: result.deleted,
       failed: result.failed,
       errors: result.errors,
     })

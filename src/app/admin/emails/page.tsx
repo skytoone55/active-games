@@ -88,12 +88,7 @@ export default function EmailsPage() {
     return () => clearTimeout(timer)
   }, [searchTerm, statusFilter, dateFrom, dateTo, selectedBranch?.id, userRole])
 
-  // Redirect if not authenticated
-  useEffect(() => {
-    if (!authLoading && !user) {
-      router.push('/admin/login')
-    }
-  }, [user, authLoading, router])
+  // Note: L'auth est gérée par le layout parent, pas de redirection ici
 
   const handleSignOut = async () => {
     const supabase = createClient()

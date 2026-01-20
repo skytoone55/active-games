@@ -1269,6 +1269,7 @@ export default function ReservationPage() {
                 <div>
                   <label className="block text-white mb-2 text-sm font-medium" style={{ fontFamily: 'Poppins, sans-serif' }}>
                     {translations.booking?.contact?.email || 'Email'}
+                    {bookingData.type === 'event' && <span className="text-red-500 ml-1">*</span>}
                   </label>
                   <div className="relative">
                     <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-primary" />
@@ -1278,12 +1279,13 @@ export default function ReservationPage() {
                       onChange={(e) => handleContactInfoChange('email', e.target.value)}
                       placeholder="example@email.com"
                       className={`w-full border ${validationErrors.email ? 'border-red-500' : 'border-primary/30'} rounded-lg pl-12 pr-4 py-3 font-medium hover:border-primary/70 transition-all backdrop-blur-sm`}
-                      style={{ 
+                      style={{
                         fontFamily: 'Poppins, sans-serif',
                         backgroundColor: 'rgba(50, 50, 70, 0.7)',
                         color: '#00f0ff',
                         outline: 'none'
                       }}
+                      required={bookingData.type === 'event'}
                     />
                     {validationErrors.email && (
                       <div className="flex items-center gap-1 mt-1 text-red-500 text-sm">
@@ -1574,25 +1576,28 @@ export default function ReservationPage() {
                 !bookingData.phone ||
                 !bookingData.termsAccepted ||
                 !!validationErrors.phone ||
-                !!(bookingData.email && validationErrors.email)
+                !!(bookingData.email && validationErrors.email) ||
+                (bookingData.type === 'event' && !bookingData.email)
               }
               className={`inline-flex items-center gap-2 px-6 py-3 rounded-xl transition-all duration-300 ${
                 !isSubmitting &&
-                bookingData.firstName && 
-                bookingData.lastName && 
-                bookingData.phone && 
+                bookingData.firstName &&
+                bookingData.lastName &&
+                bookingData.phone &&
                 bookingData.termsAccepted &&
                 !validationErrors.phone &&
-                (!bookingData.email || !validationErrors.email)
+                (!bookingData.email || !validationErrors.email) &&
+                (bookingData.type !== 'event' || bookingData.email)
                   ? 'glow-button'
                   : 'bg-dark-200 border-2 border-primary/30 text-gray-300 cursor-not-allowed hover:border-primary/40'
               }`}
               style={{
                 opacity: (
-                  bookingData.firstName && 
-                  bookingData.lastName && 
-                  bookingData.phone && 
-                  bookingData.termsAccepted
+                  bookingData.firstName &&
+                  bookingData.lastName &&
+                  bookingData.phone &&
+                  bookingData.termsAccepted &&
+                  (bookingData.type !== 'event' || bookingData.email)
                 ) ? 1 : 0.75
               }}
             >

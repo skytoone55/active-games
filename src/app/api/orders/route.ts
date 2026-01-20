@@ -19,6 +19,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { createIsraelDateTime } from '@/lib/dates'
 import { validateIsraeliPhone, formatIsraeliPhone } from '@/lib/validation'
+import { validateBookingPrice } from '@/lib/booking-validation'
 import { logOrderAction, logBookingAction, logContactAction, getClientIpFromHeaders } from '@/lib/activity-logger'
 import { sendBookingConfirmationEmail } from '@/lib/email-sender'
 import { syncContactToICountBackground } from '@/lib/icount-sync'
@@ -332,6 +333,26 @@ export async function POST(request: NextRequest) {
         // Pas de salle disponible → créer order en pending
         const referenceCode = generateShortReference()
 
+        // === VALIDATION PRIX EVENT AVANT PENDING ===
+        // Même si pending, on vérifie que le prix pourra être calculé
+        const gameAreasForValidation = getGameAreasForEventType(event_type)
+        const priceValidation = await validateBookingPrice(
+          supabase,
+          'EVENT',
+          branch_id,
+          participants_count,
+          gameAreasForValidation.map((area, idx) => ({ game_area: area }))
+        )
+
+        if (!priceValidation.valid) {
+          return NextResponse.json({
+            success: false,
+            error: priceValidation.error,
+            errorKey: priceValidation.errorKey
+          }, { status: 400 })
+        }
+        // === FIN VALIDATION PRIX ===
+
         const { data: order, error: orderError } = await supabase
           .from('orders')
           .insert({
@@ -552,6 +573,27 @@ export async function POST(request: NextRequest) {
         }
       }
 
+      // === VALIDATION PRIX EVENT OBLIGATOIRE ===
+      // Vérifier qu'une formule et un produit existent AVANT de créer le booking
+      const eventPriceValidation = await validateBookingPrice(
+        supabase,
+        'EVENT',
+        branch_id,
+        participants_count,
+        eventGameSessions.map(s => ({ game_area: s.game_area, start_datetime: s.start_datetime, end_datetime: s.end_datetime }))
+      )
+
+      if (!eventPriceValidation.valid) {
+        console.error('[ORDER API EVENT] Price validation failed:', eventPriceValidation.error)
+        return NextResponse.json({
+          success: false,
+          error: eventPriceValidation.error,
+          errorKey: eventPriceValidation.errorKey
+        }, { status: 400 })
+      }
+      console.log('[ORDER API EVENT] Price validation passed, formula:', eventPriceValidation.formula?.name)
+      // === FIN VALIDATION PRIX ===
+
       // Créer le booking EVENT
       const referenceCode = generateShortReference()
       const color = '#22C55E' // Vert pour EVENT (comme dans l'admin)
@@ -751,6 +793,8 @@ export async function POST(request: NextRequest) {
         game_sessions: eventGameSessions.map(s => ({
           game_area: s.game_area,
           session_order: s.session_order,
+          start_datetime: s.start_datetime,
+          end_datetime: s.end_datetime,
         })),
       }
 
@@ -1068,6 +1112,31 @@ export async function POST(request: NextRequest) {
       })
     }
 
+    // === VALIDATION PRIX GAME OBLIGATOIRE ===
+    // Vérifier que les produits iCount existent AVANT de créer le booking
+    const gamePriceValidation = await validateBookingPrice(
+      supabase,
+      'GAME',
+      branch_id,
+      participants_count,
+      sessionResult.game_sessions.map(s => ({
+        game_area: s.game_area as 'ACTIVE' | 'LASER',
+        start_datetime: s.start_datetime,
+        end_datetime: s.end_datetime
+      }))
+    )
+
+    if (!gamePriceValidation.valid) {
+      console.error('[ORDER API GAME] Price validation failed:', gamePriceValidation.error)
+      return NextResponse.json({
+        success: false,
+        error: gamePriceValidation.error,
+        errorKey: gamePriceValidation.errorKey
+      }, { status: 400 })
+    }
+    console.log('[ORDER API GAME] Price validation passed')
+    // === FIN VALIDATION PRIX ===
+
     // 5. Créer le booking
     const referenceCode = generateShortReference()
     const color = order_type === 'GAME' ? '#3B82F6' : '#22C55E'
@@ -1342,6 +1411,8 @@ export async function POST(request: NextRequest) {
       game_sessions: sessionResult.game_sessions.map(s => ({
         game_area: s.game_area as 'ACTIVE' | 'LASER',
         session_order: s.session_order,
+        start_datetime: s.start_datetime,
+        end_datetime: s.end_datetime,
       })),
     }
     createOfferForBookingBackground(gameBookingForOffer, branch_id)

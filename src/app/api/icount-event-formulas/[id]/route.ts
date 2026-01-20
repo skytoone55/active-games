@@ -8,7 +8,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { verifyApiPermission } from '@/lib/permissions'
-import { ensureEventProductForFormula, updateEventProductPrice } from '@/lib/icount-sync'
+import { ensureEventProductForFormula, updateEventProductPrice, deleteEventProduct } from '@/lib/icount-sync'
 
 interface RouteParams {
   params: Promise<{ id: string }>
@@ -116,6 +116,55 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
         { success: false, error: 'game_type must be LASER, ACTIVE or BOTH' },
         { status: 400 }
       )
+    }
+
+    // Check for overlapping ranges if min/max/game_type is changing
+    const newMin = min_participants ?? existingFormula.min_participants
+    const newMax = max_participants ?? existingFormula.max_participants
+    const newGameType = game_type ?? existingFormula.game_type
+
+    if (newMin > newMax) {
+      return NextResponse.json(
+        { success: false, error: 'min_participants cannot be greater than max_participants' },
+        { status: 400 }
+      )
+    }
+
+    // Only check for overlaps if ranges or game_type changed
+    const rangeOrTypeChanged =
+      min_participants !== undefined ||
+      max_participants !== undefined ||
+      game_type !== undefined
+
+    if (rangeOrTypeChanged) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: existingFormulas } = await (supabase as any)
+        .from('icount_event_formulas')
+        .select('id, name, game_type, min_participants, max_participants')
+        .eq('branch_id', existingFormula.branch_id)
+        .eq('is_active', true)
+        .neq('id', id) // Exclude current formula
+
+      if (existingFormulas) {
+        for (const existing of existingFormulas) {
+          // Each game_type creates a separate product, so only check same game_type
+          // LASER, ACTIVE, and BOTH are 3 different product types
+          if (newGameType === existing.game_type) {
+            // Check if participant ranges overlap
+            const rangesOverlap = newMin <= existing.max_participants && existing.min_participants <= newMax
+
+            if (rangesOverlap) {
+              return NextResponse.json(
+                {
+                  success: false,
+                  error: `Range ${newMin}-${newMax} overlaps with existing ${newGameType} formula "${existing.name}" (${existing.min_participants}-${existing.max_participants})`
+                },
+                { status: 400 }
+              )
+            }
+          }
+        }
+      }
     }
 
     // Construire l'objet de mise à jour
@@ -245,6 +294,17 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     // Hard delete ou soft delete
     const hardDelete = request.nextUrl.searchParams.get('hard') === 'true'
 
+    // Delete or deactivate the associated product first
+    let productDeleted = false
+    if (existingFormula.product_id) {
+      console.log('[API icount-event-formulas] Deleting associated product:', existingFormula.product_id)
+      const deleteResult = await deleteEventProduct(existingFormula.product_id, existingFormula.branch_id)
+      productDeleted = deleteResult.success
+      if (!deleteResult.success) {
+        console.warn('[API icount-event-formulas] Failed to delete product:', deleteResult.error)
+      }
+    }
+
     if (hardDelete) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { error } = await (supabase as any)
@@ -264,7 +324,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { error } = await (supabase as any)
         .from('icount_event_formulas')
-        .update({ is_active: false, updated_at: new Date().toISOString() })
+        .update({ is_active: false, product_id: null, updated_at: new Date().toISOString() })
         .eq('id', id)
 
       if (error) {
@@ -279,6 +339,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     return NextResponse.json({
       success: true,
       message: hardDelete ? 'Formula deleted' : 'Formula deactivated',
+      productDeleted,
     })
   } catch (error) {
     console.error('[API icount-event-formulas] DELETE error:', error)

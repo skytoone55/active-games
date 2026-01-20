@@ -14,6 +14,7 @@ import { GridSettingsPopup } from './components/GridSettingsPopup'
 import { AgendaSearch } from './components/AgendaSearch'
 import { useBranches } from '@/hooks/useBranches'
 import { useAuth } from '@/hooks/useAuth'
+import { useUserPermissions } from '@/hooks/useUserPermissions'
 import { useLaserRooms } from '@/hooks/useLaserRooms'
 import { useTranslation } from '@/contexts/LanguageContext'
 import type { Profile, UserBranch, GameArea, GameSession, UserRole, BookingContact, BookingSlot, Contact } from '@/lib/supabase/types'
@@ -47,7 +48,14 @@ export default function AdminPage() {
   const branchesHook = useBranches()
   const branches = branchesHook.branches
   const selectedBranchIdFromHook = branchesHook.selectedBranchId
-  
+
+  // Permissions pour l'agenda - Hook appelé tôt pour respecter l'ordre des hooks
+  const { hasPermission } = useUserPermissions(userData?.role as UserRole || null)
+  const canViewAgenda = hasPermission('agenda', 'can_view')
+  const canCreateAgenda = hasPermission('agenda', 'can_create')
+  const canEditAgenda = hasPermission('agenda', 'can_edit')
+  const canDeleteAgenda = hasPermission('agenda', 'can_delete')
+
   // Calculer effectiveSelectedBranchId AVANT useBookings pour éviter les problèmes de timing
   // Si selectedBranchId n'est pas défini, utiliser la première branche disponible
   const effectiveSelectedBranchId = selectedBranchIdFromHook || (branches.length > 0 ? branches[0]?.id : null)
@@ -94,7 +102,7 @@ export default function AdminPage() {
   const [modalInitialHour, setModalInitialHour] = useState(10)
   const [modalInitialMinute, setModalInitialMinute] = useState(0)
   const [modalDefaultBookingType, setModalDefaultBookingType] = useState<'GAME' | 'EVENT'>('GAME')
-  const [modalDefaultGameArea, setModalDefaultGameArea] = useState<'ACTIVE' | 'LASER'>('ACTIVE')
+  const [modalDefaultGameArea, setModalDefaultGameArea] = useState<'ACTIVE' | 'LASER' | undefined>(undefined)
   const [editingBooking, setEditingBooking] = useState<BookingWithSlots | null>(null)
   const [agendaSearchQuery, setAgendaSearchQuery] = useState('')
   const [showCalendarModal, setShowCalendarModal] = useState(false)
@@ -650,7 +658,13 @@ export default function AdminPage() {
   const uiSegments = buildUISegments()
 
   // Ouvrir le modal de réservation
-  const openBookingModal = (hour?: number, minute?: number, booking?: BookingWithSlots, defaultType: 'GAME' | 'EVENT' = 'GAME', defaultGameArea: 'ACTIVE' | 'LASER' = 'ACTIVE') => {
+  const openBookingModal = (hour?: number, minute?: number, booking?: BookingWithSlots, defaultType: 'GAME' | 'EVENT' = 'GAME', defaultGameArea?: 'ACTIVE' | 'LASER') => {
+    // Vérifier les permissions:
+    // - Pour une réservation existante: view suffit pour ouvrir (en lecture seule)
+    // - Pour une nouvelle réservation: create est requis
+    if (booking && !canViewAgenda) return
+    if (!booking && !canCreateAgenda) return
+
     if (booking) {
       setEditingBooking(booking)
       // Extraire l'heure de début de la réservation
@@ -663,7 +677,7 @@ export default function AdminPage() {
       if (booking.type === 'GAME' && booking.game_sessions && booking.game_sessions.length > 0) {
         setModalDefaultGameArea(booking.game_sessions[0].game_area as 'ACTIVE' | 'LASER')
       } else {
-        setModalDefaultGameArea('ACTIVE')
+        setModalDefaultGameArea(undefined) // Forcer le commercial à choisir
       }
     } else {
       setEditingBooking(null)
@@ -729,6 +743,7 @@ export default function AdminPage() {
   }
 
   // Charger les données utilisateur
+  // Note: L'auth est gérée par le layout parent, pas besoin de rediriger ici
   useEffect(() => {
     const loadUserData = async () => {
       const supabase = createClient()
@@ -737,7 +752,8 @@ export default function AdminPage() {
         const { data: { user } } = await supabase.auth.getUser()
 
         if (!user) {
-          router.push('/admin/login')
+          // Ne pas rediriger - le layout gère l'auth
+          setLoading(false)
           return
         }
 
@@ -796,7 +812,7 @@ export default function AdminPage() {
     }
 
     loadUserData()
-  }, [router])
+  }, [])
 
   // Charger le thème
   useEffect(() => {
@@ -3045,7 +3061,7 @@ export default function AdminPage() {
           findBestAvailableRoom={findBestAvailableRoom}
           findRoomAvailability={findRoomAvailability}
           calculateOverbooking={calculateOverbooking}
-          branches={branches.filter((branch, index, self) => 
+          branches={branches.filter((branch, index, self) =>
             index === self.findIndex(b => b.id === branch.id)
           )}
           selectedBranchId={selectedBranchId}
@@ -3055,6 +3071,9 @@ export default function AdminPage() {
           laserRooms={laserRooms}
           maxPlayersPerSlot={MAX_PLAYERS_PER_SLOT}
           totalSlots={TOTAL_SLOTS}
+          canCreate={canCreateAgenda}
+          canEdit={canEditAgenda}
+          canDelete={canDeleteAgenda}
         />
       )}
 
