@@ -334,10 +334,9 @@ export function OrderDetailModal({
               </div>
             </div>
 
-            {/* CGV Status - seulement pour orders admin */}
-            {order.source === 'admin_agenda' && (
-              <div className={`p-4 rounded-xl ${
-                order.cgv_validated_at
+            {/* CGV Status - pour toutes les commandes */}
+            <div className={`p-4 rounded-xl ${
+              order.cgv_validated_at
                   ? isDark ? 'bg-green-900/20 border border-green-700/30' : 'bg-green-50 border border-green-200'
                   : isDark ? 'bg-amber-900/20 border border-amber-700/30' : 'bg-amber-50 border border-amber-200'
               }`}>
@@ -382,7 +381,6 @@ export function OrderDetailModal({
                   )}
                 </div>
               </div>
-            )}
 
             {/* Notes */}
             {order.customer_notes && (

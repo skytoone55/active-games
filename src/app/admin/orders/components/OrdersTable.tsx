@@ -156,9 +156,9 @@ export function OrdersTable({ orders, isDark, onCancel, onViewOrder, onViewClien
       if (statusFilter !== 'all' && order.status !== statusFilter) return false
       if (gameAreaFilter !== 'all' && order.game_area !== gameAreaFilter) return false
       if (sourceFilter !== 'all' && order.source !== sourceFilter) return false
-      // Filtre CGV (pour orders admin seulement)
+      // Filtre CGV (pour toutes les commandes)
       if (cgvFilter !== 'all') {
-        if (cgvFilter === 'pending' && (order.source !== 'admin_agenda' || order.cgv_validated_at)) return false
+        if (cgvFilter === 'pending' && order.cgv_validated_at) return false
         if (cgvFilter === 'validated' && !order.cgv_validated_at) return false
       }
       return true
@@ -530,21 +530,19 @@ export function OrdersTable({ orders, isDark, onCancel, onViewOrder, onViewClien
                   </span>
                 </div>
 
-                {/* CGV Badge */}
+                {/* CGV Badge - pour toutes les commandes */}
                 <div className="col-span-1">
-                  {order.source === 'admin_agenda' && (
-                    <span className={`text-xs px-1.5 py-0.5 rounded flex items-center gap-1 w-fit ${
-                      order.cgv_validated_at
-                        ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                        : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
-                    }`}>
-                      {order.cgv_validated_at ? (
-                        <><FileCheck className="w-3 h-3" /> CGV</>
-                      ) : (
-                        <><AlertTriangle className="w-3 h-3" /> CGV</>
-                      )}
-                    </span>
-                  )}
+                  <span className={`text-xs px-1.5 py-0.5 rounded flex items-center gap-1 w-fit ${
+                    order.cgv_validated_at
+                      ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                      : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+                  }`}>
+                    {order.cgv_validated_at ? (
+                      <><FileCheck className="w-3 h-3" /> CGV</>
+                    ) : (
+                      <><AlertTriangle className="w-3 h-3" /> CGV</>
+                    )}
+                  </span>
                 </div>
 
                 {/* Référence */}
