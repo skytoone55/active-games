@@ -385,7 +385,9 @@ export async function POST(request: NextRequest) {
             number_of_games: eventNumberOfGames,
             pending_reason: 'room_unavailable',
             pending_details: 'No event room available for this time slot',
-            terms_accepted: true
+            terms_accepted: true,
+            terms_accepted_at: new Date().toISOString(),
+            cgv_validated_at: new Date().toISOString()
           })
           .select('id, request_reference')
           .single()
@@ -527,7 +529,9 @@ export async function POST(request: NextRequest) {
                 number_of_games: eventNumberOfGames,
                 pending_reason: 'laser_unavailable',
                 pending_details: `No laser room available for game ${i + 1}`,
-                terms_accepted: true
+                terms_accepted: true,
+                terms_accepted_at: new Date().toISOString(),
+                cgv_validated_at: new Date().toISOString()
               })
               .select('id, request_reference')
               .single()
@@ -712,7 +716,9 @@ export async function POST(request: NextRequest) {
           participants_count,
           game_area: game_area || null,
           number_of_games: eventNumberOfGames,
-          terms_accepted: true
+          terms_accepted: true,
+          terms_accepted_at: new Date().toISOString(),
+          cgv_validated_at: new Date().toISOString()
         })
         .select('id, request_reference')
         .single()
@@ -989,7 +995,9 @@ export async function POST(request: NextRequest) {
             number_of_games,
             pending_reason: 'overbooking',
             pending_details: overbookingDetails,
-            terms_accepted: true
+            terms_accepted: true,
+            terms_accepted_at: new Date().toISOString(),
+            cgv_validated_at: new Date().toISOString()
           })
           .select('id, request_reference')
           .single()
@@ -1080,7 +1088,9 @@ export async function POST(request: NextRequest) {
           number_of_games,
           pending_reason: 'slot_unavailable',
           pending_details: sessionResult.error,
-          terms_accepted: true
+          terms_accepted: true,
+          terms_accepted_at: new Date().toISOString(),
+          cgv_validated_at: new Date().toISOString()
         })
         .select('id, request_reference')
         .single()
@@ -1265,7 +1275,9 @@ export async function POST(request: NextRequest) {
         participants_count,
         game_area: game_area || null,
         number_of_games,
-        terms_accepted: true
+        terms_accepted: true,
+        terms_accepted_at: new Date().toISOString(),
+        cgv_validated_at: new Date().toISOString()
       })
       .select('id, request_reference')
       .single()
