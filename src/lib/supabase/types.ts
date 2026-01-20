@@ -236,6 +236,7 @@ export interface Database {
           color: string | null
           primary_contact_id: string | null
           icount_offer_id: number | null
+          icount_offer_url: string | null
           icount_invrec_id: number | null
           created_at: string
           updated_at: string

@@ -22,7 +22,7 @@ import { validateIsraeliPhone, formatIsraeliPhone } from '@/lib/validation'
 import { logOrderAction, logBookingAction, logContactAction, getClientIpFromHeaders } from '@/lib/activity-logger'
 import { sendBookingConfirmationEmail } from '@/lib/email-sender'
 import { syncContactToICountBackground } from '@/lib/icount-sync'
-import { createOfferForBookingBackground } from '@/lib/icount-documents'
+import { createOfferForBooking, createOfferForBookingBackground } from '@/lib/icount-documents'
 import type { EventRoom, LaserRoom, UserRole, Booking, Branch, Contact } from '@/lib/supabase/types'
 
 const supabase = createClient(
@@ -739,8 +739,40 @@ export async function POST(request: NextRequest) {
         cancelled_at: null,
         cancelled_reason: null,
         icount_offer_id: null,
+        icount_offer_url: null,
         icount_invrec_id: null
       }
+
+      // Create iCount offer SYNCHRONOUSLY for EVENT bookings
+      // This ensures we have the offer URL before sending the confirmation email
+      console.log('[ORDER API EVENT] === ICOUNT OFFER SECTION START ===')
+      const bookingWithSessions = {
+        ...eventBookingData,
+        game_sessions: eventGameSessions.map(s => ({
+          game_area: s.game_area,
+          session_order: s.session_order,
+        })),
+      }
+
+      let offerUrl: string | null = null
+      try {
+        const offerResult = await createOfferForBooking(bookingWithSessions, branch_id)
+        console.log('[ORDER API EVENT] iCount offer result:', offerResult)
+
+        // Fetch the updated booking to get the offer URL
+        if (offerResult.success) {
+          const { data: updatedBooking } = await supabase
+            .from('bookings')
+            .select('icount_offer_url')
+            .eq('id', booking.id)
+            .single()
+          offerUrl = updatedBooking?.icount_offer_url || null
+          console.log('[ORDER API EVENT] Offer URL:', offerUrl)
+        }
+      } catch (err) {
+        console.error('[ORDER API EVENT] iCount offer exception:', err)
+      }
+      console.log('[ORDER API EVENT] === ICOUNT OFFER SECTION END ===')
 
       // Envoyer l'email de confirmation si le client a un email
       console.log('[ORDER API EVENT] === EMAIL SECTION START ===')
@@ -761,10 +793,16 @@ export async function POST(request: NextRequest) {
 
         if (branch) {
           console.log('[ORDER API EVENT] Calling sendBookingConfirmationEmail with locale:', locale)
+          // Prepare booking data with offer URL for email
+          const bookingDataWithOfferUrl = {
+            ...eventBookingData,
+            icount_offer_url: offerUrl
+          }
+
           // Envoyer l'email (attendre pour que le status soit mis à jour)
           try {
             const emailResult = await sendBookingConfirmationEmail({
-              booking: eventBookingData,
+              booking: bookingDataWithOfferUrl,
               branch: branch as Branch,
               locale
             })
@@ -779,17 +817,6 @@ export async function POST(request: NextRequest) {
         console.log('[ORDER API EVENT] No customer email provided, skipping email')
       }
       console.log('[ORDER API EVENT] === EMAIL SECTION END ===')
-
-      // Create iCount offer in background (non-blocking)
-      console.log('[ORDER API EVENT] Creating iCount offer...')
-      const bookingWithSessions = {
-        ...eventBookingData,
-        game_sessions: eventGameSessions.map(s => ({
-          game_area: s.game_area,
-          session_order: s.session_order,
-        })),
-      }
-      createOfferForBookingBackground(bookingWithSessions, branch_id)
 
       return NextResponse.json({
         success: true,
@@ -1258,6 +1285,7 @@ export async function POST(request: NextRequest) {
           cancelled_at: null,
           cancelled_reason: null,
           icount_offer_id: null,
+          icount_offer_url: null,
           icount_invrec_id: null
         }
 
@@ -1309,6 +1337,7 @@ export async function POST(request: NextRequest) {
       cancelled_at: null,
       cancelled_reason: null,
       icount_offer_id: null,
+      icount_offer_url: null,
       icount_invrec_id: null,
       game_sessions: sessionResult.game_sessions.map(s => ({
         game_area: s.game_area as 'ACTIVE' | 'LASER',

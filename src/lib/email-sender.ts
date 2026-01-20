@@ -49,6 +49,8 @@ export interface BookingEmailVariables {
   logo_lasercity_url: string
   current_year: string
   terms_conditions: string // HTML content of terms & conditions
+  offer_url: string // iCount offer document URL (for EVENT bookings)
+  offer_section: string // HTML section for offer link (empty if no offer URL)
 }
 
 // Remplace les variables {{variable}} dans le template
@@ -371,6 +373,50 @@ export async function sendBookingConfirmationEmail(params: {
     locale
   )
 
+  // Generate offer section HTML (only if URL exists, for EVENT bookings)
+  const offerUrl = booking.icount_offer_url || ''
+  let offerSectionHtml = ''
+
+  if (offerUrl && booking.type === 'EVENT') {
+    // Hebrew offer section
+    if (locale === 'he') {
+      offerSectionHtml = `
+        <tr>
+          <td style="padding: 30px 40px 0 40px;">
+            <div style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border-radius: 12px; padding: 25px; border: 1px solid rgba(0, 240, 255, 0.3);">
+              <h3 style="color: #00f0ff; margin: 0 0 15px 0; font-size: 18px; text-align: right;">📄 הצעת מחיר</h3>
+              <p style="color: #ffffff; margin: 0 0 15px 0; font-size: 14px; line-height: 1.6; text-align: right;">
+                לחץ על הכפתור למטה לצפייה בהצעת המחיר שלך:
+              </p>
+              <div style="text-align: center;">
+                <a href="${offerUrl}" target="_blank" style="display: inline-block; background: linear-gradient(135deg, #00f0ff 0%, #0080ff 100%); color: #0a0a1a; padding: 14px 30px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 16px;">
+                  צפייה בהצעת מחיר
+                </a>
+              </div>
+            </div>
+          </td>
+        </tr>`
+    } else {
+      // English/French offer section
+      offerSectionHtml = `
+        <tr>
+          <td style="padding: 30px 40px 0 40px;">
+            <div style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border-radius: 12px; padding: 25px; border: 1px solid rgba(0, 240, 255, 0.3);">
+              <h3 style="color: #00f0ff; margin: 0 0 15px 0; font-size: 18px;">📄 ${locale === 'fr' ? 'Devis' : 'Price Quote'}</h3>
+              <p style="color: #ffffff; margin: 0 0 15px 0; font-size: 14px; line-height: 1.6;">
+                ${locale === 'fr' ? 'Cliquez sur le bouton ci-dessous pour voir votre devis:' : 'Click the button below to view your price quote:'}
+              </p>
+              <div style="text-align: center;">
+                <a href="${offerUrl}" target="_blank" style="display: inline-block; background: linear-gradient(135deg, #00f0ff 0%, #0080ff 100%); color: #0a0a1a; padding: 14px 30px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 16px;">
+                  ${locale === 'fr' ? 'Voir le devis' : 'View Quote'}
+                </a>
+              </div>
+            </div>
+          </td>
+        </tr>`
+    }
+  }
+
   // Préparer les variables
   const variables: BookingEmailVariables = {
     booking_reference: booking.reference_code,
@@ -391,6 +437,8 @@ export async function sendBookingConfirmationEmail(params: {
     logo_lasercity_url: `${baseUrl}/images/logo_laser_city.png`,
     current_year: new Date().getFullYear().toString(),
     terms_conditions: termsConditions,
+    offer_url: offerUrl,
+    offer_section: offerSectionHtml, // Complete HTML section (empty if no URL)
   }
 
   // Générer le sujet et le body

@@ -675,14 +675,16 @@ export async function createOfferForBooking(
 
     if (result.success && result.data) {
       const offerId = result.data.docnum
-      console.log('[ICOUNT DOCS] Offer created:', offerId)
+      const offerUrl = result.data.doc_url
+      console.log('[ICOUNT DOCS] Offer created:', offerId, 'URL:', offerUrl)
 
-      // Update booking with icount_offer_id
+      // Update booking with icount_offer_id and offer URL
       const supabase = createRawServiceClient()
       const { error: updateError } = await supabase
         .from('bookings')
         .update({
           icount_offer_id: offerId,
+          icount_offer_url: offerUrl, // Store URL for email link
           total_price: total, // Also update the total_price
         })
         .eq('id', booking.id)
