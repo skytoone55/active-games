@@ -471,6 +471,20 @@ export async function DELETE(
       }
     }
 
+    // Vérifier si l'order associée est fermée (bloquer suppression/annulation)
+    const { data: orderForDeleteCheck } = await supabase
+      .from('orders')
+      .select('id, status')
+      .eq('booking_id', id)
+      .single<{ id: string; status: string }>()
+
+    if (orderForDeleteCheck?.status === 'closed') {
+      return NextResponse.json(
+        { success: false, error: 'Cannot delete/cancel a booking linked to a closed order', messageKey: 'errors.orderClosed' },
+        { status: 400 }
+      )
+    }
+
     if (hardDelete) {
       // Suppression définitive
       // Mettre à jour l'order correspondante d'abord

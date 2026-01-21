@@ -82,6 +82,14 @@ export async function POST(
       }
     }
 
+    // Block if order is closed
+    if (order.status === 'closed') {
+      return NextResponse.json(
+        { success: false, error: 'Cannot authorize card on a closed order', messageKey: 'errors.orderClosed' },
+        { status: 400 }
+      )
+    }
+
     // Get payment provider
     const provider = await getPaymentProvider(order.branch_id)
     if (!provider) {

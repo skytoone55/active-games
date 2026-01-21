@@ -82,6 +82,14 @@ export async function POST(
       }
     }
 
+    // BLOQUER si la commande est fermée
+    if (order.status === 'closed') {
+      return NextResponse.json(
+        { success: false, error: 'Cannot create preauth on a closed order', messageKey: 'errors.orderClosed' },
+        { status: 400 }
+      )
+    }
+
     // Récupérer le provider de paiement
     const provider = await getPaymentProvider(order.branch_id)
     if (!provider) {
@@ -311,6 +319,14 @@ export async function DELETE(
           { status: 403 }
         )
       }
+    }
+
+    // BLOQUER si la commande est fermée
+    if (order.status === 'closed') {
+      return NextResponse.json(
+        { success: false, error: 'Cannot cancel preauth on a closed order', messageKey: 'errors.orderClosed' },
+        { status: 400 }
+      )
     }
 
     // Supprimer la pré-autorisation de la commande

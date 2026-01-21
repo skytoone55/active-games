@@ -32,6 +32,7 @@ export async function POST(
       .from('orders')
       .select(`
         id,
+        status,
         request_reference,
         customer_first_name,
         customer_last_name,
@@ -52,6 +53,14 @@ export async function POST(
       return NextResponse.json(
         { success: false, error: 'Commande non trouvée' },
         { status: 404 }
+      )
+    }
+
+    // BLOQUER si la commande est fermée
+    if (order.status === 'closed') {
+      return NextResponse.json(
+        { success: false, error: 'Cannot resend CGV on a closed order', messageKey: 'errors.orderClosed' },
+        { status: 400 }
       )
     }
 

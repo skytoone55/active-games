@@ -127,6 +127,19 @@ export async function PATCH(
       }
     }
 
+    // BLOQUER TOUTE MODIFICATION sur une commande fermée
+    if (order.status === 'closed') {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Cannot modify a closed order',
+          message: 'This order has been closed and cannot be modified.',
+          messageKey: 'errors.orderClosed'
+        },
+        { status: 400 }
+      )
+    }
+
     if (action === 'confirm') {
       // Confirmer manuellement une commande pending
       // DÉSACTIVÉ: L'utilisateur doit passer par l'agenda pour validation manuelle
@@ -632,6 +645,19 @@ export async function DELETE(
           { status: 403 }
         )
       }
+    }
+
+    // BLOQUER SUPPRESSION sur une commande fermée
+    if (order.status === 'closed') {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Cannot delete a closed order',
+          message: 'This order has been closed and cannot be deleted.',
+          messageKey: 'errors.orderClosed'
+        },
+        { status: 400 }
+      )
     }
 
     // Annuler le devis iCount si un booking est associé (en background)
