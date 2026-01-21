@@ -4,12 +4,12 @@ import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
-import { MapPin, Calendar, Clock, ChevronRight, ChevronLeft, Check, Users, Gamepad2, User, Phone, Mail, MessageSquare, FileText, ExternalLink, X, Home, Cake, Target, Zap, AlertCircle } from 'lucide-react'
+import { MapPin, Calendar, Clock, ChevronRight, ChevronLeft, Check, Users, Gamepad2, User, Phone, Mail, MessageSquare, FileText, ExternalLink, X, Home, Cake, Target, Zap, AlertCircle, CreditCard, Lock, Loader2 } from 'lucide-react'
 import { getTranslations, getDirection, Locale, defaultLocale } from '@/i18n'
 import { Header, Footer } from '@/components'
 import { validateEmail, validateIsraeliPhone, formatIsraeliPhone, VALIDATION_MESSAGES } from '@/lib/validation'
 
-type BookingStep = 1 | 2 | 3 | 4 | 5 | 6 | 7
+type BookingStep = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8
 
 interface BookingData {
   branch: string | null // Nom de la branche (pour affichage)
@@ -63,6 +63,28 @@ export default function ReservationPage() {
   const [termsContent, setTermsContent] = useState<{ game: string | null; event: string | null }>({ game: null, event: null })
   const [termsLoading, setTermsLoading] = useState(false)
 
+  // Payment states
+  const [depositInfo, setDepositInfo] = useState<{
+    amount: number
+    total: number
+    unitPrice: number
+    roomPrice: number
+    roomName: string | null
+    breakdown: string
+    explanation: string
+  } | null>(null)
+  const [isLoadingDeposit, setIsLoadingDeposit] = useState(false)
+  const [cardData, setCardData] = useState({
+    cc_number: '',
+    cc_validity: '',
+    cc_cvv: '',
+    cc_holder_id: '',
+    cc_holder_name: '',
+  })
+  const [paymentError, setPaymentError] = useState<string | null>(null)
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false)
+  const [paymentSuccess, setPaymentSuccess] = useState(false)
+
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const savedLocale = localStorage.getItem('locale') as Locale
@@ -98,6 +120,80 @@ export default function ReservationPage() {
 
     fetchTerms()
   }, [locale])
+
+  // Reset deposit info when booking data changes (before step 7)
+  useEffect(() => {
+    if (step < 7) {
+      setDepositInfo(null)
+    }
+  }, [step, bookingData.type, bookingData.players, bookingData.gameArea, bookingData.eventType])
+
+  // Fetch deposit info when reaching step 7 (payment step) with all required data
+  useEffect(() => {
+    const fetchDepositInfo = async () => {
+      if (step !== 7) return
+      if (!bookingData.branchSlug || !bookingData.type || !bookingData.players) return
+
+      // Reset before fetching new data
+      setDepositInfo(null)
+      setIsLoadingDeposit(true)
+
+      try {
+        // First get the branch_id from slug
+        const branchesResponse = await fetch('/api/branches')
+        const branchesData = await branchesResponse.json()
+
+        if (!branchesData.success || !branchesData.branches) {
+          console.error('Failed to fetch branches')
+          return
+        }
+
+        const branch = branchesData.branches.find((b: { slug: string }) =>
+          b.slug?.toLowerCase().trim() === bookingData.branchSlug?.toLowerCase().trim()
+        )
+
+        if (!branch) {
+          console.error('Branch not found:', bookingData.branchSlug)
+          return
+        }
+
+        // Build request payload
+        const payload = {
+          branch_id: branch.id,
+          order_type: bookingData.type === 'event' ? 'EVENT' : 'GAME',
+          participants_count: bookingData.players,
+          game_area: bookingData.gameArea,
+          number_of_games: bookingData.numberOfGames,
+          event_type: bookingData.eventType,
+          locale: locale,
+        }
+
+        console.log('[DEPOSIT] Calculating deposit for:', payload)
+
+        // Calculate deposit
+        const response = await fetch('/api/public/calculate-deposit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        })
+
+        const data = await response.json()
+        console.log('[DEPOSIT] API response:', data)
+
+        if (data.success && data.deposit) {
+          setDepositInfo(data.deposit)
+        } else {
+          console.error('[DEPOSIT] API error:', data.error)
+        }
+      } catch (error) {
+        console.error('Error fetching deposit info:', error)
+      } finally {
+        setIsLoadingDeposit(false)
+      }
+    }
+
+    fetchDepositInfo()
+  }, [step, bookingData.branchSlug, bookingData.type, bookingData.players, bookingData.gameArea, bookingData.numberOfGames, bookingData.eventType])
 
   const isRTL = locale === 'he'
   const dir = getDirection(locale)
@@ -321,13 +417,63 @@ export default function ReservationPage() {
   const [orderStatus, setOrderStatus] = useState<'auto_confirmed' | 'pending' | null>(null)
   const [orderMessage, setOrderMessage] = useState<string>('')
 
+  // Handler pour les changements de carte
+  const handleCardChange = (field: keyof typeof cardData, value: string) => {
+    let formattedValue = value
+
+    // Format card number with spaces
+    if (field === 'cc_number') {
+      formattedValue = value.replace(/\D/g, '').replace(/(.{4})/g, '$1 ').trim().slice(0, 19)
+    }
+    // Format validity as MM/YY
+    else if (field === 'cc_validity') {
+      formattedValue = value.replace(/\D/g, '')
+      if (formattedValue.length > 2) {
+        formattedValue = formattedValue.slice(0, 2) + '/' + formattedValue.slice(2, 4)
+      }
+    }
+    // CVV max 4 digits
+    else if (field === 'cc_cvv') {
+      formattedValue = value.replace(/\D/g, '').slice(0, 4)
+    }
+    // ID only digits
+    else if (field === 'cc_holder_id') {
+      formattedValue = value.replace(/\D/g, '').slice(0, 9)
+    }
+
+    setCardData(prev => ({ ...prev, [field]: formattedValue }))
+    setPaymentError(null)
+  }
+
+  // Validation de la carte
+  const isCardValid = () => {
+    const ccNumber = cardData.cc_number.replace(/\s/g, '')
+    const ccValidity = cardData.cc_validity.replace('/', '')
+
+    return (
+      ccNumber.length >= 13 &&
+      ccNumber.length <= 19 &&
+      ccValidity.length === 4 &&
+      cardData.cc_cvv.length >= 3 &&
+      cardData.cc_holder_id.length >= 7
+    )
+  }
+
   const handleConfirm = async () => {
     // Protection double-click
-    if (isSubmitting) {
+    if (isSubmitting || isProcessingPayment) {
+      return
+    }
+
+    // Si acompte requis et pas de carte valide, erreur
+    if (depositInfo && depositInfo.amount > 0 && !isCardValid()) {
+      setPaymentError('Please fill in all card details')
       return
     }
 
     setIsSubmitting(true)
+    setPaymentError(null)
+
     try {
       // D'abord, récupérer le branch_id depuis le nom de la branche
       const branchesResponse = await fetch('/api/branches')
@@ -346,17 +492,14 @@ export default function ReservationPage() {
       }
 
       // Trouver la branche par son slug (priorité) ou nom
-      // Le slug est stocké dans les traductions et correspond au slug en BD
       let selectedBranch = null
 
-      // Priorité 1: Utiliser le slug stocké (fiable, indépendant de la langue)
       if (bookingData.branchSlug) {
         selectedBranch = branchesData.branches?.find((b: { name: string; slug: string }) =>
           b.slug?.toLowerCase().trim() === bookingData.branchSlug?.toLowerCase().trim()
         )
       }
 
-      // Priorité 2: Fallback sur le nom (pour rétrocompatibilité)
       if (!selectedBranch && bookingData.branch) {
         const branchNameLower = bookingData.branch.toLowerCase().trim()
         selectedBranch = branchesData.branches?.find((b: { name: string; slug: string }) => {
@@ -379,24 +522,20 @@ export default function ReservationPage() {
       // Utiliser le gameArea sélectionné par l'utilisateur
       let gameArea: 'ACTIVE' | 'LASER' | null = null
       let customerNotes = bookingData.specialRequest || ''
-      
-      // Pour Game et Event, on a maintenant toujours un gameArea sélectionné
+
       if (bookingData.gameArea) {
         if (bookingData.gameArea === 'MIX') {
-          // Si "Mix", on envoie ACTIVE par défaut et on note la demande
           gameArea = 'ACTIVE'
           customerNotes = `[DEMANDE MIX Active + Laser] ${customerNotes}`.trim()
         } else {
           gameArea = bookingData.gameArea
         }
       }
-      
-      // Appeler la nouvelle API orders
+
+      // ÉTAPE 1: Créer la commande
       const response = await fetch('/api/orders', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           branch_id: selectedBranch.id,
           order_type: bookingData.type === 'event' ? 'EVENT' : 'GAME',
@@ -413,22 +552,71 @@ export default function ReservationPage() {
           event_type: bookingData.eventType || null,
           event_celebrant_age: bookingData.eventAge || null,
           terms_accepted: bookingData.termsAccepted,
-          locale: locale === 'he' ? 'he' : 'en', // Langue pour l'email (he ou en seulement)
+          locale: locale === 'he' ? 'he' : 'en',
         }),
       })
-      
+
       const result = await response.json()
 
-      if (result.success) {
-        // L'API retourne directement reference, status, message
-        setReservationNumber(result.reference)
-        setOrderStatus(result.status)
-        setOrderMessage(result.message || 'Booking confirmed')
-        setStep(7)
-      } else {
+      if (!result.success) {
         console.error('Error saving order:', result.error)
         alert(`Erreur: ${result.error || 'Erreur lors de la sauvegarde de la réservation'}`)
+        setIsSubmitting(false)
+        return
       }
+
+      const orderId = result.order_id
+
+      // ÉTAPE 2: Si acompte requis, effectuer le paiement
+      if (depositInfo && depositInfo.amount > 0) {
+        setIsProcessingPayment(true)
+
+        try {
+          const paymentResponse = await fetch('/api/public/pay-deposit', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              order_id: orderId,
+              amount: depositInfo.amount,
+              card_info: {
+                cc_number: cardData.cc_number.replace(/\s/g, ''),
+                cc_validity: cardData.cc_validity.replace('/', ''),
+                cc_cvv: cardData.cc_cvv,
+                cc_holder_id: cardData.cc_holder_id,
+                cc_holder_name: cardData.cc_holder_name || `${bookingData.firstName} ${bookingData.lastName || ''}`.trim(),
+              },
+            }),
+          })
+
+          const paymentResult = await paymentResponse.json()
+
+          if (!paymentResult.success) {
+            // Paiement échoué - la commande est créée mais pas payée
+            setPaymentError(paymentResult.error || 'Payment failed. Please try again.')
+            setIsSubmitting(false)
+            setIsProcessingPayment(false)
+            return
+          }
+
+          // Paiement réussi
+          setPaymentSuccess(true)
+        } catch (payError) {
+          console.error('Payment error:', payError)
+          setPaymentError('Payment processing error. Please try again.')
+          setIsSubmitting(false)
+          setIsProcessingPayment(false)
+          return
+        } finally {
+          setIsProcessingPayment(false)
+        }
+      }
+
+      // Succès final
+      setReservationNumber(result.reference)
+      setOrderStatus(result.status)
+      setOrderMessage(result.message || 'Booking confirmed')
+      setStep(8)
+
     } catch (error) {
       console.error('Error confirming reservation:', error)
       alert('Erreur lors de la confirmation. Veuillez réessayer.')
@@ -1320,6 +1508,112 @@ export default function ReservationPage() {
                   </div>
                 </div>
               </div>
+            </motion.div>
+          )}
+
+          {/* Step 7: Summary, Terms & Payment */}
+          {step === 7 && (
+            <motion.div
+              key="step7"
+              initial={{ opacity: 0, x: isRTL ? 50 : -50 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: isRTL ? -50 : 50 }}
+              className="bg-dark-100/50 backdrop-blur-sm rounded-2xl p-8 border border-primary/30"
+            >
+              <div className="text-center mb-8">
+                <Check className="w-16 h-16 text-primary mx-auto mb-4" />
+                <h2 className="text-2xl font-bold mb-2" style={{ fontFamily: 'Orbitron, sans-serif' }}>
+                  {translations.booking?.step7?.title || 'Review & Payment'}
+                </h2>
+                <p className="text-gray-400">
+                  {translations.booking?.step7?.subtitle || 'Please review your booking and complete the payment'}
+                </p>
+              </div>
+
+              {/* Booking Summary */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-dark-200/50 rounded-xl p-6 border border-primary/30"
+              >
+                <h3 className="text-xl font-bold mb-4" style={{ fontFamily: 'Orbitron, sans-serif' }}>
+                  {translations.booking?.summary?.title || 'Booking Summary'}
+                </h3>
+                <div className="space-y-2" style={{ fontFamily: 'Poppins, sans-serif' }}>
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">{translations.booking?.summary?.branch || 'Branch:'}</span>
+                    <span className="font-bold">{bookingData.branch}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">{translations.booking?.summary?.type || 'Type:'}</span>
+                    <span className="font-bold">
+                      {bookingData.type === 'game'
+                        ? (translations.booking?.type?.game?.title || 'Game')
+                        : (translations.booking?.type?.event?.title || 'Event')}
+                    </span>
+                  </div>
+                  {/* Activity type (Laser/Active/Mix) */}
+                  {bookingData.gameArea && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">{translations.booking?.summary?.activity || 'Activity:'}</span>
+                      <span className="font-bold">
+                        {bookingData.gameArea === 'ACTIVE' && (translations.booking?.game_area?.active?.title || 'Active Games')}
+                        {bookingData.gameArea === 'LASER' && (translations.booking?.game_area?.laser?.title || 'Laser City')}
+                        {bookingData.gameArea === 'MIX' && (translations.booking?.game_area?.mix?.title || 'Mix Active + Laser')}
+                      </span>
+                    </div>
+                  )}
+                  {/* Duration/parties for GAME */}
+                  {bookingData.type === 'game' && bookingData.gameArea && bookingData.numberOfGames && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">{translations.booking?.summary?.duration || 'Duration:'}</span>
+                      <span className="font-bold">
+                        {bookingData.gameArea === 'ACTIVE' && (
+                          bookingData.numberOfGames === 1 ? '30min' :
+                          bookingData.numberOfGames === 2 ? '1h' :
+                          bookingData.numberOfGames === 3 ? '1h30' :
+                          bookingData.numberOfGames === 4 ? '2h' :
+                          `${bookingData.numberOfGames} games`
+                        )}
+                        {bookingData.gameArea === 'LASER' && (
+                          `${bookingData.numberOfGames} ${bookingData.numberOfGames === 1
+                            ? (translations.booking?.game_area?.laser?.party || 'party')
+                            : (translations.booking?.game_area?.laser?.parties || 'parties')}`
+                        )}
+                        {bookingData.gameArea === 'MIX' && '30min Active + 1 Laser'}
+                      </span>
+                    </div>
+                  )}
+                  {bookingData.players && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">{translations.booking?.type?.players?.label || 'Players:'}</span>
+                      <span className="font-bold">{bookingData.players}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">{translations.booking?.summary?.date || 'Date:'}</span>
+                    <span className="font-bold">{bookingData.date && formatDate(bookingData.date)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">{translations.booking?.summary?.time || 'Time:'}</span>
+                    <span className="font-bold">{bookingData.time}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">{translations.booking?.summary?.name || 'Name:'}</span>
+                    <span className="font-bold">{bookingData.firstName} {bookingData.lastName}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">{translations.booking?.summary?.phone || 'Phone:'}</span>
+                    <span className="font-bold">{bookingData.phone}</span>
+                  </div>
+                  {bookingData.email && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">{translations.booking?.summary?.email || 'Email:'}</span>
+                      <span className="font-bold">{bookingData.email}</span>
+                    </div>
+                  )}
+                </div>
+              </motion.div>
 
               {/* Terms and Conditions Checkbox */}
               <div className="mt-6 p-4 bg-dark-200/30 rounded-lg border border-primary/20">
@@ -1353,51 +1647,174 @@ export default function ReservationPage() {
                 </div>
               </div>
 
-              {/* Booking Summary */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="bg-dark-200/50 rounded-xl p-6 mt-6 border border-primary/30"
-              >
-                <h3 className="text-xl font-bold mb-4" style={{ fontFamily: 'Orbitron, sans-serif' }}>
-                  {translations.booking?.summary?.title || 'Booking Summary'}
-                </h3>
-                <div className="space-y-2" style={{ fontFamily: 'Poppins, sans-serif' }}>
-                  <div className="flex justify-between">
-                    <span className="text-gray-400">{translations.booking?.summary?.branch || 'Branch:'}</span>
-                    <span className="font-bold">{bookingData.branch}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-400">{translations.booking?.summary?.type || 'Type:'}</span>
-                    <span className="font-bold">
-                      {bookingData.type === 'game' 
-                        ? (translations.booking?.type?.game?.title || 'Game')
-                        : (translations.booking?.type?.event?.title || 'Event')}
-                    </span>
-                  </div>
-                  {bookingData.players && (
+              {/* Price Summary & Deposit Section */}
+              {depositInfo && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="bg-dark-200/50 rounded-xl p-6 mt-6 border border-primary/30"
+                >
+                  <h3 className="text-xl font-bold mb-4 flex items-center gap-2" style={{ fontFamily: 'Orbitron, sans-serif' }}>
+                    <CreditCard className="w-5 h-5 text-primary" />
+                    {translations.booking?.payment?.title || 'Price Summary'}
+                  </h3>
+
+                  {/* Price breakdown */}
+                  <div className="space-y-3 mb-6" style={{ fontFamily: 'Poppins, sans-serif' }}>
                     <div className="flex justify-between">
-                      <span className="text-gray-400">{translations.booking?.type?.players?.label || 'Players:'}</span>
-                      <span className="font-bold">{bookingData.players}</span>
+                      <span className="text-gray-400">{translations.booking?.payment?.breakdown || 'Breakdown:'}</span>
+                      <span className="font-bold text-white">{depositInfo.breakdown}</span>
+                    </div>
+                    <div className="flex justify-between text-lg">
+                      <span className="text-gray-400">{translations.booking?.payment?.total || 'Total:'}</span>
+                      <span className="font-bold text-primary">{depositInfo.total}₪</span>
+                    </div>
+                    <div className="border-t border-primary/20 pt-3">
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <span className="text-gray-400">{translations.booking?.payment?.deposit || 'Deposit to pay now:'}</span>
+                          <p className="text-xs text-gray-500 mt-1">{depositInfo.explanation}</p>
+                        </div>
+                        <span className="font-bold text-2xl text-primary">{depositInfo.amount}₪</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Credit Card Form */}
+                  {depositInfo.amount > 0 && (
+                    <div className="border-t border-primary/20 pt-6">
+                      <h4 className="text-lg font-bold mb-4 flex items-center gap-2" style={{ fontFamily: 'Orbitron, sans-serif' }}>
+                        <Lock className="w-4 h-4 text-green-400" />
+                        {translations.booking?.payment?.card_title || 'Secure Payment'}
+                      </h4>
+
+                      <div className="space-y-4">
+                        {/* Card Number */}
+                        <div>
+                          <label className="block text-white mb-2 text-sm font-medium" style={{ fontFamily: 'Poppins, sans-serif' }}>
+                            {translations.booking?.payment?.card_number || 'Card Number'}
+                            <span className="text-primary ml-1">*</span>
+                          </label>
+                          <input
+                            type="text"
+                            value={cardData.cc_number}
+                            onChange={(e) => handleCardChange('cc_number', e.target.value)}
+                            placeholder="1234 5678 9012 3456"
+                            maxLength={19}
+                            className="w-full border border-primary/30 rounded-lg px-4 py-3 font-medium hover:border-primary/70 transition-all backdrop-blur-sm"
+                            style={{
+                              fontFamily: 'monospace',
+                              backgroundColor: 'rgba(50, 50, 70, 0.7)',
+                              color: '#00f0ff',
+                              outline: 'none',
+                              letterSpacing: '2px'
+                            }}
+                          />
+                        </div>
+
+                        {/* Validity and CVV on same line */}
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-white mb-2 text-sm font-medium" style={{ fontFamily: 'Poppins, sans-serif' }}>
+                              {translations.booking?.payment?.expiry || 'Expiry'}
+                              <span className="text-primary ml-1">*</span>
+                            </label>
+                            <input
+                              type="text"
+                              value={cardData.cc_validity}
+                              onChange={(e) => handleCardChange('cc_validity', e.target.value)}
+                              placeholder="MM/YY"
+                              maxLength={5}
+                              className="w-full border border-primary/30 rounded-lg px-4 py-3 font-medium hover:border-primary/70 transition-all backdrop-blur-sm"
+                              style={{
+                                fontFamily: 'monospace',
+                                backgroundColor: 'rgba(50, 50, 70, 0.7)',
+                                color: '#00f0ff',
+                                outline: 'none',
+                                letterSpacing: '2px'
+                              }}
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-white mb-2 text-sm font-medium" style={{ fontFamily: 'Poppins, sans-serif' }}>
+                              CVV
+                              <span className="text-primary ml-1">*</span>
+                            </label>
+                            <input
+                              type="text"
+                              value={cardData.cc_cvv}
+                              onChange={(e) => handleCardChange('cc_cvv', e.target.value)}
+                              placeholder="123"
+                              maxLength={4}
+                              className="w-full border border-primary/30 rounded-lg px-4 py-3 font-medium hover:border-primary/70 transition-all backdrop-blur-sm"
+                              style={{
+                                fontFamily: 'monospace',
+                                backgroundColor: 'rgba(50, 50, 70, 0.7)',
+                                color: '#00f0ff',
+                                outline: 'none',
+                                letterSpacing: '2px'
+                              }}
+                            />
+                          </div>
+                        </div>
+
+                        {/* Card Holder ID */}
+                        <div>
+                          <label className="block text-white mb-2 text-sm font-medium" style={{ fontFamily: 'Poppins, sans-serif' }}>
+                            {translations.booking?.payment?.holder_id || 'ID Number (Teudat Zehut)'}
+                            <span className="text-primary ml-1">*</span>
+                          </label>
+                          <input
+                            type="text"
+                            value={cardData.cc_holder_id}
+                            onChange={(e) => handleCardChange('cc_holder_id', e.target.value)}
+                            placeholder="123456789"
+                            maxLength={9}
+                            className="w-full border border-primary/30 rounded-lg px-4 py-3 font-medium hover:border-primary/70 transition-all backdrop-blur-sm"
+                            style={{
+                              fontFamily: 'monospace',
+                              backgroundColor: 'rgba(50, 50, 70, 0.7)',
+                              color: '#00f0ff',
+                              outline: 'none'
+                            }}
+                          />
+                        </div>
+
+                        {/* Payment Error */}
+                        {paymentError && (
+                          <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-4">
+                            <div className="flex items-center gap-2 text-red-500">
+                              <AlertCircle className="w-5 h-5" />
+                              <span style={{ fontFamily: 'Poppins, sans-serif' }}>{paymentError}</span>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Security Notice */}
+                        <div className="flex items-center gap-2 text-gray-400 text-xs" style={{ fontFamily: 'Poppins, sans-serif' }}>
+                          <Lock className="w-3 h-3" />
+                          {translations.booking?.payment?.secure_notice || 'Your payment information is encrypted and secure'}
+                        </div>
+                      </div>
                     </div>
                   )}
-                  <div className="flex justify-between">
-                    <span className="text-gray-400">{translations.booking?.summary?.date || 'Date:'}</span>
-                    <span className="font-bold">{bookingData.date && formatDate(bookingData.date)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-400">{translations.booking?.summary?.time || 'Time:'}</span>
-                    <span className="font-bold">{bookingData.time}</span>
-                  </div>
-                </div>
-              </motion.div>
+
+                  {/* Loading state */}
+                  {isLoadingDeposit && (
+                    <div className="flex items-center justify-center py-4">
+                      <Loader2 className="w-6 h-6 text-primary animate-spin" />
+                      <span className="ml-2 text-gray-400">{translations.booking?.payment?.loading || 'Calculating...'}</span>
+                    </div>
+                  )}
+                </motion.div>
+              )}
             </motion.div>
           )}
 
-          {/* Step 7: Confirmation */}
-          {step === 7 && reservationNumber && (
+          {/* Step 8: Confirmation */}
+          {step === 8 && reservationNumber && (
             <motion.div
-              key="step7"
+              key="step8"
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               className={`bg-dark-100/50 backdrop-blur-sm rounded-2xl p-8 border-2 shadow-[0_0_30px_rgba(0,240,255,0.3)] ${
@@ -1448,8 +1865,8 @@ export default function ReservationPage() {
 
                 {/* Reservation/Request Number */}
                 <div className={`border rounded-lg p-4 mb-8 ${
-                  orderStatus === 'pending' 
-                    ? 'bg-yellow-500/10 border-yellow-500/30' 
+                  orderStatus === 'pending'
+                    ? 'bg-yellow-500/10 border-yellow-500/30'
                     : 'bg-primary/10 border-primary/30'
                 }`}>
                   <p className="text-gray-400 text-sm mb-2" style={{ fontFamily: 'Poppins, sans-serif' }}>
@@ -1461,6 +1878,29 @@ export default function ReservationPage() {
                     {reservationNumber}
                   </p>
                 </div>
+
+                {/* Payment Success Banner */}
+                {paymentSuccess && depositInfo && depositInfo.amount > 0 && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="bg-green-500/10 border border-green-500/30 rounded-lg p-4 mb-8"
+                  >
+                    <div className="flex items-center justify-center gap-3">
+                      <div className="w-10 h-10 bg-green-500/20 rounded-full flex items-center justify-center">
+                        <Check className="w-6 h-6 text-green-500" />
+                      </div>
+                      <div className="text-left">
+                        <p className="text-green-500 font-bold" style={{ fontFamily: 'Poppins, sans-serif' }}>
+                          {translations.booking?.confirmation?.payment_success || 'Payment Successful!'}
+                        </p>
+                        <p className="text-green-400 text-sm" style={{ fontFamily: 'Poppins, sans-serif' }}>
+                          {translations.booking?.confirmation?.deposit_paid || 'Deposit paid:'} {depositInfo.amount}₪
+                        </p>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
 
                 {/* Booking Summary */}
                 <div className="bg-dark-200/50 rounded-xl p-6 mb-8 border border-primary/30 text-left max-w-2xl mx-auto">
@@ -1486,31 +1926,37 @@ export default function ReservationPage() {
                         <span className="font-bold text-white">{bookingData.players}</span>
                       </div>
                     )}
+                    {/* Activity type (Laser/Active/Mix) */}
                     {bookingData.gameArea && (
-                      <>
-                        <div className="flex justify-between">
-                          <span className="text-gray-400">Type de jeu:</span>
-                          <span className="font-bold text-white">
-                            {bookingData.gameArea === 'ACTIVE' && 'Active Games'}
-                            {bookingData.gameArea === 'LASER' && 'Laser City'}
-                            {bookingData.gameArea === 'MIX' && 'Mix Active + Laser'}
-                          </span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-400">
-                            {bookingData.gameArea === 'ACTIVE' ? 'Durée:' : 'Parties:'}
-                          </span>
-                          <span className="font-bold text-white">
-                            {bookingData.gameArea === 'ACTIVE' && (
-                              bookingData.numberOfGames === 2 ? '1h' :
-                              bookingData.numberOfGames === 3 ? '1h30' :
-                              bookingData.numberOfGames === 4 ? '2h' : `${bookingData.numberOfGames} parties`
-                            )}
-                            {bookingData.gameArea === 'LASER' && `${bookingData.numberOfGames} partie${bookingData.numberOfGames > 1 ? 's' : ''}`}
-                            {bookingData.gameArea === 'MIX' && '30min Active + 1 Laser'}
-                          </span>
-                        </div>
-                      </>
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">{translations.booking?.summary?.activity || 'Activity:'}</span>
+                        <span className="font-bold text-white">
+                          {bookingData.gameArea === 'ACTIVE' && (translations.booking?.game_area?.active?.title || 'Active Games')}
+                          {bookingData.gameArea === 'LASER' && (translations.booking?.game_area?.laser?.title || 'Laser City')}
+                          {bookingData.gameArea === 'MIX' && (translations.booking?.game_area?.mix?.title || 'Mix Active + Laser')}
+                        </span>
+                      </div>
+                    )}
+                    {/* Duration/parties for GAME */}
+                    {bookingData.type === 'game' && bookingData.gameArea && bookingData.numberOfGames && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">{translations.booking?.summary?.duration || 'Duration:'}</span>
+                        <span className="font-bold text-white">
+                          {bookingData.gameArea === 'ACTIVE' && (
+                            bookingData.numberOfGames === 1 ? '30min' :
+                            bookingData.numberOfGames === 2 ? '1h' :
+                            bookingData.numberOfGames === 3 ? '1h30' :
+                            bookingData.numberOfGames === 4 ? '2h' :
+                            `${bookingData.numberOfGames} games`
+                          )}
+                          {bookingData.gameArea === 'LASER' && (
+                            `${bookingData.numberOfGames} ${bookingData.numberOfGames === 1
+                              ? (translations.booking?.game_area?.laser?.party || 'party')
+                              : (translations.booking?.game_area?.laser?.parties || 'parties')}`
+                          )}
+                          {bookingData.gameArea === 'MIX' && '30min Active + 1 Laser'}
+                        </span>
+                      </div>
                     )}
                     <div className="flex justify-between">
                       <span className="text-gray-400">{translations.booking?.summary?.date || 'Date:'}</span>
@@ -1551,7 +1997,7 @@ export default function ReservationPage() {
         </AnimatePresence>
 
         {/* Navigation Buttons */}
-        {step !== 7 && (
+        {step !== 8 && (
         <div className="flex justify-between mt-8">
           <button
             onClick={handlePrevious}
@@ -1566,50 +2012,79 @@ export default function ReservationPage() {
             {translations.booking?.previous || 'Previous'}
           </button>
 
+          {/* Step 6: Next button to go to payment step */}
           {step === 6 && (
             <button
-              onClick={handleConfirm}
+              onClick={() => setStep(7)}
               disabled={
-                isSubmitting ||
                 !bookingData.firstName ||
                 !bookingData.lastName ||
                 !bookingData.phone ||
-                !bookingData.termsAccepted ||
                 !!validationErrors.phone ||
                 !!(bookingData.email && validationErrors.email) ||
                 (bookingData.type === 'event' && !bookingData.email)
               }
               className={`inline-flex items-center gap-2 px-6 py-3 rounded-xl transition-all duration-300 ${
-                !isSubmitting &&
                 bookingData.firstName &&
                 bookingData.lastName &&
                 bookingData.phone &&
-                bookingData.termsAccepted &&
                 !validationErrors.phone &&
                 (!bookingData.email || !validationErrors.email) &&
                 (bookingData.type !== 'event' || bookingData.email)
                   ? 'glow-button'
                   : 'bg-dark-200 border-2 border-primary/30 text-gray-300 cursor-not-allowed hover:border-primary/40'
               }`}
+            >
+              {translations.booking?.next || 'Next'}
+              <ChevronRight className="w-5 h-5" />
+            </button>
+          )}
+
+          {/* Step 7: Pay and confirm button */}
+          {step === 7 && (
+            <button
+              onClick={handleConfirm}
+              disabled={
+                isSubmitting ||
+                isProcessingPayment ||
+                !bookingData.termsAccepted ||
+                !!(depositInfo && depositInfo.amount > 0 && !isCardValid())
+              }
+              className={`inline-flex items-center gap-2 px-6 py-3 rounded-xl transition-all duration-300 ${
+                !isSubmitting &&
+                !isProcessingPayment &&
+                bookingData.termsAccepted &&
+                (!depositInfo || depositInfo.amount === 0 || isCardValid())
+                  ? 'glow-button'
+                  : 'bg-dark-200 border-2 border-primary/30 text-gray-300 cursor-not-allowed hover:border-primary/40'
+              }`}
               style={{
                 opacity: (
-                  bookingData.firstName &&
-                  bookingData.lastName &&
-                  bookingData.phone &&
                   bookingData.termsAccepted &&
-                  (bookingData.type !== 'event' || bookingData.email)
+                  (!depositInfo || depositInfo.amount === 0 || isCardValid())
                 ) ? 1 : 0.75
               }}
             >
-              {isSubmitting ? (
+              {isSubmitting || isProcessingPayment ? (
                 <>
-                  <div className="w-5 h-5 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
-                  Enregistrement...
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  {isProcessingPayment
+                    ? (translations.booking?.payment?.processing || 'Processing payment...')
+                    : (translations.booking?.submitting || 'Submitting...')}
                 </>
               ) : (
                 <>
-                  {translations.booking?.confirm || 'Confirm booking'}
-                  <Check className="w-5 h-5" />
+                  {depositInfo && depositInfo.amount > 0 ? (
+                    <>
+                      <CreditCard className="w-5 h-5" />
+                      {translations.booking?.pay_and_confirm || `Pay ${depositInfo.amount}₪ and confirm`}
+                    </>
+                  ) : (
+                    <>
+                      {translations.booking?.confirm || 'Confirm booking'}
+                      <Check className="w-5 h-5" />
+                    </>
+                  )}
                 </>
               )}
             </button>

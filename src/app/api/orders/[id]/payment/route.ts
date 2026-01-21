@@ -181,6 +181,9 @@ export async function POST(
       ccLast4?: string
       ccType?: string
       tokenId?: number
+      icountDoctype?: string
+      icountDocnum?: number
+      icountDocUrl?: string
       error?: string
     } = { success: true }
 
@@ -255,6 +258,53 @@ export async function POST(
         ccType: billResult.data.cc_type,
       }
 
+      // Créer le document iCount (invrec) pour ce paiement
+      console.log('[PAYMENT] Creating iCount document for payment')
+
+      // Parser la validité pour extraire mois/année si on a les infos carte
+      let expMonth: number | undefined
+      let expYear: number | undefined
+      if (body.cardInfo?.cc_validity) {
+        const validity = body.cardInfo.cc_validity.replace(/[^0-9]/g, '')
+        expMonth = parseInt(validity.slice(0, 2), 10)
+        expYear = 2000 + parseInt(validity.slice(2, 4), 10)
+      }
+
+      const docResult = await provider.documents.createInvoiceReceipt({
+        custom_client_id: order.contact_id || undefined,
+        client_name: `${order.customer_first_name} ${order.customer_last_name || ''}`.trim(),
+        email: order.customer_email || undefined,
+        phone: order.customer_phone || undefined,
+        items: [{
+          description: `${body.paymentType === 'deposit' ? 'Acompte' : 'Paiement'} commande ${order.request_reference}`,
+          quantity: 1,
+          unitprice_incvat: body.amount,
+        }],
+        cc: {
+          sum: body.amount,
+          card_type: billResult.data.cc_type,
+          card_number: billResult.data.cc_last4,
+          confirmation_code: billResult.data.confirmation_code,
+          exp_month: expMonth,
+          exp_year: expYear,
+          holder_id: body.cardInfo?.cc_holder_id,
+          holder_name: body.cardInfo?.cc_holder_name || `${order.customer_first_name} ${order.customer_last_name || ''}`.trim(),
+          num_of_payments: 1,
+        },
+        sanity_string: `pay_${id.slice(0, 10)}_${Date.now()}`,
+        doc_lang: 'he',
+      })
+
+      if (docResult.success && docResult.data) {
+        console.log('[PAYMENT] iCount document created:', docResult.data.doctype, docResult.data.docnum)
+        paymentResult.icountDoctype = docResult.data.doctype
+        paymentResult.icountDocnum = docResult.data.docnum
+        paymentResult.icountDocUrl = docResult.data.doc_url
+      } else {
+        // Log l'erreur mais on continue - le paiement a été effectué
+        console.error('[PAYMENT] Failed to create iCount document:', docResult.error)
+      }
+
       // Si demandé, sauvegarder la carte pour utilisation future
       if (body.saveCard && body.cardInfo && order.contact_id) {
         console.log('[PAYMENT] Attempting to store card for contact:', order.contact_id)
@@ -315,6 +365,9 @@ export async function POST(
       status: 'completed',
       icount_transaction_id: paymentResult.transactionId,
       icount_confirmation_code: paymentResult.confirmationCode,
+      icount_doctype: paymentResult.icountDoctype,
+      icount_docnum: paymentResult.icountDocnum,
+      icount_doc_url: paymentResult.icountDocUrl,
       cc_last4: paymentResult.ccLast4,
       cc_type: paymentResult.ccType,
       check_number: body.checkNumber,

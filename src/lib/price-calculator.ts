@@ -37,6 +37,8 @@ export interface CalculatePriceParams {
   products: ICountProduct[]
   eventFormulas: ICountEventFormula[]
   rooms: ICountRoom[]
+  // Locale for room name display
+  locale?: 'he' | 'en' | 'fr'
 }
 
 /**
@@ -158,8 +160,15 @@ export function calculateBookingPrice(params: CalculatePriceParams): PriceCalcul
     discountValue,
     products,
     eventFormulas,
-    rooms
+    rooms,
+    locale = 'en'
   } = params
+
+  // Helper to get room name based on locale
+  const getRoomName = (room: ICountRoom): string => {
+    if (locale === 'he' && room.name_he) return room.name_he
+    return room.name
+  }
 
   // Invalid if no participants
   if (participants < 1) {
@@ -312,7 +321,7 @@ export function calculateBookingPrice(params: CalculatePriceParams): PriceCalcul
         const room = rooms.find(r => r.id === formulaRoomId)
         if (room && room.price > 0) {
           roomPrice = room.price
-          roomName = room.name_he || room.name
+          roomName = getRoomName(room)
           subtotal += roomPrice
           breakdownParts.push(`${roomPrice}₪ (${roomName})`)
         }

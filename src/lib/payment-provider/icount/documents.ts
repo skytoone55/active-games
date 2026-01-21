@@ -331,14 +331,16 @@ export class ICountDocumentsModule {
   async cancelDocument(
     doctype: ICountDocType,
     docnum: number,
-    reason?: string
+    reason?: string,
+    refundCreditCard?: boolean
   ): Promise<ProviderResult<void>> {
-    console.log('[ICOUNT DOCS] Cancelling document:', doctype, docnum)
+    console.log('[ICOUNT DOCS] Cancelling document:', doctype, docnum, refundCreditCard ? '(with CC refund)' : '')
 
     const result = await this.client.request<ICountCancelResponse>('doc', 'cancel', {
       doctype,
       docnum,
       reason: reason || 'Cancelled via ActiveLaser',
+      ...(refundCreditCard && { refund_cc: true }),
     })
 
     if (result.success) {
@@ -354,6 +356,17 @@ export class ICountDocumentsModule {
         message: 'Failed to cancel document',
       },
     }
+  }
+
+  /**
+   * Annuler un document ET rembourser la transaction CB associée
+   */
+  async cancelDocumentWithRefund(
+    doctype: ICountDocType,
+    docnum: number,
+    reason?: string
+  ): Promise<ProviderResult<void>> {
+    return this.cancelDocument(doctype, docnum, reason, true)
   }
 
   /**
