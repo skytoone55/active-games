@@ -125,7 +125,7 @@ export async function GET(
     let priceCalculation: PriceCalculationResult | null = null
     const bookingType = order.order_type as 'GAME' | 'EVENT'
     const participants = order.participants_count || 0
-    const gameArea = (order.game_area || 'ACTIVE') as 'ACTIVE' | 'LASER' | 'CUSTOM'
+    const gameArea = (order.game_area || 'ACTIVE') as 'ACTIVE' | 'LASER' | 'MIX' | 'CUSTOM'
 
     if (participants >= 1 && products.length > 0) {
       // Determine game parameters from booking slots or order data
@@ -221,7 +221,7 @@ export async function GET(
     const getGameTypeLabel = (): string => {
       if (gameArea === 'LASER') return getLabel('laser')
       if (gameArea === 'ACTIVE') return getLabel('active')
-      if (gameArea === 'CUSTOM') return getLabel('laser_active')
+      if (gameArea === 'MIX' || gameArea === 'CUSTOM') return getLabel('laser_active')
       // Fallback based on booking type
       return bookingType === 'EVENT' ? getLabel('event') : getLabel('game')
     }

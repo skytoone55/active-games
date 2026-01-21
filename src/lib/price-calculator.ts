@@ -21,7 +21,7 @@ export interface CalculatePriceParams {
   bookingType: 'GAME' | 'EVENT'
   participants: number
   // GAME params
-  gameArea?: 'ACTIVE' | 'LASER' | 'CUSTOM' | null
+  gameArea?: 'ACTIVE' | 'LASER' | 'MIX' | 'CUSTOM' | null
   numberOfGames?: number            // For LASER: number of parties
   gameDurations?: string[]          // For ACTIVE: durations in minutes
   // GAME CUSTOM params
