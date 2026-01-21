@@ -63,9 +63,9 @@ const MAX_PLAYERS_PER_SLOT = 6
 const TOTAL_SLOTS = 14
 const TOTAL_CAPACITY = TOTAL_SLOTS * MAX_PLAYERS_PER_SLOT // 84 joueurs max
 
-// Horaires d'ouverture
-const OPENING_HOUR = 10
-const CLOSING_HOUR = 23
+// Horaires disponibles dans le formulaire (24h)
+const OPENING_HOUR = 0
+const CLOSING_HOUR = 24
 
 // Couleurs disponibles (10 couleurs)
 const COLORS = [
