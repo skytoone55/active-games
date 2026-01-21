@@ -459,7 +459,8 @@
       "switch_branch": "החלף סניף",
       "all_branches": "כל הסניפים",
       "pending_orders": "הזמנות ממתינות",
-      "notifications": "התראות"
+      "notifications": "התראות",
+      "statistics": "סטטיסטיקות"
     },
     "data_management": {
       "title": "ניהול נתונים",

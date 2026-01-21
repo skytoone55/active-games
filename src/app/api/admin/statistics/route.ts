@@ -7,13 +7,22 @@ import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { verifyApiPermission } from '@/lib/permissions'
 
 // Helper to get date range
-function getDateRange(range: string): { start: Date; end: Date } {
+function getDateRange(range: string, customStart?: string, customEnd?: string): { start: Date; end: Date } {
   const now = new Date()
-  const end = new Date(now)
+  let end = new Date(now)
   end.setHours(23, 59, 59, 999)
 
   let start = new Date(now)
   start.setHours(0, 0, 0, 0)
+
+  // Support custom date range
+  if (range === 'custom' && customStart && customEnd) {
+    start = new Date(customStart)
+    start.setHours(0, 0, 0, 0)
+    end = new Date(customEnd)
+    end.setHours(23, 59, 59, 999)
+    return { start, end }
+  }
 
   switch (range) {
     case 'today':
@@ -61,10 +70,12 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const range = searchParams.get('range') || 'month'
     const branchId = searchParams.get('branch')
+    const customStart = searchParams.get('startDate') || undefined
+    const customEnd = searchParams.get('endDate') || undefined
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const supabase = createServiceRoleClient() as any
-    const { start, end } = getDateRange(range)
+    const { start, end } = getDateRange(range, customStart, customEnd)
 
     // Build base query conditions
     const baseConditions = {
@@ -97,7 +108,7 @@ export async function GET(request: NextRequest) {
       .select('id, created_at, first_name, last_name')
 
     if (baseConditions.branch) {
-      contactsQuery = contactsQuery.eq('branch_id', baseConditions.branch)
+      contactsQuery = contactsQuery.eq('branch_id_main', baseConditions.branch)
     }
 
     const { data: contacts, error: contactsError } = await contactsQuery
@@ -286,7 +297,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Error in statistics API:', error)
     return NextResponse.json(
-      { success: false, error: 'Internal server error' },
+      { success: false, error: 'Internal server error', details: error instanceof Error ? error.message : String(error) },
       { status: 500 }
     )
   }

@@ -488,7 +488,8 @@
       "theme_light": "Mode clair",
       "theme_dark": "Mode sombre",
       "language": "Langue",
-      "pending_orders": "commandes en attente"
+      "pending_orders": "commandes en attente",
+      "statistics": "Statistiques"
     },
     "data_management": {
       "title": "Gestion des donnees",

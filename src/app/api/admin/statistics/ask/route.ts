@@ -8,6 +8,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { verifyApiPermission } from '@/lib/permissions'
+import { CLARA_SCHEMA_SUMMARY } from '@/lib/clara/supabase-schema'
 
 // Tools UNIQUEMENT pour les vraies actions (pas pour les questions!)
 const ACTION_TOOLS = [
@@ -354,11 +355,29 @@ RÈGLES IMPORTANTES:
 
 ${businessContext}
 
+STRUCTURE DE LA BASE DE DONNÉES:
+${CLARA_SCHEMA_SUMMARY}
+
 AIDE SUR LE LOGICIEL:
+- Agenda: Page principale avec calendrier, cliquer sur un créneau pour créer une réservation
+- Commandes: Liste des commandes en ligne, filtrable par statut/date/branche
+- Clients: Base de contacts avec historique des réservations
+- Équipe: Gestion des utilisateurs et permissions par rôle
+- Statistiques: Tableaux de bord avec KPIs et graphiques
+- Paramètres: Configuration branche, salles, tarifs, emails
+
+WORKFLOW COMMANDES:
+1. Client fait une demande → status "pending"
+2. Agent confirme → status "confirmed", booking créé
+3. Client paie → payment_status "fully_paid"
+4. Événement terminé → status "closed"
+
+AIDE TECHNIQUE:
 - Créer commande: Cliquer sur un créneau dans l'agenda
 - Paiement: Section "Paiements" dans la fiche commande
 - Remboursement: Icône à côté du paiement
-- Fermer commande: Bouton "Fermer" quand payé et terminé`
+- Fermer commande: Bouton "Fermer" quand payé et terminé
+- Voir logs: Menu Logs pour l'historique des actions`
 
     // Détecter si c'est une demande d'action
     const wantsAction = isActionRequest(question)

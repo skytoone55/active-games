@@ -431,7 +431,8 @@
       "theme_light": "Light mode",
       "theme_dark": "Dark mode",
       "language": "Language",
-      "pending_orders": "pending orders"
+      "pending_orders": "pending orders",
+      "statistics": "Statistics"
     },
     "data_management": {
       "title": "Data Management",
