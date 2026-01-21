@@ -17,7 +17,8 @@ import {
   Plus,
   Banknote,
   ShieldCheck,
-  CheckCheck
+  CheckCheck,
+  Send
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useTranslation } from '@/contexts/LanguageContext'
@@ -49,6 +50,7 @@ export function AccountingModal({
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [showPaymentModal, setShowPaymentModal] = useState(false)
+  const [sendingInvoice, setSendingInvoice] = useState(false)
 
   const { products, eventFormulas, rooms, loading: loadingPricing } = usePricingData(branchId)
 
@@ -260,6 +262,33 @@ export function AccountingModal({
     } catch (err) {
       console.error('Payment error:', err)
       return { success: false, error: 'Network error' }
+    }
+  }
+
+  // Handle send invoice email
+  const handleSendInvoice = async () => {
+    if (sendingInvoice) return
+
+    setSendingInvoice(true)
+    try {
+      const response = await fetch(`/api/orders/${orderId}/send-invoice`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      })
+
+      const result = await response.json()
+
+      if (result.success) {
+        alert(t('admin.invoice.success') || 'Invoice sent successfully')
+      } else {
+        const errorMsg = result.messageKey ? t(result.messageKey) : result.error
+        alert(errorMsg || 'Failed to send invoice')
+      }
+    } catch (err) {
+      console.error('Send invoice error:', err)
+      alert(t('errors.networkError') || 'Network error')
+    } finally {
+      setSendingInvoice(false)
     }
   }
 
@@ -832,8 +861,9 @@ export function AccountingModal({
         <div className={`px-6 py-4 border-t flex justify-between ${
           isDark ? 'border-gray-700 bg-gray-800/50' : 'border-gray-200 bg-gray-50'
         }`}>
-          {/* Bouton Clôturer - à gauche */}
-          <div>
+          {/* Boutons à gauche */}
+          <div className="flex items-center gap-2">
+            {/* Bouton Clôturer - visible uniquement si commande non fermée */}
             {onCloseOrder && order?.status !== 'closed' && order?.status !== 'cancelled' && (
               <button
                 onClick={() => {
@@ -848,6 +878,27 @@ export function AccountingModal({
               >
                 <CheckCheck className="w-4 h-4" />
                 {t('admin.orders.close_order')}
+              </button>
+            )}
+            {/* Bouton Envoyer facture - visible uniquement si commande fermée avec facture */}
+            {order?.status === 'closed' && Boolean((order as unknown as Record<string, unknown>).icount_invrec_url) && (
+              <button
+                onClick={handleSendInvoice}
+                disabled={sendingInvoice}
+                className={`px-4 py-2 rounded-lg transition-colors flex items-center gap-2 ${
+                  sendingInvoice
+                    ? 'bg-gray-400 cursor-not-allowed text-white'
+                    : isDark
+                      ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                      : 'bg-blue-500 hover:bg-blue-600 text-white'
+                }`}
+              >
+                {sendingInvoice ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Send className="w-4 h-4" />
+                )}
+                {t('admin.invoice.send_invoice')}
               </button>
             )}
           </div>

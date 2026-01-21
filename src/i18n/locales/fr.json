@@ -776,6 +776,16 @@
         "guaranteed": "Garantie carte"
       }
     },
+    "invoice": {
+      "send_invoice": "Envoyer facture",
+      "success": "Facture envoyee avec succes",
+      "errors": {
+        "no_email": "Pas d'adresse email pour cette commande",
+        "not_closed": "La commande doit etre cloturee pour envoyer la facture",
+        "no_invoice": "Aucune facture disponible pour cette commande",
+        "send_failed": "Echec de l'envoi de la facture"
+      }
+    },
     "payment": {
       "title": "Enregistrer un paiement",
       "order_ref": "Commande",

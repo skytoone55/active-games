@@ -720,6 +720,16 @@
         "guaranteed": "Card Guarantee"
       }
     },
+    "invoice": {
+      "send_invoice": "Send Invoice",
+      "success": "Invoice sent successfully",
+      "errors": {
+        "no_email": "No email address for this order",
+        "not_closed": "Order must be closed to send invoice",
+        "no_invoice": "No invoice available for this order",
+        "send_failed": "Failed to send invoice"
+      }
+    },
     "payment": {
       "title": "Record Payment",
       "order_ref": "Order",
