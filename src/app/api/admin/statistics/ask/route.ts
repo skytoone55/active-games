@@ -1,21 +1,15 @@
 /**
  * API pour l'assistant IA admin virtuel
  * Peut répondre aux questions ET proposer/exécuter des actions
- * Utilise Claude via l'API Anthropic avec tool_use
+ * Utilise Claude via l'API Anthropic avec tool_use (via fetch)
  */
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { verifyApiPermission } from '@/lib/permissions'
-import Anthropic from '@anthropic-ai/sdk'
-
-// Initialize Anthropic client
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY || ''
-})
 
 // Define the tools/actions the AI can propose
-const AI_TOOLS: Anthropic.Tool[] = [
+const AI_TOOLS = [
   {
     name: 'close_orders',
     description: 'Fermer des commandes terminées (paiement complet reçu). Utile pour nettoyer les commandes qui sont fully_paid mais encore en statut confirmed.',
@@ -389,6 +383,43 @@ async function executeAction(
   }
 }
 
+// Call Anthropic API directly via fetch
+async function callClaudeAPI(systemPrompt: string, userMessage: string) {
+  const apiKey = process.env.ANTHROPIC_API_KEY
+
+  if (!apiKey) {
+    throw new Error('ANTHROPIC_API_KEY not configured')
+  }
+
+  const response = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01'
+    },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 2048,
+      system: systemPrompt,
+      tools: AI_TOOLS,
+      messages: [
+        {
+          role: 'user',
+          content: userMessage
+        }
+      ]
+    })
+  })
+
+  if (!response.ok) {
+    const errorText = await response.text()
+    throw new Error(`Anthropic API error: ${response.status} - ${errorText}`)
+  }
+
+  return response.json()
+}
+
 export async function POST(request: NextRequest) {
   try {
     const { success, user, errorResponse } = await verifyApiPermission('orders', 'view')
@@ -633,11 +664,7 @@ ${(() => {
 })()}
 `
 
-    // Call Claude API with tools
-    const message = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 2048,
-      system: `Tu es l'assistant IA admin virtuel pour ActiveLaser, une entreprise de loisirs (laser game et jeux actifs en salle).
+    const systemPrompt = `Tu es l'assistant IA admin virtuel pour ActiveLaser, une entreprise de loisirs (laser game et jeux actifs en salle).
 
 Tu peux:
 1. ANALYSER les données et répondre aux questions statistiques
@@ -659,15 +686,10 @@ GUIDE D'UTILISATION DU LOGICIEL (pour get_help):
 - Remboursement: Dans la fiche commande, cliquer sur l'icône remboursement à côté du paiement
 - Fermer une commande: Bouton "Fermer" quand le paiement est complet et la prestation effectuée
 - Clients: Menu Clients pour voir tous les contacts et leur historique
-- Stats: Menu Statistiques pour les rapports et analyses`,
-      tools: AI_TOOLS,
-      messages: [
-        {
-          role: 'user',
-          content: `${dataContext}\n\nDemande de l'utilisateur: ${question}`
-        }
-      ]
-    })
+- Stats: Menu Statistiques pour les rapports et analyses`
+
+    // Call Claude API
+    const message = await callClaudeAPI(systemPrompt, `${dataContext}\n\nDemande de l'utilisateur: ${question}`)
 
     // Process the response
     let answer = ''
