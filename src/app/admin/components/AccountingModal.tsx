@@ -172,27 +172,24 @@ export function AccountingModal({
     }
   }
 
-  // Helper pour afficher le type de jeu avec la zone (comme dans OrderDetailModal)
+  // Helper pour afficher le type de jeu avec la zone
   const getGameLabel = (): string => {
     if (!order) return ''
 
+    // Même logique pour GAME et EVENT
+    if (order.game_area === 'LASER') return 'Laser City'
+    if (order.game_area === 'MIX' || order.game_area === 'CUSTOM') return 'Active + Laser'
+    if (order.game_area === 'ACTIVE') return 'Active Games'
+
+    // Fallback sur event_type pour les anciennes commandes EVENT
     if (order.order_type === 'EVENT') {
-      // Événements : afficher le type basé sur game_area
-      if (order.game_area === 'ACTIVE') return 'Événement Active Games'
-      if (order.game_area === 'LASER') return 'Événement Laser City'
-      if (order.game_area === 'MIX' || order.game_area === 'CUSTOM') return 'Événement Mix'
-      // Fallback sur event_type pour les anciennes commandes
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const orderAny = order as any
-      if (orderAny.event_type === 'event_active') return 'Événement Active Games'
-      if (orderAny.event_type === 'event_laser') return 'Événement Laser City'
-      if (orderAny.event_type === 'event_mix') return 'Événement Mix'
-      return 'Événement'
+      if (orderAny.event_type === 'event_active') return 'Active Games'
+      if (orderAny.event_type === 'event_laser') return 'Laser City'
+      if (orderAny.event_type === 'event_mix') return 'Active + Laser'
     }
 
-    // GAME : afficher le type basé sur game_area
-    if (order.game_area === 'LASER') return 'Laser City'
-    if (order.game_area === 'MIX' || order.game_area === 'CUSTOM') return 'Mix (Active + Laser)'
     return 'Active Games'
   }
 

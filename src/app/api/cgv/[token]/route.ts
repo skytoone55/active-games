@@ -188,25 +188,25 @@ export async function GET(
     // Translations for price breakdown labels based on contact's preferred locale
     const priceLabels: Record<string, Record<string, string>> = {
       he: {
-        laser: 'לייזר',
-        active: 'אקטיב',
-        laser_active: 'לייזר + אקטיב',
+        laser: 'Laser City',
+        active: 'Active Games',
+        laser_active: 'Active + Laser',
         game: 'משחק',
         event: 'אירוע',
         room: 'חדר'
       },
       en: {
-        laser: 'Laser',
-        active: 'Active',
-        laser_active: 'Laser + Active',
+        laser: 'Laser City',
+        active: 'Active Games',
+        laser_active: 'Active + Laser',
         game: 'Game',
         event: 'Event',
         room: 'Room'
       },
       fr: {
-        laser: 'Laser',
-        active: 'Active',
-        laser_active: 'Laser + Active',
+        laser: 'Laser City',
+        active: 'Active Games',
+        laser_active: 'Active + Laser',
         game: 'Jeu',
         event: 'Événement',
         room: 'Salle'
