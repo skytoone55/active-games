@@ -14,6 +14,8 @@ import { verifyApiPermission } from '@/lib/permissions'
 import { validateBookingPrice } from '@/lib/booking-validation'
 import { logBookingAction, logContactAction, logOrderAction, getClientIpFromHeaders } from '@/lib/activity-logger'
 import { sendBookingConfirmationEmail } from '@/lib/email-sender'
+import { calculateBookingPrice } from '@/lib/price-calculator'
+import type { ICountProduct, ICountEventFormula, ICountRoom } from '@/hooks/usePricingData'
 // iCount offers removed - invoice+receipt created only at order close
 import type {
   UserRole,
@@ -337,6 +339,76 @@ export async function POST(request: NextRequest) {
     let orderId: string | null = null
     let orderCgvToken: string | null = null
 
+    // Récupérer les données de pricing pour calculer le total_amount
+    const [productsResult, formulasResult, roomsResult] = await Promise.all([
+      supabase.from('icount_products').select('*').eq('branch_id', body.branch_id).eq('is_active', true),
+      supabase.from('icount_event_formulas').select('*').eq('branch_id', body.branch_id).eq('is_active', true),
+      supabase.from('icount_rooms').select('*').eq('branch_id', body.branch_id).eq('is_active', true)
+    ])
+
+    const products = (productsResult.data || []) as ICountProduct[]
+    const eventFormulas = (formulasResult.data || []) as ICountEventFormula[]
+    const rooms = (roomsResult.data || []) as ICountRoom[]
+
+    // Calculer le total_amount
+    let totalAmount: number | null = null
+    const gameArea = calculateGameArea(body.game_sessions) as 'ACTIVE' | 'LASER' | 'MIX' | 'CUSTOM' | null
+
+    if (body.participants_count >= 1 && products.length > 0) {
+      // Calculer les paramètres de jeu depuis les sessions
+      let laserGames = 0
+      let activeDurations: string[] = []
+      let customGameAreas: ('ACTIVE' | 'LASER')[] = []
+      let customGameDurations: string[] = []
+
+      if (body.game_sessions && body.game_sessions.length > 0) {
+        for (const session of body.game_sessions) {
+          const startTime = new Date(session.start_datetime)
+          const endTime = new Date(session.end_datetime)
+          const durationMinutes = Math.round((endTime.getTime() - startTime.getTime()) / 60000)
+
+          if (session.game_area === 'LASER') {
+            laserGames++
+          } else if (session.game_area === 'ACTIVE') {
+            activeDurations.push(String(durationMinutes))
+          }
+
+          // Pour CUSTOM/MIX
+          customGameAreas.push(session.game_area)
+          customGameDurations.push(String(durationMinutes))
+        }
+      }
+
+      // Déterminer le quick plan pour les événements
+      let eventQuickPlan = 'AA'
+      if (body.type === 'EVENT') {
+        if (gameArea === 'LASER') eventQuickPlan = 'LL'
+        else if (gameArea === 'ACTIVE') eventQuickPlan = 'AA'
+        else eventQuickPlan = 'AL'
+      }
+
+      const priceCalculation = calculateBookingPrice({
+        bookingType: body.type as 'GAME' | 'EVENT',
+        participants: body.participants_count,
+        gameArea: gameArea || 'ACTIVE',
+        numberOfGames: laserGames || body.game_sessions?.length || 1,
+        gameDurations: activeDurations.length > 0 ? activeDurations : ['60'],
+        customGameAreas: gameArea === 'MIX' || gameArea === 'CUSTOM' ? customGameAreas : undefined,
+        customGameDurations: gameArea === 'MIX' || gameArea === 'CUSTOM' ? customGameDurations : undefined,
+        eventQuickPlan,
+        eventRoomId: body.event_room_id || null,
+        discountType: body.discount_type,
+        discountValue: body.discount_value ?? undefined,
+        products,
+        eventFormulas,
+        rooms,
+      })
+
+      if (priceCalculation.valid) {
+        totalAmount = priceCalculation.total
+      }
+    }
+
     if (body.reactivateOrderId) {
       // Réactivation: mettre à jour l'order existant
       const { data: updatedOrder } = await supabase
@@ -354,6 +426,7 @@ export async function POST(request: NextRequest) {
           game_area: calculateGameArea(body.game_sessions),
           number_of_games: body.game_sessions?.length || 1,
           processed_at: new Date().toISOString(),
+          total_amount: totalAmount,
         })
         .eq('id', body.reactivateOrderId)
         .select('id')
@@ -384,6 +457,7 @@ export async function POST(request: NextRequest) {
           customer_email: body.customer_email || null,
           customer_notes: body.customer_notes_at_booking || null,
           request_reference: referenceCode,
+          total_amount: totalAmount,
           // CGV non acceptées - le client doit valider via le lien email
           terms_accepted: false,
           terms_accepted_at: null,

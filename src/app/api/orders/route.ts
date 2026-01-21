@@ -24,6 +24,8 @@ import { validateBookingPrice } from '@/lib/booking-validation'
 import { logOrderAction, logBookingAction, logContactAction, getClientIpFromHeaders } from '@/lib/activity-logger'
 import { sendBookingConfirmationEmail } from '@/lib/email-sender'
 import { syncContactToICountBackground } from '@/lib/icount-sync'
+import { calculateBookingPrice } from '@/lib/price-calculator'
+import type { ICountProduct, ICountEventFormula, ICountRoom } from '@/hooks/usePricingData'
 // iCount offers removed - invoice+receipt created only at order close
 import type { EventRoom, LaserRoom, UserRole, Booking, Branch, Contact } from '@/lib/supabase/types'
 
@@ -57,6 +59,83 @@ function getGameAreasForEventType(eventType: string | null): Array<'ACTIVE' | 'L
     default:
       return ['ACTIVE', 'ACTIVE'] // Défaut AA
   }
+}
+
+// Calculer le total_amount pour une commande
+async function calculateOrderTotalAmount(params: {
+  branchId: string
+  orderType: 'GAME' | 'EVENT'
+  participants: number
+  gameArea: 'ACTIVE' | 'LASER' | 'MIX' | 'CUSTOM' | null
+  numberOfGames: number
+  gameSessions?: Array<{ game_area: string; start_datetime: string; end_datetime: string }>
+  eventRoomId?: string | null
+  eventType?: string | null
+}): Promise<number | null> {
+  const { branchId, orderType, participants, gameArea, numberOfGames, gameSessions, eventRoomId, eventType } = params
+
+  // Récupérer les données de pricing
+  const [productsResult, formulasResult, roomsResult] = await Promise.all([
+    supabase.from('icount_products').select('*').eq('branch_id', branchId).eq('is_active', true),
+    supabase.from('icount_event_formulas').select('*').eq('branch_id', branchId).eq('is_active', true),
+    supabase.from('icount_rooms').select('*').eq('branch_id', branchId).eq('is_active', true)
+  ])
+
+  const products = (productsResult.data || []) as ICountProduct[]
+  const eventFormulas = (formulasResult.data || []) as ICountEventFormula[]
+  const rooms = (roomsResult.data || []) as ICountRoom[]
+
+  if (participants < 1 || products.length === 0) {
+    return null
+  }
+
+  // Calculer les paramètres de jeu depuis les sessions
+  let laserGames = 0
+  let activeDurations: string[] = []
+  let customGameAreas: ('ACTIVE' | 'LASER')[] = []
+  let customGameDurations: string[] = []
+
+  if (gameSessions && gameSessions.length > 0) {
+    for (const session of gameSessions) {
+      const startTime = new Date(session.start_datetime)
+      const endTime = new Date(session.end_datetime)
+      const durationMinutes = Math.round((endTime.getTime() - startTime.getTime()) / 60000)
+
+      if (session.game_area === 'LASER') {
+        laserGames++
+      } else if (session.game_area === 'ACTIVE') {
+        activeDurations.push(String(durationMinutes))
+      }
+
+      customGameAreas.push(session.game_area as 'ACTIVE' | 'LASER')
+      customGameDurations.push(String(durationMinutes))
+    }
+  }
+
+  // Déterminer le quick plan pour les événements
+  let eventQuickPlan = 'AA'
+  if (orderType === 'EVENT') {
+    if (eventType === 'event_laser' || gameArea === 'LASER') eventQuickPlan = 'LL'
+    else if (eventType === 'event_active' || gameArea === 'ACTIVE') eventQuickPlan = 'AA'
+    else eventQuickPlan = 'AL'
+  }
+
+  const priceCalculation = calculateBookingPrice({
+    bookingType: orderType,
+    participants,
+    gameArea: gameArea || 'ACTIVE',
+    numberOfGames: laserGames || numberOfGames || 1,
+    gameDurations: activeDurations.length > 0 ? activeDurations : ['60'],
+    customGameAreas: gameArea === 'MIX' || gameArea === 'CUSTOM' ? customGameAreas : undefined,
+    customGameDurations: gameArea === 'MIX' || gameArea === 'CUSTOM' ? customGameDurations : undefined,
+    eventQuickPlan,
+    eventRoomId: eventRoomId || null,
+    products,
+    eventFormulas,
+    rooms,
+  })
+
+  return priceCalculation.valid ? priceCalculation.total : null
 }
 
 // Trouver la meilleure salle d'événement disponible
@@ -370,6 +449,16 @@ export async function POST(request: NextRequest) {
         }
         // === FIN VALIDATION PRIX ===
 
+        // Calculer le total_amount
+        const totalAmount = await calculateOrderTotalAmount({
+          branchId: branch_id,
+          orderType: 'EVENT',
+          participants: participants_count,
+          gameArea: game_area as 'ACTIVE' | 'LASER' | 'MIX' | 'CUSTOM' | null,
+          numberOfGames: eventNumberOfGames,
+          eventType: event_type
+        })
+
         const { data: order, error: orderError } = await supabase
           .from('orders')
           .insert({
@@ -391,6 +480,7 @@ export async function POST(request: NextRequest) {
             number_of_games: eventNumberOfGames,
             pending_reason: 'room_unavailable',
             pending_details: 'No event room available for this time slot',
+            total_amount: totalAmount,
             terms_accepted: true,
             terms_accepted_at: new Date().toISOString(),
             cgv_validated_at: new Date().toISOString()
@@ -514,6 +604,16 @@ export async function POST(request: NextRequest) {
             // Pas de salle laser disponible → créer order en pending
             const referenceCode = generateShortReference()
 
+            // Calculer le total_amount
+            const totalAmount = await calculateOrderTotalAmount({
+              branchId: branch_id,
+              orderType: 'EVENT',
+              participants: participants_count,
+              gameArea: game_area as 'ACTIVE' | 'LASER' | 'MIX' | 'CUSTOM' | null,
+              numberOfGames: eventNumberOfGames,
+              eventType: event_type
+            })
+
             const { data: order, error: orderError } = await supabase
               .from('orders')
               .insert({
@@ -535,6 +635,7 @@ export async function POST(request: NextRequest) {
                 number_of_games: eventNumberOfGames,
                 pending_reason: 'laser_unavailable',
                 pending_details: `No laser room available for game ${i + 1}`,
+                total_amount: totalAmount,
                 terms_accepted: true,
                 terms_accepted_at: new Date().toISOString(),
                 cgv_validated_at: new Date().toISOString()
@@ -703,6 +804,19 @@ export async function POST(request: NextRequest) {
 
       // Créer l'order avec cgv_token pour le lien récapitulatif
       const eventCgvToken = generateCgvToken()
+
+      // Calculer le total_amount avec les game sessions créées
+      const totalAmount = await calculateOrderTotalAmount({
+        branchId: branch_id,
+        orderType: 'EVENT',
+        participants: participants_count,
+        gameArea: game_area as 'ACTIVE' | 'LASER' | 'MIX' | 'CUSTOM' | null,
+        numberOfGames: eventNumberOfGames,
+        gameSessions: eventGameSessions,
+        eventRoomId: eventRoomId || null,
+        eventType: event_type
+      })
+
       const { data: order, error: orderError } = await supabase
         .from('orders')
         .insert({
@@ -723,6 +837,7 @@ export async function POST(request: NextRequest) {
           participants_count,
           game_area: game_area || null,
           number_of_games: eventNumberOfGames,
+          total_amount: totalAmount,
           terms_accepted: true,
           terms_accepted_at: new Date().toISOString(),
           cgv_validated_at: new Date().toISOString(),
@@ -946,6 +1061,15 @@ export async function POST(request: NextRequest) {
       if (hasOverbooking) {
         const referenceCode = generateShortReference()
 
+        // Calculer le total_amount
+        const totalAmount = await calculateOrderTotalAmount({
+          branchId: branch_id,
+          orderType: 'GAME',
+          participants: participants_count,
+          gameArea: game_area as 'ACTIVE' | 'LASER' | 'MIX' | 'CUSTOM' | null,
+          numberOfGames: number_of_games
+        })
+
         const { data: order, error: orderError } = await supabase
           .from('orders')
           .insert({
@@ -967,6 +1091,7 @@ export async function POST(request: NextRequest) {
             number_of_games,
             pending_reason: 'overbooking',
             pending_details: overbookingDetails,
+            total_amount: totalAmount,
             terms_accepted: true,
             terms_accepted_at: new Date().toISOString(),
             cgv_validated_at: new Date().toISOString()
@@ -1039,6 +1164,15 @@ export async function POST(request: NextRequest) {
       // Créer une order en pending
       const referenceCode = generateShortReference()
 
+      // Calculer le total_amount
+      const totalAmount = await calculateOrderTotalAmount({
+        branchId: branch_id,
+        orderType: 'GAME',
+        participants: participants_count,
+        gameArea: game_area as 'ACTIVE' | 'LASER' | 'MIX' | 'CUSTOM' | null,
+        numberOfGames: number_of_games
+      })
+
       const { data: order, error: orderError } = await supabase
         .from('orders')
         .insert({
@@ -1060,6 +1194,7 @@ export async function POST(request: NextRequest) {
           number_of_games,
           pending_reason: 'slot_unavailable',
           pending_details: sessionResult.error,
+          total_amount: totalAmount,
           terms_accepted: true,
           terms_accepted_at: new Date().toISOString(),
           cgv_validated_at: new Date().toISOString()
@@ -1229,6 +1364,21 @@ export async function POST(request: NextRequest) {
     // 9. Créer l'order
     // Créer l'order avec cgv_token pour le lien récapitulatif
     const gameCgvToken = generateCgvToken()
+
+    // Calculer le total_amount avec les game sessions créées
+    const totalAmount = await calculateOrderTotalAmount({
+      branchId: branch_id,
+      orderType: 'GAME',
+      participants: participants_count,
+      gameArea: game_area as 'ACTIVE' | 'LASER' | 'MIX' | 'CUSTOM' | null,
+      numberOfGames: number_of_games,
+      gameSessions: sessionResult.game_sessions.map(s => ({
+        game_area: s.game_area,
+        start_datetime: s.start_datetime,
+        end_datetime: s.end_datetime
+      }))
+    })
+
     const { data: order, error: orderError } = await supabase
       .from('orders')
       .insert({
@@ -1249,6 +1399,7 @@ export async function POST(request: NextRequest) {
         participants_count,
         game_area: game_area || null,
         number_of_games,
+        total_amount: totalAmount,
         terms_accepted: true,
         terms_accepted_at: new Date().toISOString(),
         cgv_validated_at: new Date().toISOString(),
