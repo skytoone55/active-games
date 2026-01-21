@@ -203,7 +203,7 @@ async function callClaude(
   if (!apiKey) throw new Error('ANTHROPIC_API_KEY non configurée')
 
   const body: Record<string, unknown> = {
-    model: 'claude-sonnet-4-20250514',
+    model: 'claude-haiku-3-5-20241022',
     max_tokens: 1024,
     system: systemPrompt,
     messages: messages.map(m => ({ role: m.role, content: m.content }))
