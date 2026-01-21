@@ -13,12 +13,19 @@ import {
   XCircle,
   AlertTriangle,
   Play,
-  Sparkles,
   ChevronLeft,
   ChevronRight,
   RotateCcw,
   Mic,
-  MicOff
+  MicOff,
+  MessageSquare,
+  Trash2,
+  Edit3,
+  Check,
+  Plus,
+  ZoomIn,
+  ZoomOut,
+  Menu
 } from 'lucide-react'
 import Link from 'next/link'
 
@@ -41,6 +48,14 @@ interface ChatMessage {
   }
 }
 
+interface Conversation {
+  id: string
+  title: string
+  lastMessage: string
+  updatedAt: string
+  messageCount: number
+}
+
 interface ClaraAssistantProps {
   isOpen: boolean
   onClose: () => void
@@ -48,6 +63,14 @@ interface ClaraAssistantProps {
   onPositionChange?: (position: 'left' | 'right') => void
   theme?: 'light' | 'dark'
 }
+
+// Tailles de police disponibles
+const FONT_SIZES = [
+  { label: 'Petit', value: 12 },
+  { label: 'Normal', value: 14 },
+  { label: 'Grand', value: 16 },
+  { label: 'Très grand', value: 18 }
+]
 
 export function ClaraAssistant({
   isOpen,
@@ -58,6 +81,11 @@ export function ClaraAssistant({
 }: ClaraAssistantProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [conversationId, setConversationId] = useState<string | null>(null)
+  const [conversations, setConversations] = useState<Conversation[]>([])
+  const [showConversationList, setShowConversationList] = useState(false)
+  const [editingConversationId, setEditingConversationId] = useState<string | null>(null)
+  const [editingTitle, setEditingTitle] = useState('')
+  const [fontSize, setFontSize] = useState(14)
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [isExpanded, setIsExpanded] = useState(false)
@@ -75,8 +103,24 @@ export function ClaraAssistant({
   const panelRef = useRef<HTMLDivElement>(null)
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null)
 
-  // Thème
   const isDark = theme === 'dark'
+
+  // Charger la taille de police depuis localStorage
+  useEffect(() => {
+    const savedFontSize = localStorage.getItem('clara_font_size')
+    if (savedFontSize) {
+      setFontSize(parseInt(savedFontSize))
+    }
+  }, [])
+
+  // Sauvegarder la taille de police
+  const changeFontSize = (delta: number) => {
+    const currentIndex = FONT_SIZES.findIndex(s => s.value === fontSize)
+    const newIndex = Math.max(0, Math.min(FONT_SIZES.length - 1, currentIndex + delta))
+    const newSize = FONT_SIZES[newIndex].value
+    setFontSize(newSize)
+    localStorage.setItem('clara_font_size', newSize.toString())
+  }
 
   // Check si la reconnaissance vocale est supportée
   useEffect(() => {
@@ -106,9 +150,10 @@ export function ClaraAssistant({
     }
   }, [])
 
-  // Charger l'historique de conversation au montage
+  // Charger l'historique au montage
   useEffect(() => {
     if (isOpen) {
+      loadConversations()
       loadConversation()
     }
   }, [isOpen])
@@ -120,15 +165,31 @@ export function ClaraAssistant({
 
   // Focus input when opening
   useEffect(() => {
-    if (isOpen && messages.length > 0) {
+    if (isOpen && !showConversationList) {
       setTimeout(() => inputRef.current?.focus(), 100)
     }
-  }, [isOpen, messages.length])
+  }, [isOpen, showConversationList])
 
-  // Charger la conversation active
-  const loadConversation = async () => {
+  // Charger la liste des conversations
+  const loadConversations = async () => {
     try {
-      const response = await fetch('/api/admin/statistics/ask')
+      const response = await fetch('/api/admin/clara/conversations')
+      const data = await response.json()
+      if (data.success) {
+        setConversations(data.conversations || [])
+      }
+    } catch (error) {
+      console.error('Error loading conversations:', error)
+    }
+  }
+
+  // Charger une conversation spécifique
+  const loadConversation = async (convId?: string) => {
+    try {
+      const url = convId
+        ? `/api/admin/statistics/ask?conversationId=${convId}`
+        : '/api/admin/statistics/ask'
+      const response = await fetch(url)
       const data = await response.json()
       if (data.success && data.messages) {
         setConversationId(data.conversationId)
@@ -140,28 +201,68 @@ export function ClaraAssistant({
           actionExecuted: !!m.metadata?.actionResult,
           actionResult: m.metadata?.actionResult
         })))
+      } else {
+        setMessages([])
+        setConversationId(convId || null)
       }
+      setShowConversationList(false)
     } catch (error) {
       console.error('Error loading conversation:', error)
     }
   }
 
+  // Sélectionner une conversation
+  const selectConversation = (conv: Conversation) => {
+    loadConversation(conv.id)
+  }
+
   // Nouvelle conversation
   const startNewConversation = async () => {
+    setMessages([])
+    setConversationId(null)
+    setShowConversationList(false)
+    inputRef.current?.focus()
+  }
+
+  // Renommer une conversation
+  const renameConversation = async (convId: string, newTitle: string) => {
     try {
-      await fetch('/api/admin/statistics/ask', { method: 'DELETE' })
-      setMessages([])
-      setConversationId(null)
-      inputRef.current?.focus()
+      await fetch('/api/admin/clara/conversations', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ conversationId: convId, title: newTitle })
+      })
+      setConversations(prev => prev.map(c =>
+        c.id === convId ? { ...c, title: newTitle } : c
+      ))
+      setEditingConversationId(null)
     } catch (error) {
-      console.error('Error starting new conversation:', error)
+      console.error('Error renaming conversation:', error)
+    }
+  }
+
+  // Supprimer une conversation
+  const deleteConversation = async (convId: string) => {
+    if (!confirm('Supprimer cette conversation ?')) return
+    try {
+      await fetch('/api/admin/clara/conversations', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ conversationId: convId })
+      })
+      setConversations(prev => prev.filter(c => c.id !== convId))
+      if (conversationId === convId) {
+        setMessages([])
+        setConversationId(null)
+      }
+    } catch (error) {
+      console.error('Error deleting conversation:', error)
     }
   }
 
   // Toggle microphone
   const toggleListening = () => {
     if (!recognitionRef.current) return
-
     if (isListening) {
       recognitionRef.current.stop()
       setIsListening(false)
@@ -183,19 +284,15 @@ export function ClaraAssistant({
 
   useEffect(() => {
     if (!isDragging) return
-
     const handleMouseMove = (e: MouseEvent) => {
       setDetachedPosition({
         x: e.clientX - dragOffset.x,
         y: e.clientY - dragOffset.y
       })
     }
-
     const handleMouseUp = () => setIsDragging(false)
-
     window.addEventListener('mousemove', handleMouseMove)
     window.addEventListener('mouseup', handleMouseUp)
-
     return () => {
       window.removeEventListener('mousemove', handleMouseMove)
       window.removeEventListener('mouseup', handleMouseUp)
@@ -210,19 +307,15 @@ export function ClaraAssistant({
 
   useEffect(() => {
     if (!isResizing) return
-
     const handleMouseMove = (e: MouseEvent) => {
       setDetachedSize({
         width: Math.max(300, e.clientX - detachedPosition.x),
         height: Math.max(300, e.clientY - detachedPosition.y)
       })
     }
-
     const handleMouseUp = () => setIsResizing(false)
-
     window.addEventListener('mousemove', handleMouseMove)
     window.addEventListener('mouseup', handleMouseUp)
-
     return () => {
       window.removeEventListener('mousemove', handleMouseMove)
       window.removeEventListener('mouseup', handleMouseUp)
@@ -259,6 +352,8 @@ export function ClaraAssistant({
           content: data.answer || "Hmm, je n'ai pas compris. Tu peux reformuler ?",
           proposedAction: data.proposedAction
         }])
+        // Recharger la liste des conversations
+        loadConversations()
       } else {
         setMessages(prev => [...prev, {
           role: 'assistant',
@@ -358,17 +453,15 @@ export function ClaraAssistant({
         zIndex: 9999
       }
     }
-
     const baseStyles = {
       position: 'fixed' as const,
       top: 0,
       bottom: 0,
       zIndex: 50,
-      width: isExpanded ? '50vw' : '380px',
-      maxWidth: isExpanded ? '800px' : '380px',
+      width: isExpanded ? '50vw' : '400px',
+      maxWidth: isExpanded ? '800px' : '400px',
       transition: 'width 0.3s ease'
     }
-
     if (position === 'left') {
       return { ...baseStyles, left: 0 }
     }
@@ -377,29 +470,19 @@ export function ClaraAssistant({
 
   // Classes de thème
   const themeClasses = {
-    panel: isDark
-      ? 'bg-gray-900 border-cyan-500/20'
-      : 'bg-white border-gray-200',
-    header: isDark
-      ? 'border-cyan-500/20 bg-gradient-to-r from-cyan-500/10 to-purple-500/10'
-      : 'border-gray-200 bg-gradient-to-r from-cyan-50 to-purple-50',
+    panel: isDark ? 'bg-gray-900 border-cyan-500/20' : 'bg-white border-gray-200',
+    header: isDark ? 'border-cyan-500/20 bg-gradient-to-r from-cyan-500/10 to-teal-500/10' : 'border-gray-200 bg-gradient-to-r from-cyan-50 to-teal-50',
     headerText: isDark ? 'text-white' : 'text-gray-900',
     headerSubtext: isDark ? 'text-gray-400' : 'text-gray-500',
-    iconButton: isDark ? 'hover:bg-white/10 text-gray-400' : 'hover:bg-gray-100 text-gray-500',
+    iconButton: isDark ? 'hover:bg-white/10 text-gray-400 hover:text-white' : 'hover:bg-gray-100 text-gray-500 hover:text-gray-700',
     chatBg: isDark ? '' : 'bg-gray-50',
-    userBubble: isDark
-      ? 'bg-cyan-500/20 text-white'
-      : 'bg-cyan-500 text-white',
-    assistantBubble: isDark
-      ? 'bg-gray-800 text-gray-200'
-      : 'bg-white text-gray-800 border border-gray-200 shadow-sm',
-    input: isDark
-      ? 'bg-gray-800 border-cyan-500/20 text-white placeholder-gray-500'
-      : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400',
-    actionBox: isDark
-      ? 'bg-gray-800/80 border-orange-500/30'
-      : 'bg-orange-50 border-orange-200',
-    backdrop: isDark ? 'bg-black/50' : 'bg-black/30'
+    userBubble: isDark ? 'bg-cyan-500/20 text-white' : 'bg-cyan-500 text-white',
+    assistantBubble: isDark ? 'bg-gray-800 text-gray-200' : 'bg-white text-gray-800 border border-gray-200 shadow-sm',
+    input: isDark ? 'bg-gray-800 border-cyan-500/20 text-white placeholder-gray-500' : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400',
+    actionBox: isDark ? 'bg-gray-800/80 border-orange-500/30' : 'bg-orange-50 border-orange-200',
+    backdrop: isDark ? 'bg-black/50' : 'bg-black/30',
+    conversationItem: isDark ? 'hover:bg-gray-800 border-gray-700' : 'hover:bg-gray-100 border-gray-200',
+    conversationItemActive: isDark ? 'bg-cyan-500/20 border-cyan-500' : 'bg-cyan-50 border-cyan-500'
   }
 
   return (
@@ -428,8 +511,11 @@ export function ClaraAssistant({
           onMouseDown={isDetached ? handleMouseDown : undefined}
         >
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-r from-cyan-500 to-purple-500 flex items-center justify-center">
-              <Sparkles className="w-4 h-4 text-white" />
+            {/* Logo Clara - Vague / Battement */}
+            <div className="w-8 h-8 rounded-full bg-gradient-to-r from-cyan-500 to-teal-400 flex items-center justify-center">
+              <svg viewBox="0 0 24 24" className="w-4 h-4 text-white" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <path d="M2 12h2l3-7 4 14 4-7 3 0h4" />
+              </svg>
             </div>
             <div>
               <h3 className={`font-bold text-sm ${themeClasses.headerText}`}>Clara</h3>
@@ -438,6 +524,36 @@ export function ClaraAssistant({
           </div>
 
           <div className="flex items-center gap-1">
+            {/* Menu conversations */}
+            <button
+              onClick={() => {
+                setShowConversationList(!showConversationList)
+                if (!showConversationList) loadConversations()
+              }}
+              className={`p-1.5 rounded-lg transition-colors ${themeClasses.iconButton} ${showConversationList ? 'bg-cyan-500/20 text-cyan-400' : ''}`}
+              title="Conversations"
+            >
+              <Menu className="w-4 h-4" />
+            </button>
+
+            {/* Zoom police */}
+            <button
+              onClick={() => changeFontSize(-1)}
+              className={`p-1.5 rounded-lg transition-colors ${themeClasses.iconButton}`}
+              title="Réduire la police"
+              disabled={fontSize <= FONT_SIZES[0].value}
+            >
+              <ZoomOut className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => changeFontSize(1)}
+              className={`p-1.5 rounded-lg transition-colors ${themeClasses.iconButton}`}
+              title="Agrandir la police"
+              disabled={fontSize >= FONT_SIZES[FONT_SIZES.length - 1].value}
+            >
+              <ZoomIn className="w-4 h-4" />
+            </button>
+
             {/* Nouvelle conversation */}
             <button
               onClick={startNewConversation}
@@ -447,50 +563,42 @@ export function ClaraAssistant({
               <RotateCcw className="w-4 h-4" />
             </button>
 
-            {/* Position toggle (only in side panel mode) */}
+            {/* Position toggle */}
             {!isDetached && onPositionChange && (
               <button
                 onClick={() => onPositionChange(position === 'left' ? 'right' : 'left')}
                 className={`p-1.5 rounded-lg transition-colors ${themeClasses.iconButton}`}
                 title={position === 'left' ? 'Déplacer à droite' : 'Déplacer à gauche'}
               >
-                {position === 'left' ? (
-                  <ChevronRight className="w-4 h-4" />
-                ) : (
-                  <ChevronLeft className="w-4 h-4" />
-                )}
+                {position === 'left' ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
               </button>
             )}
 
-            {/* Detach/Attach button */}
+            {/* Detach/Attach */}
             <button
               onClick={() => setIsDetached(!isDetached)}
               className={`p-1.5 rounded-lg transition-colors ${themeClasses.iconButton}`}
-              title={isDetached ? 'Attacher au côté' : 'Détacher en fenêtre'}
+              title={isDetached ? 'Attacher' : 'Détacher'}
             >
               <Move className="w-4 h-4" />
             </button>
 
-            {/* Expand/Collapse (only in side panel mode) */}
+            {/* Expand/Collapse */}
             {!isDetached && (
               <button
                 onClick={() => setIsExpanded(!isExpanded)}
                 className={`p-1.5 rounded-lg transition-colors ${themeClasses.iconButton}`}
                 title={isExpanded ? 'Réduire' : 'Agrandir'}
               >
-                {isExpanded ? (
-                  <Minimize2 className="w-4 h-4" />
-                ) : (
-                  <Maximize2 className="w-4 h-4" />
-                )}
+                {isExpanded ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
               </button>
             )}
 
-            {/* Settings link */}
+            {/* Settings */}
             <Link
               href="/admin/clara/settings"
               className={`p-1.5 rounded-lg transition-colors ${themeClasses.iconButton}`}
-              title="Paramètres de Clara"
+              title="Paramètres"
             >
               <Settings className="w-4 h-4" />
             </Link>
@@ -506,17 +614,105 @@ export function ClaraAssistant({
           </div>
         </div>
 
+        {/* Conversation List Panel */}
+        {showConversationList && (
+          <div className={`border-b ${isDark ? 'border-gray-700 bg-gray-800/50' : 'border-gray-200 bg-gray-50'} max-h-64 overflow-y-auto`}>
+            <div className="p-2">
+              {/* Bouton nouvelle conversation */}
+              <button
+                onClick={startNewConversation}
+                className={`w-full flex items-center gap-2 p-2 rounded-lg mb-2 ${isDark ? 'bg-cyan-500/20 text-cyan-400 hover:bg-cyan-500/30' : 'bg-cyan-50 text-cyan-600 hover:bg-cyan-100'}`}
+              >
+                <Plus className="w-4 h-4" />
+                <span className="text-sm font-medium">Nouvelle conversation</span>
+              </button>
+
+              {conversations.length === 0 ? (
+                <p className={`text-center py-4 text-sm ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                  Aucune conversation
+                </p>
+              ) : (
+                <div className="space-y-1">
+                  {conversations.map(conv => (
+                    <div
+                      key={conv.id}
+                      className={`flex items-center gap-2 p-2 rounded-lg border cursor-pointer ${
+                        conversationId === conv.id ? themeClasses.conversationItemActive : themeClasses.conversationItem
+                      }`}
+                      onClick={() => !editingConversationId && selectConversation(conv)}
+                    >
+                      <MessageSquare className={`w-4 h-4 flex-shrink-0 ${isDark ? 'text-gray-500' : 'text-gray-400'}`} />
+
+                      {editingConversationId === conv.id ? (
+                        <input
+                          type="text"
+                          value={editingTitle}
+                          onChange={(e) => setEditingTitle(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') renameConversation(conv.id, editingTitle)
+                            if (e.key === 'Escape') setEditingConversationId(null)
+                          }}
+                          onClick={(e) => e.stopPropagation()}
+                          className={`flex-1 text-sm px-1 py-0.5 rounded ${isDark ? 'bg-gray-700 text-white' : 'bg-white text-gray-900'}`}
+                          autoFocus
+                        />
+                      ) : (
+                        <div className="flex-1 min-w-0">
+                          <p className={`text-sm font-medium truncate ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                            {conv.title || 'Sans titre'}
+                          </p>
+                          <p className={`text-xs truncate ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                            {conv.messageCount} messages
+                          </p>
+                        </div>
+                      )}
+
+                      <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                        {editingConversationId === conv.id ? (
+                          <button
+                            onClick={() => renameConversation(conv.id, editingTitle)}
+                            className="p-1 rounded hover:bg-green-500/20 text-green-500"
+                          >
+                            <Check className="w-3 h-3" />
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => {
+                              setEditingConversationId(conv.id)
+                              setEditingTitle(conv.title || '')
+                            }}
+                            className={`p-1 rounded ${isDark ? 'hover:bg-gray-700 text-gray-500' : 'hover:bg-gray-200 text-gray-400'}`}
+                          >
+                            <Edit3 className="w-3 h-3" />
+                          </button>
+                        )}
+                        <button
+                          onClick={() => deleteConversation(conv.id)}
+                          className="p-1 rounded hover:bg-red-500/20 text-red-500"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Chat Area */}
         <div className={`flex-1 overflow-y-auto p-4 space-y-4 ${themeClasses.chatBg}`}>
           {messages.length === 0 ? (
-            // Chat vierge - juste un message de bienvenue simple
             <div className="flex justify-start">
-              <div className={`max-w-[85%] rounded-xl px-4 py-3 ${themeClasses.assistantBubble}`}>
-                <div className={`flex items-center gap-2 mb-2 text-xs ${isDark ? 'text-cyan-400/70' : 'text-cyan-600'}`}>
-                  <Sparkles className="w-3 h-3" />
+              <div className={`max-w-[85%] rounded-xl px-4 py-3 ${themeClasses.assistantBubble}`} style={{ fontSize }}>
+                <div className={`flex items-center gap-2 mb-2 ${isDark ? 'text-cyan-400/70' : 'text-cyan-600'}`} style={{ fontSize: fontSize - 2 }}>
+                  <svg viewBox="0 0 24 24" className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <path d="M2 12h2l3-7 4 14 4-7 3 0h4" />
+                  </svg>
                   Clara
                 </div>
-                <p className="text-sm">
+                <p>
                   Salut ! Je suis Clara, ton assistante. Tu peux me poser des questions sur tes stats, me demander de l&apos;aide ou me faire faire des actions. Qu&apos;est-ce que je peux faire pour toi ?
                 </p>
               </div>
@@ -525,32 +721,36 @@ export function ClaraAssistant({
             <>
               {messages.map((msg, i) => (
                 <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`max-w-[85%] rounded-xl px-4 py-3 ${
-                    msg.role === 'user' ? themeClasses.userBubble : themeClasses.assistantBubble
-                  }`}>
+                  <div
+                    className={`max-w-[85%] rounded-xl px-4 py-3 ${msg.role === 'user' ? themeClasses.userBubble : themeClasses.assistantBubble}`}
+                    style={{ fontSize }}
+                  >
                     {msg.role === 'assistant' && (
-                      <div className={`flex items-center gap-2 mb-2 text-xs ${isDark ? 'text-cyan-400/70' : 'text-cyan-600'}`}>
-                        <Sparkles className="w-3 h-3" />
+                      <div className={`flex items-center gap-2 mb-2 ${isDark ? 'text-cyan-400/70' : 'text-cyan-600'}`} style={{ fontSize: fontSize - 2 }}>
+                        <svg viewBox="0 0 24 24" className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="2.5">
+                          <path d="M2 12h2l3-7 4 14 4-7 3 0h4" />
+                        </svg>
                         Clara
                       </div>
                     )}
-                    <p className="whitespace-pre-wrap text-sm">{msg.content}</p>
+                    <p className="whitespace-pre-wrap">{msg.content}</p>
 
                     {/* Proposed Action */}
                     {msg.proposedAction && !msg.actionExecuted && (
                       <div className={`mt-3 p-3 rounded-lg border ${themeClasses.actionBox}`}>
-                        <div className="flex items-center gap-2 text-orange-500 text-xs font-medium mb-2">
+                        <div className="flex items-center gap-2 text-orange-500 font-medium mb-2" style={{ fontSize: fontSize - 2 }}>
                           <AlertTriangle className="w-3 h-3" />
                           Action proposée
                         </div>
-                        <p className={`text-xs mb-3 ${isDark ? 'text-white' : 'text-gray-700'}`}>
+                        <p className={`mb-3 ${isDark ? 'text-white' : 'text-gray-700'}`} style={{ fontSize: fontSize - 2 }}>
                           {msg.proposedAction.description}
                         </p>
                         <div className="flex gap-2">
                           <button
                             onClick={() => handleExecuteAction(msg.proposedAction!, i)}
                             disabled={loading}
-                            className="flex items-center gap-1 px-2 py-1 bg-green-600/20 border border-green-500 rounded text-green-500 text-xs hover:bg-green-600/30 disabled:opacity-50"
+                            className="flex items-center gap-1 px-2 py-1 bg-green-600/20 border border-green-500 rounded text-green-500 hover:bg-green-600/30 disabled:opacity-50"
+                            style={{ fontSize: fontSize - 2 }}
                           >
                             <Play className="w-3 h-3" />
                             Exécuter
@@ -558,7 +758,8 @@ export function ClaraAssistant({
                           <button
                             onClick={() => handleCancelAction(i)}
                             disabled={loading}
-                            className="flex items-center gap-1 px-2 py-1 bg-red-600/20 border border-red-500 rounded text-red-500 text-xs hover:bg-red-600/30 disabled:opacity-50"
+                            className="flex items-center gap-1 px-2 py-1 bg-red-600/20 border border-red-500 rounded text-red-500 hover:bg-red-600/30 disabled:opacity-50"
+                            style={{ fontSize: fontSize - 2 }}
                           >
                             <XCircle className="w-3 h-3" />
                             Annuler
@@ -569,17 +770,16 @@ export function ClaraAssistant({
 
                     {/* Action Result */}
                     {msg.actionExecuted && msg.actionResult && (
-                      <div className={`mt-3 p-2 rounded-lg border text-xs ${
-                        msg.actionResult.success
-                          ? 'bg-green-900/20 border-green-500/30 text-green-500'
-                          : 'bg-red-900/20 border-red-500/30 text-red-500'
-                      }`}>
+                      <div
+                        className={`mt-3 p-2 rounded-lg border ${
+                          msg.actionResult.success
+                            ? 'bg-green-900/20 border-green-500/30 text-green-500'
+                            : 'bg-red-900/20 border-red-500/30 text-red-500'
+                        }`}
+                        style={{ fontSize: fontSize - 2 }}
+                      >
                         <div className="flex items-center gap-1 mb-1">
-                          {msg.actionResult.success ? (
-                            <CheckCircle className="w-3 h-3" />
-                          ) : (
-                            <XCircle className="w-3 h-3" />
-                          )}
+                          {msg.actionResult.success ? <CheckCircle className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
                           {msg.actionResult.success ? 'Effectuée' : 'Non effectuée'}
                         </div>
                         <p className={isDark ? 'text-gray-300' : 'text-gray-600'}>{msg.actionResult.message}</p>
@@ -593,7 +793,7 @@ export function ClaraAssistant({
                 <div className="flex justify-start">
                   <div className={`rounded-xl px-4 py-2 flex items-center gap-2 ${themeClasses.assistantBubble}`}>
                     <Loader2 className="w-4 h-4 animate-spin text-cyan-500" />
-                    <span className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Clara réfléchit...</span>
+                    <span className={isDark ? 'text-gray-400' : 'text-gray-500'} style={{ fontSize }}>Clara réfléchit...</span>
                   </div>
                 </div>
               )}
@@ -632,12 +832,13 @@ export function ClaraAssistant({
               onKeyPress={handleKeyPress}
               placeholder="Écris ou parle à Clara..."
               disabled={loading}
-              className={`flex-1 border rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-cyan-500 disabled:opacity-50 ${themeClasses.input}`}
+              className={`flex-1 border rounded-xl px-4 py-2 focus:outline-none focus:border-cyan-500 disabled:opacity-50 ${themeClasses.input}`}
+              style={{ fontSize }}
             />
             <button
               onClick={sendMessage}
               disabled={loading || !input.trim()}
-              className="p-2 bg-gradient-to-r from-cyan-500 to-purple-500 rounded-xl text-white hover:opacity-90 disabled:opacity-50 transition-opacity"
+              className="p-2 bg-gradient-to-r from-cyan-500 to-teal-400 rounded-xl text-white hover:opacity-90 disabled:opacity-50 transition-opacity"
             >
               <Send className="w-5 h-5" />
             </button>
@@ -660,7 +861,7 @@ export function ClaraAssistant({
   )
 }
 
-// Types pour la reconnaissance vocale (Web Speech API)
+// Types pour la reconnaissance vocale
 interface SpeechRecognitionEvent extends Event {
   results: SpeechRecognitionResultList
 }

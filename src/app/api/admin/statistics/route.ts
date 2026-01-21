@@ -62,10 +62,13 @@ function getDayName(dayIndex: number): string {
 
 export async function GET(request: NextRequest) {
   try {
+    console.log('[Statistics API] Starting...')
     const { success, errorResponse } = await verifyApiPermission('orders', 'view')
     if (!success) {
+      console.log('[Statistics API] Permission denied')
       return errorResponse
     }
+    console.log('[Statistics API] Permission granted')
 
     const { searchParams } = new URL(request.url)
     const range = searchParams.get('range') || 'month'
@@ -73,9 +76,12 @@ export async function GET(request: NextRequest) {
     const customStart = searchParams.get('startDate') || undefined
     const customEnd = searchParams.get('endDate') || undefined
 
+    console.log('[Statistics API] Params:', { range, branchId, customStart, customEnd })
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const supabase = createServiceRoleClient() as any
     const { start, end } = getDateRange(range, customStart, customEnd)
+    console.log('[Statistics API] Date range:', { start: start.toISOString(), end: end.toISOString() })
 
     // Build base query conditions
     const baseConditions = {
@@ -87,7 +93,7 @@ export async function GET(request: NextRequest) {
     // === ORDERS DATA ===
     let ordersQuery = supabase
       .from('orders')
-      .select('id, total_amount, paid_amount, payment_status, status, order_type, created_at, branch_id, contact_id, created_by')
+      .select('id, total_amount, paid_amount, payment_status, status, order_type, created_at, branch_id, contact_id')
       .gte('created_at', baseConditions.startDate)
       .lte('created_at', baseConditions.endDate)
 
@@ -96,10 +102,11 @@ export async function GET(request: NextRequest) {
     }
 
     const { data: orders, error: ordersError } = await ordersQuery
+    console.log('[Statistics API] Orders fetched:', orders?.length || 0, 'error:', ordersError)
 
     if (ordersError) {
       console.error('Error fetching orders:', ordersError)
-      return NextResponse.json({ success: false, error: 'Failed to fetch orders' }, { status: 500 })
+      return NextResponse.json({ success: false, error: 'Failed to fetch orders', details: ordersError.message }, { status: 500 })
     }
 
     // === CONTACTS DATA ===
@@ -112,19 +119,19 @@ export async function GET(request: NextRequest) {
     }
 
     const { data: contacts, error: contactsError } = await contactsQuery
+    console.log('[Statistics API] Contacts fetched:', contacts?.length || 0, 'error:', contactsError)
 
     if (contactsError) {
       console.error('Error fetching contacts:', contactsError)
     }
 
-    // === USERS DATA ===
-    const { data: users } = await supabase
-      .from('profiles')
-      .select('id, first_name, last_name')
-
-    const userMap = new Map<string, string>(users?.map((u: { id: string; first_name: string; last_name: string }) =>
-      [u.id, `${u.first_name} ${u.last_name}`]
-    ) || [])
+    // === USERS DATA === (non utilisé pour l'instant, pas de created_by dans orders)
+    // const { data: users } = await supabase
+    //   .from('profiles')
+    //   .select('id, first_name, last_name')
+    // const userMap = new Map<string, string>(users?.map((u: { id: string; first_name: string; last_name: string }) =>
+    //   [u.id, `${u.first_name} ${u.last_name}`]
+    // ) || [])
 
     // === BRANCHES DATA ===
     const { data: branches } = await supabase
@@ -228,17 +235,8 @@ export async function GET(request: NextRequest) {
       .sort((a, b) => b.revenue - a.revenue)
       .slice(0, 10)
 
-    // Orders by user
-    const userOrderCounts: Record<string, number> = {}
-    orders?.forEach((o: { created_by: string | null }) => {
-      if (o.created_by) {
-        const userName = userMap.get(o.created_by) || 'Unknown'
-        userOrderCounts[userName] = (userOrderCounts[userName] || 0) + 1
-      }
-    })
-    const ordersByUser = Object.entries(userOrderCounts)
-      .map(([user, count]) => ({ user, count }))
-      .sort((a, b) => b.count - a.count)
+    // Orders by user - pas de colonne created_by, on skip cette stat pour l'instant
+    const ordersByUser: { user: string; count: number }[] = []
 
     // Popular days
     const dayCounts: Record<number, number> = { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 }
