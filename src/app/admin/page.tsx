@@ -1506,16 +1506,40 @@ export default function AdminPage() {
       const timeSlotEnd = new Date(timeSlotStart)
       timeSlotEnd.setMinutes(timeSlotEnd.getMinutes() + SLOT_DURATION)
 
-      // Calculer totalParticipants = somme des participants actifs sur cette tranche (sans exclure le booking en cours de modification)
+      // Calculer totalParticipants = somme des participants ACTIVE sur cette tranche (sans exclure le booking en cours de modification)
+      // IMPORTANT: Ne compter que les sessions ACTIVE, pas LASER (LASER a sa propre logique de salles)
       let totalParticipants = participants // Inclure la nouvelle réservation
       for (const booking of bookingsForBranch) {
         if (booking.id === excludeBookingId) continue // Exclure le booking en cours de modification
         if (booking.type !== 'GAME' && booking.type !== 'EVENT') continue
-        const bookingStart = booking.game_start_datetime ? new Date(booking.game_start_datetime) : new Date(booking.start_datetime)
-        const bookingEnd = booking.game_end_datetime ? new Date(booking.game_end_datetime) : new Date(booking.end_datetime)
-        
-        if (bookingStart < timeSlotEnd && bookingEnd > timeSlotStart) {
-          totalParticipants += booking.participants_count
+
+        // Si le booking a des game_sessions, utiliser celles-ci (filtrer ACTIVE uniquement)
+        if (booking.game_sessions && booking.game_sessions.length > 0) {
+          for (const session of booking.game_sessions) {
+            // Ne prendre en compte que les sessions ACTIVE pour l'overbooking
+            if (session.game_area !== 'ACTIVE') continue
+
+            const sessionStart = new Date(session.start_datetime)
+            const sessionEnd = new Date(session.end_datetime)
+
+            // Vérifier si cette session est active sur cette tranche
+            if (sessionStart < timeSlotEnd && sessionEnd > timeSlotStart) {
+              totalParticipants += booking.participants_count
+              break // Une seule fois par booking (même si plusieurs sessions ACTIVE)
+            }
+          }
+        } else {
+          // Fallback pour anciens bookings sans game_sessions
+          // Ne compter que si game_area est ACTIVE (ou non défini pour rétrocompatibilité)
+          const bookingGameArea = (booking as any).game_area
+          if (bookingGameArea === 'LASER') continue // Exclure les bookings LASER
+
+          const bookingStart = booking.game_start_datetime ? new Date(booking.game_start_datetime) : new Date(booking.start_datetime)
+          const bookingEnd = booking.game_end_datetime ? new Date(booking.game_end_datetime) : new Date(booking.end_datetime)
+
+          if (bookingStart < timeSlotEnd && bookingEnd > timeSlotStart) {
+            totalParticipants += booking.participants_count
+          }
         }
       }
 

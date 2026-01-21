@@ -346,7 +346,7 @@ export function calculateBookingPrice(params: CalculatePriceParams): PriceCalcul
   }
 
   const total = Math.round(subtotal - discountAmount)
-  const breakdown = breakdownParts.join(' + ').replace(' + -', ' ')
+  const breakdown = breakdownParts.join(' + ').replace(' + -', ' - ')
 
   return {
     breakdown,

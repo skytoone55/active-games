@@ -1093,15 +1093,19 @@ export function BookingModal({
       }
       
       // Vérifier l'overbooking dans la nouvelle branche
-      // Pour les événements, vérifier chaque session ACTIVE individuellement (pas la durée totale)
-      if (calculateOverbooking) {
+      // IMPORTANT: L'overbooking ne s'applique qu'aux sessions ACTIVE (pas LASER qui a sa propre logique de salles)
+      const hasActiveContentForOB = bookingType === 'EVENT'
+        ? eventQuickPlan.includes('A')
+        : (gameArea === 'ACTIVE' || gameArea === 'CUSTOM' || gameArea === 'MIX')
+
+      if (calculateOverbooking && hasActiveContentForOB) {
         let overbookingInfo = null
         let hasOverbooking = false
-        
+
         if (bookingType === 'EVENT') {
           // Pour les événements, calculer les sessions ACTIVE et vérifier chacune individuellement
           const activeSessions = calculateActiveSessionsForEvent()
-          
+
           // Vérifier chaque session ACTIVE individuellement (pas la durée totale)
           for (const session of activeSessions) {
             const sessionObInfo = calculateOverbooking(
@@ -1111,7 +1115,7 @@ export function BookingModal({
               editingBooking?.id,
               bookingBranchId
             )
-            
+
             if (sessionObInfo.willCauseOverbooking) {
               hasOverbooking = true
               // Garder l'info avec le plus grand overbooking
@@ -1121,7 +1125,7 @@ export function BookingModal({
             }
           }
         } else {
-          // Pour GAME, vérifier normalement
+          // Pour GAME ACTIVE/CUSTOM/MIX, vérifier l'overbooking
           overbookingInfo = calculateOverbooking(
             currentParsedParticipants,
             startDateTime,
@@ -1131,7 +1135,7 @@ export function BookingModal({
           )
           hasOverbooking = overbookingInfo.willCauseOverbooking
         }
-        
+
         if (hasOverbooking && overbookingInfo) {
           setOverbookingInfo(overbookingInfo)
           setShowOverbookingWarning(true)
@@ -1140,6 +1144,10 @@ export function BookingModal({
           setOverbookingInfo(null)
           setShowOverbookingWarning(false)
         }
+      } else if (!hasActiveContentForOB) {
+        // Pas de contenu ACTIVE = pas d'overbooking à vérifier
+        setOverbookingInfo(null)
+        setShowOverbookingWarning(false)
       }
       
       // Pour les événements, vérifier la disponibilité des salles dans la nouvelle branche
@@ -1193,6 +1201,18 @@ export function BookingModal({
   const priceCalculation = useMemo(() => {
     if (parsedParticipants < 1) return null
 
+    // Pour EVENT, déterminer la salle optimale si pas encore assignée
+    let eventRoomIdForCalc: string | null = editingBooking?.event_room_id || null
+    if (bookingType === 'EVENT' && !eventRoomIdForCalc && pricingRooms.length > 0) {
+      // Trouver la salle avec la capacité la plus proche (supérieure ou égale) aux participants
+      // Les salles event_rooms ont une capacité, on prend la plus petite qui convient
+      const sortedRooms = [...pricingRooms].sort((a, b) => (a.price || 0) - (b.price || 0))
+      // Prendre la première salle disponible (la moins chère) pour l'estimation du prix
+      if (sortedRooms.length > 0) {
+        eventRoomIdForCalc = sortedRooms[0].id
+      }
+    }
+
     const result = calculateBookingPrice({
       bookingType,
       participants: parsedParticipants,
@@ -1205,7 +1225,7 @@ export function BookingModal({
       customGameDurations: gameCustomGameDurations,
       // EVENT params
       eventQuickPlan,
-      eventRoomId: editingBooking?.event_room_id || null,
+      eventRoomId: eventRoomIdForCalc,
       // Discount
       discountType,
       discountValue,
@@ -1214,7 +1234,7 @@ export function BookingModal({
       eventFormulas,
       rooms: pricingRooms,
     })
-    console.log('[PRICE CALC]', { bookingType, parsedParticipants, gameArea, numberOfGames, products: products.length, result })
+    console.log('[PRICE CALC]', { bookingType, parsedParticipants, gameArea, numberOfGames, products: products.length, eventRoomIdForCalc, result })
     return result
   }, [
     bookingType,
@@ -2026,15 +2046,20 @@ export function BookingModal({
       }
     }
 
-    // Vérifier l'overbooking avant de soumettre (pour GAME et EVENT)
-    if (calculateOverbooking && (bookingType === 'GAME' || bookingType === 'EVENT')) {
+    // Vérifier l'overbooking avant de soumettre
+    // IMPORTANT: L'overbooking ne s'applique qu'aux sessions ACTIVE (pas LASER qui a sa propre logique de salles)
+    const hasActiveContent = bookingType === 'EVENT'
+      ? eventQuickPlan.includes('A') // EVENT avec sessions ACTIVE
+      : (gameArea === 'ACTIVE' || gameArea === 'CUSTOM' || gameArea === 'MIX') // GAME avec zone ACTIVE
+
+    if (calculateOverbooking && hasActiveContent) {
       let obInfo = null
-      
+
       if (bookingType === 'EVENT') {
         // Pour les événements, vérifier chaque session ACTIVE individuellement
         const activeSessions = calculateActiveSessionsForEvent()
         let maxOverbooking = null
-        
+
         for (const session of activeSessions) {
           const sessionObInfo = calculateOverbooking(
             parsedParticipants,
@@ -2043,7 +2068,7 @@ export function BookingModal({
             editingBooking?.id,
             bookingBranchId
           )
-          
+
           if (sessionObInfo.willCauseOverbooking) {
             // Garder l'info avec le plus grand overbooking
             if (!maxOverbooking || sessionObInfo.maxOverbookedCount > maxOverbooking.maxOverbookedCount) {
@@ -2051,7 +2076,7 @@ export function BookingModal({
             }
           }
         }
-        
+
         obInfo = maxOverbooking || {
           willCauseOverbooking: false,
           maxOverbookedCount: 0,
@@ -2059,10 +2084,10 @@ export function BookingModal({
           affectedTimeSlots: []
         }
       } else {
-        // Pour GAME, vérifier normalement
+        // Pour GAME ACTIVE/CUSTOM/MIX, vérifier l'overbooking
         const gameStartDate = new Date(localDate)
         gameStartDate.setHours(hour || 10, minute || 0, 0, 0)
-        
+
         const { endHour: gameEndHour, endMinute: gameEndMinute } = calculateGameEndTime()
         const gameEndDate = new Date(localDate)
         gameEndDate.setHours(gameEndHour, gameEndMinute, 0, 0)
@@ -2093,12 +2118,17 @@ export function BookingModal({
     const confirmedRoomId = pendingRoomId
     setShowOverCapacityConfirm(false)
     setPendingRoomId(null)
-    
+
+    // Vérifier l'overbooking seulement si contenu ACTIVE
+    const hasActiveContent = bookingType === 'EVENT'
+      ? eventQuickPlan.includes('A')
+      : (gameArea === 'ACTIVE' || gameArea === 'CUSTOM' || gameArea === 'MIX')
+
     // Après avoir confirmé la salle, vérifier l'overbooking avant de soumettre
-    if (calculateOverbooking && (bookingType === 'GAME' || bookingType === 'EVENT')) {
+    if (calculateOverbooking && hasActiveContent) {
       const gameStartDate = new Date(localDate)
       gameStartDate.setHours(hour || 10, minute || 0, 0, 0)
-      
+
       const { endHour: gameEndHour, endMinute: gameEndMinute } = calculateGameEndTime()
       const gameEndDate = new Date(localDate)
       gameEndDate.setHours(gameEndHour, gameEndMinute, 0, 0)
@@ -2119,7 +2149,7 @@ export function BookingModal({
         return
       }
     }
-    
+
     // Pas d'overbooking, soumettre directement
     await submitWithRoom(confirmedRoomId)
   }
@@ -2135,12 +2165,17 @@ export function BookingModal({
       const confirmedRoomId = lowerCapacityRoomInfo.id
       setShowLowerCapacityRoom(false)
       setLowerCapacityRoomInfo(null)
-      
+
+      // Vérifier l'overbooking seulement si contenu ACTIVE
+      const hasActiveContent = bookingType === 'EVENT'
+        ? eventQuickPlan.includes('A')
+        : (gameArea === 'ACTIVE' || gameArea === 'CUSTOM' || gameArea === 'MIX')
+
       // Après avoir confirmé la salle, vérifier l'overbooking avant de soumettre
-      if (calculateOverbooking && (bookingType === 'GAME' || bookingType === 'EVENT')) {
+      if (calculateOverbooking && hasActiveContent) {
         const gameStartDate = new Date(localDate)
         gameStartDate.setHours(hour || 10, minute || 0, 0, 0)
-        
+
         const { endHour: gameEndHour, endMinute: gameEndMinute } = calculateGameEndTime()
         const gameEndDate = new Date(localDate)
         gameEndDate.setHours(gameEndHour, gameEndMinute, 0, 0)
@@ -2149,7 +2184,8 @@ export function BookingModal({
           parsedParticipants,
           gameStartDate,
           gameEndDate,
-          editingBooking?.id
+          editingBooking?.id,
+          bookingBranchId
         )
 
         if (obInfo.willCauseOverbooking) {
@@ -2160,7 +2196,7 @@ export function BookingModal({
           return
         }
       }
-      
+
       // Pas d'overbooking, soumettre directement
       await submitWithRoom(confirmedRoomId)
     }
