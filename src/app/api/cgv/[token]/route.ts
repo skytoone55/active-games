@@ -16,8 +16,8 @@ export async function GET(
     const { token } = await params
     const supabase = createServiceRoleClient()
 
-    // Récupérer la commande par token avec le booking et les slots
-    // Note: On utilise !booking_id pour spécifier la foreign key
+    // Récupérer la commande par token
+    // D'abord on récupère l'order sans la jointure booking
     const { data: orderData, error } = await supabase
       .from('orders')
       .select(`
@@ -34,23 +34,8 @@ export async function GET(
         contact_id,
         order_type,
         booking_id,
-        bookings!booking_id(
-          id,
-          reference_code,
-          type,
-          booking_slots(
-            id,
-            room_id,
-            start_time,
-            end_time,
-            participants,
-            games_count,
-            formula_id,
-            product_id,
-            unit_price,
-            total_price
-          )
-        )
+        game_area,
+        number_of_games
       `)
       .eq('cgv_token', token)
       .single()
@@ -90,9 +75,31 @@ export async function GET(
       }
     }
 
-    // Récupérer les données de tarification pour le calcul des prix
-    // (même logique que AccountingModal)
-    const booking = order.bookings
+    // Récupérer le booking si booking_id existe
+    let booking: { id: string; room_id?: string; booking_slots?: Array<{ area?: string; duration_minutes?: number }> } | null = null
+    if (order.booking_id) {
+      const { data: bookingData } = await supabase
+        .from('bookings')
+        .select(`
+          id,
+          room_id,
+          booking_slots(
+            id,
+            room_id,
+            start_time,
+            end_time,
+            participants,
+            games_count,
+            formula_id,
+            product_id,
+            unit_price,
+            total_price
+          )
+        `)
+        .eq('id', order.booking_id)
+        .single()
+      booking = bookingData as typeof booking
+    }
 
     // Fetch pricing data: icount_products, icount_event_formulas, icount_rooms
     // (même tables que usePricingData utilisé par AccountingModal)
