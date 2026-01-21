@@ -9,7 +9,8 @@ import {
   FileText,
   ChevronRight,
   CreditCard,
-  Package
+  Package,
+  Wrench
 } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { useBranches } from '@/hooks/useBranches'
@@ -18,9 +19,10 @@ import { AdminHeader } from '../components/AdminHeader'
 import { TemplatesSection } from './components/TemplatesSection'
 import { CredentialsSection } from './components/CredentialsSection'
 import { ICountCatalogSection } from './components/ICountCatalogSection'
+import { MaintenanceSection } from './components/MaintenanceSection'
 import { createClient } from '@/lib/supabase/client'
 
-type SettingsSection = 'templates' | 'credentials' | 'catalog'
+type SettingsSection = 'templates' | 'credentials' | 'catalog' | 'maintenance'
 
 export default function SettingsPage() {
   const router = useRouter()
@@ -99,6 +101,12 @@ export default function SettingsPage() {
       icon: Package,
       label: 'Catalogue iCount',
       description: 'Produits et formules'
+    },
+    {
+      id: 'maintenance',
+      icon: Wrench,
+      label: 'Maintenance',
+      description: 'Outils de maintenance'
     }
   ]
 
@@ -189,6 +197,9 @@ export default function SettingsPage() {
           )}
           {activeSection === 'catalog' && (
             <ICountCatalogSection isDark={isDark} />
+          )}
+          {activeSection === 'maintenance' && (
+            <MaintenanceSection isDark={isDark} />
           )}
         </div>
       </div>
