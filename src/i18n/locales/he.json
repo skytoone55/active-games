@@ -587,7 +587,9 @@
         "rooms_width": "רוחב ROOMS",
         "row_height": "גובה שורות",
         "normal": "רגיל",
-        "reset": "איפוס"
+        "reset": "איפוס",
+        "visible_hours": "שעות גלויות",
+        "visible_hours_hint": "הרחבה אוטומטית אם הזמנה מחוץ לטווח"
       },
       "grid_headers": {
         "hour": "שעה",

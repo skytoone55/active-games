@@ -15,6 +15,10 @@ interface GridSettingsPopupProps {
   setGridWidths: (widths: GridWidths) => void
   rowHeight: number
   setRowHeight: (height: number) => void
+  visibleHoursStart: number
+  setVisibleHoursStart: (hour: number) => void
+  visibleHoursEnd: number
+  setVisibleHoursEnd: (hour: number) => void
   selectedBranchId: string | null
   isDark: boolean
 }
@@ -26,6 +30,10 @@ export function GridSettingsPopup({
   setGridWidths,
   rowHeight,
   setRowHeight,
+  visibleHoursStart,
+  setVisibleHoursStart,
+  visibleHoursEnd,
+  setVisibleHoursEnd,
   selectedBranchId,
   isDark,
 }: GridSettingsPopupProps) {
@@ -33,39 +41,66 @@ export function GridSettingsPopup({
 
   if (!isOpen) return null
 
-  const handleWidthChange = (key: keyof GridWidths, value: number) => {
-    const newWidths = { ...gridWidths, [key]: value }
-    setGridWidths(newWidths)
+  const saveSettings = (updates: Partial<{
+    gridWidths: GridWidths
+    rowHeight: number
+    visibleHoursStart: number
+    visibleHoursEnd: number
+  }>) => {
     if (selectedBranchId) {
       localStorage.setItem(`gridSettings_${selectedBranchId}`, JSON.stringify({
-        gridWidths: newWidths,
-        rowHeight
+        gridWidths: updates.gridWidths ?? gridWidths,
+        rowHeight: updates.rowHeight ?? rowHeight,
+        visibleHoursStart: updates.visibleHoursStart ?? visibleHoursStart,
+        visibleHoursEnd: updates.visibleHoursEnd ?? visibleHoursEnd
       }))
     }
   }
 
+  const handleWidthChange = (key: keyof GridWidths, value: number) => {
+    const newWidths = { ...gridWidths, [key]: value }
+    setGridWidths(newWidths)
+    saveSettings({ gridWidths: newWidths })
+  }
+
   const handleRowHeightChange = (value: number) => {
     setRowHeight(value)
-    if (selectedBranchId) {
-      localStorage.setItem(`gridSettings_${selectedBranchId}`, JSON.stringify({
-        gridWidths,
-        rowHeight: value
-      }))
-    }
+    saveSettings({ rowHeight: value })
+  }
+
+  const handleVisibleHoursStartChange = (value: number) => {
+    // S'assurer que start < end
+    const newStart = Math.min(value, visibleHoursEnd - 1)
+    setVisibleHoursStart(newStart)
+    saveSettings({ visibleHoursStart: newStart })
+  }
+
+  const handleVisibleHoursEndChange = (value: number) => {
+    // S'assurer que end > start
+    const newEnd = Math.max(value, visibleHoursStart + 1)
+    setVisibleHoursEnd(newEnd)
+    saveSettings({ visibleHoursEnd: newEnd })
   }
 
   const handleReset = () => {
     const defaultWidths = { active: 100, laser: 100, rooms: 100 }
     const defaultRowHeight = 20
+    const defaultVisibleHoursStart = 10
+    const defaultVisibleHoursEnd = 23
     setGridWidths(defaultWidths)
     setRowHeight(defaultRowHeight)
-    if (selectedBranchId) {
-      localStorage.setItem(`gridSettings_${selectedBranchId}`, JSON.stringify({
-        gridWidths: defaultWidths,
-        rowHeight: defaultRowHeight
-      }))
-    }
+    setVisibleHoursStart(defaultVisibleHoursStart)
+    setVisibleHoursEnd(defaultVisibleHoursEnd)
+    saveSettings({
+      gridWidths: defaultWidths,
+      rowHeight: defaultRowHeight,
+      visibleHoursStart: defaultVisibleHoursStart,
+      visibleHoursEnd: defaultVisibleHoursEnd
+    })
   }
+
+  // Générer les options d'heures (0-23)
+  const hourOptions = Array.from({ length: 24 }, (_, i) => i)
 
   return (
     <>
@@ -170,6 +205,52 @@ export function GridSettingsPopup({
                 onChange={(e) => handleRowHeightChange(parseInt(e.target.value))}
                 className="w-full h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer"
               />
+            </div>
+
+            {/* Séparateur */}
+            <div className={`border-t my-4 ${isDark ? 'border-gray-700' : 'border-gray-200'}`} />
+
+            {/* Heures visibles */}
+            <div className="mb-4">
+              <label className={`block text-xs font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                {t('admin.agenda.settings.visible_hours') || 'Heures visibles'}
+              </label>
+              <div className="flex items-center gap-2">
+                <select
+                  value={visibleHoursStart}
+                  onChange={(e) => handleVisibleHoursStartChange(parseInt(e.target.value))}
+                  className={`flex-1 px-2 py-1 text-sm rounded border ${
+                    isDark
+                      ? 'bg-gray-700 border-gray-600 text-white'
+                      : 'bg-white border-gray-300 text-gray-900'
+                  }`}
+                >
+                  {hourOptions.map((h) => (
+                    <option key={h} value={h} disabled={h >= visibleHoursEnd}>
+                      {String(h).padStart(2, '0')}:00
+                    </option>
+                  ))}
+                </select>
+                <span className={isDark ? 'text-gray-400' : 'text-gray-500'}>→</span>
+                <select
+                  value={visibleHoursEnd}
+                  onChange={(e) => handleVisibleHoursEndChange(parseInt(e.target.value))}
+                  className={`flex-1 px-2 py-1 text-sm rounded border ${
+                    isDark
+                      ? 'bg-gray-700 border-gray-600 text-white'
+                      : 'bg-white border-gray-300 text-gray-900'
+                  }`}
+                >
+                  {hourOptions.map((h) => (
+                    <option key={h} value={h} disabled={h <= visibleHoursStart}>
+                      {String(h).padStart(2, '0')}:45
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <p className={`text-xs mt-1 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                {t('admin.agenda.settings.visible_hours_hint') || 'Extension automatique si réservation hors plage'}
+              </p>
             </div>
 
             {/* Bouton Réinitialiser */}

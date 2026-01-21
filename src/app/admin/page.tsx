@@ -136,6 +136,10 @@ export default function AdminPage() {
     rooms: 100
   })
   const [rowHeight, setRowHeight] = useState(20) // Hauteur des lignes en px (défaut 20px)
+
+  // Heures visibles de l'agenda (0-23) - par défaut 10h-23h
+  const [visibleHoursStart, setVisibleHoursStart] = useState(10)
+  const [visibleHoursEnd, setVisibleHoursEnd] = useState(23)
   
   // Modal de confirmation
   const [confirmationModal, setConfirmationModal] = useState<{
@@ -176,6 +180,8 @@ export default function AdminPage() {
           const parsed = JSON.parse(savedGrid)
           if (parsed.gridWidths) setGridWidths(parsed.gridWidths)
           if (parsed.rowHeight) setRowHeight(parsed.rowHeight)
+          if (parsed.visibleHoursStart !== undefined) setVisibleHoursStart(parsed.visibleHoursStart)
+          if (parsed.visibleHoursEnd !== undefined) setVisibleHoursEnd(parsed.visibleHoursEnd)
         } catch (e) {
           console.error('Error loading grid settings:', e)
         }
@@ -2156,18 +2162,65 @@ export default function AdminPage() {
     }
   }
 
-  // Générer les créneaux horaires (toutes les 15 minutes pour la précision)
-  // Mais on affichera visuellement seulement les bordures de 30 minutes
-  const timeSlots: { hour: number; minute: number; label: string }[] = []
-  for (let h = 10; h <= 22; h++) {
-    for (const m of [0, 15, 30, 45]) {
-      timeSlots.push({
-        hour: h,
-        minute: m,
-        label: `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`,
-      })
+  // Calculer les heures effectives à afficher (config + extension automatique si réservations hors plage)
+  const effectiveHours = useMemo(() => {
+    let minHour = visibleHoursStart
+    let maxHour = visibleHoursEnd
+
+    // Scanner les réservations du jour pour étendre si nécessaire
+    for (const booking of bookings) {
+      // Utiliser game_start_datetime si disponible, sinon start_datetime
+      const startStr = booking.game_start_datetime || booking.start_datetime
+      const endStr = booking.game_end_datetime || booking.end_datetime
+
+      const startDate = new Date(startStr)
+      const endDate = new Date(endStr)
+
+      // Vérifier que la réservation est bien sur le jour sélectionné
+      const bookingDate = new Date(startDate)
+      bookingDate.setHours(0, 0, 0, 0)
+      const selectedDateNormalized = new Date(selectedDate)
+      selectedDateNormalized.setHours(0, 0, 0, 0)
+
+      if (bookingDate.getTime() !== selectedDateNormalized.getTime()) continue
+
+      const startHour = startDate.getHours()
+      const endHour = endDate.getHours()
+      const endMinute = endDate.getMinutes()
+
+      // Étendre si la réservation commence avant l'heure de début visible
+      if (startHour < minHour) {
+        minHour = startHour
+      }
+
+      // Étendre si la réservation finit après l'heure de fin visible
+      // Gérer minuit (0h) et après minuit
+      if (endHour === 0 && endMinute > 0) {
+        // Finit après minuit - étendre jusqu'à minuit (23h45 = dernière tranche visible)
+        maxHour = 23
+      } else if (endHour > maxHour || (endHour === maxHour && endMinute > 0)) {
+        maxHour = Math.min(23, endHour) // Max 23 car on affiche jusqu'à 23:45
+      }
     }
-  }
+
+    return { minHour, maxHour }
+  }, [bookings, selectedDate, visibleHoursStart, visibleHoursEnd])
+
+  // Générer les créneaux horaires (toutes les 15 minutes pour la précision)
+  // Utilise les heures effectives (config + extension automatique)
+  const timeSlots: { hour: number; minute: number; label: string }[] = useMemo(() => {
+    const slots: { hour: number; minute: number; label: string }[] = []
+    for (let h = effectiveHours.minHour; h <= effectiveHours.maxHour; h++) {
+      for (const m of [0, 15, 30, 45]) {
+        slots.push({
+          hour: h,
+          minute: m,
+          label: `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`,
+        })
+      }
+    }
+    return slots
+  }, [effectiveHours])
 
 
   return (
@@ -3130,6 +3183,10 @@ export default function AdminPage() {
         setGridWidths={setGridWidths}
         rowHeight={rowHeight}
         setRowHeight={setRowHeight}
+        visibleHoursStart={visibleHoursStart}
+        setVisibleHoursStart={setVisibleHoursStart}
+        visibleHoursEnd={visibleHoursEnd}
+        setVisibleHoursEnd={setVisibleHoursEnd}
         selectedBranchId={selectedBranchId}
         isDark={isDark}
       />

@@ -559,7 +559,9 @@
         "rooms_width": "ROOMS width",
         "row_height": "Row height",
         "normal": "normal",
-        "reset": "Reset"
+        "reset": "Reset",
+        "visible_hours": "Visible hours",
+        "visible_hours_hint": "Auto-extends if booking outside range"
       },
       "grid_headers": {
         "hour": "Hour",

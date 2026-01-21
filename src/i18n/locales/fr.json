@@ -615,7 +615,9 @@
         "rooms_width": "Largeur ROOMS",
         "row_height": "Hauteur lignes",
         "normal": "normal",
-        "reset": "Reinitialiser"
+        "reset": "Reinitialiser",
+        "visible_hours": "Heures visibles",
+        "visible_hours_hint": "Extension auto si reservation hors plage"
       },
       "grid_headers": {
         "hour": "Heure",
