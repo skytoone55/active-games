@@ -1201,17 +1201,10 @@ export function BookingModal({
   const priceCalculation = useMemo(() => {
     if (parsedParticipants < 1) return null
 
-    // Pour EVENT, déterminer la salle optimale si pas encore assignée
-    let eventRoomIdForCalc: string | null = editingBooking?.event_room_id || null
-    if (bookingType === 'EVENT' && !eventRoomIdForCalc && pricingRooms.length > 0) {
-      // Trouver la salle avec la capacité la plus proche (supérieure ou égale) aux participants
-      // Les salles event_rooms ont une capacité, on prend la plus petite qui convient
-      const sortedRooms = [...pricingRooms].sort((a, b) => (a.price || 0) - (b.price || 0))
-      // Prendre la première salle disponible (la moins chère) pour l'estimation du prix
-      if (sortedRooms.length > 0) {
-        eventRoomIdForCalc = sortedRooms[0].id
-      }
-    }
+    // Pour EVENT, le prix de la salle vient de la formule (formula.room_id -> icount_rooms)
+    // On ne passe pas eventRoomId car booking.event_room_id pointe vers event_rooms (salles physiques)
+    // alors que le calcul de prix utilise icount_rooms (configuration de prix)
+    // La formule contient déjà le room_id vers la bonne table icount_rooms
 
     const result = calculateBookingPrice({
       bookingType,
@@ -1225,7 +1218,7 @@ export function BookingModal({
       customGameDurations: gameCustomGameDurations,
       // EVENT params
       eventQuickPlan,
-      eventRoomId: eventRoomIdForCalc,
+      eventRoomId: null, // Laisser le calcul utiliser formula.room_id
       // Discount
       discountType,
       discountValue,
@@ -1234,7 +1227,7 @@ export function BookingModal({
       eventFormulas,
       rooms: pricingRooms,
     })
-    console.log('[PRICE CALC]', { bookingType, parsedParticipants, gameArea, numberOfGames, products: products.length, eventRoomIdForCalc, result })
+    console.log('[PRICE CALC]', { bookingType, parsedParticipants, gameArea, numberOfGames, products: products.length, result })
     return result
   }, [
     bookingType,
@@ -1245,7 +1238,6 @@ export function BookingModal({
     gameCustomGameArea,
     gameCustomGameDurations,
     eventQuickPlan,
-    editingBooking?.event_room_id,
     discountType,
     discountValue,
     products,

@@ -161,7 +161,7 @@ export function AccountingModal({
         numberOfGames: laserGames || 1,
         gameDurations: activeDuration > 0 ? [String(activeDuration)] : ['60'],
         eventQuickPlan,
-        eventRoomId: booking?.room_id || null,
+        eventRoomId: null, // Laisser le calcul utiliser formula.room_id (icount_rooms)
         products: safeProducts,
         eventFormulas: safeEventFormulas,
         rooms: safeRooms,
