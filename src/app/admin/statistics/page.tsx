@@ -584,7 +584,7 @@ export default function StatisticsPage() {
                         <YAxis stroke="#666" />
                         <Tooltip
                           contentStyle={{ backgroundColor: '#1a1a2e', border: '1px solid #00f0ff', borderRadius: '8px' }}
-                          formatter={(value: number) => [formatCurrency(value), 'CA']}
+                          formatter={(value) => [formatCurrency(value as number), 'CA']}
                         />
                         <Area type="monotone" dataKey="revenue" stroke="#00f0ff" fill="url(#colorRevenue)" />
                       </AreaChart>
@@ -605,7 +605,7 @@ export default function StatisticsPage() {
                           paddingAngle={5}
                           dataKey="count"
                           nameKey="type"
-                          label={({ type, percent }) => `${type} ${(percent * 100).toFixed(0)}%`}
+                          label={({ name, percent }) => `${name} ${((percent || 0) * 100).toFixed(0)}%`}
                         >
                           {stats.ordersByType.map((entry, index) => (
                             <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
@@ -694,7 +694,7 @@ export default function StatisticsPage() {
                       <YAxis type="category" dataKey="branch" stroke="#666" width={100} />
                       <Tooltip
                         contentStyle={{ backgroundColor: '#1a1a2e', border: '1px solid #00f0ff', borderRadius: '8px' }}
-                        formatter={(value: number) => [formatCurrency(value), 'CA']}
+                        formatter={(value) => [formatCurrency(value as number), 'CA']}
                       />
                       <Bar dataKey="revenue" fill="#00f0ff" radius={[0, 4, 4, 0]} />
                     </BarChart>

@@ -111,7 +111,7 @@ export async function GET(request: NextRequest) {
       .from('profiles')
       .select('id, first_name, last_name')
 
-    const userMap = new Map(users?.map((u: { id: string; first_name: string; last_name: string }) =>
+    const userMap = new Map<string, string>(users?.map((u: { id: string; first_name: string; last_name: string }) =>
       [u.id, `${u.first_name} ${u.last_name}`]
     ) || [])
 
@@ -120,7 +120,7 @@ export async function GET(request: NextRequest) {
       .from('branches')
       .select('id, name')
 
-    const branchMap = new Map(branches?.map((b: { id: string; name: string }) => [b.id, b.name]) || [])
+    const branchMap = new Map<string, string>(branches?.map((b: { id: string; name: string }) => [b.id, b.name]) || [])
 
     // === CALCULATE STATS ===
 
@@ -170,7 +170,7 @@ export async function GET(request: NextRequest) {
     // Orders by branch
     const branchData: Record<string, { count: number; revenue: number }> = {}
     orders?.forEach((o: { branch_id: string; total_amount: number | null }) => {
-      const branchName = branchMap.get(o.branch_id) || 'Unknown'
+      const branchName: string = branchMap.get(o.branch_id) || 'Unknown'
       if (!branchData[branchName]) {
         branchData[branchName] = { count: 0, revenue: 0 }
       }
