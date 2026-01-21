@@ -6,6 +6,8 @@ import { Loader2, ChevronLeft, ChevronRight, Calendar, Settings, Sliders } from 
 import { createClient } from '@/lib/supabase/client'
 import { useBookings, type BookingWithSlots, type CreateBookingData } from '@/hooks/useBookings'
 import { BookingModal } from './components/BookingModal'
+import { AccountingModal } from './components/AccountingModal'
+import { OrderDetailModalWrapper } from './components/OrderDetailModalWrapper'
 import { AdminHeader } from './components/AdminHeader'
 import { ConfirmationModal } from './components/ConfirmationModal'
 import { SettingsModal } from './components/SettingsModal'
@@ -32,7 +34,7 @@ interface UserData {
 export default function AdminPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { t, locale } = useTranslation()
+  const { t, tArray, locale } = useTranslation()
 
   // Helper pour obtenir la locale de date en fonction de la langue
   const getDateLocale = () => {
@@ -105,6 +107,8 @@ export default function AdminPage() {
   const [modalDefaultGameArea, setModalDefaultGameArea] = useState<'ACTIVE' | 'LASER' | undefined>(undefined)
   const [editingBooking, setEditingBooking] = useState<BookingWithSlots | null>(null)
   const [editingBookingOrderId, setEditingBookingOrderId] = useState<string | null>(null)
+  const [accountingOrderId, setAccountingOrderId] = useState<string | null>(null)
+  const [orderDetailId, setOrderDetailId] = useState<string | null>(null)
   const [agendaSearchQuery, setAgendaSearchQuery] = useState('')
   const [showCalendarModal, setShowCalendarModal] = useState(false)
   const [calendarMonth, setCalendarMonth] = useState(new Date().getMonth())
@@ -2263,7 +2267,7 @@ export default function AdminPage() {
                     {/* Grille calendrier */}
                     <div className="grid grid-cols-7 gap-1">
                       {/* En-têtes jours */}
-                      {(t('admin.agenda.days_short') as unknown as string[]).map((day, i) => (
+                      {(tArray('admin.agenda.days_short').length > 0 ? tArray('admin.agenda.days_short') : ['L', 'M', 'M', 'J', 'V', 'S', 'D']).map((day, i) => (
                         <div key={i} className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'} text-center p-1 font-bold`}>
                           {day}
                         </div>
@@ -3104,11 +3108,29 @@ export default function AdminPage() {
           canCreate={canCreateAgenda}
           canEdit={canEditAgenda}
           canDelete={canDeleteAgenda}
-          onViewOrder={(orderId) => {
-            // Naviguer vers la page orders et ouvrir la commande
-            router.push(`/admin/orders?order=${encodeURIComponent(orderId)}`)
-          }}
+          onViewOrder={(orderId) => setOrderDetailId(orderId)}
           orderId={editingBookingOrderId}
+          onOpenAccounting={(orderId) => setAccountingOrderId(orderId)}
+        />
+      )}
+
+      {/* Modal Fiche Commande */}
+      {orderDetailId && selectedBranchId && (
+        <OrderDetailModalWrapper
+          orderId={orderDetailId}
+          onClose={() => setOrderDetailId(null)}
+          isDark={isDark}
+          onOpenAccounting={(orderId) => setAccountingOrderId(orderId)}
+        />
+      )}
+
+      {/* Modal Fiche Comptable */}
+      {accountingOrderId && selectedBranchId && (
+        <AccountingModal
+          orderId={accountingOrderId}
+          branchId={selectedBranchId}
+          onClose={() => setAccountingOrderId(null)}
+          isDark={isDark}
         />
       )}
 

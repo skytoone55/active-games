@@ -22,6 +22,7 @@ interface LanguageContextType {
   locale: Locale
   setLocale: (locale: Locale) => void
   t: (key: string, params?: Record<string, string | number>) => string
+  tArray: (key: string) => string[]
   direction: 'ltr' | 'rtl'
   isRTL: boolean
   languageNames: Record<Locale, string>
@@ -108,6 +109,26 @@ export function LanguageProvider({ children, isAdmin = false, initialLocale }: L
     return value
   }, [translations])
 
+  // Fonction pour récupérer des tableaux de traductions
+  const tArray = useCallback((key: string): string[] => {
+    const keys = key.split('.')
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let value: any = translations
+
+    for (const k of keys) {
+      if (value && typeof value === 'object' && k in value) {
+        value = value[k]
+      } else {
+        return []
+      }
+    }
+
+    if (Array.isArray(value)) {
+      return value
+    }
+    return []
+  }, [translations])
+
   const direction = useMemo(() => getDirection(locale), [locale])
   const isRTL = useMemo(() => direction === 'rtl', [direction])
 
@@ -115,12 +136,13 @@ export function LanguageProvider({ children, isAdmin = false, initialLocale }: L
     locale,
     setLocale,
     t,
+    tArray,
     direction,
     isRTL,
     languageNames,
     languageFlags,
     availableLocales: locales,
-  }), [locale, setLocale, t, direction, isRTL])
+  }), [locale, setLocale, t, tArray, direction, isRTL])
 
   return (
     <LanguageContext.Provider value={contextValue}>

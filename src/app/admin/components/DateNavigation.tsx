@@ -17,7 +17,7 @@ export function DateNavigation({
   view,
   onViewChange,
 }: DateNavigationProps) {
-  const { t, locale } = useTranslation()
+  const { t, tArray, locale } = useTranslation()
 
   // Helper pour obtenir la locale de date en fonction de la langue
   const getDateLocale = () => {
@@ -35,8 +35,9 @@ export function DateNavigation({
   }
 
   // Helper pour obtenir les jours de la semaine traduits (format court)
-  const getDaysShort = () => {
-    return t('admin.agenda.days_short') as unknown as string[]
+  const getDaysShort = (): string[] => {
+    const days = tArray('admin.agenda.days_short')
+    return days.length > 0 ? days : ['L', 'M', 'M', 'J', 'V', 'S', 'D']
   }
 
   const [showCalendar, setShowCalendar] = useState(false)

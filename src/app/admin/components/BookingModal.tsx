@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
-import { X, Loader2, Users, Clock, User, Phone, Mail, MessageSquare, Gamepad2, PartyPopper, Palette, Home, Calendar, ChevronLeft, ChevronRight, Trash2, Edit2, RefreshCw, AlertTriangle, ChevronDown, Building2, Zap, Target, FileText } from 'lucide-react'
+import { X, Loader2, Users, Clock, User, Phone, Mail, MessageSquare, Gamepad2, PartyPopper, Palette, Home, Calendar, ChevronLeft, ChevronRight, Trash2, Edit2, RefreshCw, AlertTriangle, ChevronDown, Building2, Zap, Target, FileText, Receipt } from 'lucide-react'
 import type { CreateBookingData, BookingWithSlots } from '@/hooks/useBookings'
 import { ContactFieldAutocomplete } from './ContactFieldAutocomplete'
 import { useContacts } from '@/hooks/useContacts'
@@ -50,6 +50,7 @@ interface BookingModalProps {
   // Navigation vers la commande
   onViewOrder?: (orderId: string) => void // Callback pour voir la commande dans la zone Orders
   orderId?: string | null // ID de la commande liée au booking
+  onOpenAccounting?: (orderId: string) => void // Callback pour ouvrir la fiche comptable
 }
 
 type BookingType = 'GAME' | 'EVENT'
@@ -106,9 +107,10 @@ export function BookingModal({
   canEdit = true,
   canDelete = true,
   onViewOrder,
-  orderId
+  orderId,
+  onOpenAccounting
 }: BookingModalProps) {
-  const { t, locale } = useTranslation()
+  const { t, tArray, locale } = useTranslation()
 
   // Helper pour obtenir la locale de date en fonction de la langue
   const getDateLocale = () => {
@@ -126,8 +128,13 @@ export function BookingModal({
   }
 
   // Helper pour obtenir les jours de la semaine traduits
-  const getDaysShort = () => {
-    return t('admin.agenda.days_short') as unknown as string[]
+  const getDaysShort = (): string[] => {
+    const days = tArray('admin.agenda.days_short')
+    if (days.length > 0) {
+      return days
+    }
+    // Fallback si la traduction n'est pas un tableau
+    return ['L', 'M', 'M', 'J', 'V', 'S', 'D']
   }
 
   const [loading, setLoading] = useState(false)
@@ -2451,12 +2458,49 @@ export function BookingModal({
               </div>
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className={`p-2 rounded-lg ${isDark ? 'hover:bg-gray-700 text-gray-400' : 'hover:bg-gray-100 text-gray-500'}`}
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-1">
+            {/* Icônes d'accès rapide - visibles uniquement en mode édition avec orderId */}
+            {editingBooking && orderId && (
+              <div className="flex items-center gap-1 mr-2">
+                {/* Fiche Commande */}
+                {onViewOrder && (
+                  <button
+                    type="button"
+                    onClick={() => onViewOrder(orderId)}
+                    className={`p-2.5 rounded-lg transition-colors ${
+                      isDark
+                        ? 'hover:bg-blue-600/30 text-blue-400'
+                        : 'hover:bg-blue-100 text-blue-600'
+                    }`}
+                    title={t('admin.booking_modal.actions.view_order')}
+                  >
+                    <FileText className="w-6 h-6" />
+                  </button>
+                )}
+                {/* Fiche Comptable */}
+                {onOpenAccounting && (
+                  <button
+                    type="button"
+                    onClick={() => onOpenAccounting(orderId)}
+                    className={`p-2.5 rounded-lg transition-colors ${
+                      isDark
+                        ? 'hover:bg-cyan-600/30 text-cyan-400'
+                        : 'hover:bg-cyan-100 text-cyan-600'
+                    }`}
+                    title={t('admin.accounting.title')}
+                  >
+                    <Receipt className="w-6 h-6" />
+                  </button>
+                )}
+              </div>
+            )}
+            <button
+              onClick={onClose}
+              className={`p-2 rounded-lg ${isDark ? 'hover:bg-gray-700 text-gray-400' : 'hover:bg-gray-100 text-gray-500'}`}
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* Body */}
@@ -3890,22 +3934,6 @@ export function BookingModal({
             )}
           </div>
           <div className="flex items-center gap-3">
-            {/* Bouton voir la commande - à côté de Cancel pour éviter les clics accidentels près de Delete */}
-            {editingBooking && onViewOrder && orderId && (
-              <button
-                type="button"
-                onClick={() => onViewOrder(orderId)}
-                disabled={loading}
-                className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-colors ${
-                  isDark
-                    ? 'text-blue-400 hover:bg-blue-900/20 hover:text-blue-300'
-                    : 'text-blue-600 hover:bg-blue-50 hover:text-blue-700'
-                }`}
-              >
-                <FileText className="w-4 h-4" />
-                {t('admin.booking_modal.actions.view_order') || 'Voir commande'}
-              </button>
-            )}
             <button
               type="button"
               onClick={onClose}

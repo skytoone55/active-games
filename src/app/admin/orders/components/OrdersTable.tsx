@@ -15,7 +15,8 @@ import {
   Zap,
   XCircle,
   FileCheck,
-  AlertTriangle
+  AlertTriangle,
+  Receipt
 } from 'lucide-react'
 import { useTranslation } from '@/contexts/LanguageContext'
 import type { OrderWithRelations, OrderStatus, GameArea } from '@/lib/supabase/types'
@@ -29,6 +30,7 @@ interface OrdersTableProps {
   onCancel: (orderId: string) => void
   onViewOrder: (order: OrderWithRelations) => void
   onViewClient: (contactId: string) => void
+  onOpenAccounting?: (orderId: string) => void
   canDelete?: boolean // Permission d'annuler une commande
 }
 
@@ -117,7 +119,7 @@ function FilterDropdown({
 
 const PAGE_SIZE_OPTIONS = [10, 20, 50, 100, 200, 500, 1000]
 
-export function OrdersTable({ orders, isDark, onCancel, onViewOrder, onViewClient, canDelete = true }: OrdersTableProps) {
+export function OrdersTable({ orders, isDark, onCancel, onViewOrder, onViewClient, onOpenAccounting, canDelete = true }: OrdersTableProps) {
   const { t, locale } = useTranslation()
   const [sortField, setSortField] = useState<SortField>('created')
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
@@ -545,11 +547,27 @@ export function OrdersTable({ orders, isDark, onCancel, onViewOrder, onViewClien
                   </span>
                 </div>
 
-                {/* Référence */}
-                <div className="col-span-1 text-xs font-mono">
-                  <span className={isDark ? 'text-gray-400' : 'text-gray-600'}>
+                {/* Référence + Actions */}
+                <div className="col-span-1 flex items-center justify-between gap-1">
+                  <span className={`text-xs font-mono truncate ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
                     {order.booking?.reference_code || order.request_reference}
                   </span>
+                  {onOpenAccounting && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        onOpenAccounting(order.id)
+                      }}
+                      className={`p-1.5 rounded-lg transition-colors flex-shrink-0 ${
+                        isDark
+                          ? 'hover:bg-cyan-600/30 text-cyan-400'
+                          : 'hover:bg-cyan-100 text-cyan-600'
+                      }`}
+                      title={t('admin.accounting.title')}
+                    >
+                      <Receipt className="w-4 h-4" />
+                    </button>
+                  )}
                 </div>
               </div>
             )

@@ -28,6 +28,7 @@ import { OrderDetailModal } from './components/OrderDetailModal'
 import type { OrderStatus } from '@/lib/supabase/types'
 import { ContactDetailsModal } from '../components/ContactDetailsModal'
 import { ConfirmationModal } from '../components/ConfirmationModal'
+import { AccountingModal } from '../components/AccountingModal'
 import { createClient } from '@/lib/supabase/client'
 import type { OrderWithRelations } from '@/lib/supabase/types'
 
@@ -76,6 +77,7 @@ export default function OrdersPage() {
   const [theme, setTheme] = useState<Theme>('light')
   const [selectedOrder, setSelectedOrder] = useState<OrderWithRelations | null>(null)
   const [selectedContactId, setSelectedContactId] = useState<string | null>(null)
+  const [accountingOrderId, setAccountingOrderId] = useState<string | null>(null)
   const [confirmModal, setConfirmModal] = useState<ConfirmModalState>({
     isOpen: false,
     title: '',
@@ -535,6 +537,7 @@ export default function OrdersPage() {
             onCancel={handleCancel}
             onViewOrder={handleViewOrder}
             onViewClient={handleViewClient}
+            onOpenAccounting={(orderId) => setAccountingOrderId(orderId)}
             canDelete={canDeleteOrder}
           />
         )}
@@ -551,9 +554,20 @@ export default function OrdersPage() {
           onResendCgvReminder={handleResendCgvReminder}
           onGoToAgenda={handleGoToAgenda}
           onGoToClient={handleViewClient}
+          onOpenAccounting={(orderId) => setAccountingOrderId(orderId)}
           isDark={isDark}
           canEdit={canEditOrder}
           canDelete={canDeleteOrder}
+        />
+      )}
+
+      {/* Modal Fiche Comptable */}
+      {accountingOrderId && selectedBranchId && (
+        <AccountingModal
+          orderId={accountingOrderId}
+          branchId={selectedBranchId}
+          onClose={() => setAccountingOrderId(null)}
+          isDark={isDark}
         />
       )}
 

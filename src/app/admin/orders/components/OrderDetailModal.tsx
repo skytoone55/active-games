@@ -23,7 +23,8 @@ import {
   Loader2,
   FileText,
   FileCheck,
-  AlertTriangle
+  AlertTriangle,
+  Receipt
 } from 'lucide-react'
 import { useTranslation } from '@/contexts/LanguageContext'
 import type { OrderWithRelations } from '@/lib/supabase/types'
@@ -37,6 +38,7 @@ interface OrderDetailModalProps {
   onResendCgvReminder?: (orderId: string) => Promise<{ success: boolean; error?: string }>
   onGoToAgenda: (date: string, bookingId?: string) => void
   onGoToClient: (contactId: string) => void
+  onOpenAccounting?: (orderId: string) => void
   isDark: boolean
   canEdit?: boolean // Permission de modifier (recréer, renvoyer email)
   canDelete?: boolean // Permission d'annuler une commande
@@ -51,6 +53,7 @@ export function OrderDetailModal({
   onResendCgvReminder,
   onGoToAgenda,
   onGoToClient,
+  onOpenAccounting,
   isDark,
   canEdit = true,
   canDelete = true,
@@ -511,6 +514,26 @@ export function OrderDetailModal({
                   </div>
                   <ExternalLink className="w-4 h-4" />
                 </a>
+              )}
+
+              {/* Bouton Fiche Comptable */}
+              {onOpenAccounting && (
+                <button
+                  onClick={() => onOpenAccounting(order.id)}
+                  className={`w-full mb-3 flex items-center gap-3 p-3 rounded-xl transition-colors ${
+                    isDark
+                      ? 'bg-cyan-600/20 hover:bg-cyan-600/30 text-cyan-400'
+                      : 'bg-cyan-50 hover:bg-cyan-100 text-cyan-600'
+                  }`}
+                >
+                  <Receipt className="w-5 h-5" />
+                  <div className="text-left flex-1">
+                    <p className="font-medium">{t('admin.accounting.title')}</p>
+                    <p className={`text-xs ${isDark ? 'text-cyan-400/70' : 'text-cyan-500/70'}`}>
+                      {t('admin.accounting.price_breakdown')}
+                    </p>
+                  </div>
+                </button>
               )}
 
               {/* Bouton Renvoyer Email de confirmation */}

@@ -600,3 +600,51 @@ export interface EmailLogWithRelations extends EmailLog {
   branch?: Branch | null
   template?: EmailTemplate | null
 }
+
+// Types pour le système de paiement
+export type PaymentStatus = 'pending' | 'deposit_paid' | 'fully_paid' | 'card_authorized' | 'refunded' | 'failed'
+export type PaymentType = 'full' | 'deposit' | 'balance' | 'refund'
+export type PaymentMethod = 'card' | 'cash' | 'transfer' | 'check'
+
+export interface Payment {
+  id: string
+  order_id: string | null
+  booking_id: string | null
+  contact_id: string | null
+  branch_id: string
+  amount: number
+  currency: string
+  payment_type: PaymentType
+  payment_method: PaymentMethod
+  status: string
+  icount_transaction_id: string | null
+  icount_confirmation_code: string | null
+  icount_document_id: string | null
+  icount_document_type: string | null
+  cc_last4: string | null
+  cc_type: string | null
+  check_number: string | null
+  check_bank: string | null
+  check_date: string | null
+  transfer_reference: string | null
+  notes: string | null
+  processed_by: string | null
+  created_at: string
+  updated_at: string
+}
+
+export type PaymentInsert = Omit<Payment, 'id' | 'created_at' | 'updated_at'>
+export type PaymentUpdate = Partial<PaymentInsert>
+
+// Type étendu pour Payment avec relations
+export interface PaymentWithRelations extends Payment {
+  order?: Order | null
+  booking?: Booking | null
+  contact?: Contact | null
+  branch?: Branch | null
+}
+
+// Type étendu pour Order avec paiements
+export interface OrderWithPayments extends OrderWithRelations {
+  payments?: Payment[]
+}
