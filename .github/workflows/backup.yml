@@ -1,0 +1,156 @@
+name: Backup Supabase (Hourly 10h-22h)
+
+on:
+  schedule:
+    # Toutes les heures de 10h à 22h (UTC+2 = Israel Time)
+    # UTC: 8h à 20h
+    - cron: '0 8-20 * * *'
+
+  # Permet de lancer manuellement
+  workflow_dispatch:
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install @supabase/supabase-js
+
+      - name: Run backup
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: |
+          node << 'EOF'
+          const { createClient } = require('@supabase/supabase-js');
+
+          async function backup() {
+            console.log('🔄 Début du backup automatique (GitHub Actions)...');
+
+            const supabase = createClient(
+              process.env.SUPABASE_URL,
+              process.env.SUPABASE_SERVICE_KEY
+            );
+
+            const tables = [
+              'activity_logs', 'ai_conversations', 'ai_messages',
+              'booking_contacts', 'booking_slots', 'bookings',
+              'branch_settings', 'branches', 'contacts',
+              'email_logs', 'email_settings', 'email_templates',
+              'event_rooms', 'game_sessions', 'icount_event_formulas',
+              'icount_products', 'icount_rooms', 'laser_rooms',
+              'orders', 'payment_credentials', 'payments',
+              'profiles', 'role_permissions', 'roles', 'user_branches'
+            ];
+
+            const backupData = {
+              timestamp: new Date().toISOString(),
+              version: '1.0',
+              source: 'github-actions',
+              tables: {},
+              metadata: {
+                project: 'activelaser',
+                database: 'zapwlcrjnabrfhoxfgqo',
+                workflow: 'hourly-backup'
+              }
+            };
+
+            let totalRecords = 0;
+
+            for (const table of tables) {
+              try {
+                const { data, error, count } = await supabase
+                  .from(table)
+                  .select('*', { count: 'exact' });
+
+                if (error) {
+                  console.error(`❌ ${table}: ${error.message}`);
+                  backupData.tables[table] = { error: error.message, records: 0 };
+                  continue;
+                }
+
+                backupData.tables[table] = {
+                  data: data || [],
+                  records: count || 0
+                };
+
+                totalRecords += count || 0;
+                console.log(`✅ ${table}: ${count || 0} enregistrements`);
+              } catch (err) {
+                console.error(`❌ ${table}: ${err.message}`);
+                backupData.tables[table] = { error: err.message, records: 0 };
+              }
+            }
+
+            const backupJSON = JSON.stringify(backupData, null, 2);
+            const backupBuffer = Buffer.from(backupJSON);
+
+            console.log(`📊 Total: ${totalRecords} enregistrements`);
+            console.log(`📦 Taille: ${(backupBuffer.length / 1024).toFixed(2)} KB`);
+
+            // Upload dans Supabase Storage
+            const filename = `backup_${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
+
+            const { error: uploadError } = await supabase
+              .storage
+              .from('backups')
+              .upload(filename, backupBuffer, {
+                contentType: 'application/json',
+                upsert: false
+              });
+
+            if (uploadError) {
+              console.error('❌ Upload error:', uploadError.message);
+              process.exit(1);
+            }
+
+            console.log(`✅ Backup uploadé: ${filename}`);
+
+            // Nettoyer les vieux backups (garder les 50 derniers)
+            const { data: files } = await supabase
+              .storage
+              .from('backups')
+              .list('', {
+                limit: 100,
+                sortBy: { column: 'created_at', order: 'desc' }
+              });
+
+            if (files && files.length > 50) {
+              const filesToDelete = files
+                .filter(f => f.name.startsWith('backup_') && f.name.endsWith('.json'))
+                .slice(50)
+                .map(f => f.name);
+
+              if (filesToDelete.length > 0) {
+                const { error: deleteError } = await supabase
+                  .storage
+                  .from('backups')
+                  .remove(filesToDelete);
+
+                if (!deleteError) {
+                  console.log(`🗑️  ${filesToDelete.length} vieux backups supprimés`);
+                }
+              }
+            }
+
+            console.log('✅ Backup terminé avec succès');
+          }
+
+          backup().catch(err => {
+            console.error('❌ Erreur:', err);
+            process.exit(1);
+          });
+          EOF
+
+      - name: Backup summary
+        if: always()
+        run: echo "Backup job completed at $(date)"
