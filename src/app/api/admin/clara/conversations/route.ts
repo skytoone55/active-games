@@ -9,6 +9,19 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { verifyApiPermission } from '@/lib/permissions'
 
+// Types pour les conversations
+interface ConversationMessage {
+  id: string
+  content: string
+}
+
+interface ConversationData {
+  id: string
+  title: string | null
+  updated_at: string
+  ai_messages: ConversationMessage[] | null
+}
+
 // GET - Liste des conversations
 export async function GET() {
   try {
@@ -18,7 +31,8 @@ export async function GET() {
     }
     const userId = user.id
 
-    const supabase = createServiceRoleClient()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const supabase = createServiceRoleClient() as any
 
     // Récupérer les conversations de l'utilisateur
     const { data: conversations, error } = await supabase
@@ -42,7 +56,7 @@ export async function GET() {
     }
 
     // Formater les conversations
-    const formattedConversations = conversations?.map(conv => ({
+    const formattedConversations = (conversations as ConversationData[] | null)?.map(conv => ({
       id: conv.id,
       title: conv.title || generateTitle(conv.ai_messages),
       lastMessage: conv.ai_messages?.[0]?.content?.substring(0, 50) || '',
@@ -76,7 +90,8 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Missing conversationId or title' }, { status: 400 })
     }
 
-    const supabase = createServiceRoleClient()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const supabase = createServiceRoleClient() as any
 
     // Vérifier que la conversation appartient à l'utilisateur
     const { data: conv } = await supabase
@@ -124,7 +139,8 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Missing conversationId' }, { status: 400 })
     }
 
-    const supabase = createServiceRoleClient()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const supabase = createServiceRoleClient() as any
 
     // Vérifier que la conversation appartient à l'utilisateur
     const { data: conv } = await supabase
@@ -164,7 +180,7 @@ export async function DELETE(request: NextRequest) {
 }
 
 // Helper pour générer un titre à partir des messages
-function generateTitle(messages: { content: string }[] | null): string {
+function generateTitle(messages: ConversationMessage[] | null): string {
   if (!messages || messages.length === 0) return 'Sans titre'
 
   // Prendre le premier message utilisateur
