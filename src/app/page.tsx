@@ -52,8 +52,10 @@ export default function Home() {
       
       <main>
         <HeroSection translations={translations} />
-        <ConceptSection translations={translations} />
-        <HowItWorksSection translations={translations} />
+        <div id="concept">
+          <ConceptSection translations={translations} />
+          <HowItWorksSection translations={translations} />
+        </div>
         <GamesSection translations={translations} />
         <PricingSection translations={translations} isRTL={isRTL} />
         <BranchesSection translations={translations} />

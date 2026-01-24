@@ -25,17 +25,15 @@
       "strategy": "Votre strategie gagne"
     },
     "description": [
-      "L'experience est concue pour des groupes de 6 joueurs maximum et dure 60 minutes d'action non-stop.",
-      "A votre arrivee, chaque joueur recoit un bracelet intelligent et s'inscrit avec son nom. Le bracelet vous identifie tout au long du jeu – chaque point, chaque reussite et chaque defi sont enregistres dessus.",
-      "Avant d'entrer dans chaque salle, le groupe scanne le bracelet, et le systeme identifie automatiquement les participants et lance le jeu choisi.",
+      "L'experience est concue pour des groupes de 6 joueurs maximum et dure 60 minutes d'action non-stop. A votre arrivee, chaque joueur recoit un bracelet intelligent qui vous identifie tout au long du jeu – chaque point, chaque reussite et chaque defi sont enregistres dessus.",
       "Le complexe comprend 8 salles differentes, chacune avec son propre univers, concept et defis uniques. Dans chaque salle, plusieurs jeux avec des niveaux de difficulte variables attendent, afin que chaque groupe puisse choisir les defis qui lui conviennent.",
-      "Vous pouvez jouer en mode competitif ou en mode equipe – affronter les autres ou collaborer avec vos amis et partenaires, et choisir dans chaque jeu si vous jouez en tant que rivaux ou en tant qu'equipe unie.",
-      "Il n'y a pas de parcours fixe ni d'ordre obligatoire – vous choisissez ou entrer, quand changer de salle et quelle strategie vous menera a accumuler un maximum de points.",
+      "Vous pouvez jouer en mode competitif ou en mode equipe – affronter les autres ou collaborer avec vos amis. Il n'y a pas de parcours fixe ni d'ordre obligatoire – vous choisissez ou entrer, quand changer de salle et quelle strategie vous menera a accumuler un maximum de points.",
       "Active Games est une experience dynamique, captivante et pleine d'adrenaline, ou la cooperation, la vitesse et la reflexion rapide sont les cles de la victoire."
     ]
   },
   "howItWorks": {
     "title": "COMMENT ÇA MARCHE",
+    "subtitle": "5 étapes simples pour une expérience inoubliable",
     "steps": [
       {
         "number": "1",

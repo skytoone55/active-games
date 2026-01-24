@@ -55,7 +55,7 @@ export default function ConceptSection({ translations }: ConceptSectionProps) {
   ]
 
   return (
-    <section id="concept" className="py-10 md:py-16 min-h-[400px] w-full relative overflow-hidden" style={{
+    <section className="py-10 md:py-16 min-h-[400px] w-full relative overflow-hidden" style={{
       background: 'linear-gradient(135deg, rgba(255, 0, 229, 0.7) 0%, rgba(255, 0, 255, 0.6) 25%, rgba(255, 50, 200, 0.7) 50%, rgba(255, 0, 255, 0.6) 75%, rgba(255, 0, 229, 0.8) 100%)'
     }}>
       {/* Background decorative elements */}
