@@ -26,8 +26,42 @@
     },
     "description": [
       "L'experience est concue pour des groupes de 6 joueurs maximum et dure 60 minutes d'action non-stop.",
-      "A votre arrivee, chaque joueur recoit un bracelet intelligent et s'inscrit avec son nom.",
-      "Le complexe comprend 8 salles differentes, chacune avec son propre univers, concept et defis uniques."
+      "A votre arrivee, chaque joueur recoit un bracelet intelligent et s'inscrit avec son nom. Le bracelet vous identifie tout au long du jeu – chaque point, chaque reussite et chaque defi sont enregistres dessus.",
+      "Avant d'entrer dans chaque salle, le groupe scanne le bracelet, et le systeme identifie automatiquement les participants et lance le jeu choisi.",
+      "Le complexe comprend 8 salles differentes, chacune avec son propre univers, concept et defis uniques. Dans chaque salle, plusieurs jeux avec des niveaux de difficulte variables attendent, afin que chaque groupe puisse choisir les defis qui lui conviennent.",
+      "Vous pouvez jouer en mode competitif ou en mode equipe – affronter les autres ou collaborer avec vos amis et partenaires, et choisir dans chaque jeu si vous jouez en tant que rivaux ou en tant qu'equipe unie.",
+      "Il n'y a pas de parcours fixe ni d'ordre obligatoire – vous choisissez ou entrer, quand changer de salle et quelle strategie vous menera a accumuler un maximum de points.",
+      "Active Games est une experience dynamique, captivante et pleine d'adrenaline, ou la cooperation, la vitesse et la reflexion rapide sont les cles de la victoire."
+    ]
+  },
+  "howItWorks": {
+    "title": "COMMENT ÇA MARCHE",
+    "steps": [
+      {
+        "number": "1",
+        "title": "Arrivée et enregistrement",
+        "description": "Chaque joueur reçoit un bracelet intelligent et s'inscrit avec son nom"
+      },
+      {
+        "number": "2",
+        "title": "Scan du bracelet",
+        "description": "Avant chaque jeu, scannez votre bracelet pour identifier les participants"
+      },
+      {
+        "number": "3",
+        "title": "Choisissez votre salle",
+        "description": "8 salles différentes avec des univers et défis uniques vous attendent"
+      },
+      {
+        "number": "4",
+        "title": "Jouez à votre rythme",
+        "description": "Mode compétitif ou coopératif, vous décidez de votre stratégie"
+      },
+      {
+        "number": "5",
+        "title": "Accumulez des points",
+        "description": "Pas de parcours fixe - maximisez vos points selon votre stratégie"
+      }
     ]
   },
   "games": {

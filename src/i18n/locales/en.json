@@ -26,8 +26,42 @@
     },
     "description": [
       "The experience is designed for groups of up to 6 players and lasts 60 minutes of non-stop action.",
-      "Upon arrival, each player receives a smart bracelet and registers with their name.",
-      "The complex includes 8 different rooms, each with its own world, concept, and unique challenges."
+      "Upon arrival, each player receives a smart bracelet and registers with their name. The bracelet identifies you throughout the entire game – every point, every achievement, and every challenge are saved on it.",
+      "Before entering each room, the group scans the bracelet, and the system automatically identifies the participants and activates the selected game.",
+      "The complex includes 8 different rooms, each with its own world, concept, and unique challenges. In each room, multiple games with varying difficulty levels await, so every group can choose the challenges that suit them.",
+      "You can play in competitive mode or team mode – compete against each other or collaborate with friends and partners, and choose in each game whether to play as rivals or as one team.",
+      "There is no fixed path and no mandatory order – you choose where to enter, when to switch rooms, and which strategy will lead you to accumulate maximum points.",
+      "Active Games is a dynamic, exciting, and adrenaline-filled experience, where cooperation, speed, and sharp thinking are the keys to victory."
+    ]
+  },
+  "howItWorks": {
+    "title": "HOW IT WORKS",
+    "steps": [
+      {
+        "number": "1",
+        "title": "Arrival and registration",
+        "description": "Each player receives a smart bracelet and registers with their name"
+      },
+      {
+        "number": "2",
+        "title": "Scan your bracelet",
+        "description": "Before each game, scan your bracelet to identify participants"
+      },
+      {
+        "number": "3",
+        "title": "Choose your room",
+        "description": "8 different rooms with unique worlds and challenges await you"
+      },
+      {
+        "number": "4",
+        "title": "Play at your pace",
+        "description": "Competitive or cooperative mode, you decide your strategy"
+      },
+      {
+        "number": "5",
+        "title": "Accumulate points",
+        "description": "No fixed path - maximize your points according to your strategy"
+      }
     ]
   },
   "games": {

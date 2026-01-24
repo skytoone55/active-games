@@ -5,6 +5,7 @@ import {
   Header,
   HeroSection,
   ConceptSection,
+  HowItWorksSection,
   GamesSection,
   PricingSection,
   BranchesSection,
@@ -52,6 +53,7 @@ export default function Home() {
       <main>
         <HeroSection translations={translations} />
         <ConceptSection translations={translations} />
+        <HowItWorksSection translations={translations} />
         <GamesSection translations={translations} />
         <PricingSection translations={translations} isRTL={isRTL} />
         <BranchesSection translations={translations} />
