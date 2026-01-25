@@ -105,10 +105,10 @@ export async function POST(request: NextRequest) {
     // Sauvegarder le message utilisateur
     await addPublicMessage(conversation.id, 'user', message)
 
-    // Récupérer l'historique (limité pour les visiteurs)
+    // Récupérer l'historique complet (toute la session)
     const messages = await getPublicMessages(conversation.id, 50)
     const aiMessages = convertToAIMessages(messages)
-    const truncatedMessages = truncateHistory(aiMessages, 15000)
+    const truncatedMessages = truncateHistory(aiMessages, 50000) // Limite de sécurité très haute
 
     // Récupérer le prompt système (personnalisé ou par défaut)
     const systemPrompt = await getPublicSystemPrompt()

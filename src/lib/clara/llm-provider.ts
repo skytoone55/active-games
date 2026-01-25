@@ -36,7 +36,7 @@ export interface LLMGenerateOptions {
 
 // Defaults
 const DEFAULT_PROVIDER: LLMProvider = 'gemini'
-const DEFAULT_MAX_TOKENS = 20000
+const DEFAULT_MAX_TOKENS = 4000
 const DEFAULT_TEMPERATURE = 0.7
 
 // Default models par provider
