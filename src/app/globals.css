@@ -429,6 +429,13 @@ input[type="number"] {
   transition: all 0.3s ease;
 }
 
+/* Remonter le bouton WhatsApp sur mobile pour éviter le chevauchement avec le chat */
+@media (max-width: 768px) {
+  .whatsapp-float {
+    bottom: 100px;
+  }
+}
+
 .whatsapp-float:hover {
   transform: scale(1.1);
   box-shadow: 0 6px 30px rgba(37, 211, 102, 0.6);
