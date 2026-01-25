@@ -1582,6 +1582,81 @@
         "toggle_error": "שגיאה בשינוי סטטוס",
         "usage_title": "כיצד משתמשים בתבניות אלו",
         "usage_desc": "תנאים אלו מוצגים כאשר לקוחות מסמנים את תיבת \"אני מסכים לתנאים והגבלות\" בהזמנה מקוונת, ונכללים בתחתית מיילי האישור."
+      },
+      "clara": {
+        "title": "Clara AI",
+        "subtitle": "העוזרת הווירטואלית של האתר",
+        "tabs": {
+          "general": "כללי",
+          "prompt": "פרומפט מערכת",
+          "knowledge": "בסיס ידע",
+          "model": "מודל AI"
+        },
+        "api_keys": {
+          "title": "מפתחות API מוגדרים",
+          "configured": "מוגדר",
+          "missing": "חסר",
+          "active": "פעיל",
+          "env_note": "מפתחות API מוגדרים ב-Vercel (Settings → Environment Variables). משתנים נדרשים:"
+        },
+        "general": {
+          "enable_clara": "הפעל את קלרה",
+          "enable_clara_desc": "הפעל או השבת את הצ'אטבוט באתר הציבורי",
+          "public_chat": "צ'אט ציבורי",
+          "public_chat_desc": "אפשר למבקרים לשוחח עם קלרה",
+          "welcome_message": "הודעת פתיחה"
+        },
+        "prompt": {
+          "title": "פרומפט מערכת פעיל",
+          "custom_active": "פרומפט מותאם אישית פעיל",
+          "default_active": "פרומפט ברירת מחדל פעיל",
+          "reset_default": "אפס לברירת מחדל",
+          "characters": "תווים. הפרומפט יכלול אוטומטית את בסיס הידע בסוף."
+        },
+        "knowledge": {
+          "title": "בסיס ידע פעיל",
+          "custom_active": "בסיס ידע מותאם אישית פעיל",
+          "default_active": "בסיס ידע ברירת מחדל פעיל",
+          "reset_default": "אפס לברירת מחדל",
+          "characters": "תווים. כולל מידע על החברה, מחירים, שעות פעילות, פעילויות..."
+        },
+        "model": {
+          "provider": "ספק AI",
+          "models_count": "מודלים",
+          "model_label": "מודל",
+          "temperature": "טמפרטורה",
+          "temperature_precise": "מדויק",
+          "temperature_creative": "יצירתי",
+          "max_tokens": "מקסימום טוקנים (אורך תגובה)",
+          "rate_limit_minute": "מגבלה / דקה",
+          "rate_limit_hour": "מגבלה / שעה",
+          "max_messages": "מקסימום הודעות לשיחה"
+        },
+        "actions": {
+          "save": "שמור",
+          "saving": "שומר..."
+        },
+        "messages": {
+          "general_saved": "ההגדרות הכלליות נשמרו",
+          "prompt_saved": "הפרומפט נשמר",
+          "knowledge_saved": "בסיס הידע נשמר",
+          "model_saved": "הגדרות המודל נשמרו",
+          "prompt_reset": "הפרומפט אופס לברירת מחדל",
+          "knowledge_reset": "בסיס הידע אופס לברירת מחדל",
+          "save_error": "שגיאה בשמירת ההגדרות",
+          "reset_error": "שגיאה באיפוס"
+        },
+        "confirm": {
+          "unsaved_title": "שינויים שלא נשמרו",
+          "unsaved_message": "יש לך שינויים שלא נשמרו. האם ברצונך לבטל אותם ולעבור ללשונית אחרת?",
+          "discard_changes": "בטל שינויים",
+          "reset_prompt_title": "אפס פרומפט",
+          "reset_prompt_message": "האם אתה בטוח שברצונך לאפס לפרומפט ברירת המחדל? הפרומפט המותאם אישית שלך יימחק לצמיתות.",
+          "reset_knowledge_title": "אפס בסיס ידע",
+          "reset_knowledge_message": "האם אתה בטוח שברצונך לאפס לבסיס הידע של ברירת המחדל? הגרסה המותאמת אישית שלך תימחק לצמיתות.",
+          "reset": "אפס",
+          "cancel": "ביטול"
+        }
       }
     },
     "permissions": {

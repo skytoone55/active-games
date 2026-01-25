@@ -1526,6 +1526,81 @@
         "toggle_error": "Error changing status",
         "usage_title": "How these templates are used",
         "usage_desc": "These terms are displayed when customers check the \"I accept the terms and conditions\" box during online booking, and are included at the bottom of confirmation emails."
+      },
+      "clara": {
+        "title": "Clara AI",
+        "subtitle": "Virtual assistant of the site",
+        "tabs": {
+          "general": "General",
+          "prompt": "System Prompt",
+          "knowledge": "Knowledge Base",
+          "model": "AI Model"
+        },
+        "api_keys": {
+          "title": "Configured API Keys",
+          "configured": "Configured",
+          "missing": "Missing",
+          "active": "Active",
+          "env_note": "API keys are configured in Vercel (Settings → Environment Variables). Required variables:"
+        },
+        "general": {
+          "enable_clara": "Enable Clara",
+          "enable_clara_desc": "Enable or disable the chatbot on the public site",
+          "public_chat": "Public Chat",
+          "public_chat_desc": "Allow visitors to chat with Clara",
+          "welcome_message": "Welcome message"
+        },
+        "prompt": {
+          "title": "Active System Prompt",
+          "custom_active": "Custom prompt active",
+          "default_active": "Default prompt active",
+          "reset_default": "Reset to default",
+          "characters": "characters. The prompt will automatically include the knowledge base at the end."
+        },
+        "knowledge": {
+          "title": "Active Knowledge Base",
+          "custom_active": "Custom knowledge active",
+          "default_active": "Default knowledge active",
+          "reset_default": "Reset to default",
+          "characters": "characters. Contains info about the company, prices, hours, activities..."
+        },
+        "model": {
+          "provider": "AI Provider",
+          "models_count": "models",
+          "model_label": "Model",
+          "temperature": "Temperature",
+          "temperature_precise": "Precise",
+          "temperature_creative": "Creative",
+          "max_tokens": "Maximum tokens (response length)",
+          "rate_limit_minute": "Limit / minute",
+          "rate_limit_hour": "Limit / hour",
+          "max_messages": "Max messages per conversation"
+        },
+        "actions": {
+          "save": "Save",
+          "saving": "Saving..."
+        },
+        "messages": {
+          "general_saved": "General settings saved",
+          "prompt_saved": "Prompt saved",
+          "knowledge_saved": "Knowledge base saved",
+          "model_saved": "Model settings saved",
+          "prompt_reset": "Prompt reset to default",
+          "knowledge_reset": "Knowledge base reset to default",
+          "save_error": "Failed to save settings",
+          "reset_error": "Error during reset"
+        },
+        "confirm": {
+          "unsaved_title": "Unsaved changes",
+          "unsaved_message": "You have unsaved changes. Do you want to discard them and switch tabs?",
+          "discard_changes": "Discard changes",
+          "reset_prompt_title": "Reset prompt",
+          "reset_prompt_message": "Are you sure you want to reset to the default prompt? Your custom prompt will be permanently deleted.",
+          "reset_knowledge_title": "Reset knowledge base",
+          "reset_knowledge_message": "Are you sure you want to reset to the default knowledge base? Your custom version will be permanently deleted.",
+          "reset": "Reset",
+          "cancel": "Cancel"
+        }
       }
     },
     "permissions": {

@@ -1582,6 +1582,81 @@
         "toggle_error": "Erreur lors du changement de statut",
         "usage_title": "Comment ces templates sont utilises",
         "usage_desc": "Ces conditions sont affichees lorsque les clients cochent la case \"J'accepte les conditions generales\" lors de la reservation en ligne, et sont incluses en bas des emails de confirmation."
+      },
+      "clara": {
+        "title": "Clara AI",
+        "subtitle": "Assistante virtuelle du site",
+        "tabs": {
+          "general": "General",
+          "prompt": "Prompt Systeme",
+          "knowledge": "Base de Connaissances",
+          "model": "Modele IA"
+        },
+        "api_keys": {
+          "title": "Cles API Configurees",
+          "configured": "Configuree",
+          "missing": "Manquante",
+          "active": "Actif",
+          "env_note": "Les cles API se configurent dans Vercel (Settings → Environment Variables). Variables requises :"
+        },
+        "general": {
+          "enable_clara": "Activer Clara",
+          "enable_clara_desc": "Active ou desactive le chatbot sur le site public",
+          "public_chat": "Chat Public",
+          "public_chat_desc": "Permet aux visiteurs de discuter avec Clara",
+          "welcome_message": "Message de bienvenue"
+        },
+        "prompt": {
+          "title": "Prompt Systeme Actif",
+          "custom_active": "Prompt personnalise actif",
+          "default_active": "Prompt par defaut actif",
+          "reset_default": "Reinitialiser par defaut",
+          "characters": "caracteres. Le prompt inclura automatiquement la base de connaissances a la fin."
+        },
+        "knowledge": {
+          "title": "Base de Connaissances Active",
+          "custom_active": "Knowledge personnalisee active",
+          "default_active": "Knowledge par defaut active",
+          "reset_default": "Reinitialiser par defaut",
+          "characters": "caracteres. Contient les infos sur l'entreprise, tarifs, horaires, activites..."
+        },
+        "model": {
+          "provider": "Provider IA",
+          "models_count": "modeles",
+          "model_label": "Modele",
+          "temperature": "Temperature",
+          "temperature_precise": "Precis",
+          "temperature_creative": "Creatif",
+          "max_tokens": "Tokens maximum (longueur reponse)",
+          "rate_limit_minute": "Limite / minute",
+          "rate_limit_hour": "Limite / heure",
+          "max_messages": "Messages max par conversation"
+        },
+        "actions": {
+          "save": "Sauvegarder",
+          "saving": "Sauvegarde..."
+        },
+        "messages": {
+          "general_saved": "Parametres generaux sauvegardes",
+          "prompt_saved": "Prompt sauvegarde",
+          "knowledge_saved": "Base de connaissances sauvegardee",
+          "model_saved": "Parametres du modele sauvegardes",
+          "prompt_reset": "Prompt remis par defaut",
+          "knowledge_reset": "Base de connaissances remise par defaut",
+          "save_error": "Erreur lors de la sauvegarde",
+          "reset_error": "Erreur lors de la reinitialisation"
+        },
+        "confirm": {
+          "unsaved_title": "Modifications non sauvegardees",
+          "unsaved_message": "Vous avez des modifications non sauvegardees. Voulez-vous les annuler et changer d'onglet ?",
+          "discard_changes": "Annuler les modifications",
+          "reset_prompt_title": "Reinitialiser le prompt",
+          "reset_prompt_message": "Etes-vous sur de vouloir remettre le prompt par defaut ? Votre prompt personnalise sera definitivement supprime.",
+          "reset_knowledge_title": "Reinitialiser la base de connaissances",
+          "reset_knowledge_message": "Etes-vous sur de vouloir remettre la base de connaissances par defaut ? Votre version personnalisee sera definitivement supprimee.",
+          "reset": "Reinitialiser",
+          "cancel": "Annuler"
+        }
       }
     },
     "permissions": {

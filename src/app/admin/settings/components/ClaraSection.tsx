@@ -21,6 +21,7 @@ import {
   ToggleRight,
   X,
 } from 'lucide-react'
+import { useTranslation } from '@/contexts/LanguageContext'
 
 interface ClaraSectionProps {
   isDark: boolean
@@ -173,6 +174,7 @@ function ConfirmModal({
 }
 
 export function ClaraSection({ isDark }: ClaraSectionProps) {
+  const { t } = useTranslation()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
@@ -276,7 +278,7 @@ export function ClaraSection({ isDark }: ClaraSectionProps) {
       if (!response.ok) throw new Error('Failed to save settings')
 
       setOriginalSettings(settings)
-      setSuccess('Paramètres généraux sauvegardés')
+      setSuccess(t('admin.settings.clara.messages.general_saved'))
       setTimeout(() => setSuccess(null), 3000)
 
     } catch (err) {
@@ -307,7 +309,7 @@ export function ClaraSection({ isDark }: ClaraSectionProps) {
 
       setOriginalPrompt(activePrompt)
       setIsUsingCustomPrompt(promptIsCustom)
-      setSuccess('Prompt sauvegardé')
+      setSuccess(t('admin.settings.clara.messages.prompt_saved'))
       setTimeout(() => setSuccess(null), 3000)
 
     } catch (err) {
@@ -338,7 +340,7 @@ export function ClaraSection({ isDark }: ClaraSectionProps) {
 
       setOriginalKnowledge(activeKnowledge)
       setIsUsingCustomKnowledge(knowledgeIsCustom)
-      setSuccess('Base de connaissances sauvegardée')
+      setSuccess(t('admin.settings.clara.messages.knowledge_saved'))
       setTimeout(() => setSuccess(null), 3000)
 
     } catch (err) {
@@ -364,7 +366,7 @@ export function ClaraSection({ isDark }: ClaraSectionProps) {
       if (!response.ok) throw new Error('Failed to save settings')
 
       setOriginalSettings(settings)
-      setSuccess('Paramètres du modèle sauvegardés')
+      setSuccess(t('admin.settings.clara.messages.model_saved'))
       setTimeout(() => setSuccess(null), 3000)
 
     } catch (err) {
@@ -395,9 +397,9 @@ export function ClaraSection({ isDark }: ClaraSectionProps) {
     if (hasUnsavedChanges(activeTab)) {
       setConfirmModal({
         isOpen: true,
-        title: 'Modifications non sauvegardées',
-        message: 'Vous avez des modifications non sauvegardées. Voulez-vous les annuler et changer d\'onglet ?',
-        confirmText: 'Annuler les modifications',
+        title: t('admin.settings.clara.confirm.unsaved_title'),
+        message: t('admin.settings.clara.confirm.unsaved_message'),
+        confirmText: t('admin.settings.clara.confirm.discard_changes'),
         variant: 'warning',
         onConfirm: () => {
           // Discard changes
@@ -432,11 +434,11 @@ export function ClaraSection({ isDark }: ClaraSectionProps) {
       setActivePrompt(defaultPrompt)
       setOriginalPrompt(defaultPrompt)
       setIsUsingCustomPrompt(false)
-      setSuccess('Prompt remis par défaut')
+      setSuccess(t('admin.settings.clara.messages.prompt_reset'))
       setTimeout(() => setSuccess(null), 3000)
 
     } catch (err) {
-      setError('Erreur lors de la réinitialisation')
+      setError(t('admin.settings.clara.messages.reset_error'))
     } finally {
       setSavingPrompt(false)
     }
@@ -445,9 +447,9 @@ export function ClaraSection({ isDark }: ClaraSectionProps) {
   const resetPrompt = () => {
     setConfirmModal({
       isOpen: true,
-      title: 'Réinitialiser le prompt',
-      message: 'Êtes-vous sûr de vouloir remettre le prompt par défaut ? Votre prompt personnalisé sera définitivement supprimé.',
-      confirmText: 'Réinitialiser',
+      title: t('admin.settings.clara.confirm.reset_prompt_title'),
+      message: t('admin.settings.clara.confirm.reset_prompt_message'),
+      confirmText: t('admin.settings.clara.confirm.reset'),
       variant: 'danger',
       onConfirm: () => {
         setConfirmModal(prev => ({ ...prev, isOpen: false }))
@@ -471,11 +473,11 @@ export function ClaraSection({ isDark }: ClaraSectionProps) {
       setActiveKnowledge(defaultKnowledge)
       setOriginalKnowledge(defaultKnowledge)
       setIsUsingCustomKnowledge(false)
-      setSuccess('Base de connaissances remise par défaut')
+      setSuccess(t('admin.settings.clara.messages.knowledge_reset'))
       setTimeout(() => setSuccess(null), 3000)
 
     } catch (err) {
-      setError('Erreur lors de la réinitialisation')
+      setError(t('admin.settings.clara.messages.reset_error'))
     } finally {
       setSavingKnowledge(false)
     }
@@ -484,9 +486,9 @@ export function ClaraSection({ isDark }: ClaraSectionProps) {
   const resetKnowledge = () => {
     setConfirmModal({
       isOpen: true,
-      title: 'Réinitialiser la base de connaissances',
-      message: 'Êtes-vous sûr de vouloir remettre la base de connaissances par défaut ? Votre version personnalisée sera définitivement supprimée.',
-      confirmText: 'Réinitialiser',
+      title: t('admin.settings.clara.confirm.reset_knowledge_title'),
+      message: t('admin.settings.clara.confirm.reset_knowledge_message'),
+      confirmText: t('admin.settings.clara.confirm.reset'),
       variant: 'danger',
       onConfirm: () => {
         setConfirmModal(prev => ({ ...prev, isOpen: false }))
@@ -504,10 +506,10 @@ export function ClaraSection({ isDark }: ClaraSectionProps) {
   }
 
   const tabs: { id: Tab; label: string; icon: typeof Sparkles }[] = [
-    { id: 'general', label: 'Général', icon: Sparkles },
-    { id: 'prompt', label: 'Prompt Système', icon: MessageSquare },
-    { id: 'knowledge', label: 'Base de Connaissances', icon: BookOpen },
-    { id: 'model', label: 'Modèle IA', icon: Sliders },
+    { id: 'general', label: t('admin.settings.clara.tabs.general'), icon: Sparkles },
+    { id: 'prompt', label: t('admin.settings.clara.tabs.prompt'), icon: MessageSquare },
+    { id: 'knowledge', label: t('admin.settings.clara.tabs.knowledge'), icon: BookOpen },
+    { id: 'model', label: t('admin.settings.clara.tabs.model'), icon: Sliders },
   ]
 
   return (
@@ -521,10 +523,10 @@ export function ClaraSection({ isDark }: ClaraSectionProps) {
         </div>
         <div>
           <h2 className={`text-xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-            Clara AI
+            {t('admin.settings.clara.title')}
           </h2>
           <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-            Assistante virtuelle du site
+            {t('admin.settings.clara.subtitle')}
           </p>
         </div>
       </div>
@@ -585,7 +587,7 @@ export function ClaraSection({ isDark }: ClaraSectionProps) {
             <div className={`p-4 rounded-lg border ${isDark ? 'bg-gray-700/50 border-gray-600' : 'bg-gray-50 border-gray-200'}`}>
               <h4 className={`font-medium mb-3 flex items-center gap-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
                 <Key className="w-5 h-5" />
-                Clés API Configurées
+                {t('admin.settings.clara.api_keys.title')}
               </h4>
               <div className="grid gap-3">
                 {Object.entries(providers).map(([providerId, provider]) => {
@@ -612,7 +614,7 @@ export function ClaraSection({ isDark }: ClaraSectionProps) {
                               <span className={`ml-2 text-xs px-2 py-0.5 rounded-full ${
                                 isDark ? 'bg-pink-500/20 text-pink-400' : 'bg-pink-100 text-pink-700'
                               }`}>
-                                Actif
+                                {t('admin.settings.clara.api_keys.active')}
                               </span>
                             )}
                           </p>
@@ -628,14 +630,14 @@ export function ClaraSection({ isDark }: ClaraSectionProps) {
                           ? isDark ? 'text-green-400' : 'text-green-600'
                           : isDark ? 'text-red-400' : 'text-red-600'
                       }`}>
-                        {isConfigured ? '✓ Configurée' : '✗ Manquante'}
+                        {isConfigured ? `✓ ${t('admin.settings.clara.api_keys.configured')}` : `✗ ${t('admin.settings.clara.api_keys.missing')}`}
                       </span>
                     </div>
                   )
                 })}
               </div>
               <p className={`mt-3 text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
-                Les clés API se configurent dans Vercel (Settings → Environment Variables). Variables requises :<br />
+                {t('admin.settings.clara.api_keys.env_note')}<br />
                 <code className="text-pink-400">GOOGLE_AI_API_KEY</code>, <code className="text-pink-400">OPENAI_API_KEY</code>, <code className="text-pink-400">ANTHROPIC_API_KEY</code>
               </p>
             </div>
@@ -644,10 +646,10 @@ export function ClaraSection({ isDark }: ClaraSectionProps) {
             <div className="flex items-center justify-between">
               <div>
                 <p className={`font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                  Activer Clara
+                  {t('admin.settings.clara.general.enable_clara')}
                 </p>
                 <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                  Active ou désactive le chatbot sur le site public
+                  {t('admin.settings.clara.general.enable_clara_desc')}
                 </p>
               </div>
               <button
@@ -670,10 +672,10 @@ export function ClaraSection({ isDark }: ClaraSectionProps) {
             <div className="flex items-center justify-between">
               <div>
                 <p className={`font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                  Chat Public
+                  {t('admin.settings.clara.general.public_chat')}
                 </p>
                 <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                  Permet aux visiteurs de discuter avec Clara
+                  {t('admin.settings.clara.general.public_chat_desc')}
                 </p>
               </div>
               <button
@@ -698,7 +700,7 @@ export function ClaraSection({ isDark }: ClaraSectionProps) {
             {/* Welcome Message */}
             <div>
               <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                Message de bienvenue
+                {t('admin.settings.clara.general.welcome_message')}
               </label>
               <textarea
                 value={settings.public_chat.welcome_message}
@@ -731,7 +733,7 @@ export function ClaraSection({ isDark }: ClaraSectionProps) {
                 ) : (
                   <Save className="w-4 h-4" />
                 )}
-                Sauvegarder
+                {t('admin.settings.clara.actions.save')}
               </button>
             </div>
           </div>
@@ -743,12 +745,12 @@ export function ClaraSection({ isDark }: ClaraSectionProps) {
             <div className="flex items-center justify-between">
               <div>
                 <h3 className={`font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                  Prompt Système Actif
+                  {t('admin.settings.clara.prompt.title')}
                 </h3>
                 <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
                   {isUsingCustomPrompt || activePrompt !== defaultPrompt
-                    ? '⚡ Prompt personnalisé actif'
-                    : '📝 Prompt par défaut actif'
+                    ? `⚡ ${t('admin.settings.clara.prompt.custom_active')}`
+                    : `📝 ${t('admin.settings.clara.prompt.default_active')}`
                   }
                 </p>
               </div>
@@ -762,7 +764,7 @@ export function ClaraSection({ isDark }: ClaraSectionProps) {
                 }`}
               >
                 <RotateCcw className="w-4 h-4" />
-                Réinitialiser par défaut
+                {t('admin.settings.clara.prompt.reset_default')}
               </button>
             </div>
 
@@ -778,7 +780,7 @@ export function ClaraSection({ isDark }: ClaraSectionProps) {
             />
 
             <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
-              {activePrompt.length} caractères. Le prompt inclura automatiquement la base de connaissances à la fin.
+              {activePrompt.length} {t('admin.settings.clara.prompt.characters')}
             </p>
 
             {/* Save Button */}
@@ -797,7 +799,7 @@ export function ClaraSection({ isDark }: ClaraSectionProps) {
                 ) : (
                   <Save className="w-4 h-4" />
                 )}
-                Sauvegarder
+                {t('admin.settings.clara.actions.save')}
               </button>
             </div>
           </div>
@@ -809,12 +811,12 @@ export function ClaraSection({ isDark }: ClaraSectionProps) {
             <div className="flex items-center justify-between">
               <div>
                 <h3 className={`font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                  Base de Connaissances Active
+                  {t('admin.settings.clara.knowledge.title')}
                 </h3>
                 <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
                   {isUsingCustomKnowledge || activeKnowledge !== defaultKnowledge
-                    ? '⚡ Knowledge personnalisée active'
-                    : '📚 Knowledge par défaut active'
+                    ? `⚡ ${t('admin.settings.clara.knowledge.custom_active')}`
+                    : `📚 ${t('admin.settings.clara.knowledge.default_active')}`
                   }
                 </p>
               </div>
@@ -828,7 +830,7 @@ export function ClaraSection({ isDark }: ClaraSectionProps) {
                 }`}
               >
                 <RotateCcw className="w-4 h-4" />
-                Réinitialiser par défaut
+                {t('admin.settings.clara.knowledge.reset_default')}
               </button>
             </div>
 
@@ -844,7 +846,7 @@ export function ClaraSection({ isDark }: ClaraSectionProps) {
             />
 
             <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
-              {activeKnowledge.length} caractères. Contient les infos sur l'entreprise, tarifs, horaires, activités...
+              {activeKnowledge.length} {t('admin.settings.clara.knowledge.characters')}
             </p>
 
             {/* Save Button */}
@@ -863,7 +865,7 @@ export function ClaraSection({ isDark }: ClaraSectionProps) {
                 ) : (
                   <Save className="w-4 h-4" />
                 )}
-                Sauvegarder
+                {t('admin.settings.clara.actions.save')}
               </button>
             </div>
           </div>
@@ -876,7 +878,7 @@ export function ClaraSection({ isDark }: ClaraSectionProps) {
             <div>
               <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
                 <Key className="w-4 h-4 inline mr-2" />
-                Provider IA
+                {t('admin.settings.clara.model.provider')}
               </label>
               <div className="grid grid-cols-3 gap-3">
                 {Object.entries(providers).map(([providerId, provider]) => {
@@ -915,7 +917,7 @@ export function ClaraSection({ isDark }: ClaraSectionProps) {
                         <div className={`w-2 h-2 rounded-full ${isConfigured ? 'bg-green-500' : 'bg-red-500'}`} />
                       </div>
                       <span className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                        {provider.models.length} modèles
+                        {provider.models.length} {t('admin.settings.clara.model.models_count')}
                       </span>
                     </button>
                   )
@@ -927,7 +929,7 @@ export function ClaraSection({ isDark }: ClaraSectionProps) {
             <div>
               <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
                 <Sparkles className="w-4 h-4 inline mr-2" />
-                Modèle ({providers[settings.provider]?.name || settings.provider})
+                {t('admin.settings.clara.model.model_label')} ({providers[settings.provider]?.name || settings.provider})
               </label>
               <select
                 value={settings.model}
@@ -950,7 +952,7 @@ export function ClaraSection({ isDark }: ClaraSectionProps) {
             <div>
               <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
                 <Thermometer className="w-4 h-4 inline mr-2" />
-                Température: {settings.temperature}
+                {t('admin.settings.clara.model.temperature')}: {settings.temperature}
               </label>
               <input
                 type="range"
@@ -962,8 +964,8 @@ export function ClaraSection({ isDark }: ClaraSectionProps) {
                 className="w-full accent-pink-500"
               />
               <div className={`flex justify-between text-xs mt-1 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
-                <span>0 (Précis)</span>
-                <span>1 (Créatif)</span>
+                <span>0 ({t('admin.settings.clara.model.temperature_precise')})</span>
+                <span>1 ({t('admin.settings.clara.model.temperature_creative')})</span>
               </div>
             </div>
 
@@ -971,7 +973,7 @@ export function ClaraSection({ isDark }: ClaraSectionProps) {
             <div>
               <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
                 <Hash className="w-4 h-4 inline mr-2" />
-                Tokens maximum (longueur réponse)
+                {t('admin.settings.clara.model.max_tokens')}
               </label>
               <input
                 type="number"
@@ -992,7 +994,7 @@ export function ClaraSection({ isDark }: ClaraSectionProps) {
               <div>
                 <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
                   <Clock className="w-4 h-4 inline mr-2" />
-                  Limite / minute
+                  {t('admin.settings.clara.model.rate_limit_minute')}
                 </label>
                 <input
                   type="number"
@@ -1010,7 +1012,7 @@ export function ClaraSection({ isDark }: ClaraSectionProps) {
               <div>
                 <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
                   <Clock className="w-4 h-4 inline mr-2" />
-                  Limite / heure
+                  {t('admin.settings.clara.model.rate_limit_hour')}
                 </label>
                 <input
                   type="number"
@@ -1031,7 +1033,7 @@ export function ClaraSection({ isDark }: ClaraSectionProps) {
             <div>
               <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
                 <Users className="w-4 h-4 inline mr-2" />
-                Messages max par conversation
+                {t('admin.settings.clara.model.max_messages')}
               </label>
               <input
                 type="number"
@@ -1063,7 +1065,7 @@ export function ClaraSection({ isDark }: ClaraSectionProps) {
                 ) : (
                   <Save className="w-4 h-4" />
                 )}
-                Sauvegarder
+                {t('admin.settings.clara.actions.save')}
               </button>
             </div>
           </div>
