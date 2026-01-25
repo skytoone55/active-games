@@ -663,13 +663,17 @@ export const generateBookingLink = tool({
     type: z.enum(['game', 'event']).describe('Booking type'),
     players: z.number().min(1).describe('Number of players/participants'),
     gameArea: z.enum(['ACTIVE', 'LASER', 'MIX']).optional().describe('Game area (required for game type)'),
-    numberOfGames: z.number().min(1).max(5).optional().describe('Number of games (for game type, usually 1-3)'),
+    numberOfGames: z.number().min(1).max(6).optional().describe(`Number of games (tranches de 30min pour ACTIVE):
+      - For LASER: number of parties (1, 2, or 3)
+      - For ACTIVE: numberOfGames in 30min blocks (2=1h/100₪, 3=1h30/140₪, 4=2h/180₪)
+      - For MIX: always 1 (fixed 30min Active + 1 Laser = 120₪)
+      IMPORTANT: Active Games uses 30min blocks. 2 games = 1h, 3 games = 1h30, 4 games = 2h.`),
     date: z.string().describe('Date in YYYY-MM-DD format'),
     time: z.string().describe('Time in HH:MM format'),
     firstName: z.string().optional().describe('Customer first name'),
     lastName: z.string().optional().describe('Customer last name'),
     phone: z.string().optional().describe('Customer phone number'),
-    email: z.string().optional().describe('Customer email'),
+    email: z.string().optional().describe('Customer email (ALWAYS ask for it)'),
     eventType: z.string().optional().describe('Event type (for event bookings): birthday, bar_mitzvah, corporate, party, other'),
   }),
   execute: async ({ branchSlug, type, players, gameArea, numberOfGames, date, time, firstName, lastName, phone, email, eventType }) => {

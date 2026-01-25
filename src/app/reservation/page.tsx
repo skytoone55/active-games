@@ -42,7 +42,7 @@ function ReservationContent() {
     branchSlug: null,
     type: null,
     gameArea: null,
-    numberOfGames: 1, // Par défaut 1 jeu (sera ajusté selon l'activité)
+    numberOfGames: 2, // Par défaut 2 (= 1h pour Active, sera ajusté selon l'activité)
     players: null,
     date: null,
     time: null,
@@ -415,9 +415,10 @@ function ReservationContent() {
   // Sélection du type de jeu (pour Game uniquement)
   const handleGameAreaSelect = (gameArea: 'ACTIVE' | 'LASER' | 'MIX') => {
     // Définir le nombre de jeux par défaut selon le type
-    // ACTIVE et LASER = 1 par défaut (ACTIVE = 1h, LASER = 1 partie)
-    // MIX = toujours 1 (formule fixe)
-    const defaultGames = 1
+    // ACTIVE: numberOfGames en tranches de 30min (2 = 1h, 3 = 1h30, 4 = 2h)
+    // LASER: numberOfGames = nombre de parties
+    // MIX: toujours 1 (formule fixe 30min Active + 1 Laser)
+    const defaultGames = gameArea === 'LASER' ? 1 : gameArea === 'MIX' ? 1 : 2 // 2 = 1h pour Active
     setBookingData({ ...bookingData, gameArea, numberOfGames: defaultGames })
     // Ne pas changer d'étape - on attend la sélection du nombre de jeux
   }
@@ -1642,11 +1643,12 @@ function ReservationContent() {
                       <span className="text-gray-400">{translations.booking?.summary?.duration || 'Duration:'}</span>
                       <span className="font-bold">
                         {bookingData.gameArea === 'ACTIVE' && (
-                          bookingData.numberOfGames === 1 ? '1h' :
-                          bookingData.numberOfGames === 2 ? '2h' :
-                          bookingData.numberOfGames === 3 ? '3h' :
-                          bookingData.numberOfGames === 4 ? '4h' :
-                          `${bookingData.numberOfGames}h`
+                          bookingData.numberOfGames === 2 ? '1h' :
+                          bookingData.numberOfGames === 3 ? '1h30' :
+                          bookingData.numberOfGames === 4 ? '2h' :
+                          bookingData.numberOfGames === 5 ? '2h30' :
+                          bookingData.numberOfGames === 6 ? '3h' :
+                          `${Math.floor(bookingData.numberOfGames * 30 / 60)}h${bookingData.numberOfGames * 30 % 60 > 0 ? (bookingData.numberOfGames * 30 % 60) : ''}`
                         )}
                         {bookingData.gameArea === 'LASER' && (
                           `${bookingData.numberOfGames} ${bookingData.numberOfGames === 1
@@ -2016,11 +2018,12 @@ function ReservationContent() {
                         <span className="text-gray-400">{translations.booking?.summary?.duration || 'Duration:'}</span>
                         <span className="font-bold text-white">
                           {bookingData.gameArea === 'ACTIVE' && (
-                            bookingData.numberOfGames === 1 ? '1h' :
-                            bookingData.numberOfGames === 2 ? '2h' :
-                            bookingData.numberOfGames === 3 ? '3h' :
-                            bookingData.numberOfGames === 4 ? '4h' :
-                            `${bookingData.numberOfGames}h`
+                            bookingData.numberOfGames === 2 ? '1h' :
+                            bookingData.numberOfGames === 3 ? '1h30' :
+                            bookingData.numberOfGames === 4 ? '2h' :
+                            bookingData.numberOfGames === 5 ? '2h30' :
+                            bookingData.numberOfGames === 6 ? '3h' :
+                            `${Math.floor(bookingData.numberOfGames * 30 / 60)}h${bookingData.numberOfGames * 30 % 60 > 0 ? (bookingData.numberOfGames * 30 % 60) : ''}`
                           )}
                           {bookingData.gameArea === 'LASER' && (
                             `${bookingData.numberOfGames} ${bookingData.numberOfGames === 1
