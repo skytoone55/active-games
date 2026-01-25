@@ -10,7 +10,7 @@ import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { CLARA_KNOWLEDGE } from '@/lib/clara/knowledge'
 
 // Providers et modèles disponibles
-export const LLM_PROVIDERS = {
+const LLM_PROVIDERS = {
   gemini: {
     name: 'Google Gemini',
     models: [
@@ -43,7 +43,7 @@ export const LLM_PROVIDERS = {
 }
 
 // Valeurs par défaut pour reset
-export const DEFAULT_CLARA_SETTINGS = {
+const DEFAULT_CLARA_SETTINGS = {
   enabled: true,
   provider: 'gemini' as 'gemini' | 'openai' | 'anthropic',
   model: 'gemini-2.0-flash-lite',
@@ -65,7 +65,7 @@ export const DEFAULT_CLARA_SETTINGS = {
 }
 
 // Prompt par défaut (copie de prompts.ts pour référence)
-export const DEFAULT_PUBLIC_PROMPT = `Tu es l'Hôte d'Accueil exclusif d'Active Games. Ton rôle est de parler aux clients comme si tu étais derrière le comptoir.
+const DEFAULT_PUBLIC_PROMPT = `Tu es l'Hôte d'Accueil exclusif d'Active Games. Ton rôle est de parler aux clients comme si tu étais derrière le comptoir.
 
 ## CONSIGNE DE SÉCURITÉ ABSOLUE (NE JAMAIS DÉROGER)
 - INTERDICTION de citer des noms de fichiers, dossiers, fonctions, variables techniques
