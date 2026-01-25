@@ -497,14 +497,34 @@ export function ClaraWidget({
               </div>
             )}
 
-            {/* Indicateur de chargement */}
+            {/* Indicateur de chargement - 3 points animés */}
             {isLoading && messages[messages.length - 1]?.role === 'user' && (
               <div className={`flex ${isRTL ? 'justify-end' : 'justify-start'}`}>
-                <div className="bg-white shadow-sm border border-gray-100 rounded-2xl px-4 py-3 flex items-center gap-2">
-                  <Loader2 className="w-5 h-5 animate-spin" style={{ color: primaryColor }} />
-                  <span className="text-gray-500" style={{ fontSize: `${fontSize}px` }}>
-                    {locale === 'he' ? 'קלרה חושבת...' : locale === 'fr' ? 'Clara réfléchit...' : 'Clara is thinking...'}
-                  </span>
+                <div className="bg-white shadow-sm border border-gray-100 rounded-2xl px-5 py-4 flex items-center gap-1.5">
+                  <span
+                    className="w-2 h-2 rounded-full animate-bounce"
+                    style={{
+                      backgroundColor: primaryColor,
+                      animationDelay: '0ms',
+                      animationDuration: '1s'
+                    }}
+                  />
+                  <span
+                    className="w-2 h-2 rounded-full animate-bounce"
+                    style={{
+                      backgroundColor: primaryColor,
+                      animationDelay: '150ms',
+                      animationDuration: '1s'
+                    }}
+                  />
+                  <span
+                    className="w-2 h-2 rounded-full animate-bounce"
+                    style={{
+                      backgroundColor: primaryColor,
+                      animationDelay: '300ms',
+                      animationDuration: '1s'
+                    }}
+                  />
                 </div>
               </div>
             )}
