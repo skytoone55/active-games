@@ -325,50 +325,117 @@ export function ClaraAssistant({
     }
   }, [isResizing, detachedPosition])
 
-  // Send message to Clara
+  // Send message to Clara avec streaming
   const sendMessage = async () => {
     if (!input.trim() || loading) return
 
     const userMessage = input.trim()
     setInput('')
+
+    // Ajouter le message utilisateur
     setMessages(prev => [...prev, { role: 'user', content: userMessage }])
+
+    // Créer un placeholder pour la réponse de Clara
+    const assistantMsgId = `msg-${Date.now()}`
+    setMessages(prev => [...prev, { id: assistantMsgId, role: 'assistant', content: '' }])
     setLoading(true)
 
     try {
-      const response = await fetch('/api/admin/statistics/ask', {
+      // Récupérer le token d'auth depuis le cookie de session Supabase
+      const response = await fetch('/api/clara/chat', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({
-          question: userMessage,
+          message: userMessage,
           conversationId
-        })
+        }),
+        credentials: 'include'
       })
 
-      const data = await response.json()
+      if (!response.ok) {
+        // Fallback sur l'ancienne API si la nouvelle n'est pas disponible
+        const fallbackResponse = await fetch('/api/admin/statistics/ask', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            question: userMessage,
+            conversationId
+          })
+        })
+        const data = await fallbackResponse.json()
 
-      if (data.success) {
-        if (data.conversationId) {
-          setConversationId(data.conversationId)
+        if (data.success) {
+          if (data.conversationId) setConversationId(data.conversationId)
+          setMessages(prev => prev.map(msg =>
+            msg.id === assistantMsgId
+              ? { ...msg, content: data.answer || "Hmm, je n'ai pas compris.", proposedAction: data.proposedAction }
+              : msg
+          ))
+          loadConversations()
+        } else {
+          throw new Error(data.error || 'API error')
         }
-        setMessages(prev => [...prev, {
-          role: 'assistant',
-          content: data.answer || "Hmm, je n'ai pas compris. Tu peux reformuler ?",
-          proposedAction: data.proposedAction
-        }])
-        // Recharger la liste des conversations
-        loadConversations()
-      } else {
-        setMessages(prev => [...prev, {
-          role: 'assistant',
-          content: data.error || "Désolée, j'ai eu un souci. Réessaie !"
-        }])
+        return
+      }
+
+      // Lire le stream SSE
+      const reader = response.body?.getReader()
+      if (!reader) throw new Error('No response body')
+
+      const decoder = new TextDecoder()
+      let buffer = ''
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split('\n')
+        buffer = lines.pop() || ''
+
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue
+
+          try {
+            const data = JSON.parse(line.substring(6))
+
+            switch (data.type) {
+              case 'conversation':
+                if (data.id) setConversationId(data.id)
+                break
+
+              case 'text':
+                // Streaming: ajouter le texte progressivement
+                setMessages(prev => prev.map(msg =>
+                  msg.id === assistantMsgId
+                    ? { ...msg, content: msg.content + data.content }
+                    : msg
+                ))
+                break
+
+              case 'done':
+                // Recharger la liste des conversations
+                loadConversations()
+                break
+
+              case 'error':
+                throw new Error(data.message || 'Stream error')
+            }
+          } catch (e) {
+            if (e instanceof SyntaxError) continue
+            throw e
+          }
+        }
       }
     } catch (error) {
       console.error('Clara error:', error)
-      setMessages(prev => [...prev, {
-        role: 'assistant',
-        content: "Oups ! Je n'arrive pas à me connecter. Vérifie que la clé API est configurée."
-      }])
+      setMessages(prev => prev.map(msg =>
+        msg.id === assistantMsgId
+          ? { ...msg, content: "Oups ! Je n'arrive pas à me connecter. Vérifie que la clé API est configurée." }
+          : msg
+      ))
     } finally {
       setLoading(false)
     }

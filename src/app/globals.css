@@ -415,7 +415,8 @@ input[type="number"] {
 .whatsapp-float {
   position: fixed;
   bottom: 30px;
-  right: 30px;
+  left: 30px;
+  right: auto;
   width: 60px;
   height: 60px;
   background: #25d366;
@@ -433,7 +434,4 @@ input[type="number"] {
   box-shadow: 0 6px 30px rgba(37, 211, 102, 0.6);
 }
 
-[dir="rtl"] .whatsapp-float {
-  right: auto;
-  left: 30px;
-}
+/* WhatsApp toujours à gauche, quelle que soit la direction */

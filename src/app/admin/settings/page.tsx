@@ -10,7 +10,8 @@ import {
   ChevronRight,
   CreditCard,
   Package,
-  Wrench
+  Wrench,
+  Sparkles
 } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { useBranches } from '@/hooks/useBranches'
@@ -20,9 +21,10 @@ import { TemplatesSection } from './components/TemplatesSection'
 import { CredentialsSection } from './components/CredentialsSection'
 import { ICountCatalogSection } from './components/ICountCatalogSection'
 import { MaintenanceSection } from './components/MaintenanceSection'
+import { ClaraSection } from './components/ClaraSection'
 import { createClient } from '@/lib/supabase/client'
 
-type SettingsSection = 'templates' | 'credentials' | 'catalog' | 'maintenance'
+type SettingsSection = 'templates' | 'credentials' | 'catalog' | 'maintenance' | 'clara'
 
 export default function SettingsPage() {
   const router = useRouter()
@@ -107,6 +109,12 @@ export default function SettingsPage() {
       icon: Wrench,
       label: 'Maintenance',
       description: 'Outils de maintenance'
+    },
+    {
+      id: 'clara',
+      icon: Sparkles,
+      label: 'Clara AI',
+      description: 'Assistant virtuel'
     }
   ]
 
@@ -200,6 +208,9 @@ export default function SettingsPage() {
           )}
           {activeSection === 'maintenance' && (
             <MaintenanceSection isDark={isDark} />
+          )}
+          {activeSection === 'clara' && (
+            <ClaraSection isDark={isDark} />
           )}
         </div>
       </div>

@@ -648,3 +648,118 @@ export interface PaymentWithRelations extends Payment {
 export interface OrderWithPayments extends OrderWithRelations {
   payments?: Payment[]
 }
+
+// ============================================
+// Types pour Clara AI
+// ============================================
+
+// System Settings
+export interface SystemSetting {
+  id: string
+  key: string
+  value: Json
+  description: string | null
+  created_at: string
+  updated_at: string
+}
+
+// Clara Settings (valeur de system_settings où key = 'clara')
+export interface ClaraSettings {
+  enabled: boolean
+  provider: 'gemini' | 'openai' | 'anthropic'
+  model: string
+  max_tokens: number
+  temperature: number
+  rate_limit_per_minute: number
+  rate_limit_per_hour: number
+  session_timeout_minutes: number
+  max_conversation_messages: number
+  public_chat: {
+    enabled: boolean
+    welcome_message: string
+    quick_replies: string[]
+  }
+  crm_chat: {
+    enabled: boolean
+    features: ('search' | 'stats' | 'actions')[]
+  }
+}
+
+// Clara Branch Settings (clara_settings dans branch_settings)
+export interface ClaraBranchSettings {
+  welcome_message_override?: string
+  quick_replies_override?: string[]
+  disabled_features?: string[]
+}
+
+// Conversations IA (CRM - utilisateurs authentifiés)
+export interface AIConversation {
+  id: string
+  user_id: string
+  branch_id: string | null
+  title: string | null
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface AIMessage {
+  id: string
+  conversation_id: string
+  role: 'user' | 'assistant'
+  content: string
+  metadata: Json
+  created_at: string
+}
+
+// Conversations publiques (visiteurs)
+export interface PublicConversation {
+  id: string
+  session_id: string
+  branch_id: string | null
+  visitor_name: string | null
+  visitor_email: string | null
+  visitor_phone: string | null
+  ip_address: string | null
+  user_agent: string | null
+  locale: string
+  created_at: string
+  updated_at: string
+  last_message_at: string | null
+  is_converted: boolean
+  converted_contact_id: string | null
+}
+
+export interface PublicMessage {
+  id: string
+  conversation_id: string
+  role: 'user' | 'assistant'
+  content: string
+  metadata: Json
+  created_at: string
+}
+
+// Rate Limiting Clara
+export interface ClaraRateLimit {
+  id: string
+  identifier: string
+  request_count: number
+  window_start: string
+  created_at: string
+}
+
+// Types Insert
+export type AIConversationInsert = Omit<AIConversation, 'id' | 'created_at' | 'updated_at'>
+export type AIMessageInsert = Omit<AIMessage, 'id' | 'created_at'>
+export type PublicConversationInsert = Omit<PublicConversation, 'id' | 'created_at' | 'updated_at'>
+export type PublicMessageInsert = Omit<PublicMessage, 'id' | 'created_at'>
+
+// Types avec relations
+export interface AIConversationWithMessages extends AIConversation {
+  messages?: AIMessage[]
+}
+
+export interface PublicConversationWithMessages extends PublicConversation {
+  messages?: PublicMessage[]
+  branch?: Branch | null
+}

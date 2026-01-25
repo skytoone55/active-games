@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import './globals.css'
+import { GlobalWidgets } from '@/components'
 
 export const metadata: Metadata = {
   title: 'Active Games - New Generation Leisure Activities',
@@ -24,6 +25,7 @@ export default function RootLayout({
     <html lang="en" dir="ltr" suppressHydrationWarning>
       <body className="antialiased" suppressHydrationWarning>
         {children}
+        <GlobalWidgets />
       </body>
     </html>
   )

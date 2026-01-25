@@ -235,6 +235,10 @@
       "title_event": "פרטי אירוע ויצירת קשר",
       "subtitle_event": "אנא מלאו את פרטי יצירת הקשר שלכם ואת פרטי הזמנת האירוע"
     },
+    "step7": {
+      "title": "סיכום ותשלום",
+      "subtitle": "אנא בדקו את פרטי ההזמנה והשלימו את התשלום"
+    },
     "contact": {
       "first_name": "שם פרטי",
       "last_name": "שם משפחה",
@@ -359,15 +363,50 @@
       "back_to_site": "חזרה לאתר",
       "finished": "סיום",
       "download_reservation": "הורדת הזמנה",
-      "download_order": "הורדת הזמנה"
+      "download_order": "הורדת הזמנה",
+      "payment_success": "התשלום בוצע בהצלחה!",
+      "deposit_paid": "מקדמה שולמה:"
     },
     "arrival_note": "אנא הגיעו לפחות 10 דקות לפני השעה שנקבעה",
     "summary": {
       "title": "סיכום הזמנה",
       "branch": "סניף:",
       "type": "סוג:",
+      "activity": "פעילות:",
+      "duration": "משך:",
       "date": "תאריך:",
-      "time": "שעה:"
+      "time": "שעה:",
+      "name": "שם:",
+      "phone": "טלפון:",
+      "email": "אימייל:"
+    },
+    "payment": {
+      "title": "סיכום מחיר",
+      "breakdown": "פירוט:",
+      "total": "סה״כ:",
+      "deposit": "מקדמה לתשלום עכשיו:",
+      "remaining": "יתרה לתשלום במקום:",
+      "card_title": "תשלום מאובטח",
+      "card_number": "מספר כרטיס",
+      "expiry": "תוקף",
+      "cvv": "CVV",
+      "holder_id": "מספר תעודת זהות",
+      "secure_notice": "פרטי התשלום שלך מוצפנים ומאובטחים",
+      "loading": "מחשב...",
+      "processing": "מעבד תשלום..."
+    },
+    "game_area": {
+      "active": {
+        "title": "Active Games"
+      },
+      "laser": {
+        "title": "Laser Tag",
+        "party": "משחק",
+        "parties": "משחקים"
+      },
+      "mix": {
+        "title": "MIX (Active + Laser)"
+      }
     }
   },
   "admin": {

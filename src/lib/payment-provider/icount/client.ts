@@ -7,6 +7,31 @@ import type { ProviderCredentials, ProviderResult } from '../types'
 
 const ICOUNT_API_BASE_URL = 'https://api.icount.co.il/api/v3.php'
 
+// Timeout par défaut pour les requêtes iCount (30 secondes)
+const ICOUNT_REQUEST_TIMEOUT_MS = 30 * 1000
+
+/**
+ * Helper pour fetch avec timeout
+ */
+async function fetchWithTimeout(
+  url: string,
+  options: RequestInit,
+  timeoutMs: number = ICOUNT_REQUEST_TIMEOUT_MS
+): Promise<Response> {
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
+
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal,
+    })
+    return response
+  } finally {
+    clearTimeout(timeoutId)
+  }
+}
+
 interface ICountSession {
   sid: string
   createdAt: number
@@ -58,7 +83,7 @@ export class ICountClient {
    */
   async login(): Promise<ProviderResult<{ sid: string }>> {
     try {
-      const response = await fetch(`${ICOUNT_API_BASE_URL}/auth/login`, {
+      const response = await fetchWithTimeout(`${ICOUNT_API_BASE_URL}/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -88,6 +113,16 @@ export class ICountClient {
         },
       }
     } catch (error) {
+      // Gérer spécifiquement l'erreur de timeout
+      if (error instanceof Error && error.name === 'AbortError') {
+        return {
+          success: false,
+          error: {
+            code: 'timeout',
+            message: 'iCount API request timed out (30s)',
+          },
+        }
+      }
       return {
         success: false,
         error: {
@@ -107,7 +142,7 @@ export class ICountClient {
     }
 
     try {
-      await fetch(`${ICOUNT_API_BASE_URL}/auth/logout`, {
+      await fetchWithTimeout(`${ICOUNT_API_BASE_URL}/auth/logout`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -187,7 +222,7 @@ export class ICountClient {
 
       const url = `${ICOUNT_API_BASE_URL}/${module}/${method}`
 
-      const response = await fetch(url, {
+      const response = await fetchWithTimeout(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -212,7 +247,7 @@ export class ICountClient {
         const newSid = await this.getSessionId()
         if (newSid) {
           retryParams.sid = newSid
-          const retryResponse = await fetch(url, {
+          const retryResponse = await fetchWithTimeout(url, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -235,6 +270,17 @@ export class ICountClient {
         },
       }
     } catch (error) {
+      // Gérer spécifiquement l'erreur de timeout
+      if (error instanceof Error && error.name === 'AbortError') {
+        console.error(`[ICOUNT] Request timeout for ${module}/${method}`)
+        return {
+          success: false,
+          error: {
+            code: 'timeout',
+            message: 'iCount API request timed out (30s)',
+          },
+        }
+      }
       return {
         success: false,
         error: {

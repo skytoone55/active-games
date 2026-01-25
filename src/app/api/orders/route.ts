@@ -25,6 +25,7 @@ import { logOrderAction, logBookingAction, logContactAction, getClientIpFromHead
 import { sendBookingConfirmationEmail } from '@/lib/email-sender'
 import { syncContactToICountBackground } from '@/lib/icount-sync'
 import { calculateBookingPrice } from '@/lib/price-calculator'
+import { checkRateLimit, getClientIp } from '@/lib/rate-limiter'
 import type { ICountProduct, ICountEventFormula, ICountRoom } from '@/hooks/usePricingData'
 // iCount offers removed - invoice+receipt created only at order close
 import type { EventRoom, LaserRoom, UserRole, Booking, Branch, Contact } from '@/lib/supabase/types'
@@ -300,6 +301,19 @@ async function findOrCreateContact(
  */
 export async function POST(request: NextRequest) {
   console.log('[ORDER API] POST called')
+
+  // Rate limiting pour les requêtes publiques (5 req/min par IP)
+  const clientIp = getClientIp(request.headers)
+  const rateLimit = checkRateLimit(clientIp, 5, 60 * 1000)
+
+  if (!rateLimit.success) {
+    console.warn(`[ORDER API] Rate limit exceeded for IP: ${clientIp}`)
+    return NextResponse.json(
+      { success: false, error: 'Too many requests. Please wait a moment.', messageKey: 'errors.rateLimitExceeded' },
+      { status: 429 }
+    )
+  }
+
   try {
     const body = await request.json()
     console.log('[ORDER API] Body received:', { order_type: body.order_type, customer_email: body.customer_email })
@@ -759,12 +773,29 @@ export async function POST(request: NextRequest) {
         )
       }
 
+      // Helper pour rollback complet du booking et ses dépendances
+      const rollbackEventBooking = async (bookingId: string) => {
+        await supabase.from('game_sessions').delete().eq('booking_id', bookingId)
+        await supabase.from('booking_slots').delete().eq('booking_id', bookingId)
+        await supabase.from('booking_contacts').delete().eq('booking_id', bookingId)
+        await supabase.from('bookings').delete().eq('id', bookingId)
+      }
+
       // Créer booking_contacts
-      await supabase.from('booking_contacts').insert({
+      const { error: contactsError } = await supabase.from('booking_contacts').insert({
         booking_id: booking.id,
         contact_id: contactId,
         is_primary: true
       })
+
+      if (contactsError) {
+        console.error('Booking contacts creation error:', contactsError)
+        await rollbackEventBooking(booking.id)
+        return NextResponse.json(
+          { success: false, error: 'Failed to create booking contacts' },
+          { status: 500 }
+        )
+      }
 
       // Créer les slots (uniquement pour les sessions ACTIVE, comme dans l'admin)
       const eventSlots = eventGameSessions
@@ -779,7 +810,15 @@ export async function POST(request: NextRequest) {
         }))
 
       if (eventSlots.length > 0) {
-        await supabase.from('booking_slots').insert(eventSlots)
+        const { error: slotsError } = await supabase.from('booking_slots').insert(eventSlots)
+        if (slotsError) {
+          console.error('Booking slots creation error:', slotsError)
+          await rollbackEventBooking(booking.id)
+          return NextResponse.json(
+            { success: false, error: 'Failed to create booking slots' },
+            { status: 500 }
+          )
+        }
       }
 
       // Créer les game_sessions
@@ -793,9 +832,8 @@ export async function POST(request: NextRequest) {
         .insert(sessionsToInsert)
 
       if (sessionsError) {
-        // Rollback booking
-        await supabase.from('bookings').delete().eq('id', booking.id)
         console.error('Sessions creation error:', sessionsError)
+        await rollbackEventBooking(booking.id)
         return NextResponse.json(
           { success: false, error: 'Failed to create game sessions' },
           { status: 500 }
@@ -847,7 +885,10 @@ export async function POST(request: NextRequest) {
         .single()
 
       if (orderError) {
-        // Rollback booking
+        // Rollback complet du booking et ses dépendances
+        await supabase.from('game_sessions').delete().eq('booking_id', booking.id)
+        await supabase.from('booking_slots').delete().eq('booking_id', booking.id)
+        await supabase.from('booking_contacts').delete().eq('booking_id', booking.id)
         await supabase.from('bookings').delete().eq('id', booking.id)
         return NextResponse.json(
           { success: false, error: 'Failed to create order' },
@@ -1299,12 +1340,29 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Helper pour rollback complet du booking GAME et ses dépendances
+    const rollbackGameBooking = async (bookingId: string) => {
+      await supabase.from('game_sessions').delete().eq('booking_id', bookingId)
+      await supabase.from('booking_slots').delete().eq('booking_id', bookingId)
+      await supabase.from('booking_contacts').delete().eq('booking_id', bookingId)
+      await supabase.from('bookings').delete().eq('id', bookingId)
+    }
+
     // 6. Créer booking_contacts
-    await supabase.from('booking_contacts').insert({
+    const { error: gameContactsError } = await supabase.from('booking_contacts').insert({
       booking_id: booking.id,
       contact_id: contactId,
       is_primary: true
     })
+
+    if (gameContactsError) {
+      console.error('Booking contacts creation error:', gameContactsError)
+      await rollbackGameBooking(booking.id)
+      return NextResponse.json(
+        { success: false, error: 'Failed to create booking contacts' },
+        { status: 500 }
+      )
+    }
 
     // 7. Créer les slots (basés sur les sessions créées)
     // Pour être cohérent, on utilise les sessions pour définir les slots
@@ -1337,7 +1395,15 @@ export async function POST(request: NextRequest) {
     }
 
     if (slots.length > 0) {
-      await supabase.from('booking_slots').insert(slots)
+      const { error: gameSlotsError } = await supabase.from('booking_slots').insert(slots)
+      if (gameSlotsError) {
+        console.error('Booking slots creation error:', gameSlotsError)
+        await rollbackGameBooking(booking.id)
+        return NextResponse.json(
+          { success: false, error: 'Failed to create booking slots' },
+          { status: 500 }
+        )
+      }
     }
 
     // 8. Créer les game_sessions
@@ -1352,8 +1418,8 @@ export async function POST(request: NextRequest) {
         .insert(sessionsToInsert)
 
       if (sessionsError) {
-        // Rollback booking
-        await supabase.from('bookings').delete().eq('id', booking.id)
+        console.error('Sessions creation error:', sessionsError)
+        await rollbackGameBooking(booking.id)
         return NextResponse.json(
           { success: false, error: 'Failed to create game sessions' },
           { status: 500 }
@@ -1409,8 +1475,8 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (orderError) {
-      // Rollback booking
-      await supabase.from('bookings').delete().eq('id', booking.id)
+      // Rollback complet du booking et ses dépendances
+      await rollbackGameBooking(booking.id)
       return NextResponse.json(
         { success: false, error: 'Failed to create order' },
         { status: 500 }

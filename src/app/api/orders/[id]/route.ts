@@ -660,10 +660,27 @@ export async function DELETE(
       )
     }
 
-    // Annuler le devis iCount si un booking est associé (en background)
+    // Supprimer le booking et ses dépendances si associé
     if (order.booking_id) {
-      // Récupérer les infos du booking avant suppression
-      // iCount offer cancellation removed - no more offers to cancel
+      // Supprimer dans l'ordre des dépendances (enfants avant parents)
+      // Note: On garde les contacts car ils sont indépendants des bookings
+      await supabase.from('game_sessions').delete().eq('booking_id', order.booking_id)
+      await supabase.from('booking_slots').delete().eq('booking_id', order.booking_id)
+      await supabase.from('booking_contacts').delete().eq('booking_id', order.booking_id)
+      await supabase.from('bookings').delete().eq('id', order.booking_id)
+
+      // Logger la suppression du booking
+      await logBookingAction({
+        userId: user.id,
+        userRole: user.role as UserRole,
+        userName: `${user.profile.first_name} ${user.profile.last_name}`,
+        action: 'deleted',
+        bookingId: order.booking_id,
+        bookingRef: order.request_reference,
+        branchId: order.branch_id,
+        details: { deletedWithOrder: true, orderId: id },
+        ipAddress
+      })
     }
 
     const { error } = await supabase
@@ -690,7 +707,8 @@ export async function DELETE(
       details: {
         customerName: `${order.customer_first_name} ${order.customer_last_name || ''}`.trim(),
         status: order.status,
-        orderType: order.order_type
+        orderType: order.order_type,
+        bookingDeleted: !!order.booking_id
       },
       ipAddress
     })

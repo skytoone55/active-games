@@ -1,8 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { checkRateLimit, getClientIp } from '@/lib/rate-limiter'
 
 const CONTACT_EMAIL = 'contact@activegames.co.il'
 
 export async function POST(request: NextRequest) {
+  // Rate limiting pour les requêtes publiques (5 req/min par IP)
+  const clientIp = getClientIp(request.headers)
+  const rateLimit = checkRateLimit(clientIp, 5, 60 * 1000)
+
+  if (!rateLimit.success) {
+    console.warn(`[CONTACT] Rate limit exceeded for IP: ${clientIp}`)
+    return NextResponse.json(
+      { error: 'Too many requests. Please wait a moment.' },
+      { status: 429 }
+    )
+  }
+
   try {
     const body = await request.json()
     const { name, email, message } = body

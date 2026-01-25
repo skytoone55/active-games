@@ -15,6 +15,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { getPaymentProvider } from '@/lib/payment-provider'
+import { checkRateLimit, getClientIp } from '@/lib/rate-limiter'
 import type { CreditCardInfo } from '@/lib/payment-provider/icount/credit-card'
 
 const supabase = createClient(
@@ -39,6 +40,18 @@ interface PayDepositRequest {
  * Payer l'acompte d'une commande existante
  */
 export async function POST(request: NextRequest) {
+  // Rate limiting pour les requêtes publiques (5 req/min par IP)
+  const clientIp = getClientIp(request.headers)
+  const rateLimit = checkRateLimit(clientIp, 5, 60 * 1000)
+
+  if (!rateLimit.success) {
+    console.warn(`[PAY-DEPOSIT] Rate limit exceeded for IP: ${clientIp}`)
+    return NextResponse.json(
+      { success: false, error: 'Too many requests. Please wait a moment.' },
+      { status: 429 }
+    )
+  }
+
   try {
     const body: PayDepositRequest = await request.json()
 
@@ -94,6 +107,34 @@ export async function POST(request: NextRequest) {
         { success: false, error: 'Deposit already paid' },
         { status: 400 }
       )
+    }
+
+    // PROTECTION DOUBLE PAIEMENT: Vérifier qu'il n'y a pas de paiement en cours
+    const { data: pendingPayments } = await supabase
+      .from('payments')
+      .select('id, created_at')
+      .eq('order_id', order_id)
+      .eq('status', 'pending')
+      .limit(1)
+
+    if (pendingPayments && pendingPayments.length > 0) {
+      const pendingPayment = pendingPayments[0]
+      const createdAt = new Date(pendingPayment.created_at)
+      const now = new Date()
+      const ageMs = now.getTime() - createdAt.getTime()
+
+      // Si le paiement pending a moins de 2 minutes, bloquer
+      if (ageMs < 2 * 60 * 1000) {
+        console.warn(`[PAY-DEPOSIT] Blocked duplicate payment attempt for order ${order_id}`)
+        return NextResponse.json(
+          { success: false, error: 'A payment is already being processed' },
+          { status: 409 }
+        )
+      } else {
+        // Si le paiement pending est trop vieux (>2min), c'est probablement un abandon
+        console.warn(`[PAY-DEPOSIT] Cleaning up stale pending payment ${pendingPayment.id}`)
+        await supabase.from('payments').delete().eq('id', pendingPayment.id)
+      }
     }
 
     // Récupérer le provider de paiement pour cette branche

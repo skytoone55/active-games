@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import { MapPin, Calendar, Clock, ChevronRight, ChevronLeft, Check, Users, Gamepad2, User, Phone, Mail, MessageSquare, FileText, ExternalLink, X, Home, Cake, Target, Zap, AlertCircle, CreditCard, Lock, Loader2 } from 'lucide-react'
@@ -33,6 +33,7 @@ interface BookingData {
 
 export default function ReservationPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [locale, setLocale] = useState<Locale>(defaultLocale)
   const [translations, setTranslations] = useState(getTranslations(defaultLocale))
   const [step, setStep] = useState<BookingStep>(1)
@@ -94,6 +95,74 @@ export default function ReservationPage() {
       }
     }
   }, [])
+
+  // Pré-remplir les données depuis les paramètres URL (lien généré par Clara)
+  useEffect(() => {
+    if (!searchParams) return
+
+    const branch = searchParams.get('branch')
+    const type = searchParams.get('type') as 'game' | 'event' | null
+    const players = searchParams.get('players')
+    const gameArea = searchParams.get('gameArea') as 'ACTIVE' | 'LASER' | 'MIX' | null
+    const numberOfGames = searchParams.get('games')
+    const date = searchParams.get('date')
+    const time = searchParams.get('time')
+    const firstName = searchParams.get('firstName')
+    const lastName = searchParams.get('lastName')
+    const phone = searchParams.get('phone')
+    const email = searchParams.get('email')
+    const eventType = searchParams.get('eventType')
+
+    // Si au moins la branche est fournie, pré-remplir les données
+    if (branch) {
+      // Map branch slug to display name
+      const branchNames: Record<string, string> = {
+        'rishon-lezion': 'Rishon LeZion',
+        'petah-tikva': 'Petah Tikva',
+      }
+
+      const newBookingData: Partial<BookingData> = {
+        branchSlug: branch,
+        branch: branchNames[branch] || branch,
+      }
+
+      if (type) newBookingData.type = type
+      if (players) newBookingData.players = parseInt(players, 10)
+      if (gameArea) newBookingData.gameArea = gameArea
+      if (numberOfGames) newBookingData.numberOfGames = parseInt(numberOfGames, 10)
+      if (date) newBookingData.date = date
+      if (time) newBookingData.time = time
+      if (firstName) newBookingData.firstName = firstName
+      if (lastName) newBookingData.lastName = lastName
+      if (phone) newBookingData.phone = phone
+      if (email) newBookingData.email = email
+      if (eventType) newBookingData.eventType = eventType
+
+      setBookingData(prev => ({ ...prev, ...newBookingData }))
+
+      // Déterminer l'étape de départ selon les données fournies
+      // On va directement à l'étape 7 (paiement) si toutes les infos essentielles sont présentes
+      if (branch && type && players && date && time && firstName && phone) {
+        // Données complètes → aller à l'étape de paiement
+        setTimeout(() => setStep(7), 100)
+      } else if (branch && type && players && date && time) {
+        // Manque juste les coordonnées → étape 6
+        setTimeout(() => setStep(6), 100)
+      } else if (branch && type && players && date) {
+        // Manque l'heure → étape 5
+        setTimeout(() => setStep(5), 100)
+      } else if (branch && type && players && (type === 'event' || gameArea)) {
+        // Manque la date → étape 4
+        setTimeout(() => setStep(4), 100)
+      } else if (branch && type && players) {
+        // Manque le type de jeu/event → étape 3
+        setTimeout(() => setStep(3), 100)
+      } else if (branch) {
+        // Juste la branche → étape 2
+        setTimeout(() => setStep(2), 100)
+      }
+    }
+  }, [searchParams])
 
   // Fetch terms and conditions from database
   useEffect(() => {
@@ -645,6 +714,8 @@ export default function ReservationPage() {
     localStorage.setItem('locale', newLocale)
     document.documentElement.dir = getDirection(newLocale)
     document.documentElement.lang = newLocale
+    // Notifier les autres composants (GlobalWidgets) du changement de locale
+    window.dispatchEvent(new Event('localeChange'))
   }
 
   return (

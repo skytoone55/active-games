@@ -11,7 +11,6 @@ import {
   BranchesSection,
   ContactSection,
   Footer,
-  WhatsAppButton,
 } from '@/components'
 import { getTranslations, getDirection, Locale, defaultLocale } from '@/i18n'
 
@@ -34,10 +33,13 @@ export default function Home() {
     setLocale(newLocale)
     setTranslations(getTranslations(newLocale))
     localStorage.setItem('locale', newLocale)
-    
+
     // Update document direction for RTL support
     document.documentElement.dir = getDirection(newLocale)
     document.documentElement.lang = newLocale
+
+    // Notifier les autres composants (GlobalWidgets) du changement de locale
+    window.dispatchEvent(new Event('localeChange'))
   }
 
   const isRTL = locale === 'he'
@@ -63,7 +65,6 @@ export default function Home() {
       </main>
 
       <Footer translations={translations} />
-      <WhatsAppButton />
     </div>
   )
 }
