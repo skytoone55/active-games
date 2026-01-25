@@ -147,6 +147,15 @@ This tool will tell you if the slot is really available or not, and suggest alte
       }
     }
 
+    // VALIDATION CRITIQUE : EVENT nécessite minimum 15 personnes
+    if (type === 'EVENT' && participants < 15) {
+      return {
+        available: false,
+        error: `IMPOSSIBLE de créer un EVENT pour ${participants} personnes. Minimum 15 personnes requis. Pour un anniversaire de moins de 15 personnes, propose un GAME (jeu simple) avec les mêmes activités. Ne propose JAMAIS un EVENT à moins de 15 personnes.`,
+        missingInfo: []
+      }
+    }
+
     // Valider les infos selon le type
     if (type === 'GAME') {
       if (!gameArea) {
@@ -665,6 +674,16 @@ export const generateBookingLink = tool({
   }),
   execute: async ({ branchSlug, type, players, gameArea, numberOfGames, date, time, firstName, lastName, phone, email, eventType }) => {
     console.log('[Tool:generateBookingLink] Generating link with:', { branchSlug, type, players, gameArea, numberOfGames, date, time })
+
+    // VALIDATION CRITIQUE : EVENT nécessite minimum 15 personnes
+    if (type === 'event' && players < 15) {
+      return {
+        success: false,
+        error: `ERREUR : Impossible de créer un lien EVENT pour ${players} personnes. Minimum 15 personnes requis pour un EVENT. Pour moins de 15 personnes, utilise type="game" même si c'est un anniversaire.`,
+        bookingUrl: null,
+        summary: null
+      }
+    }
 
     // Construire l'URL avec les paramètres
     const params = new URLSearchParams()
