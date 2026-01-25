@@ -134,8 +134,8 @@ export async function POST(request: NextRequest) {
     // Build game durations for ACTIVE
     let gameDurations = game_durations
     if (gameDurations.length === 0 && game_area === 'ACTIVE') {
-      // Default: each game is 30 minutes
-      gameDurations = Array(number_of_games).fill('30')
+      // Default: Active Games = 60 minutes (1 hour)
+      gameDurations = Array(number_of_games).fill('60')
     }
 
     // Handle MIX (Sur Mesure) - convert to CUSTOM with 1 Laser + 30min Active

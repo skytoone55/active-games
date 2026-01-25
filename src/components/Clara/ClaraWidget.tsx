@@ -100,9 +100,10 @@ interface MessageContentProps {
   fontSize: number
   primaryColor: string
   locale: string
+  onBookingLinkClick?: () => void
 }
 
-function MessageContent({ content, isStreaming, fontSize, primaryColor, locale }: MessageContentProps) {
+function MessageContent({ content, isStreaming, fontSize, primaryColor, locale, onBookingLinkClick }: MessageContentProps) {
   const router = useRouter()
 
   // Pré-traiter le contenu pour normaliser les liens de réservation
@@ -180,6 +181,12 @@ function MessageContent({ content, isStreaming, fontSize, primaryColor, locale }
               onClick={() => {
                 // Naviguer vers la page de réservation dans le même onglet
                 router.push(part)
+                // Fermer le chat après 3 secondes pour laisser place à la page de réservation
+                if (onBookingLinkClick) {
+                  setTimeout(() => {
+                    onBookingLinkClick()
+                  }, 3000)
+                }
               }}
               className="block w-full mt-3 mb-2 px-4 py-3 rounded-xl font-semibold text-white transition-all hover:opacity-90 hover:scale-[1.02] active:scale-[0.98] shadow-lg"
               style={{
@@ -454,6 +461,7 @@ export function ClaraWidget({
                         fontSize={fontSize}
                         primaryColor={primaryColor}
                         locale={locale}
+                        onBookingLinkClick={() => setIsOpen(false)}
                       />
                     </p>
                   </div>
