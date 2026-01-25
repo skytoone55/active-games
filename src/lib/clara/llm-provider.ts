@@ -138,7 +138,6 @@ export async function streamLLMResponse(options: LLMStreamOptions) {
     model: languageModel,
     system: systemPrompt,
     messages,
-    maxTokens,
     temperature,
     tools,
     stopWhen: stepCountIs(5), // Continue après les tool calls jusqu'à 5 steps
@@ -186,7 +185,6 @@ export async function generateLLMResponse(options: LLMGenerateOptions): Promise<
     model: languageModel,
     system: systemPrompt,
     messages,
-    maxTokens,
     temperature,
     tools,
   })
@@ -222,7 +220,6 @@ export async function testLLMConnection(provider: LLMProvider, model?: string): 
     const result = await generateText({
       model: languageModel,
       prompt: 'Say "OK" if you can hear me.',
-      maxTokens: 10,
     })
 
     return {

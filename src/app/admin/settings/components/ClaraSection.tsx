@@ -277,7 +277,6 @@ export function ClaraSection({ isDark }: ClaraSectionProps) {
 
       setOriginalSettings(settings)
       setSuccess('Paramètres généraux sauvegardés')
-      setShowApiKeyInput(false)
       setTimeout(() => setSuccess(null), 3000)
 
     } catch (err) {

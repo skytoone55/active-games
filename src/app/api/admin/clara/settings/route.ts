@@ -9,6 +9,13 @@ import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { CLARA_KNOWLEDGE } from '@/lib/clara/knowledge'
 
+// Type for system_settings table (not in generated types)
+interface SystemSetting {
+  key: string
+  value: Record<string, unknown>
+  updated_at?: string
+}
+
 // Providers et modèles disponibles
 const LLM_PROVIDERS = {
   gemini: {
@@ -117,7 +124,7 @@ async function checkSuperAdmin(): Promise<{ authorized: boolean; userId?: string
     .from('profiles')
     .select('role')
     .eq('id', user.id)
-    .single()
+    .single<{ role: string }>()
 
   if (!profile || profile.role !== 'super_admin') {
     return { authorized: false }
@@ -138,27 +145,29 @@ export async function GET(request: NextRequest) {
     }
 
     const supabase = createServiceRoleClient()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const db = supabase as any
 
     // Récupérer les settings Clara
-    const { data: claraSettings } = await supabase
+    const { data: claraSettings } = await db
       .from('system_settings')
       .select('value')
       .eq('key', 'clara')
-      .single()
+      .single() as { data: SystemSetting | null }
 
     // Récupérer le prompt personnalisé (si existe)
-    const { data: promptSetting } = await supabase
+    const { data: promptSetting } = await db
       .from('system_settings')
       .select('value')
       .eq('key', 'clara_public_prompt')
-      .single()
+      .single() as { data: SystemSetting | null }
 
     // Récupérer la knowledge base personnalisée (si existe)
-    const { data: knowledgeSetting } = await supabase
+    const { data: knowledgeSetting } = await db
       .from('system_settings')
       .select('value')
       .eq('key', 'clara_knowledge')
-      .single()
+      .single() as { data: SystemSetting | null }
 
     // Récupérer les clés API de chaque provider (masquées)
     const apiKeys: Record<string, { configured: boolean; masked: string | null }> = {}
@@ -173,8 +182,8 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       settings: claraSettings?.value || DEFAULT_CLARA_SETTINGS,
-      customPrompt: promptSetting?.value?.prompt || null,
-      customKnowledge: knowledgeSetting?.value?.knowledge || null,
+      customPrompt: (promptSetting?.value as { prompt?: string })?.prompt || null,
+      customKnowledge: (knowledgeSetting?.value as { knowledge?: string })?.knowledge || null,
       defaultPrompt: DEFAULT_PUBLIC_PROMPT,
       defaultKnowledge: CLARA_KNOWLEDGE,
       providers: LLM_PROVIDERS,
@@ -202,10 +211,12 @@ export async function PUT(request: NextRequest) {
     const { settings, customPrompt, customKnowledge, resetPrompt, resetKnowledge, resetSettings } = body
 
     const supabase = createServiceRoleClient()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const db = supabase as any
 
     // Reset settings si demandé
     if (resetSettings) {
-      await supabase
+      await db
         .from('system_settings')
         .upsert({
           key: 'clara',
@@ -218,7 +229,7 @@ export async function PUT(request: NextRequest) {
 
     // Reset prompt si demandé
     if (resetPrompt) {
-      await supabase
+      await db
         .from('system_settings')
         .delete()
         .eq('key', 'clara_public_prompt')
@@ -228,7 +239,7 @@ export async function PUT(request: NextRequest) {
 
     // Reset knowledge si demandé
     if (resetKnowledge) {
-      await supabase
+      await db
         .from('system_settings')
         .delete()
         .eq('key', 'clara_knowledge')
@@ -238,7 +249,7 @@ export async function PUT(request: NextRequest) {
 
     // Mettre à jour les settings généraux
     if (settings) {
-      await supabase
+      await db
         .from('system_settings')
         .upsert({
           key: 'clara',
@@ -251,12 +262,12 @@ export async function PUT(request: NextRequest) {
     if (customPrompt !== undefined) {
       if (customPrompt === null || customPrompt === '') {
         // Supprimer le prompt personnalisé (revenir au défaut)
-        await supabase
+        await db
           .from('system_settings')
           .delete()
           .eq('key', 'clara_public_prompt')
       } else {
-        await supabase
+        await db
           .from('system_settings')
           .upsert({
             key: 'clara_public_prompt',
@@ -270,12 +281,12 @@ export async function PUT(request: NextRequest) {
     if (customKnowledge !== undefined) {
       if (customKnowledge === null || customKnowledge === '') {
         // Supprimer la knowledge personnalisée (revenir au défaut)
-        await supabase
+        await db
           .from('system_settings')
           .delete()
           .eq('key', 'clara_knowledge')
       } else {
-        await supabase
+        await db
           .from('system_settings')
           .upsert({
             key: 'clara_knowledge',

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -31,7 +31,7 @@ interface BookingData {
   eventAge: number | null // Age for birthday or bar/bat mitzvah (optional)
 }
 
-export default function ReservationPage() {
+function ReservationContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [locale, setLocale] = useState<Locale>(defaultLocale)
@@ -2279,5 +2279,23 @@ export default function ReservationPage() {
         </div>
       )}
     </div>
+  )
+}
+
+// Loading fallback component
+function LoadingFallback() {
+  return (
+    <div className="min-h-screen flex items-center justify-center">
+      <Loader2 className="w-8 h-8 animate-spin text-primary" />
+    </div>
+  )
+}
+
+// Export default with Suspense wrapper
+export default function ReservationPage() {
+  return (
+    <Suspense fallback={<LoadingFallback />}>
+      <ReservationContent />
+    </Suspense>
   )
 }
