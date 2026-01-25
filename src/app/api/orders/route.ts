@@ -371,6 +371,32 @@ export async function POST(request: NextRequest) {
     // Formater le téléphone
     const formattedPhone = formatIsraeliPhone(customer_phone)
 
+    // NOUVEAU : Chercher un order ABORTED existant pour ce client/date/heure
+    // Si trouvé, on le mettra à jour au lieu de créer un nouveau
+    const { data: existingAbortedOrder } = await supabase
+      .from('orders')
+      .select('id')
+      .eq('status', 'aborted')
+      .eq('customer_phone', formattedPhone)
+      .eq('requested_date', requested_date)
+      .eq('requested_time', requested_time)
+      .eq('branch_id', branch_id)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    const abortedOrderId = existingAbortedOrder?.id || null
+    console.log('[ORDER API] Existing aborted order:', abortedOrderId)
+
+    // Si un order ABORTED existe, le supprimer (sera remplacé par le nouveau PENDING)
+    if (abortedOrderId) {
+      await supabase
+        .from('orders')
+        .delete()
+        .eq('id', abortedOrderId)
+      console.log('[ORDER API] Deleted aborted order:', abortedOrderId)
+    }
+
     // 1. Trouver ou créer le contact (avec la langue préférée du site)
     const { contactId } = await findOrCreateContact(
       branch_id,

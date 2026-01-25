@@ -719,6 +719,44 @@ export const generateBookingLink = tool({
       'petah-tikva': 'Petah Tikva',
     }
 
+    // Créer une commande ABORTED pour tracker l'intérêt
+    // Elle sera mise à jour en PENDING si le client paie
+    try {
+      // Récupérer le branch_id
+      const { data: branch } = await supabase
+        .from('branches')
+        .select('id')
+        .eq('slug', branchSlug)
+        .single()
+
+      if (branch) {
+        await supabase
+          .from('orders')
+          .insert({
+            branch_id: branch.id,
+            order_type: type.toUpperCase(),
+            participants_count: players,
+            game_area: gameArea || null,
+            number_of_games: numberOfGames || null,
+            event_type: eventType || null,
+            scheduled_date: date,
+            scheduled_time: time,
+            customer_first_name: firstName || null,
+            customer_last_name: lastName || null,
+            customer_phone: phone || null,
+            customer_email: email || null,
+            status: 'aborted',
+            source: 'clara_chatbot',
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          })
+        console.log('[Clara] Aborted order created for tracking')
+      }
+    } catch (error) {
+      console.error('[Clara] Error creating aborted order:', error)
+      // Ne pas bloquer la génération du lien si ça échoue
+    }
+
     return {
       success: true,
       bookingUrl,

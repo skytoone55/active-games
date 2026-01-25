@@ -22,7 +22,7 @@ export type ClientType = 'individual' | 'company'
 export type GameArea = 'ACTIVE' | 'LASER' | 'MIX' | 'CUSTOM'
 
 // Types pour Orders (commandes en ligne)
-export type OrderStatus = 'pending' | 'auto_confirmed' | 'manually_confirmed' | 'cancelled' | 'closed'
+export type OrderStatus = 'aborted' | 'pending' | 'auto_confirmed' | 'manually_confirmed' | 'cancelled' | 'closed'
 export type OrderType = 'GAME' | 'EVENT'
 export type PendingReason = 'overbooking' | 'room_unavailable' | 'slot_unavailable' | 'laser_vests_full' | 'other'
 

@@ -458,6 +458,41 @@ function ReservationContent() {
     }
   }
 
+  // Créer une commande ABORTED quand le client arrive à l'étape paiement
+  const createAbortedOrder = async () => {
+    try {
+      const response = await fetch('/api/orders/aborted', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          branch_id: bookingData.branch?.id,
+          order_type: bookingData.type?.toUpperCase(),
+          participants_count: bookingData.players,
+          game_area: bookingData.gameArea,
+          number_of_games: bookingData.numberOfGames,
+          event_type: bookingData.eventType,
+          scheduled_date: bookingData.date,
+          scheduled_time: bookingData.time,
+          customer_first_name: bookingData.firstName,
+          customer_last_name: bookingData.lastName,
+          customer_phone: bookingData.phone,
+          customer_email: bookingData.email,
+          source: 'public_booking'
+        })
+      })
+
+      const data = await response.json()
+      if (data.success) {
+        console.log('[ABORTED] Order created:', data.order_id)
+        // Stocker l'ID pour le mettre à jour après paiement
+        sessionStorage.setItem('aborted_order_id', data.order_id)
+      }
+    } catch (error) {
+      console.error('[ABORTED] Error creating order:', error)
+      // Ne pas bloquer l'utilisateur si ça échoue
+    }
+  }
+
   const handleContactInfoChange = (field: 'firstName' | 'lastName' | 'phone' | 'email' | 'specialRequest', value: string | number) => {
     setBookingData({ ...bookingData, [field]: value })
     
@@ -2091,7 +2126,10 @@ function ReservationContent() {
           {/* Step 6: Next button to go to payment step */}
           {step === 6 && (
             <button
-              onClick={() => setStep(7)}
+              onClick={async () => {
+                await createAbortedOrder()
+                setStep(7)
+              }}
               disabled={
                 !bookingData.firstName ||
                 !bookingData.lastName ||
