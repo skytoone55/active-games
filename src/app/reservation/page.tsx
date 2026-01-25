@@ -461,11 +461,24 @@ function ReservationContent() {
   // Créer une commande ABORTED quand le client arrive à l'étape paiement
   const createAbortedOrder = async () => {
     try {
+      // Récupérer le branch_id à partir du slug
+      if (!bookingData.branchSlug) {
+        console.warn('[ABORTED] No branch slug available')
+        return
+      }
+
+      const branchRes = await fetch(`/api/branches?slug=${bookingData.branchSlug}`)
+      const branchData = await branchRes.json()
+      if (!branchData.success || !branchData.branch?.id) {
+        console.warn('[ABORTED] Could not find branch ID')
+        return
+      }
+
       const response = await fetch('/api/orders/aborted', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          branch_id: bookingData.branch?.id,
+          branch_id: branchData.branch.id,
           order_type: bookingData.type?.toUpperCase(),
           participants_count: bookingData.players,
           game_area: bookingData.gameArea,
