@@ -36,7 +36,7 @@ export interface LLMGenerateOptions {
 
 // Defaults
 const DEFAULT_PROVIDER: LLMProvider = 'gemini'
-const DEFAULT_MAX_TOKENS = 4096
+const DEFAULT_MAX_TOKENS = 20000
 const DEFAULT_TEMPERATURE = 0.7
 
 // Default models par provider
@@ -140,7 +140,7 @@ export async function streamLLMResponse(options: LLMStreamOptions) {
     messages,
     temperature,
     tools,
-    stopWhen: stepCountIs(5), // Continue après les tool calls jusqu'à 5 steps
+    stopWhen: stepCountIs(10), // Continue après les tool calls jusqu'à 10 steps
     onStepFinish: (step) => {
       console.log('[LLM] Step finished:', {
         hasText: !!step.text,

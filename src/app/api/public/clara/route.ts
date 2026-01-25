@@ -106,7 +106,7 @@ export async function POST(request: NextRequest) {
     await addPublicMessage(conversation.id, 'user', message)
 
     // Récupérer l'historique (limité pour les visiteurs)
-    const messages = await getPublicMessages(conversation.id, 20)
+    const messages = await getPublicMessages(conversation.id, 50)
     const aiMessages = convertToAIMessages(messages)
     const truncatedMessages = truncateHistory(aiMessages, 15000)
 
