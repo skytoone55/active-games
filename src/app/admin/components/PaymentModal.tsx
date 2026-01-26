@@ -152,7 +152,9 @@ export function PaymentModal({
       if (useExistingPreauth && existingPreauth) return true
       // Si on utilise une carte stockée
       if (useStoredCard && storedCard) return true
-      // Sinon valider les champs carte
+      // Si mode 'payment' avec carte (PayPages) - pas besoin de valider les champs carte
+      if (mode === 'payment' && paymentMethod === 'card') return true
+      // Sinon valider les champs carte (mode preauth uniquement)
       const cleanedNumber = ccNumber.replace(/\s/g, '')
       if (cleanedNumber.length < 13 || cleanedNumber.length > 19) return false
       if (ccValidity.length !== 5) return false // MM/YY format
@@ -201,18 +203,13 @@ export function PaymentModal({
       else if (useStoredCard && storedCard) {
         data.tokenId = storedCard.tokenId
       }
-      // Mode paiement: nouvelle carte
+      // Mode paiement: nouvelle carte -> utiliser PayPages (cardInfo déclenche la redirection)
       else {
         data.cardInfo = {
-          cc_number: ccNumber.replace(/\s/g, ''),
-          cc_validity: ccValidity.replace('/', ''),
-          cc_cvv: ccCvv,
-          cc_holder_id: ccHolderId,
-          cc_holder_name: ccHolderName || undefined,
-        }
-        // Sauvegarder la carte si demandé
-        if (saveCard) {
-          data.saveCard = true
+          cc_number: '',
+          cc_validity: '',
+          cc_cvv: '',
+          cc_holder_id: '',
         }
       }
     } else if (paymentMethod === 'check') {
@@ -615,10 +612,25 @@ export function PaymentModal({
                     </div>
                   )}
 
-                  {/* New card fields - show if:
-                      - In preauth mode (always need card for new preauth)
-                      - In payment mode without preauth selected and without stored card selected */}
-                  {(mode === 'preauth' || (!useExistingPreauth && (!storedCard || !useStoredCard))) && (
+                  {/* PayPages Notice - Card payment via hosted page */}
+                  {(paymentMethod === 'card' && !useExistingPreauth && !useStoredCard) && (
+                    <div className={`rounded-xl border p-4 ${
+                      isDark ? 'bg-blue-900/20 border-blue-700/30' : 'bg-blue-50 border-blue-200'
+                    }`}>
+                      <div className="flex items-center gap-2 mb-2">
+                        <Lock className="w-5 h-5 text-blue-500" />
+                        <span className={`font-medium ${isDark ? 'text-blue-300' : 'text-blue-700'}`}>
+                          {t('admin.payment.card_title') || 'Secure Payment'}
+                        </span>
+                      </div>
+                      <p className={`text-sm ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
+                        {t('admin.payment.paypages_notice') || 'A secure payment window will open. Card data never touches your server.'}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Preauth fields - keep for J5 preauth only */}
+                  {mode === 'preauth' && (
                     <div className="space-y-4">
                       {/* Card number */}
                       <div>
@@ -723,29 +735,6 @@ export function PaymentModal({
                         />
                       </div>
 
-                      {/* Save card option - only in payment mode */}
-                      {mode === 'payment' && (
-                        <div className={`p-4 rounded-xl border ${
-                          isDark ? 'border-gray-700' : 'border-gray-200'
-                        }`}>
-                          <label className="flex items-center gap-3 cursor-pointer">
-                            <input
-                              type="checkbox"
-                              checked={saveCard}
-                              onChange={(e) => setSaveCard(e.target.checked)}
-                              className="w-5 h-5 rounded border-gray-300 text-blue-500 focus:ring-blue-500"
-                            />
-                            <div>
-                              <span className={isDark ? 'text-white' : 'text-gray-900'}>
-                                {t('admin.payment.save_card')}
-                              </span>
-                              <p className={`text-xs mt-0.5 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
-                                {t('admin.payment.save_card_description')}
-                              </p>
-                            </div>
-                          </label>
-                        </div>
-                      )}
 
                       {/* Preauth info message */}
                       {mode === 'preauth' && (

@@ -809,7 +809,9 @@
       "preauth_will_be_captured": "This pre-authorization will be used for payment",
       "preauth_card_only": "Pre-authorization is only available with credit card",
       "preauth_info_title": "Pre-authorization (J5)",
-      "preauth_info_desc": "The client will receive an SMS validation. The amount will be reserved without being charged. You can charge it later."
+      "preauth_info_desc": "The client will receive an SMS validation. The amount will be reserved without being charged. You can charge it later.",
+      "card_title": "Secure Payment",
+      "paypages_notice": "A secure payment window will open. Card data never touches your server."
     },
     "users": {
       "title": "User Management",

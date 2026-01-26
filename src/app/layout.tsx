@@ -23,6 +23,20 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" dir="ltr" suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              // Disable mouse wheel on number inputs globally
+              document.addEventListener('wheel', function(e) {
+                if (document.activeElement.type === 'number') {
+                  document.activeElement.blur();
+                }
+              });
+            `,
+          }}
+        />
+      </head>
       <body className="antialiased" suppressHydrationWarning>
         {children}
         <GlobalWidgets />

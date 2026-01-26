@@ -865,7 +865,9 @@
       "preauth_will_be_captured": "Cette pre-autorisation sera utilisee pour le paiement",
       "preauth_card_only": "La pre-autorisation se fait uniquement par carte bancaire",
       "preauth_info_title": "Pre-autorisation (J5)",
-      "preauth_info_desc": "Le client recevra un SMS de validation. Le montant sera reserve sans etre debite. Vous pourrez le prelever plus tard."
+      "preauth_info_desc": "Le client recevra un SMS de validation. Le montant sera reserve sans etre debite. Vous pourrez le prelever plus tard.",
+      "card_title": "Paiement securise",
+      "paypages_notice": "Une fenetre de paiement securisee va s'ouvrir. Les donnees bancaires ne transitent jamais par votre serveur."
     },
     "users": {
       "title": "Gestion des utilisateurs",

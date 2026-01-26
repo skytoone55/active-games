@@ -243,14 +243,36 @@ export function AccountingModal({
         const result = await response.json()
 
         if (result.success) {
-          // Ne pas recharger immédiatement - laisser l'utilisateur voir le message de succès
           return { success: true }
         } else {
           return { success: false, error: result.error }
         }
       }
 
-      // Mode paiement normal
+      // Mode paiement normal - utiliser PayPages pour CB
+      if (data.paymentMethod === 'card' && data.cardInfo) {
+        const response = await fetch(`/api/orders/${orderId}/payment-admin`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            amount: data.amount,
+            paymentType: data.paymentType,
+            notes: data.notes,
+          }),
+        })
+
+        const result = await response.json()
+
+        if (result.success && result.payment_url) {
+          // Ouvrir PayPages dans nouvelle fenêtre
+          window.open(result.payment_url, '_blank', 'width=800,height=600')
+          return { success: true }
+        } else {
+          return { success: false, error: result.error }
+        }
+      }
+
+      // Paiements cash/chèque/virement - ancien endpoint
       const response = await fetch(`/api/orders/${orderId}/payment`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -260,8 +282,6 @@ export function AccountingModal({
       const result = await response.json()
 
       if (result.success) {
-        // Ne pas recharger immédiatement - laisser l'utilisateur voir le message de succès
-        // Le rechargement se fera quand le modal se ferme
         return { success: true }
       } else {
         return { success: false, error: result.error }
