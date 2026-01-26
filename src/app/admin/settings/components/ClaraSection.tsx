@@ -1038,7 +1038,7 @@ export function ClaraSection({ isDark }: ClaraSectionProps) {
               <input
                 type="number"
                 value={settings.max_conversation_messages}
-                onChange={(e) => setSettings({ ...settings, max_conversation_messages: parseInt(e.target.value) || 50 })}
+                onChange={(e) => setSettings({ ...settings, max_conversation_messages: parseInt(e.target.value) || 150 })}
                 min={10}
                 max={200}
                 className={`w-full px-4 py-3 rounded-lg border transition-colors ${

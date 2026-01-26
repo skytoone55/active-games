@@ -59,7 +59,7 @@ export async function getClaraSettings(): Promise<ClaraSettings> {
     rate_limit_per_minute: 30,
     rate_limit_per_hour: 200,
     session_timeout_minutes: 30,
-    max_conversation_messages: 50,
+    max_conversation_messages: 150,
     public_chat: {
       enabled: true,
       welcome_message: 'שלום! אני קלרה, העוזרת הווירטואלית של Active Games.',
@@ -212,7 +212,7 @@ export async function createCRMConversation(userId: string, branchId?: string): 
 /**
  * Récupère les messages d'une conversation CRM
  */
-export async function getCRMMessages(conversationId: string, limit = 50): Promise<AIMessage[]> {
+export async function getCRMMessages(conversationId: string, limit = 150): Promise<AIMessage[]> {
   const { data } = await supabase
     .from('ai_messages')
     .select('*')
@@ -342,7 +342,7 @@ export async function getOrCreatePublicConversation(
 /**
  * Récupère les messages d'une conversation publique
  */
-export async function getPublicMessages(conversationId: string, limit = 50): Promise<PublicMessage[]> {
+export async function getPublicMessages(conversationId: string, limit = 150): Promise<PublicMessage[]> {
   const { data } = await supabase
     .from('public_messages')
     .select('*')

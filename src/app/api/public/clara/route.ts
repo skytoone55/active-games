@@ -106,7 +106,7 @@ export async function POST(request: NextRequest) {
     await addPublicMessage(conversation.id, 'user', message)
 
     // Récupérer l'historique complet (toute la session)
-    const messages = await getPublicMessages(conversation.id, 50)
+    const messages = await getPublicMessages(conversation.id, 150)
     const aiMessages = convertToAIMessages(messages)
     const truncatedMessages = truncateHistory(aiMessages, 50000) // Limite de sécurité très haute
 
@@ -235,7 +235,7 @@ export async function GET(request: NextRequest) {
       const conversation = await getOrCreatePublicConversation(sessionId)
       if (conversation) {
         conversationId = conversation.id
-        const messages = await getPublicMessages(conversation.id, 50)
+        const messages = await getPublicMessages(conversation.id, 150)
         history = messages.map(msg => ({
           role: msg.role as 'user' | 'assistant',
           content: msg.content,

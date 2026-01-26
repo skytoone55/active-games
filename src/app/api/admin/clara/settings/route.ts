@@ -60,7 +60,7 @@ const DEFAULT_CLARA_SETTINGS = {
   rate_limit_per_minute: 30,
   rate_limit_per_hour: 200,
   session_timeout_minutes: 30,
-  max_conversation_messages: 50,
+  max_conversation_messages: 150,
   public_chat: {
     enabled: true,
     welcome_message: 'שלום! אני קלרה, העוזרת הווירטואלית של Active Games.',
