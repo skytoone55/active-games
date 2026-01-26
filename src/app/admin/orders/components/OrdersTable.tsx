@@ -278,6 +278,7 @@ export function OrdersTable({ orders, isDark, onCancel, onViewOrder, onViewClien
     { value: 'auto_confirmed', label: t('admin.orders.status.auto_confirmed') },
     { value: 'manually_confirmed', label: t('admin.orders.status.manually_confirmed') },
     { value: 'closed', label: t('admin.orders.status.closed') },
+    { value: 'aborted', label: t('admin.orders.status.aborted') },
     { value: 'cancelled', label: t('admin.orders.status.cancelled') },
   ]
 
@@ -444,11 +445,11 @@ export function OrdersTable({ orders, isDark, onCancel, onViewOrder, onViewClien
             const GameIcon = getGameIcon(order.order_type, order.game_area)
             
             return (
-              <div 
+              <div
                 key={order.id}
                 className={`grid grid-cols-12 gap-2 px-4 py-3 items-center hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer ${
                   order.status === 'pending' ? 'bg-red-50/30 dark:bg-red-900/10' : ''
-                } ${order.status === 'cancelled' ? 'opacity-60' : ''}`}
+                } ${order.status === 'cancelled' || order.status === 'aborted' ? 'opacity-60' : ''}`}
                 onClick={() => onViewOrder(order)}
               >
                 {/* Type */}
@@ -561,7 +562,7 @@ export function OrdersTable({ orders, isDark, onCancel, onViewOrder, onViewClien
                   <span className={`text-xs font-mono truncate ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
                     {order.booking?.reference_code || order.request_reference}
                   </span>
-                  {onOpenAccounting && (
+                  {onOpenAccounting && order.status !== 'aborted' && (
                     <button
                       onClick={(e) => {
                         e.stopPropagation()
@@ -577,7 +578,7 @@ export function OrdersTable({ orders, isDark, onCancel, onViewOrder, onViewClien
                       <Receipt className="w-4 h-4" />
                     </button>
                   )}
-                  {onCloseOrder && order.status !== 'closed' && order.status !== 'cancelled' && (
+                  {onCloseOrder && order.status !== 'closed' && order.status !== 'cancelled' && order.status !== 'aborted' && (
                     <button
                       onClick={(e) => {
                         e.stopPropagation()

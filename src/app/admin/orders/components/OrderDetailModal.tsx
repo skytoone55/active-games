@@ -214,8 +214,10 @@ export function OrderDetailModal({
       >
         {/* Header avec gradient */}
         <div className={`relative p-6 ${
-          order.status === 'pending' 
-            ? 'bg-gradient-to-r from-amber-600 to-orange-600' 
+          order.status === 'pending'
+            ? 'bg-gradient-to-r from-amber-600 to-orange-600'
+            : order.status === 'aborted'
+            ? 'bg-gradient-to-r from-orange-600 to-orange-700'
             : order.status === 'cancelled'
             ? 'bg-gradient-to-r from-gray-600 to-gray-700'
             : 'bg-gradient-to-r from-blue-600 to-cyan-600'
@@ -409,8 +411,8 @@ export function OrderDetailModal({
                 {t('admin.orders.quick_access')}
               </h3>
               
-              {/* Bouton vers Agenda - grisé si annulé */}
-              {order.status === 'cancelled' || !order.booking_id ? (
+              {/* Bouton vers Agenda - grisé si annulé ou aborted */}
+              {order.status === 'cancelled' || order.status === 'aborted' || !order.booking_id ? (
                 <>
                   <div
                     className={`w-full mb-3 flex items-center gap-3 p-3 rounded-xl cursor-not-allowed ${
@@ -428,8 +430,8 @@ export function OrderDetailModal({
                     </div>
                   </div>
                   
-                  {/* Bouton Réactiver - seulement si annulé */}
-                  {order.status === 'cancelled' && onRecreate && (
+                  {/* Bouton Réactiver - seulement si annulé ou aborted */}
+                  {(order.status === 'cancelled' || order.status === 'aborted') && onRecreate && (
                     <button
                       onClick={() => canEdit && onRecreate(order.id)}
                       disabled={!canEdit}
@@ -537,7 +539,7 @@ export function OrderDetailModal({
               )}
 
               {/* Bouton Renvoyer Email de confirmation */}
-              {onResendEmail && order.status !== 'cancelled' && (
+              {onResendEmail && order.status !== 'cancelled' && order.status !== 'aborted' && (
                 <button
                   onClick={handleResendEmail}
                   disabled={sendingEmail || !order.customer_email}
@@ -592,7 +594,7 @@ export function OrderDetailModal({
               )}
 
               {/* Bouton Renvoyer Rappel CGV - seulement pour orders admin avec CGV non validées et non fermées */}
-              {onResendCgvReminder && order.status !== 'cancelled' && order.status !== 'closed' && order.source === 'admin_agenda' && !order.cgv_validated_at && (
+              {onResendCgvReminder && order.status !== 'cancelled' && order.status !== 'aborted' && order.status !== 'closed' && order.source === 'admin_agenda' && !order.cgv_validated_at && (
                 <button
                   onClick={handleResendCgvReminder}
                   disabled={sendingCgv || !order.customer_email}
@@ -708,8 +710,8 @@ export function OrderDetailModal({
           </div>
         </div>
 
-        {/* Footer avec bouton d'annulation - masqué si annulé ou fermé */}
-        {order.status !== 'cancelled' && order.status !== 'closed' && (
+        {/* Footer avec bouton d'annulation - masqué si annulé, aborted ou fermé */}
+        {order.status !== 'cancelled' && order.status !== 'aborted' && order.status !== 'closed' && (
           <div className={`px-6 py-4 border-t ${isDark ? 'border-gray-700 bg-gray-900' : 'border-gray-200 bg-gray-50'}`}>
             <button
               onClick={() => {
