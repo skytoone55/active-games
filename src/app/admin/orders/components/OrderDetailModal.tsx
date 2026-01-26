@@ -28,6 +28,7 @@ import {
 } from 'lucide-react'
 import { useTranslation } from '@/contexts/LanguageContext'
 import type { OrderWithRelations } from '@/lib/supabase/types'
+import { formatIsraelTime } from '@/lib/dates'
 
 interface OrderDetailModalProps {
   order: OrderWithRelations
@@ -293,7 +294,9 @@ export function OrderDetailModal({
                   </div>
                   <div>
                     <p className={`font-medium text-2xl ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                      {formatTime(order.requested_time)}
+                      {order.booking?.start_datetime
+                        ? formatIsraelTime(order.booking.start_datetime, getDateLocale())
+                        : formatTime(order.requested_time)}
                     </p>
                   </div>
                 </div>
