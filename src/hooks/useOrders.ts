@@ -9,6 +9,7 @@ interface OrdersStats {
   pending: number
   auto_confirmed: number
   manually_confirmed: number
+  aborted: number
   cancelled: number
 }
 
@@ -22,6 +23,7 @@ export function useOrders(branchId: string | null) {
     pending: 0,
     auto_confirmed: 0,
     manually_confirmed: 0,
+    aborted: 0,
     cancelled: 0
   })
 
@@ -59,6 +61,7 @@ export function useOrders(branchId: string | null) {
         pending: allOrders.filter((o: Order) => o.status === 'pending').length,
         auto_confirmed: allOrders.filter((o: Order) => o.status === 'auto_confirmed').length,
         manually_confirmed: allOrders.filter((o: Order) => o.status === 'manually_confirmed').length,
+        aborted: allOrders.filter((o: Order) => o.status === 'aborted').length,
         cancelled: allOrders.filter((o: Order) => o.status === 'cancelled').length,
       })
 
