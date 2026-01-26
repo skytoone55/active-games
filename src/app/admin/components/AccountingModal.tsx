@@ -726,13 +726,30 @@ export function AccountingModal({
                           )}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between">
+                          <div className="flex items-center justify-between gap-2">
                             <p className={`font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>
                               {payment.amount.toLocaleString()} ₪
                             </p>
-                            {payment.status === 'completed' && (
-                              <CheckCircle className="w-4 h-4 text-green-500" />
-                            )}
+                            <div className="flex items-center gap-2">
+                              {payment.icount_doc_url && (
+                                <a
+                                  href={payment.icount_doc_url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className={`p-1.5 rounded-lg transition-colors ${
+                                    isDark
+                                      ? 'hover:bg-gray-600 text-blue-400 hover:text-blue-300'
+                                      : 'hover:bg-gray-200 text-blue-600 hover:text-blue-700'
+                                  }`}
+                                  title={t('admin.invoice.view_invoice')}
+                                >
+                                  <ExternalLink className="w-4 h-4" />
+                                </a>
+                              )}
+                              {payment.status === 'completed' && (
+                                <CheckCircle className="w-4 h-4 text-green-500" />
+                              )}
+                            </div>
                           </div>
                           <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
                             {new Date(payment.created_at).toLocaleDateString(getDateLocale(), {
