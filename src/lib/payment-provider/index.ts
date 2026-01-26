@@ -7,13 +7,12 @@ import { ICountClient } from './icount/client'
 import { ICountCreditCardModule } from './icount/credit-card'
 import { ICountClientsModule } from './icount/clients'
 import { ICountDocumentsModule } from './icount/documents'
-import { ICountPayPagesModule } from './icount/paypages'
 
 // Types
 export * from './types'
 
 // iCount Client & Modules
-export { ICountClient, ICountClientsModule, ICountDocumentsModule, ICountItemsModule, ICountCreditCardModule, ICountPayPagesModule } from './icount'
+export { ICountClient, ICountClientsModule, ICountDocumentsModule, ICountItemsModule, ICountCreditCardModule } from './icount'
 export type {
   ICountDocType,
   ICountDocumentItem,
@@ -30,10 +29,6 @@ export type {
   J5PreapprovalParams,
   BillCardParams,
   GetTokenParams,
-  PayPageItem,
-  GenerateSaleParams,
-  GenerateSaleResult,
-  PayPageWebhookPayload,
 } from './icount'
 
 /**
@@ -44,7 +39,6 @@ export interface PaymentProviderModules {
   creditCard: ICountCreditCardModule
   clients: ICountClientsModule
   documents: ICountDocumentsModule
-  payPages: ICountPayPagesModule
 }
 
 // Cache for payment providers by branch
@@ -102,7 +96,6 @@ export async function getPaymentProvider(branchId: string): Promise<PaymentProvi
     creditCard: new ICountCreditCardModule(client),
     clients: new ICountClientsModule(client),
     documents: new ICountDocumentsModule(client),
-    payPages: new ICountPayPagesModule(client),
   }
 
   // Cache the provider

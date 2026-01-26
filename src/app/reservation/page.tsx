@@ -75,8 +75,7 @@ function ReservationContent() {
     explanation: string
   } | null>(null)
   const [isLoadingDeposit, setIsLoadingDeposit] = useState(false)
-  // Card data removed - using PayPages instead
-  const [cardData] = useState({
+  const [cardData, setCardData] = useState({
     cc_number: '',
     cc_validity: '',
     cc_cvv: '',
@@ -538,13 +537,59 @@ function ReservationContent() {
   const [orderStatus, setOrderStatus] = useState<'auto_confirmed' | 'pending' | null>(null)
   const [orderMessage, setOrderMessage] = useState<string>('')
 
+  // Handler pour les changements de carte
+  const handleCardChange = (field: keyof typeof cardData, value: string) => {
+    let formattedValue = value
+
+    // Format card number with spaces
+    if (field === 'cc_number') {
+      formattedValue = value.replace(/\D/g, '').replace(/(.{4})/g, '$1 ').trim().slice(0, 19)
+    }
+    // Format validity as MM/YY
+    else if (field === 'cc_validity') {
+      formattedValue = value.replace(/\D/g, '')
+      if (formattedValue.length > 2) {
+        formattedValue = formattedValue.slice(0, 2) + '/' + formattedValue.slice(2, 4)
+      }
+    }
+    // CVV max 4 digits
+    else if (field === 'cc_cvv') {
+      formattedValue = value.replace(/\D/g, '').slice(0, 4)
+    }
+    // ID only digits
+    else if (field === 'cc_holder_id') {
+      formattedValue = value.replace(/\D/g, '').slice(0, 9)
+    }
+
+    setCardData(prev => ({ ...prev, [field]: formattedValue }))
+    setPaymentError(null)
+  }
+
+  // Validation de la carte
+  const isCardValid = () => {
+    const ccNumber = cardData.cc_number.replace(/\s/g, '')
+    const ccValidity = cardData.cc_validity.replace('/', '')
+
+    return (
+      ccNumber.length >= 13 &&
+      ccNumber.length <= 19 &&
+      ccValidity.length === 4 &&
+      cardData.cc_cvv.length >= 3 &&
+      cardData.cc_holder_id.length >= 7
+    )
+  }
+
   const handleConfirm = async () => {
     // Protection double-click
     if (isSubmitting || isProcessingPayment) {
       return
     }
 
-    // Validation supprimée - PayPages gère tout
+    // Si acompte requis et pas de carte valide, erreur
+    if (depositInfo && depositInfo.amount > 0 && !isCardValid()) {
+      setPaymentError('Please fill in all card details')
+      return
+    }
 
     setIsSubmitting(true)
     setPaymentError(null)
@@ -608,12 +653,7 @@ function ReservationContent() {
       }
 
       // ÉTAPE 1: Créer la commande
-      // Si acompte requis, créer order ABORTED (sera confirmé après paiement)
-      // Sinon, créer order normal (auto-confirmed)
-      const needsDeposit = depositInfo && depositInfo.amount > 0
-      const endpoint = needsDeposit ? '/api/orders/aborted' : '/api/orders'
-
-      const response = await fetch(endpoint, {
+      const response = await fetch('/api/orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -633,7 +673,6 @@ function ReservationContent() {
           event_celebrant_age: bookingData.eventAge || null,
           terms_accepted: bookingData.termsAccepted,
           locale: locale === 'he' ? 'he' : 'en',
-          source: 'public_booking'
         }),
       })
 
@@ -648,39 +687,47 @@ function ReservationContent() {
 
       const orderId = result.order_id
 
-      // ÉTAPE 2: Si acompte requis, rediriger vers PayPages
-      if (needsDeposit) {
+      // ÉTAPE 2: Si acompte requis, effectuer le paiement
+      if (depositInfo && depositInfo.amount > 0) {
         setIsProcessingPayment(true)
 
         try {
-          const paymentResponse = await fetch('/api/public/initiate-payment', {
+          const paymentResponse = await fetch('/api/public/pay-deposit', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               order_id: orderId,
               amount: depositInfo.amount,
-              payment_type: 'deposit',
+              card_info: {
+                cc_number: cardData.cc_number.replace(/\s/g, ''),
+                cc_validity: cardData.cc_validity.replace('/', ''),
+                cc_cvv: cardData.cc_cvv,
+                cc_holder_id: cardData.cc_holder_id,
+                cc_holder_name: cardData.cc_holder_name || `${bookingData.firstName} ${bookingData.lastName || ''}`.trim(),
+              },
             }),
           })
 
           const paymentResult = await paymentResponse.json()
 
-          if (!paymentResult.success || !paymentResult.payment_url) {
-            setPaymentError(paymentResult.error || 'Failed to initiate payment. Please try again.')
+          if (!paymentResult.success) {
+            // Paiement échoué - la commande est créée mais pas payée
+            setPaymentError(paymentResult.error || 'Payment failed. Please try again.')
             setIsSubmitting(false)
             setIsProcessingPayment(false)
             return
           }
 
-          // Rediriger vers PayPages iCount
-          window.location.href = paymentResult.payment_url
-          return
+          // Paiement réussi
+          setPaymentSuccess(true)
         } catch (payError) {
-          console.error('Payment initiation error:', payError)
+          console.error('Payment error:', payError)
           setPaymentError('Payment processing error. Please try again.')
           setIsSubmitting(false)
           setIsProcessingPayment(false)
           return
+        } finally {
+          setIsProcessingPayment(false)
         }
       }
 
@@ -1756,34 +1803,121 @@ function ReservationContent() {
                     </div>
                   </div>
 
-                  {/* Payment Notice */}
+                  {/* Credit Card Form */}
                   {depositInfo.amount > 0 && (
                     <div className="border-t border-primary/20 pt-6">
-                      <div className="bg-primary/10 border border-primary/30 rounded-lg p-6">
-                        <div className="flex items-center gap-3 mb-3">
-                          <Lock className="w-6 h-6 text-green-400" />
-                          <h4 className="text-lg font-bold" style={{ fontFamily: 'Orbitron, sans-serif' }}>
-                            {translations.booking?.payment?.card_title || 'Secure Payment'}
-                          </h4>
-                        </div>
-                        <p className="text-white/80 text-sm" style={{ fontFamily: 'Poppins, sans-serif' }}>
-                          {translations.booking?.payment?.secure_notice || 'You will be redirected to our secure payment page.'}
-                        </p>
-                      </div>
+                      <h4 className="text-lg font-bold mb-4 flex items-center gap-2" style={{ fontFamily: 'Orbitron, sans-serif' }}>
+                        <Lock className="w-4 h-4 text-green-400" />
+                        {translations.booking?.payment?.card_title || 'Secure Payment'}
+                      </h4>
 
-                      {/* Payment Error */}
-                      {paymentError && (
-                        <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-4 mt-4">
-                          <div className="flex items-center gap-2 text-red-500">
-                            <AlertCircle className="w-5 h-5" />
-                            <span style={{ fontFamily: 'Poppins, sans-serif' }}>{paymentError}</span>
+                      <div className="space-y-4">
+                        {/* Card Number */}
+                        <div>
+                          <label className="block text-white mb-2 text-sm font-medium" style={{ fontFamily: 'Poppins, sans-serif' }}>
+                            {translations.booking?.payment?.card_number || 'Card Number'}
+                            <span className="text-primary ml-1">*</span>
+                          </label>
+                          <input
+                            type="text"
+                            value={cardData.cc_number}
+                            onChange={(e) => handleCardChange('cc_number', e.target.value)}
+                            placeholder="1234 5678 9012 3456"
+                            maxLength={19}
+                            className="w-full border border-primary/30 rounded-lg px-4 py-3 font-medium hover:border-primary/70 transition-all backdrop-blur-sm"
+                            style={{
+                              fontFamily: 'monospace',
+                              backgroundColor: 'rgba(50, 50, 70, 0.7)',
+                              color: '#00f0ff',
+                              outline: 'none',
+                              letterSpacing: '2px'
+                            }}
+                          />
+                        </div>
+
+                        {/* Validity and CVV on same line */}
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-white mb-2 text-sm font-medium" style={{ fontFamily: 'Poppins, sans-serif' }}>
+                              {translations.booking?.payment?.expiry || 'Expiry'}
+                              <span className="text-primary ml-1">*</span>
+                            </label>
+                            <input
+                              type="text"
+                              value={cardData.cc_validity}
+                              onChange={(e) => handleCardChange('cc_validity', e.target.value)}
+                              placeholder="MM/YY"
+                              maxLength={5}
+                              className="w-full border border-primary/30 rounded-lg px-4 py-3 font-medium hover:border-primary/70 transition-all backdrop-blur-sm"
+                              style={{
+                                fontFamily: 'monospace',
+                                backgroundColor: 'rgba(50, 50, 70, 0.7)',
+                                color: '#00f0ff',
+                                outline: 'none',
+                                letterSpacing: '2px'
+                              }}
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-white mb-2 text-sm font-medium" style={{ fontFamily: 'Poppins, sans-serif' }}>
+                              CVV
+                              <span className="text-primary ml-1">*</span>
+                            </label>
+                            <input
+                              type="text"
+                              value={cardData.cc_cvv}
+                              onChange={(e) => handleCardChange('cc_cvv', e.target.value)}
+                              placeholder="123"
+                              maxLength={4}
+                              className="w-full border border-primary/30 rounded-lg px-4 py-3 font-medium hover:border-primary/70 transition-all backdrop-blur-sm"
+                              style={{
+                                fontFamily: 'monospace',
+                                backgroundColor: 'rgba(50, 50, 70, 0.7)',
+                                color: '#00f0ff',
+                                outline: 'none',
+                                letterSpacing: '2px'
+                              }}
+                            />
                           </div>
                         </div>
-                      )}
 
-                      <div className="flex items-center gap-2 text-gray-400 text-xs mt-4" style={{ fontFamily: 'Poppins, sans-serif' }}>
-                        <Lock className="w-3 h-3" />
-                        <span>{translations.booking?.payment?.secure_notice || 'Your payment information is encrypted and secure'}</span>
+                        {/* Card Holder ID */}
+                        <div>
+                          <label className="block text-white mb-2 text-sm font-medium" style={{ fontFamily: 'Poppins, sans-serif' }}>
+                            {translations.booking?.payment?.holder_id || 'ID Number (Teudat Zehut)'}
+                            <span className="text-primary ml-1">*</span>
+                          </label>
+                          <input
+                            type="text"
+                            value={cardData.cc_holder_id}
+                            onChange={(e) => handleCardChange('cc_holder_id', e.target.value)}
+                            placeholder="123456789"
+                            maxLength={9}
+                            className="w-full border border-primary/30 rounded-lg px-4 py-3 font-medium hover:border-primary/70 transition-all backdrop-blur-sm"
+                            style={{
+                              fontFamily: 'monospace',
+                              backgroundColor: 'rgba(50, 50, 70, 0.7)',
+                              color: '#00f0ff',
+                              outline: 'none'
+                            }}
+                          />
+                        </div>
+
+                        {/* Payment Error */}
+                        {paymentError && (
+                          <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-4">
+                            <div className="flex items-center gap-2 text-red-500">
+                              <AlertCircle className="w-5 h-5" />
+                              <span style={{ fontFamily: 'Poppins, sans-serif' }}>{paymentError}</span>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Security Notice */}
+                        <div className="flex items-center gap-2 text-gray-400 text-xs" style={{ fontFamily: 'Poppins, sans-serif' }}>
+                          <Lock className="w-3 h-3" />
+                          {translations.booking?.payment?.secure_notice || 'Your payment information is encrypted and secure'}
+                        </div>
                       </div>
                     </div>
                   )}
@@ -2040,17 +2174,22 @@ function ReservationContent() {
               disabled={
                 isSubmitting ||
                 isProcessingPayment ||
-                !bookingData.termsAccepted
+                !bookingData.termsAccepted ||
+                !!(depositInfo && depositInfo.amount > 0 && !isCardValid())
               }
               className={`inline-flex items-center gap-2 px-6 py-3 rounded-xl transition-all duration-300 ${
                 !isSubmitting &&
                 !isProcessingPayment &&
-                bookingData.termsAccepted
+                bookingData.termsAccepted &&
+                (!depositInfo || depositInfo.amount === 0 || isCardValid())
                   ? 'glow-button'
                   : 'bg-dark-200 border-2 border-primary/30 text-gray-300 cursor-not-allowed hover:border-primary/40'
               }`}
               style={{
-                opacity: bookingData.termsAccepted ? 1 : 0.75
+                opacity: (
+                  bookingData.termsAccepted &&
+                  (!depositInfo || depositInfo.amount === 0 || isCardValid())
+                ) ? 1 : 0.75
               }}
             >
               {isSubmitting || isProcessingPayment ? (
