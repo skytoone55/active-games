@@ -7,6 +7,7 @@ import * as Brevo from '@getbrevo/brevo'
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import type { EmailLog, EmailTemplate, Booking, Branch, EmailLogInsert } from '@/lib/supabase/types'
 import { logEmailSent } from '@/lib/activity-logger'
+import { formatIsraelDate, formatIsraelTime } from '@/lib/dates'
 
 // Client Supabase admin pour les opérations d'email (pas besoin d'auth utilisateur)
 const getAdminSupabase = () => {
@@ -319,18 +320,16 @@ export async function sendBookingConfirmationEmail(params: {
   // Déterminer la locale pour le formatage des dates
   const dateLocale = locale === 'he' ? 'he-IL' : locale === 'fr' ? 'fr-FR' : 'en-US'
 
-  // Formater la date et l'heure selon la locale
-  const bookingDate = new Date(booking.start_datetime)
-  const formattedDate = bookingDate.toLocaleDateString(dateLocale, {
+  // Formater la date et l'heure selon la locale AVEC le timezone Israel
+  // IMPORTANT: On utilise formatIsraelDate/Time pour forcer le timezone Asia/Jerusalem
+  // Sans ça, le serveur (en UTC) affiche -2h de décalage par rapport à l'agenda
+  const formattedDate = formatIsraelDate(booking.start_datetime, dateLocale, {
     weekday: 'long',
     year: 'numeric',
     month: 'long',
     day: 'numeric',
   })
-  const formattedTime = bookingDate.toLocaleTimeString(dateLocale, {
-    hour: '2-digit',
-    minute: '2-digit',
-  })
+  const formattedTime = formatIsraelTime(booking.start_datetime, dateLocale)
 
   // Déterminer l'URL de base pour les logos
   // En production, utiliser le domaine réel

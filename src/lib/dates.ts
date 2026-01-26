@@ -66,9 +66,9 @@ export function getIsraelOffset(date: Date): number {
 /**
  * Formate une date ISO en heure locale Israel pour l'affichage
  */
-export function formatIsraelTime(isoString: string): string {
+export function formatIsraelTime(isoString: string, locale: string = 'he-IL'): string {
   const date = new Date(isoString)
-  return date.toLocaleTimeString('he-IL', {
+  return date.toLocaleTimeString(locale, {
     timeZone: ISRAEL_TIMEZONE,
     hour: '2-digit',
     minute: '2-digit',
@@ -79,14 +79,15 @@ export function formatIsraelTime(isoString: string): string {
 /**
  * Formate une date ISO en date locale Israel pour l'affichage
  */
-export function formatIsraelDate(isoString: string): string {
+export function formatIsraelDate(isoString: string, locale: string = 'he-IL', options?: Intl.DateTimeFormatOptions): string {
   const date = new Date(isoString)
-  return date.toLocaleDateString('he-IL', {
+  const defaultOptions: Intl.DateTimeFormatOptions = {
     timeZone: ISRAEL_TIMEZONE,
     year: 'numeric',
     month: '2-digit',
     day: '2-digit'
-  })
+  }
+  return date.toLocaleDateString(locale, { ...defaultOptions, ...options })
 }
 
 /**
