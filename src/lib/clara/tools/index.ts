@@ -733,6 +733,44 @@ export const generateBookingLink = tool({
         // Generate reference
         const generateShortReference = () => Math.random().toString(36).substring(2, 8).toUpperCase()
 
+        // Trouver ou créer le contact pour la base marketing
+        let contactId: string | null = null
+        if (phone) {
+          // Chercher contact existant
+          const { data: existingContact } = await supabase
+            .from('contacts')
+            .select('id')
+            .eq('branch_id_main', branch.id)
+            .eq('phone', phone)
+            .single()
+
+          if (existingContact) {
+            contactId = existingContact.id
+            console.log('[Clara] Existing contact found:', contactId)
+          } else {
+            // Créer nouveau contact
+            const { data: newContact } = await supabase
+              .from('contacts')
+              .insert({
+                branch_id_main: branch.id,
+                first_name: firstName || 'Client',
+                last_name: lastName || '',
+                phone,
+                email: email || null,
+                notes_client: 'Contact créé depuis Clara chatbot (order aborted)',
+                source: 'chatbot',
+                preferred_locale: 'he'
+              })
+              .select('id')
+              .single()
+
+            if (newContact) {
+              contactId = newContact.id
+              console.log('[Clara] New contact created:', contactId)
+            }
+          }
+        }
+
         await supabase
           .from('orders')
           .insert({
@@ -748,13 +786,14 @@ export const generateBookingLink = tool({
             customer_last_name: lastName || null,
             customer_phone: phone || null,
             customer_email: email || null,
+            contact_id: contactId,
             status: 'aborted',
             source: 'clara_chatbot',
             request_reference: generateShortReference(),
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
           })
-        console.log('[Clara] Aborted order created for tracking')
+        console.log('[Clara] Aborted order created for tracking with contact:', contactId)
       }
     } catch (error) {
       console.error('[Clara] Error creating aborted order:', error)

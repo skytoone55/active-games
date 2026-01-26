@@ -21,6 +21,62 @@ function generateShortReference(): string {
   return Math.random().toString(36).substring(2, 8).toUpperCase()
 }
 
+/**
+ * Trouve ou crée un contact pour l'order ABORTED
+ * Important pour la base de données marketing/relance
+ */
+async function findOrCreateContact(
+  branchId: string,
+  firstName: string,
+  lastName: string | null,
+  phone: string,
+  email: string | null,
+  source: string
+): Promise<string | null> {
+  if (!phone) return null
+
+  console.log('[CREATE-ABORTED] findOrCreateContact - phone:', phone)
+
+  // Chercher un contact existant par téléphone
+  const { data: existing } = await supabase
+    .from('contacts')
+    .select('id')
+    .eq('branch_id_main', branchId)
+    .eq('phone', phone)
+    .single()
+
+  if (existing) {
+    console.log('[CREATE-ABORTED] Existing contact found:', existing.id)
+    return existing.id
+  }
+
+  console.log('[CREATE-ABORTED] Creating new contact...')
+
+  // Créer un nouveau contact
+  const { data: newContact, error } = await supabase
+    .from('contacts')
+    .insert({
+      branch_id_main: branchId,
+      first_name: firstName,
+      last_name: lastName || '',
+      phone,
+      email: email || null,
+      notes_client: `Contact créé depuis ${source === 'clara_chatbot' ? 'Clara chatbot' : 'formulaire public'} (order aborted)`,
+      source: source === 'clara_chatbot' ? 'chatbot' : 'website',
+      preferred_locale: 'he' // Par défaut hébreu, sera mis à jour si l'utilisateur change de langue
+    })
+    .select('id')
+    .single()
+
+  if (error || !newContact) {
+    console.error('[CREATE-ABORTED] Error creating contact:', error)
+    return null
+  }
+
+  console.log('[CREATE-ABORTED] New contact created:', newContact.id)
+  return newContact.id
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
@@ -50,6 +106,18 @@ export async function POST(request: NextRequest) {
       source
     })
 
+    // Trouver ou créer le contact pour la base marketing
+    const contactId = await findOrCreateContact(
+      branch_id,
+      customer_first_name,
+      customer_last_name,
+      customer_phone,
+      customer_email,
+      source
+    )
+
+    console.log('[CREATE-ABORTED] Contact ID:', contactId)
+
     // Créer la commande avec statut ABORTED
     const { data: order, error } = await supabase
       .from('orders')
@@ -66,6 +134,7 @@ export async function POST(request: NextRequest) {
         customer_last_name,
         customer_phone,
         customer_email,
+        contact_id: contactId,
         status: 'aborted',
         source,
         request_reference: generateShortReference(),
