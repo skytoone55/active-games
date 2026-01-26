@@ -919,8 +919,8 @@ export function AccountingModal({
                 {t('admin.orders.close_order')}
               </button>
             )}
-            {/* Bouton Envoyer facture - visible uniquement si commande fermée avec facture */}
-            {order?.status === 'closed' && Boolean((order as unknown as Record<string, unknown>).icount_invrec_url) && (
+            {/* Bouton Envoyer facture - visible dès qu'au moins un paiement a une facture */}
+            {payments.some(p => p.icount_doc_url) && (
               <button
                 onClick={handleSendInvoice}
                 disabled={sendingInvoice}

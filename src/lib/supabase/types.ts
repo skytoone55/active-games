@@ -621,6 +621,7 @@ export interface Payment {
   icount_confirmation_code: string | null
   icount_document_id: string | null
   icount_document_type: string | null
+  icount_doc_url: string | null
   cc_last4: string | null
   cc_type: string | null
   check_number: string | null
