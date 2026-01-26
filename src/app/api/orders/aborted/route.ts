@@ -17,6 +17,10 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
+function generateShortReference(): string {
+  return Math.random().toString(36).substring(2, 8).toUpperCase()
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
@@ -64,6 +68,7 @@ export async function POST(request: NextRequest) {
         customer_email,
         status: 'aborted',
         source,
+        request_reference: generateShortReference(),
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       })

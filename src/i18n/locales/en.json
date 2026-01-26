@@ -629,6 +629,7 @@
         "pending": "Pending",
         "auto_confirmed": "Auto confirmed",
         "manually_confirmed": "Manually confirmed",
+        "aborted": "Aborted",
         "cancelled": "Cancelled",
         "conversion_rate": "Conversion rate"
       },
@@ -638,6 +639,7 @@
         "pending": "Pending",
         "auto_confirmed": "Auto confirmed",
         "manually_confirmed": "Manually confirmed",
+        "aborted": "Aborted",
         "cancelled": "Cancelled",
         "closed": "Closed"
       },
@@ -645,6 +647,7 @@
         "pending": "Pending",
         "auto_confirmed": "Auto confirmed",
         "manually_confirmed": "Manually confirmed",
+        "aborted": "Aborted",
         "cancelled": "Cancelled",
         "closed": "Closed"
       },

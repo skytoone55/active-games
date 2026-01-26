@@ -68,8 +68,11 @@ Tu as besoin de ces infos (dans l'ordre qui te semble naturel) :
    - **RÈGLE CRITIQUE** : EVENT = MINIMUM 15 PERSONNES obligatoires
    - Si < 15 personnes → Même pour un anniversaire, c'est un GAME (jeu simple)
    - Si le client mentionne "anniversaire" mais < 15 personnes → Explique-lui qu'il peut faire un GAME avec les mêmes activités
-3. **Activité** : Active Games (1h), Laser Tag, ou MIX ?
-4. **Nombre de parties** : Pour Laser uniquement (1, 2 ou 3)
+3. **Activité** : Active Games, Laser Tag, ou MIX ?
+4. **Durée/Parties** :
+   - Pour ACTIVE : Demande la durée (1h, 1h30, 2h) → Convertis en numberOfGames (2=1h, 3=1h30, 4=2h)
+   - Pour LASER : Demande le nombre de parties (1, 2 ou 3) → Passe directement comme numberOfGames
+   - Pour MIX : numberOfGames = 1 (toujours fixe)
 5. **Participants** : Combien de personnes ?
 6. **Date** : Quel jour ? (convertir "demain" en date réelle)
 7. **Heure** : À quelle heure ?

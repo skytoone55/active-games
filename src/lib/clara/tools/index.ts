@@ -730,6 +730,9 @@ export const generateBookingLink = tool({
         .single()
 
       if (branch) {
+        // Generate reference
+        const generateShortReference = () => Math.random().toString(36).substring(2, 8).toUpperCase()
+
         await supabase
           .from('orders')
           .insert({
@@ -747,6 +750,7 @@ export const generateBookingLink = tool({
             customer_email: email || null,
             status: 'aborted',
             source: 'clara_chatbot',
+            request_reference: generateShortReference(),
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
           })

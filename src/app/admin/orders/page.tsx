@@ -201,6 +201,14 @@ export default function OrdersPage() {
           border: 'border-blue-500/30',
           label: t('admin.orders.status.manually_confirmed')
         }
+      case 'aborted':
+        return {
+          icon: XCircle,
+          color: 'text-orange-500',
+          bg: 'bg-orange-500/10',
+          border: 'border-orange-500/30',
+          label: t('admin.orders.status.aborted')
+        }
       case 'cancelled':
         return {
           icon: XCircle,
@@ -462,7 +470,7 @@ export default function OrdersPage() {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+        <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-6">
           <div className={`p-4 rounded-xl ${isDark ? 'bg-gray-800' : 'bg-white'} border ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
             <div className="text-2xl font-bold">{stats.total}</div>
             <div className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{t('admin.orders.stats.total')}</div>
@@ -478,6 +486,10 @@ export default function OrdersPage() {
           <div className={`p-4 rounded-xl bg-blue-500/10 border border-blue-500/30`}>
             <div className="text-2xl font-bold text-blue-500">{stats.manually_confirmed}</div>
             <div className="text-sm text-blue-500/70">{t('admin.orders.stats.manually_confirmed')}</div>
+          </div>
+          <div className={`p-4 rounded-xl bg-orange-500/10 border border-orange-500/30`}>
+            <div className="text-2xl font-bold text-orange-500">{stats.aborted || 0}</div>
+            <div className="text-sm text-orange-500/70">{t('admin.orders.stats.aborted')}</div>
           </div>
           <div className={`p-4 rounded-xl bg-red-500/10 border border-red-500/30`}>
             <div className="text-2xl font-bold text-red-500">{stats.cancelled}</div>
@@ -564,10 +576,22 @@ export default function OrdersPage() {
           </button>
 
           <button
+            onClick={() => setQuickStatusFilter('aborted')}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
+              quickStatusFilter === 'aborted'
+                ? 'bg-orange-600 text-white'
+                : isDark ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+            }`}
+          >
+            <XCircle className="w-4 h-4" />
+            {t('admin.orders.filter.aborted')} ({stats.aborted || 0})
+          </button>
+
+          <button
             onClick={() => setQuickStatusFilter('cancelled')}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
               quickStatusFilter === 'cancelled'
-                ? 'bg-gray-600 text-white'
+                ? 'bg-red-600 text-white'
                 : isDark ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
             }`}
           >

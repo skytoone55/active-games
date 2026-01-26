@@ -685,6 +685,7 @@
         "pending": "En attente",
         "auto_confirmed": "Confirmes auto",
         "manually_confirmed": "Confirmes manuel",
+        "aborted": "Abandonnes",
         "cancelled": "Annules",
         "conversion_rate": "Taux de conversion"
       },
@@ -694,6 +695,7 @@
         "pending": "En attente",
         "auto_confirmed": "Confirmes auto",
         "manually_confirmed": "Confirmes manuel",
+        "aborted": "Abandonnes",
         "cancelled": "Annulees",
         "closed": "Cloturees"
       },
@@ -701,6 +703,7 @@
         "pending": "En attente",
         "auto_confirmed": "Confirme auto",
         "manually_confirmed": "Confirme manuel",
+        "aborted": "Abandonne",
         "cancelled": "Annule",
         "closed": "Cloture"
       },

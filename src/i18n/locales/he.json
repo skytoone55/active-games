@@ -722,6 +722,7 @@
         "pending": "ממתינות",
         "auto_confirmed": "אושרו אוטומטית",
         "manually_confirmed": "אושרו ידנית",
+        "aborted": "נזנחו",
         "cancelled": "בוטלו",
         "conversion_rate": "שיעור המרה"
       },
@@ -731,6 +732,7 @@
         "pending": "ממתינות",
         "auto_confirmed": "אושרו אוטומטית",
         "manually_confirmed": "אושרו ידנית",
+        "aborted": "נזנחו",
         "cancelled": "בוטלו",
         "closed": "נסגרו"
       },
@@ -738,6 +740,7 @@
         "pending": "ממתין",
         "auto_confirmed": "אושר אוטומטית",
         "manually_confirmed": "אושר ידנית",
+        "aborted": "ננזח",
         "cancelled": "בוטל",
         "closed": "נסגר"
       },
