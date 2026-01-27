@@ -389,17 +389,18 @@ export default function AdminPage() {
         setModalDefaultBookingType(booking.type as 'GAME' | 'EVENT')
         setShowBookingModal(true)
 
-        // Chercher l'order_id correspondant
+        // Chercher l'order_id et status correspondant
         const supabase = createClient()
         supabase
           .from('orders')
-          .select('id')
+          .select('id, status')
           .eq('booking_id', booking.id)
           .single()
           .then(({ data: orderData }) => {
-            const order = orderData as { id: string } | null
+            const order = orderData as { id: string; status: string } | null
             if (order) {
               setEditingBookingOrderId(order.id)
+              setEditingBookingOrderStatus(order.status)
             }
           })
 
