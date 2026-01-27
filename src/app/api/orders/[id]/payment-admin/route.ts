@@ -197,14 +197,22 @@ export async function POST(
     }
 
     // Log l'action
-    await logOrderAction(
-      supabase,
-      id,
-      'payment_initiated',
-      user.id,
-      ipAddress,
-      `Payment initiated: ${body.amount}₪ via PayPages`
-    )
+    await logOrderAction({
+      userId: user.id,
+      userRole: user.role,
+      userName: `${user.profile.first_name} ${user.profile.last_name}`.trim() || user.email,
+      action: 'updated',
+      orderId: id,
+      orderRef: order.request_reference,
+      branchId: order.branch_id,
+      details: {
+        payment_initiated: true,
+        amount: body.amount,
+        payment_type: body.paymentType,
+        method: 'paypage'
+      },
+      ipAddress
+    })
 
     return NextResponse.json({
       success: true,
