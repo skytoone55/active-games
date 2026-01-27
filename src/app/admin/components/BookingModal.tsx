@@ -2617,7 +2617,7 @@ export function BookingModal({
             <div className="flex items-center gap-3 p-3 rounded-lg bg-amber-500/20 border border-amber-500/30">
               <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0" />
               <p className="text-sm text-amber-600 dark:text-amber-400">
-                {t('errors.orderClosed')}
+                {t('admin.errors.orderClosed')}
               </p>
             </div>
           )}
@@ -4036,7 +4036,7 @@ export function BookingModal({
                 type="button"
                 onClick={handleDeleteClick}
                 disabled={loading || !canDelete || orderStatus === 'closed'}
-                title={orderStatus === 'closed' ? t('errors.orderClosed') : !canDelete ? t('admin.common.no_permission') : undefined}
+                title={orderStatus === 'closed' ? t('admin.errors.orderClosed') : !canDelete ? t('admin.common.no_permission') : undefined}
                 className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-colors ${
                   !canDelete || orderStatus === 'closed'
                     ? 'opacity-50 cursor-not-allowed text-gray-400'
@@ -4067,7 +4067,7 @@ export function BookingModal({
               type="submit"
               onClick={handleSubmit}
               disabled={loading || parsedParticipants < 1 || (bookingType === 'EVENT' && !eventParticipantsValidation.valid) || (bookingType === 'EVENT' && (!email.trim() || !!emailError)) || (editingBooking ? !canEdit : !canCreate) || orderStatus === 'closed'}
-              title={orderStatus === 'closed' ? t('errors.orderClosed') : (editingBooking ? !canEdit : !canCreate) ? t('admin.common.no_permission') : undefined}
+              title={orderStatus === 'closed' ? t('admin.errors.orderClosed') : (editingBooking ? !canEdit : !canCreate) ? t('admin.common.no_permission') : undefined}
               className={`px-6 py-2 rounded-lg text-white flex items-center gap-2 disabled:opacity-50 ${
                 (editingBooking ? !canEdit : !canCreate) || orderStatus === 'closed' ? 'cursor-not-allowed' : ''
               }`}
