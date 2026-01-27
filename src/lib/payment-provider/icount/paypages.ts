@@ -45,6 +45,9 @@ export interface GenerateSaleParams {
   // Metadata
   income_type_id?: number
   client_type_id?: number
+
+  // Index signature for iCount API compatibility
+  [key: string]: unknown
 }
 
 export interface GenerateSaleResult {
