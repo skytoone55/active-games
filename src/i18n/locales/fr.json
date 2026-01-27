@@ -1847,6 +1847,20 @@
         "name": "Nom",
         "orders": "Commandes",
         "revenue": "CA"
+      },
+      "status": {
+        "pending": "En attente",
+        "auto_confirmed": "Auto confirmé",
+        "manually_confirmed": "Confirmé manuellement",
+        "cancelled": "Annulé",
+        "closed": "Clôturé"
+      },
+      "tabs": {
+        "overview": "Vue d'ensemble",
+        "revenue": "Chiffre d'affaires",
+        "orders": "Commandes",
+        "clients": "Clients",
+        "team": "Équipe"
       }
     }
   }

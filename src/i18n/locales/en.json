@@ -1789,6 +1789,20 @@
         "name": "Name",
         "orders": "Orders",
         "revenue": "Revenue"
+      },
+      "status": {
+        "pending": "Pending",
+        "auto_confirmed": "Auto confirmed",
+        "manually_confirmed": "Manually confirmed",
+        "cancelled": "Cancelled",
+        "closed": "Closed"
+      },
+      "tabs": {
+        "overview": "Overview",
+        "revenue": "Revenue",
+        "orders": "Orders",
+        "clients": "Clients",
+        "team": "Team"
       }
     }
   }

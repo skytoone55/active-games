@@ -78,13 +78,7 @@ const CHART_COLORS = {
   dark: ['#60a5fa', '#fb923c', '#4ade80', '#c084fc', '#f472b6', '#facc15']
 }
 
-const STATUS_COLORS: Record<string, { light: string; dark: string; label: string }> = {
-  pending: { light: 'bg-yellow-100 text-yellow-700', dark: 'bg-yellow-500/20 text-yellow-400', label: 'En attente' },
-  auto_confirmed: { light: 'bg-green-100 text-green-700', dark: 'bg-green-500/20 text-green-400', label: 'Auto confirmé' },
-  manually_confirmed: { light: 'bg-blue-100 text-blue-700', dark: 'bg-blue-500/20 text-blue-400', label: 'Confirmé manuellement' },
-  cancelled: { light: 'bg-red-100 text-red-700', dark: 'bg-red-500/20 text-red-400', label: 'Annulé' },
-  closed: { light: 'bg-purple-100 text-purple-700', dark: 'bg-purple-500/20 text-purple-400', label: 'Clôturé' },
-}
+// STATUS_COLORS sera défini dans le component pour utiliser t()
 
 export default function StatisticsPage() {
   const router = useRouter()
@@ -126,6 +120,15 @@ export default function StatisticsPage() {
     { label: t('admin.stats.date_range.year'), value: 'year' },
     { label: t('admin.stats.date_range.custom'), value: 'custom' },
   ], [t])
+
+  // Status colors with translated labels
+  const STATUS_COLORS = useMemo(() => ({
+    pending: { light: 'bg-yellow-100 text-yellow-700', dark: 'bg-yellow-500/20 text-yellow-400', label: t('admin.stats.status.pending') },
+    auto_confirmed: { light: 'bg-green-100 text-green-700', dark: 'bg-green-500/20 text-green-400', label: t('admin.stats.status.auto_confirmed') },
+    manually_confirmed: { light: 'bg-blue-100 text-blue-700', dark: 'bg-blue-500/20 text-blue-400', label: t('admin.stats.status.manually_confirmed') },
+    cancelled: { light: 'bg-red-100 text-red-700', dark: 'bg-red-500/20 text-red-400', label: t('admin.stats.status.cancelled') },
+    closed: { light: 'bg-purple-100 text-purple-700', dark: 'bg-purple-500/20 text-purple-400', label: t('admin.stats.status.closed') },
+  }), [t])
 
   // Charger les stats
   const loadStats = useCallback(async () => {
@@ -360,11 +363,11 @@ export default function StatisticsPage() {
       <div className={`${isDark ? 'bg-gray-800/50' : 'bg-gray-50'} px-6 py-3 border-b ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
         <div className="flex gap-2 overflow-x-auto">
           {[
-            { id: 'overview', label: 'Vue d\'ensemble', icon: BarChart3 },
-            { id: 'revenue', label: 'Chiffre d\'affaires', icon: DollarSign },
-            { id: 'orders', label: 'Commandes', icon: ShoppingCart },
-            { id: 'clients', label: 'Clients', icon: Users },
-            { id: 'team', label: 'Équipe', icon: UserCheck },
+            { id: 'overview', label: t('admin.stats.tabs.overview'), icon: BarChart3 },
+            { id: 'revenue', label: t('admin.stats.tabs.revenue'), icon: DollarSign },
+            { id: 'orders', label: t('admin.stats.tabs.orders'), icon: ShoppingCart },
+            { id: 'clients', label: t('admin.stats.tabs.clients'), icon: Users },
+            { id: 'team', label: t('admin.stats.tabs.team'), icon: UserCheck },
           ].map(tab => (
             <button
               key={tab.id}

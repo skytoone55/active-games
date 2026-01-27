@@ -986,10 +986,21 @@
       "modal": {
         "create_title": "צור משתמש",
         "edit_title": "ערוך משתמש",
-        "delete_title": "למחוק את המשתמש?",
+        "delete_title": "מחק משתמש",
         "delete_warning": "פעולה בלתי הפיכה",
-        "delete_message": "החשבון וכל ההרשאות של משתמש זה יימחקו לצמיתות.",
-        "delete_confirm": "מחק לצמיתות"
+        "delete_message": "האם אתה בטוח שברצונך למחוק משתמש זה?",
+        "delete_confirm": "מחק משתמש",
+        "first_name": "שם פרטי",
+        "last_name": "שם משפחה",
+        "email": "אימייל",
+        "phone": "טלפון",
+        "password": "סיסמה",
+        "password_placeholder": "הזן סיסמה",
+        "role": "תפקיד",
+        "branches": "סניפים",
+        "select_branches": "בחר סניפים",
+        "temp_password": "סיסמה זמנית",
+        "copy_password": "העתק סיסמה"
       },
       "delete_confirm": "האם אתה בטוח שברצונך למחוק את המשתמש {{name}}?",
       "no_users": "לא נמצאו משתמשים"
@@ -1837,6 +1848,20 @@
         "name": "שם",
         "orders": "הזמנות",
         "revenue": "הכנסות"
+      },
+      "status": {
+        "pending": "ממתין",
+        "auto_confirmed": "מאושר אוטומטית",
+        "manually_confirmed": "מאושר ידנית",
+        "cancelled": "מבוטל",
+        "closed": "סגור"
+      },
+      "tabs": {
+        "overview": "סקירה כללית",
+        "revenue": "הכנסות",
+        "orders": "הזמנות",
+        "clients": "לקוחות",
+        "team": "צוות"
       }
     }
   }
