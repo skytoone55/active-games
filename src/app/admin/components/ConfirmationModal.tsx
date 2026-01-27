@@ -119,13 +119,13 @@ export function ConfirmationModal({
                     : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
                 }`}
               >
-                {cancelText}
+                {cancelText || t('admin.common.cancel')}
               </button>
               <button
                 onClick={handleConfirm}
                 className={`px-4 py-2 rounded-lg transition-colors text-white ${getConfirmButtonColor()}`}
               >
-                {confirmText}
+                {confirmText || t('admin.common.confirm')}
               </button>
             </>
           )}
