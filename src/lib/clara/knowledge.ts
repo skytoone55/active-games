@@ -225,11 +225,10 @@ Les formules EVENT sont stockées dans le système avec:
 - Prix par personne pour cette tranche
 - Salle éventuelle incluse
 
-### Forfaits standards:
-**15 participants:** 2200₪ (chaque participant supplémentaire: +120₪)
-**30 participants:** 3450₪ (chaque participant supplémentaire: +100₪)
-
-### Ce qui est inclus dans les événements:
+Forfaits standards:
+15 participants: Minimum 15 perosnnes. 120₪ par personne + 400 pour la salle privee 
+30 participants: Minimum 30 perosnnes. 100₪ par personne + 600 pour la salle privee 
+Ce qui est inclus dans les événements:
 - Salle d'événement PRIVÉE
 - Système son et éclairage
 - Tables de jeu
@@ -239,9 +238,9 @@ Les formules EVENT sont stockées dans le système avec:
 - Tables 180/70 avec nappes
 - Assiettes pour snacks + verres
 
-**Pour les pizzas:** +40₪ par plateau supplémentaire
+Pour les pizzas: +40₪ par plateau supplémentaire
 
-### Salles événements:
+Salles événements:
 - Salle privée dédiée à votre groupe
 - Arène de laser tag privée pour vos parties
 - Pas de garantie sur une salle spécifique (l'attribution est faite par le complexe)
@@ -249,8 +248,9 @@ Les formules EVENT sont stockées dans le système avec:
 - Décorations personnelles OK mais SANS coller sur les murs
 
 
-### Durée événement:
+Durée événement:
 2 heures.
+
 
 ### Déroulement type d'un événement:
 1. Accueil dans la salle privée
@@ -279,9 +279,6 @@ Les formules EVENT sont stockées dans le système avec:
 
 **Arrivée:** Demander aux clients d'arriver 15 minutes avant l'heure prévue. L'activité commence 15 min après.
 
-**Groupes 12+ personnes:** Orienter vers les formules événement qui sont plus avantageuses. 
-Si c est critique pour fermer un evenement pousser a etre rappeler par un pour des exeptions. 
-(cas extreme si vraiment pas de choix pour fermer un evenement qui se fermera pas autrement.)
 
 ## POLITIQUE D'ANNULATION
 

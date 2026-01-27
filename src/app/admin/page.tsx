@@ -274,17 +274,23 @@ export default function AdminPage() {
       const endMinute = endDate.getMinutes()
 
       // Étendre si la réservation commence avant l'heure de début visible
-      if (startHour < minHour) {
+      // IMPORTANT: Gérer heure 0 (minuit/début du jour suivant)
+      // Si booking commence entre 00:00 et 05:59, c'est probablement après minuit
+      if (startHour >= 0 && startHour < 6) {
+        // Booking après minuit - étendre minHour pour inclure ces heures matinales
+        minHour = 0
+      } else if (startHour < minHour) {
         minHour = startHour
       }
 
       // Étendre si la réservation finit après l'heure de fin visible
-      // Gérer minuit (0h) et après minuit
-      if (endHour === 0 && endMinute > 0) {
-        // Finit après minuit - étendre jusqu'à minuit (23h45 = dernière tranche visible)
-        maxHour = 23
+      // Gérer minuit (0h) et après minuit: heure 0-5 = début du lendemain/après minuit
+      if (endHour >= 0 && endHour < 6) {
+        // Finit après minuit - étendre maxHour jusqu'à au moins 23h
+        // pour permettre l'affichage des créneaux qui traversent minuit
+        if (maxHour < 23) maxHour = 23
       } else if (endHour > maxHour || (endHour === maxHour && endMinute > 0)) {
-        maxHour = Math.min(23, endHour) // Max 23 car on affiche jusqu'à 23:45
+        maxHour = endHour // Étendre normalement
       }
     }
 
@@ -866,6 +872,10 @@ export default function AdminPage() {
 
           if (result.success) {
             setEditingBookingOrderStatus('closed')
+            // Rafraîchir les données pour refléter le nouveau status
+            if (selectedBranchId) {
+              loadBookingsForBranchAsync(selectedBranchId, selectedDate)
+            }
             setConfirmationModal({
               isOpen: true,
               title: t('admin.common.success'),
