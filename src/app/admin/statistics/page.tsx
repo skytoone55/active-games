@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   BarChart3,
@@ -41,6 +41,7 @@ import {
 } from 'recharts'
 import { useAuth } from '@/hooks/useAuth'
 import { useBranches } from '@/hooks/useBranches'
+import { useTranslation } from '@/contexts/LanguageContext'
 import { AdminHeader } from '../components/AdminHeader'
 import { createClient } from '@/lib/supabase/client'
 
@@ -69,16 +70,7 @@ interface StatsData {
   popularHours: { hour: string; count: number }[]
 }
 
-// Date range options
-const DATE_RANGES = [
-  { label: 'Aujourd\'hui', value: 'today' },
-  { label: 'Cette semaine', value: 'week' },
-  { label: 'Ce mois', value: 'month' },
-  { label: 'Ce trimestre', value: 'quarter' },
-  { label: 'Cette année', value: 'year' },
-  { label: 'Tout', value: 'all' },
-  { label: 'Personnalisé', value: 'custom' },
-]
+// Les DATE_RANGES seront définis dans le component pour utiliser t()
 
 // Colors for charts
 const CHART_COLORS = {
@@ -98,6 +90,7 @@ export default function StatisticsPage() {
   const router = useRouter()
   const { user, loading: authLoading, signOut } = useAuth()
   const { branches, selectedBranch, selectBranch, loading: branchesLoading } = useBranches()
+  const { t } = useTranslation()
 
   const [loading, setLoading] = useState(true)
   const [stats, setStats] = useState<StatsData | null>(null)
@@ -124,6 +117,15 @@ export default function StatisticsPage() {
 
   const isDark = theme === 'dark'
   const colors = isDark ? CHART_COLORS.dark : CHART_COLORS.light
+
+  // Date range options with translations
+  const DATE_RANGES = useMemo(() => [
+    { label: t('admin.stats.date_range.today'), value: 'today' },
+    { label: t('admin.stats.date_range.week'), value: 'week' },
+    { label: t('admin.stats.date_range.month'), value: 'month' },
+    { label: t('admin.stats.date_range.year'), value: 'year' },
+    { label: t('admin.stats.date_range.custom'), value: 'custom' },
+  ], [t])
 
   // Charger les stats
   const loadStats = useCallback(async () => {
@@ -191,19 +193,19 @@ export default function StatisticsPage() {
     if (!stats) return
 
     const rows = [
-      ['Statistiques', dateRange, new Date().toLocaleDateString('fr-FR')],
+      [t('admin.stats.title'), dateRange, new Date().toLocaleDateString('fr-FR')],
       [],
-      ['Chiffre d\'affaires total', formatCurrency(stats.totalRevenue)],
-      ['CA encaissé', formatCurrency(stats.paidRevenue)],
-      ['CA en attente', formatCurrency(stats.pendingRevenue)],
-      ['Panier moyen', formatCurrency(stats.averageOrderValue)],
-      ['Nombre de commandes', stats.totalOrders],
-      ['Nombre de clients', stats.totalClients],
-      ['Nouveaux clients ce mois', stats.newClientsThisMonth],
-      ['Clients récurrents', stats.returningClients],
+      [t('admin.stats.overview.total_revenue'), formatCurrency(stats.totalRevenue)],
+      [t('admin.stats.overview.paid_revenue'), formatCurrency(stats.paidRevenue)],
+      [t('admin.stats.overview.pending_revenue'), formatCurrency(stats.pendingRevenue)],
+      [t('admin.stats.overview.average_order'), formatCurrency(stats.averageOrderValue)],
+      [t('admin.stats.overview.total_orders'), stats.totalOrders],
+      [t('admin.stats.overview.total_clients'), stats.totalClients],
+      [t('admin.stats.overview.new_clients'), stats.newClientsThisMonth],
+      [t('admin.stats.overview.returning_clients'), stats.returningClients],
       [],
-      ['Top Clients'],
-      ['Nom', 'Commandes', 'CA'],
+      [t('admin.stats.overview.top_clients')],
+      [t('admin.stats.overview.name'), t('admin.stats.overview.orders'), t('admin.stats.overview.revenue')],
       ...stats.topClients.map(c => [c.name, c.orders, formatCurrency(c.revenue)]),
     ]
 
@@ -245,10 +247,10 @@ export default function StatisticsPage() {
             </div>
             <div>
               <h1 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                Statistiques
+                {t('admin.stats.title')}
               </h1>
               <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                Analysez vos performances et données
+                {t('admin.stats.subtitle')}
               </p>
             </div>
           </div>

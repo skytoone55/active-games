@@ -71,55 +71,82 @@
         "name": "Grid",
         "description": "A revolutionary interactive flooring system with built-in RGB LED lights and sensors.",
         "popup_description": "The Active Games Grid immerses players in a captivating challenge of logic and reasoning.",
-        "features": ["5 game modes", "50 levels to explore"]
+        "features": [
+          "5 game modes",
+          "50 levels to explore"
+        ]
       },
       "arena": {
         "name": "Arena",
         "description": "The ultimate dodgeball LED target wall game. Test speed, accuracy & memory.",
         "popup_description": "An interactive LED hexagon target wall where players use dodgeballs to hit glowing targets.",
-        "features": ["4 game modes", "40 levels to explore"]
+        "features": [
+          "4 game modes",
+          "40 levels to explore"
+        ]
       },
       "push": {
         "name": "Push",
         "description": "In this room, the walls are filled with buttons that can change colors.",
         "popup_description": "Push is an observation and strategy challenge game.",
-        "features": ["5 game modes", "50 levels to explore"]
+        "features": [
+          "5 game modes",
+          "50 levels to explore"
+        ]
       },
       "basketball": {
         "name": "Hoops Basketball",
         "description": "An interactive basketball fitness game that combines fun, exercise, and technology.",
         "popup_description": "A fully interactive fitness experience.",
-        "features": ["LED-lit targets", "Smart sensor tracking"]
+        "features": [
+          "LED-lit targets",
+          "Smart sensor tracking"
+        ]
       },
       "climbing": {
         "name": "Climbing",
         "description": "An interactive LED wall designed to test your agility, strategy, and team fun.",
         "popup_description": "An interactive LED climbing wall game that simulates the thrill of cliff climbing.",
-        "features": ["Grab green safe lights", "Avoid dangerous red zones"]
+        "features": [
+          "Grab green safe lights",
+          "Avoid dangerous red zones"
+        ]
       },
       "hide": {
         "name": "Digital Hide Room",
         "description": "In this room, sensor eyes track your every movement.",
         "popup_description": "A thrilling blend of stealth, strategy, and teamwork.",
-        "features": ["4 game modes", "40 levels to explore"]
+        "features": [
+          "4 game modes",
+          "40 levels to explore"
+        ]
       },
       "flash": {
         "name": "Flash",
         "description": "Two or more players must cooperate. Press the circular light before the current reaches the target.",
         "popup_description": "Flash is a game of quick reaction challenges.",
-        "features": ["4 game modes", "40 levels to explore"]
+        "features": [
+          "4 game modes",
+          "40 levels to explore"
+        ]
       },
       "laser": {
         "name": "Laser",
         "description": "A thrilling escape room experience where players dodge laser beams.",
         "popup_description": "Creates a real-life action challenge where players must dodge, crawl, and weave through laser beams.",
-        "features": ["Dynamic difficulty modes", "For kids, teens, and adults"]
+        "features": [
+          "Dynamic difficulty modes",
+          "For kids, teens, and adults"
+        ]
       },
       "control": {
         "name": "Control",
         "description": "In Control, players control the movement of light blocks via an interactive console.",
         "popup_description": "Control the movement of light blocks via an interactive console.",
-        "features": ["Interactive console", "LED tile integration"]
+        "features": [
+          "Interactive console",
+          "LED tile integration"
+        ]
       }
     }
   },
@@ -514,7 +541,6 @@
       "access_denied": "Access Denied",
       "access_denied_message": "You do not have the required permissions to manage roles.",
       "no_roles": "No roles defined",
-      "system": "System",
       "custom": "Custom",
       "cannot_edit": "This role cannot be edited",
       "cannot_delete": "This role cannot be deleted",
@@ -618,7 +644,15 @@
         "november": "November",
         "december": "December"
       },
-      "days_short": ["M", "T", "W", "T", "F", "S", "S"]
+      "days_short": [
+        "M",
+        "T",
+        "W",
+        "T",
+        "F",
+        "S",
+        "S"
+      ]
     },
     "orders": {
       "title": "Orders",
@@ -1727,6 +1761,35 @@
       "element_deactivated": "Item deactivated",
       "error_loading": "Error loading data",
       "error_delete": "Error during deletion"
+    },
+    "stats": {
+      "title": "Statistics",
+      "subtitle": "Analyze your performance and data",
+      "export_csv": "Export CSV",
+      "refresh": "Refresh",
+      "date_range": {
+        "today": "Today",
+        "yesterday": "Yesterday",
+        "week": "This week",
+        "month": "This month",
+        "year": "This year",
+        "custom": "Custom"
+      },
+      "overview": {
+        "title": "Overview",
+        "total_revenue": "Total Revenue",
+        "paid_revenue": "Paid Revenue",
+        "pending_revenue": "Pending Revenue",
+        "average_order": "Average Order Value",
+        "total_orders": "Total Orders",
+        "total_clients": "Total Clients",
+        "new_clients": "New Clients This Month",
+        "returning_clients": "Returning Clients",
+        "top_clients": "Top Clients",
+        "name": "Name",
+        "orders": "Orders",
+        "revenue": "Revenue"
+      }
     }
   }
 }

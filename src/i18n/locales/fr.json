@@ -71,55 +71,82 @@
         "name": "Grid",
         "description": "Un systeme de sol interactif revolutionnaire avec lumieres LED RGB et capteurs integres.",
         "popup_description": "La Grille Active Games plonge les joueurs dans un defi captivant de logique et de raisonnement sur un plateau interactif.",
-        "features": ["5 modes de jeu", "50 niveaux a explorer"]
+        "features": [
+          "5 modes de jeu",
+          "50 niveaux a explorer"
+        ]
       },
       "arena": {
         "name": "Arena",
         "description": "Le jeu ultime de cibles LED murales avec balles. Testez votre vitesse, precision et memoire.",
         "popup_description": "Un mur de cibles hexagonales LED interactif ou les joueurs utilisent des balles pour toucher des cibles lumineuses.",
-        "features": ["4 modes de jeu", "40 niveaux a explorer"]
+        "features": [
+          "4 modes de jeu",
+          "40 niveaux a explorer"
+        ]
       },
       "push": {
         "name": "Push",
         "description": "Dans cette salle, les murs sont remplis de boutons qui changent de couleurs.",
         "popup_description": "Push est un jeu de defi d'observation et de strategie.",
-        "features": ["5 modes de jeu", "50 niveaux a explorer"]
+        "features": [
+          "5 modes de jeu",
+          "50 niveaux a explorer"
+        ]
       },
       "basketball": {
         "name": "Hoops Basketball",
         "description": "Un jeu de basketball interactif et fitness qui combine fun, exercice et technologie.",
         "popup_description": "Une experience fitness entierement interactive.",
-        "features": ["Cibles LED", "Suivi par capteurs intelligents"]
+        "features": [
+          "Cibles LED",
+          "Suivi par capteurs intelligents"
+        ]
       },
       "climbing": {
         "name": "Climbing",
         "description": "Un mur LED interactif concu pour tester votre agilite, strategie et fun en equipe.",
         "popup_description": "Un jeu de mur d'escalade LED interactif qui simule le frisson de l'escalade.",
-        "features": ["Attrapez les lumieres vertes", "Evitez les zones rouges dangereuses"]
+        "features": [
+          "Attrapez les lumieres vertes",
+          "Evitez les zones rouges dangereuses"
+        ]
       },
       "hide": {
         "name": "Hide Game Room",
         "description": "Cooperez avec vos amis pour accomplir des taches, evitez la detection des capteurs.",
         "popup_description": "Un melange palpitant de furtivite, strategie et travail d'equipe.",
-        "features": ["4 modes de jeu", "40 niveaux a explorer"]
+        "features": [
+          "4 modes de jeu",
+          "40 niveaux a explorer"
+        ]
       },
       "flash": {
         "name": "Flash",
         "description": "Deux joueurs ou plus doivent cooperer. Appuyez sur la lumiere circulaire avant que le courant n'atteigne la cible.",
         "popup_description": "Flash est un jeu de defis de reaction rapide.",
-        "features": ["4 modes de jeu", "40 niveaux a explorer"]
+        "features": [
+          "4 modes de jeu",
+          "40 niveaux a explorer"
+        ]
       },
       "laser": {
         "name": "Laser",
         "description": "Une experience d'escape room palpitante ou les joueurs esquivent les faisceaux laser.",
         "popup_description": "Cree un defi d'action reel ou les joueurs doivent esquiver, ramper et se faufiler a travers un reseau de faisceaux laser.",
-        "features": ["Modes de difficulte dynamiques", "Pour enfants, ados et adultes"]
+        "features": [
+          "Modes de difficulte dynamiques",
+          "Pour enfants, ados et adultes"
+        ]
       },
       "control": {
         "name": "Control",
         "description": "Dans Control, les joueurs controlent le mouvement des blocs lumineux via une console interactive.",
         "popup_description": "Controlez le mouvement des blocs lumineux via une console interactive.",
-        "features": ["Console interactive", "Integration dalles LED"]
+        "features": [
+          "Console interactive",
+          "Integration dalles LED"
+        ]
       }
     }
   },
@@ -674,7 +701,15 @@
         "november": "Novembre",
         "december": "Decembre"
       },
-      "days_short": ["L", "M", "M", "J", "V", "S", "D"]
+      "days_short": [
+        "L",
+        "M",
+        "M",
+        "J",
+        "V",
+        "S",
+        "D"
+      ]
     },
     "orders": {
       "title": "Commandes",
@@ -1784,6 +1819,35 @@
       "element_deactivated": "Element desactive",
       "error_loading": "Erreur lors du chargement des donnees",
       "error_delete": "Erreur lors de la suppression"
+    },
+    "stats": {
+      "title": "Statistiques",
+      "subtitle": "Analysez vos performances et données",
+      "export_csv": "Exporter CSV",
+      "refresh": "Actualiser",
+      "date_range": {
+        "today": "Aujourd'hui",
+        "yesterday": "Hier",
+        "week": "Cette semaine",
+        "month": "Ce mois",
+        "year": "Cette année",
+        "custom": "Personnalisé"
+      },
+      "overview": {
+        "title": "Vue d'ensemble",
+        "total_revenue": "Chiffre d'affaires total",
+        "paid_revenue": "CA encaissé",
+        "pending_revenue": "CA en attente",
+        "average_order": "Panier moyen",
+        "total_orders": "Nombre de commandes",
+        "total_clients": "Nombre de clients",
+        "new_clients": "Nouveaux clients ce mois",
+        "returning_clients": "Clients récurrents",
+        "top_clients": "Top Clients",
+        "name": "Nom",
+        "orders": "Commandes",
+        "revenue": "CA"
+      }
     }
   }
 }
