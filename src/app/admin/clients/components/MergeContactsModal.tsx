@@ -4,10 +4,10 @@ import { useState } from 'react'
 import { X, Loader2, User, Phone, Mail, AlertTriangle, Check } from 'lucide-react'
 import { useContacts, type UpdateContactData } from '@/hooks/useContacts'
 import type { Contact, BookingContactUpdate } from '@/lib/supabase/types'
-import { useTranslation } from 'react-i18next'
+import { useTranslation } from '@/contexts/LanguageContext'
+import { getClient } from '@/lib/supabase/client'
 
 type ContactField = 'first_name' | 'last_name' | 'phone' | 'email' | 'notes_client'
-import { getClient } from '@/lib/supabase/client'
 
 interface MergeContactsModalProps {
   isOpen: boolean
