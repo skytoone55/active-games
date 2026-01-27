@@ -874,7 +874,7 @@ export default function AdminPage() {
           if (result.success) {
             setEditingBookingOrderStatus('closed')
             // Fermer la modale d'édition pour éviter les tentatives de modification sur commande fermée
-            setEditingBookingId(null)
+            setEditingBooking(null)
             // Rafraîchir les données pour refléter le nouveau status
             if (selectedBranchId) {
               loadBookingsForBranchAsync(selectedBranchId, selectedDate)
