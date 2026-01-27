@@ -1825,6 +1825,9 @@
       "subtitle": "Analysez vos performances et données",
       "export_csv": "Exporter CSV",
       "refresh": "Actualiser",
+      "all_branches": "Toutes les branches",
+      "to": "à",
+      "no_data": "Aucune donnée disponible",
       "date_range": {
         "today": "Aujourd'hui",
         "yesterday": "Hier",
@@ -1832,6 +1835,49 @@
         "month": "Ce mois",
         "year": "Cette année",
         "custom": "Personnalisé"
+      },
+      "kpi": {
+        "revenue": "Chiffre d'affaires",
+        "collected": "encaissé",
+        "orders": "Commandes",
+        "per_order": "commande",
+        "clients": "Clients",
+        "this_month": "ce mois",
+        "loyalty_rate": "Taux fidélité",
+        "returning": "récurrents",
+        "total_revenue": "CA Total",
+        "paid_revenue": "CA Encaissé",
+        "pending_revenue": "CA En attente",
+        "average_basket": "Panier moyen",
+        "total_orders": "Total commandes",
+        "games": "Jeux",
+        "events": "Événements",
+        "total_clients": "Total clients",
+        "new_this_month": "Nouveaux ce mois",
+        "returning_clients": "Clients récurrents"
+      },
+      "charts": {
+        "revenue_evolution": "Évolution du CA",
+        "by_type": "Répartition par type",
+        "popular_days": "Jours populaires",
+        "popular_hours": "Heures populaires",
+        "revenue_by_branch": "CA par branche",
+        "monthly_evolution": "Évolution mensuelle",
+        "revenue": "CA",
+        "orders_count": "Commandes",
+        "order_status": "Statut des commandes",
+        "orders_evolution": "Évolution des commandes",
+        "top_clients": "Meilleurs clients",
+        "orders_by_user": "Commandes par utilisateur"
+      },
+      "labels": {
+        "games": "Jeux",
+        "events": "Événements"
+      },
+      "table": {
+        "client": "Client",
+        "orders": "Commandes",
+        "revenue": "CA généré"
       },
       "overview": {
         "title": "Vue d'ensemble",

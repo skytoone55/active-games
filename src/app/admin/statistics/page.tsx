@@ -293,7 +293,7 @@ export default function StatisticsPage() {
                       : 'bg-white border-gray-300 text-gray-900 focus:ring-blue-400'
                   } border`}
                 />
-                <span className={isDark ? 'text-gray-400' : 'text-gray-500'}>à</span>
+                <span className={isDark ? 'text-gray-400' : 'text-gray-500'}>{t('admin.stats.to')}</span>
                 <input
                   type="date"
                   value={customEndDate}
@@ -318,7 +318,7 @@ export default function StatisticsPage() {
                     : 'bg-white border-gray-300 text-gray-900 focus:ring-blue-400'
                 } border`}
               >
-                <option value="all">Toutes les branches</option>
+                <option value="all">{t('admin.stats.all_branches')}</option>
                 {branches.map(branch => (
                   <option key={branch.id} value={branch.id}>{branch.name}</option>
                 ))}
@@ -339,7 +339,7 @@ export default function StatisticsPage() {
               }`}
             >
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-              Actualiser
+              {t('admin.stats.refresh')}
             </button>
 
             {/* Export */}
@@ -353,7 +353,7 @@ export default function StatisticsPage() {
               }`}
             >
               <Download className="w-4 h-4" />
-              Export
+              {t('admin.stats.export_csv')}
             </button>
           </div>
         </div>
@@ -403,36 +403,36 @@ export default function StatisticsPage() {
                 {/* KPI Cards */}
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                   <KPICard
-                    title="Chiffre d'affaires"
+                    title={t('admin.stats.kpi.revenue')}
                     value={formatCurrency(stats.totalRevenue)}
                     icon={DollarSign}
-                    trend={stats.paidRevenue > 0 ? `${Math.round((stats.paidRevenue / stats.totalRevenue) * 100)}% encaissé` : undefined}
+                    trend={stats.paidRevenue > 0 ? `${Math.round((stats.paidRevenue / stats.totalRevenue) * 100)}% ${t('admin.stats.kpi.collected')}` : undefined}
                     trendUp={true}
                     isDark={isDark}
                     color="green"
                   />
                   <KPICard
-                    title="Commandes"
+                    title={t('admin.stats.kpi.orders')}
                     value={formatNumber(stats.totalOrders)}
                     icon={ShoppingCart}
-                    trend={`${formatCurrency(stats.averageOrderValue)} / commande`}
+                    trend={`${formatCurrency(stats.averageOrderValue)} / ${t('admin.stats.kpi.per_order')}`}
                     isDark={isDark}
                     color="blue"
                   />
                   <KPICard
-                    title="Clients"
+                    title={t('admin.stats.kpi.clients')}
                     value={formatNumber(stats.totalClients)}
                     icon={Users}
-                    trend={`+${stats.newClientsThisMonth} ce mois`}
+                    trend={`+${stats.newClientsThisMonth} ${t('admin.stats.kpi.this_month')}`}
                     trendUp={true}
                     isDark={isDark}
                     color="purple"
                   />
                   <KPICard
-                    title="Taux fidélité"
+                    title={t('admin.stats.kpi.loyalty_rate')}
                     value={stats.totalClients > 0 ? `${Math.round((stats.returningClients / stats.totalClients) * 100)}%` : '0%'}
                     icon={UserCheck}
-                    trend={`${stats.returningClients} récurrents`}
+                    trend={`${stats.returningClients} ${t('admin.stats.kpi.returning')}`}
                     isDark={isDark}
                     color="orange"
                   />
@@ -441,7 +441,7 @@ export default function StatisticsPage() {
                 {/* Charts Row */}
                 <div className="grid lg:grid-cols-2 gap-6">
                   {/* Revenue Evolution */}
-                  <ChartCard title="Évolution du CA" isDark={isDark}>
+                  <ChartCard title={t('admin.stats.charts.revenue_evolution')} isDark={isDark}>
                     <ResponsiveContainer width="100%" height={280}>
                       <AreaChart data={stats.ordersByMonth}>
                         <defs>
@@ -460,7 +460,7 @@ export default function StatisticsPage() {
                             borderRadius: '8px',
                             color: isDark ? '#ffffff' : '#000000'
                           }}
-                          formatter={(value) => [formatCurrency(value as number), 'CA']}
+                          formatter={(value) => [formatCurrency(value as number), t('admin.stats.charts.revenue')]}
                         />
                         <Area type="monotone" dataKey="revenue" stroke={colors[0]} fill="url(#colorRevenue)" strokeWidth={2} />
                       </AreaChart>
@@ -468,7 +468,7 @@ export default function StatisticsPage() {
                   </ChartCard>
 
                   {/* Orders by Type */}
-                  <ChartCard title="Répartition par type" isDark={isDark}>
+                  <ChartCard title={t('admin.stats.charts.by_type')} isDark={isDark}>
                     <ResponsiveContainer width="100%" height={280}>
                       <PieChart>
                         <Pie
@@ -480,7 +480,7 @@ export default function StatisticsPage() {
                           paddingAngle={5}
                           dataKey="count"
                           nameKey="type"
-                          label={({ name, percent }) => `${name === 'GAME' ? 'Jeux' : 'Événements'} ${((percent || 0) * 100).toFixed(0)}%`}
+                          label={({ name, percent }) => `${name === 'GAME' ? t('admin.stats.labels.games') : t('admin.stats.labels.events')} ${((percent || 0) * 100).toFixed(0)}%`}
                         >
                           {stats.ordersByType.map((entry, index) => (
                             <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
@@ -501,7 +501,7 @@ export default function StatisticsPage() {
 
                 {/* Popular Times */}
                 <div className="grid lg:grid-cols-2 gap-6">
-                  <ChartCard title="Jours populaires" isDark={isDark}>
+                  <ChartCard title={t('admin.stats.charts.popular_days')} isDark={isDark}>
                     <ResponsiveContainer width="100%" height={220}>
                       <BarChart data={stats.popularDays}>
                         <CartesianGrid strokeDasharray="3 3" stroke={isDark ? '#374151' : '#e5e7eb'} />
@@ -520,7 +520,7 @@ export default function StatisticsPage() {
                     </ResponsiveContainer>
                   </ChartCard>
 
-                  <ChartCard title="Heures populaires" isDark={isDark}>
+                  <ChartCard title={t('admin.stats.charts.popular_hours')} isDark={isDark}>
                     <ResponsiveContainer width="100%" height={220}>
                       <BarChart data={stats.popularHours}>
                         <CartesianGrid strokeDasharray="3 3" stroke={isDark ? '#374151' : '#e5e7eb'} />
@@ -546,14 +546,14 @@ export default function StatisticsPage() {
             {activeTab === 'revenue' && (
               <div className="space-y-6">
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                  <KPICard title="CA Total" value={formatCurrency(stats.totalRevenue)} icon={DollarSign} isDark={isDark} color="green" />
-                  <KPICard title="CA Encaissé" value={formatCurrency(stats.paidRevenue)} icon={CreditCard} isDark={isDark} color="blue" />
-                  <KPICard title="CA En attente" value={formatCurrency(stats.pendingRevenue)} icon={Clock} isDark={isDark} color="orange" />
-                  <KPICard title="Panier moyen" value={formatCurrency(stats.averageOrderValue)} icon={ShoppingCart} isDark={isDark} color="purple" />
+                  <KPICard title={t('admin.stats.kpi.total_revenue')} value={formatCurrency(stats.totalRevenue)} icon={DollarSign} isDark={isDark} color="green" />
+                  <KPICard title={t('admin.stats.kpi.paid_revenue')} value={formatCurrency(stats.paidRevenue)} icon={CreditCard} isDark={isDark} color="blue" />
+                  <KPICard title={t('admin.stats.kpi.pending_revenue')} value={formatCurrency(stats.pendingRevenue)} icon={Clock} isDark={isDark} color="orange" />
+                  <KPICard title={t('admin.stats.kpi.average_basket')} value={formatCurrency(stats.averageOrderValue)} icon={ShoppingCart} isDark={isDark} color="purple" />
                 </div>
 
                 {/* Revenue by Branch */}
-                <ChartCard title="CA par branche" isDark={isDark}>
+                <ChartCard title={t('admin.stats.charts.revenue_by_branch')} isDark={isDark}>
                   <ResponsiveContainer width="100%" height={300}>
                     <BarChart data={stats.ordersByBranch} layout="vertical">
                       <CartesianGrid strokeDasharray="3 3" stroke={isDark ? '#374151' : '#e5e7eb'} />
@@ -566,7 +566,7 @@ export default function StatisticsPage() {
                           borderRadius: '8px',
                           color: isDark ? '#ffffff' : '#000000'
                         }}
-                        formatter={(value) => [formatCurrency(value as number), 'CA']}
+                        formatter={(value) => [formatCurrency(value as number), t('admin.stats.charts.revenue')]}
                       />
                       <Bar dataKey="revenue" fill={colors[2]} radius={[0, 4, 4, 0]} />
                     </BarChart>
@@ -574,7 +574,7 @@ export default function StatisticsPage() {
                 </ChartCard>
 
                 {/* Monthly Evolution with dual axis */}
-                <ChartCard title="Évolution mensuelle" isDark={isDark}>
+                <ChartCard title={t('admin.stats.charts.monthly_evolution')} isDark={isDark}>
                   <ResponsiveContainer width="100%" height={300}>
                     <LineChart data={stats.ordersByMonth}>
                       <CartesianGrid strokeDasharray="3 3" stroke={isDark ? '#374151' : '#e5e7eb'} />
@@ -590,8 +590,8 @@ export default function StatisticsPage() {
                         }}
                       />
                       <Legend />
-                      <Line yAxisId="left" type="monotone" dataKey="revenue" name="CA" stroke={colors[0]} strokeWidth={2} dot={{ fill: colors[0] }} />
-                      <Line yAxisId="right" type="monotone" dataKey="count" name="Commandes" stroke={colors[3]} strokeWidth={2} dot={{ fill: colors[3] }} />
+                      <Line yAxisId="left" type="monotone" dataKey="revenue" name={t('admin.stats.charts.revenue')} stroke={colors[0]} strokeWidth={2} dot={{ fill: colors[0] }} />
+                      <Line yAxisId="right" type="monotone" dataKey="count" name={t('admin.stats.charts.orders_count')} stroke={colors[3]} strokeWidth={2} dot={{ fill: colors[3] }} />
                     </LineChart>
                   </ResponsiveContainer>
                 </ChartCard>
@@ -602,17 +602,17 @@ export default function StatisticsPage() {
             {activeTab === 'orders' && (
               <div className="space-y-6">
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                  <KPICard title="Total commandes" value={formatNumber(stats.totalOrders)} icon={ShoppingCart} isDark={isDark} color="blue" />
-                  <KPICard title="Panier moyen" value={formatCurrency(stats.averageOrderValue)} icon={DollarSign} isDark={isDark} color="green" />
+                  <KPICard title={t('admin.stats.kpi.total_orders')} value={formatNumber(stats.totalOrders)} icon={ShoppingCart} isDark={isDark} color="blue" />
+                  <KPICard title={t('admin.stats.kpi.average_basket')} value={formatCurrency(stats.averageOrderValue)} icon={DollarSign} isDark={isDark} color="green" />
                   <KPICard
-                    title="Jeux"
+                    title={t('admin.stats.kpi.games')}
                     value={formatNumber(stats.ordersByType.find(t => t.type === 'GAME')?.count || 0)}
                     icon={Target}
                     isDark={isDark}
                     color="purple"
                   />
                   <KPICard
-                    title="Événements"
+                    title={t('admin.stats.kpi.events')}
                     value={formatNumber(stats.ordersByType.find(t => t.type === 'EVENT')?.count || 0)}
                     icon={PartyPopper}
                     isDark={isDark}
@@ -621,7 +621,7 @@ export default function StatisticsPage() {
                 </div>
 
                 {/* Orders by Status */}
-                <ChartCard title="Statut des commandes" isDark={isDark}>
+                <ChartCard title={t('admin.stats.charts.order_status')} isDark={isDark}>
                   <div className="grid grid-cols-2 md:grid-cols-5 gap-4 p-4">
                     {stats.ordersByStatus.map((status) => {
                       const statusStyle = STATUS_COLORS[status.status] || STATUS_COLORS.pending
@@ -639,7 +639,7 @@ export default function StatisticsPage() {
                 </ChartCard>
 
                 {/* Orders Evolution */}
-                <ChartCard title="Évolution des commandes" isDark={isDark}>
+                <ChartCard title={t('admin.stats.charts.orders_evolution')} isDark={isDark}>
                   <ResponsiveContainer width="100%" height={300}>
                     <AreaChart data={stats.ordersByMonth}>
                       <defs>
@@ -670,11 +670,11 @@ export default function StatisticsPage() {
             {activeTab === 'clients' && (
               <div className="space-y-6">
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                  <KPICard title="Total clients" value={formatNumber(stats.totalClients)} icon={Users} isDark={isDark} color="blue" />
-                  <KPICard title="Nouveaux ce mois" value={formatNumber(stats.newClientsThisMonth)} icon={UserCheck} trendUp={true} isDark={isDark} color="green" />
-                  <KPICard title="Clients récurrents" value={formatNumber(stats.returningClients)} icon={TrendingUp} isDark={isDark} color="purple" />
+                  <KPICard title={t('admin.stats.kpi.total_clients')} value={formatNumber(stats.totalClients)} icon={Users} isDark={isDark} color="blue" />
+                  <KPICard title={t('admin.stats.kpi.new_this_month')} value={formatNumber(stats.newClientsThisMonth)} icon={UserCheck} trendUp={true} isDark={isDark} color="green" />
+                  <KPICard title={t('admin.stats.kpi.returning_clients')} value={formatNumber(stats.returningClients)} icon={TrendingUp} isDark={isDark} color="purple" />
                   <KPICard
-                    title="Taux fidélité"
+                    title={t('admin.stats.kpi.loyalty_rate')}
                     value={stats.totalClients > 0 ? `${Math.round((stats.returningClients / stats.totalClients) * 100)}%` : '0%'}
                     icon={Percent}
                     isDark={isDark}
@@ -683,15 +683,15 @@ export default function StatisticsPage() {
                 </div>
 
                 {/* Top Clients */}
-                <ChartCard title="Meilleurs clients" isDark={isDark}>
+                <ChartCard title={t('admin.stats.charts.top_clients')} isDark={isDark}>
                   <div className="overflow-x-auto">
                     <table className="w-full">
                       <thead>
                         <tr className={`border-b ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
                           <th className={`text-left py-3 px-4 font-medium ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>#</th>
-                          <th className={`text-left py-3 px-4 font-medium ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Client</th>
-                          <th className={`text-center py-3 px-4 font-medium ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Commandes</th>
-                          <th className={`text-right py-3 px-4 font-medium ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>CA généré</th>
+                          <th className={`text-left py-3 px-4 font-medium ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{t('admin.stats.table.client')}</th>
+                          <th className={`text-center py-3 px-4 font-medium ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{t('admin.stats.table.orders')}</th>
+                          <th className={`text-right py-3 px-4 font-medium ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{t('admin.stats.table.revenue')}</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -713,7 +713,7 @@ export default function StatisticsPage() {
             {/* Team Tab */}
             {activeTab === 'team' && (
               <div className="space-y-6">
-                <ChartCard title="Commandes par utilisateur" isDark={isDark}>
+                <ChartCard title={t('admin.stats.charts.orders_by_user')} isDark={isDark}>
                   <ResponsiveContainer width="100%" height={Math.max(300, stats.ordersByUser.length * 50)}>
                     <BarChart data={stats.ordersByUser} layout="vertical">
                       <CartesianGrid strokeDasharray="3 3" stroke={isDark ? '#374151' : '#e5e7eb'} />
@@ -736,7 +736,7 @@ export default function StatisticsPage() {
           </>
         ) : (
           <div className={`text-center py-20 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-            Aucune donnée disponible
+            {t('admin.stats.no_data')}
           </div>
         )}
       </main>

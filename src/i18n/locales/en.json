@@ -1767,6 +1767,9 @@
       "subtitle": "Analyze your performance and data",
       "export_csv": "Export CSV",
       "refresh": "Refresh",
+      "all_branches": "All branches",
+      "to": "to",
+      "no_data": "No data available",
       "date_range": {
         "today": "Today",
         "yesterday": "Yesterday",
@@ -1774,6 +1777,49 @@
         "month": "This month",
         "year": "This year",
         "custom": "Custom"
+      },
+      "kpi": {
+        "revenue": "Revenue",
+        "collected": "collected",
+        "orders": "Orders",
+        "per_order": "order",
+        "clients": "Clients",
+        "this_month": "this month",
+        "loyalty_rate": "Loyalty Rate",
+        "returning": "returning",
+        "total_revenue": "Total Revenue",
+        "paid_revenue": "Paid Revenue",
+        "pending_revenue": "Pending Revenue",
+        "average_basket": "Average Basket",
+        "total_orders": "Total Orders",
+        "games": "Games",
+        "events": "Events",
+        "total_clients": "Total Clients",
+        "new_this_month": "New This Month",
+        "returning_clients": "Returning Clients"
+      },
+      "charts": {
+        "revenue_evolution": "Revenue Evolution",
+        "by_type": "Distribution by Type",
+        "popular_days": "Popular Days",
+        "popular_hours": "Popular Hours",
+        "revenue_by_branch": "Revenue by Branch",
+        "monthly_evolution": "Monthly Evolution",
+        "revenue": "Revenue",
+        "orders_count": "Orders",
+        "order_status": "Order Status",
+        "orders_evolution": "Orders Evolution",
+        "top_clients": "Top Clients",
+        "orders_by_user": "Orders by User"
+      },
+      "labels": {
+        "games": "Games",
+        "events": "Events"
+      },
+      "table": {
+        "client": "Client",
+        "orders": "Orders",
+        "revenue": "Revenue Generated"
       },
       "overview": {
         "title": "Overview",

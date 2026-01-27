@@ -1826,6 +1826,9 @@
       "subtitle": "נתח את הביצועים והנתונים שלך",
       "export_csv": "ייצוא CSV",
       "refresh": "רענן",
+      "all_branches": "כל הסניפים",
+      "to": "עד",
+      "no_data": "אין נתונים זמינים",
       "date_range": {
         "today": "היום",
         "yesterday": "אתמול",
@@ -1833,6 +1836,49 @@
         "month": "החודש",
         "year": "השנה",
         "custom": "תאריך מותאם"
+      },
+      "kpi": {
+        "revenue": "מחזור",
+        "collected": "נגבה",
+        "orders": "הזמנות",
+        "per_order": "הזמנה",
+        "clients": "לקוחות",
+        "this_month": "החודש",
+        "loyalty_rate": "שיעור נאמנות",
+        "returning": "חוזרים",
+        "total_revenue": "מחזור כולל",
+        "paid_revenue": "מחזור נגבה",
+        "pending_revenue": "מחזור ממתין",
+        "average_basket": "סל ממוצע",
+        "total_orders": "הזמנות כוללות",
+        "games": "משחקים",
+        "events": "אירועים",
+        "total_clients": "לקוחות כוללים",
+        "new_this_month": "חדשים החודש",
+        "returning_clients": "לקוחות חוזרים"
+      },
+      "charts": {
+        "revenue_evolution": "התפתחות המחזור",
+        "by_type": "התפלגות לפי סוג",
+        "popular_days": "ימים פופולריים",
+        "popular_hours": "שעות פופולריות",
+        "revenue_by_branch": "מחזור לפי סניף",
+        "monthly_evolution": "התפתחות חודשית",
+        "revenue": "מחזור",
+        "orders_count": "הזמנות",
+        "order_status": "סטטוס הזמנות",
+        "orders_evolution": "התפתחות הזמנות",
+        "top_clients": "לקוחות מובילים",
+        "orders_by_user": "הזמנות לפי משתמש"
+      },
+      "labels": {
+        "games": "משחקים",
+        "events": "אירועים"
+      },
+      "table": {
+        "client": "לקוח",
+        "orders": "הזמנות",
+        "revenue": "מחזור שנוצר"
       },
       "overview": {
         "title": "סקירה כללית",
