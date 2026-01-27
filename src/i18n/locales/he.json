@@ -1222,6 +1222,41 @@
         "no_cancel": "לא - בטל",
         "yes_authorize": "כן - אשר"
       },
+      "discount": {
+        "label": "הנחה",
+        "percent_placeholder": "לדוגמה: 10",
+        "fixed_placeholder": "לדוגמה: 50"
+      },
+      "types": {
+        "game": "Game",
+        "event": "Event"
+      },
+      "zones": {
+        "active": "Active",
+        "laser": "Laser"
+      },
+      "languages": {
+        "hebrew": "עברית",
+        "french": "Français",
+        "english": "English"
+      },
+      "common": {
+        "branch": "סניף",
+        "duration_min": "משך (דקות)",
+        "placeholder_phone": "05XXXXXXXX"
+      },
+      "errors": {
+        "no_laser_room": "אין חדר לייזר זמין ל-{{participants}} משתתפים ב-{{time}}{{mode}}. קיבולת לא מספקת. אנא בחר זמן אחר, הפחת את מספר המשתתפים{{modeHint}}.",
+        "no_laser_room_full": "אין חדר לייזר זמין ל-{{participants}} משתתפים ב-{{time}}. החדרים מלאים או בעלי קיבולת לא מספקת. אנא בחר זמן אחר או הפחת את מספר המשתתפים.",
+        "no_room_for_quantity": "אין חדר זמין לכמות זו. אנא הפחת את מספר המשתתפים.",
+        "no_room_for_participants": "אין חדר זמין ל-{{participants}} משתתפים. אנא הפחת את מספר המשתתפים או בחר זמן אחר.",
+        "vests_constraint": "הפרת מגבלת אפודים: {{current}} > {{max}} (נדחה). {{message}}",
+        "vests_constraint_spare": "הפרת מגבלת אפודים (כולל רזרבה): {{current}} > {{total}} (נדחה). {{message}}",
+        "vests_constraint_hard": "הפרת מגבלת אפודים קשה: {{current}} > {{max}} (נדחה). {{message}}",
+        "booking_cancelled": "ההזמנה בוטלה. אנא הפחת את מספר המשתתפים או בחר זמן אחר.",
+        "create_error": "שגיאה ביצירת הזמנה",
+        "generic_error": "אירעה שגיאה"
+      },
       "calendar": {
         "previous_year": "שנה קודמת",
         "next_year": "שנה הבאה",

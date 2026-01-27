@@ -1125,6 +1125,29 @@
         "indigo": "Indigo",
         "emerald": "Emeraude"
       },
+      "discount": {
+        "label": "Remise",
+        "percent_placeholder": "Ex: 10",
+        "fixed_placeholder": "Ex: 50"
+      },
+      "types": {
+        "game": "Game",
+        "event": "Event"
+      },
+      "zones": {
+        "active": "Active",
+        "laser": "Laser"
+      },
+      "languages": {
+        "hebrew": "עברית",
+        "french": "Français",
+        "english": "English"
+      },
+      "common": {
+        "branch": "Branche",
+        "duration_min": "Durée (min)",
+        "placeholder_phone": "05XXXXXXXX"
+      },
       "actions": {
         "delete": "Supprimer",
         "cancel": "Annuler",
@@ -1197,8 +1220,12 @@
       },
       "errors": {
         "no_laser_room": "Aucune salle laser disponible pour {{participants}} participants a {{time}}{{mode}}. Capacite insuffisante. Veuillez choisir un autre creneau, reduire le nombre de participants{{modeHint}}.",
+        "no_laser_room_full": "Aucune salle laser disponible pour {{participants}} participants a {{time}}. Les salles sont pleines ou ont une capacite insuffisante. Veuillez choisir un autre creneau ou reduire le nombre de participants.",
         "no_room_for_quantity": "Aucune salle disponible pour cette quantite. Veuillez reduire le nombre de participants.",
+        "no_room_for_participants": "Aucune salle disponible pour {{participants}} participants. Veuillez reduire le nombre de participants ou choisir une autre periode.",
         "vests_constraint": "Contrainte vestes violee : {{current}} > {{max}} (REFUS). {{message}}",
+        "vests_constraint_spare": "Contrainte vestes violee (incluant spare) : {{current}} > {{total}} (REFUS). {{message}}",
+        "vests_constraint_hard": "Contrainte hard vests violee : {{current}} > {{max}} (REFUS). {{message}}",
         "booking_cancelled": "Reservation annulee. Veuillez reduire le nombre de participants ou choisir une autre periode.",
         "create_error": "Erreur lors de la creation de la reservation",
         "generic_error": "Une erreur est survenue"

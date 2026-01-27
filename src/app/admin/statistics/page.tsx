@@ -624,7 +624,7 @@ export default function StatisticsPage() {
                 <ChartCard title={t('admin.stats.charts.order_status')} isDark={isDark}>
                   <div className="grid grid-cols-2 md:grid-cols-5 gap-4 p-4">
                     {stats.ordersByStatus.map((status) => {
-                      const statusStyle = STATUS_COLORS[status.status] || STATUS_COLORS.pending
+                      const statusStyle = STATUS_COLORS[status.status as keyof typeof STATUS_COLORS] || STATUS_COLORS.pending
                       return (
                         <div
                           key={status.status}

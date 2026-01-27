@@ -1117,6 +1117,29 @@
         "no_cancel": "No - Cancel",
         "yes_authorize": "Yes - Authorize"
       },
+      "discount": {
+        "label": "Discount",
+        "percent_placeholder": "Ex: 10",
+        "fixed_placeholder": "Ex: 50"
+      },
+      "types": {
+        "game": "Game",
+        "event": "Event"
+      },
+      "zones": {
+        "active": "Active",
+        "laser": "Laser"
+      },
+      "languages": {
+        "hebrew": "עברית",
+        "french": "Français",
+        "english": "English"
+      },
+      "common": {
+        "branch": "Branch",
+        "duration_min": "Duration (min)",
+        "placeholder_phone": "05XXXXXXXX"
+      },
       "calendar": {
         "previous_year": "Previous year",
         "next_year": "Next year",
@@ -1140,8 +1163,12 @@
       },
       "errors": {
         "no_laser_room": "No laser room available for {{participants}} participants at {{time}}{{mode}}. Insufficient capacity. Please choose another time slot, reduce the number of participants{{modeHint}}.",
+        "no_laser_room_full": "No laser room available for {{participants}} participants at {{time}}. Rooms are full or have insufficient capacity. Please choose another time slot or reduce the number of participants.",
         "no_room_for_quantity": "No room available for this quantity. Please reduce the number of participants.",
+        "no_room_for_participants": "No room available for {{participants}} participants. Please reduce the number of participants or choose another time slot.",
         "vests_constraint": "Vest constraint violated: {{current}} > {{max}} (REJECTED). {{message}}",
+        "vests_constraint_spare": "Vest constraint violated (including spare): {{current}} > {{total}} (REJECTED). {{message}}",
+        "vests_constraint_hard": "Hard vest constraint violated: {{current}} > {{max}} (REJECTED). {{message}}",
         "booking_cancelled": "Booking cancelled. Please reduce the number of participants or choose another time slot.",
         "create_error": "Error creating booking",
         "generic_error": "An error occurred"
