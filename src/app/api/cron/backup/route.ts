@@ -49,37 +49,19 @@ export async function GET(request: Request) {
 
     const backupData: any = {
       timestamp: new Date().toISOString(),
-      version: '2.0',
-      schema: {},
+      version: '3.0-DATA-ONLY',
+      description: 'Backup données uniquement (utiliser avec backup SQL pour restauration complète)',
       tables: {},
       metadata: {
         project: 'activelaser',
-        database: 'zapwlcrjnabrfhoxfgqo'
+        database: 'zapwlcrjnabrfhoxfgqo',
+        backup_type: 'data_only'
       }
     };
 
     let totalRecords = 0;
 
-    // Export schema for each table
-    console.log('📋 Export du schéma...');
-    for (const table of tables) {
-      try {
-        // Get schema from information_schema
-        const { data: columns } = await supabase
-          .from('information_schema.columns')
-          .select('*')
-          .eq('table_schema', 'public')
-          .eq('table_name', table);
-
-        backupData.schema[table] = columns || [];
-        console.log(`✅ Schéma ${table}: ${columns?.length || 0} colonnes`);
-      } catch (err: any) {
-        console.warn(`⚠️  Schéma ${table}: ${err.message}`);
-        backupData.schema[table] = { error: err.message };
-      }
-    }
-
-    // Exporter toutes les tables
+    // Export des données uniquement
     console.log('📊 Export des données...');
     for (const table of tables) {
       try {
