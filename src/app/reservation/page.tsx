@@ -86,6 +86,23 @@ function ReservationContent() {
   const [isProcessingPayment, setIsProcessingPayment] = useState(false)
   const [paymentSuccess, setPaymentSuccess] = useState(false)
 
+
+  // Helper function for translations
+  const t = (key: string, params?: Record<string, any>) => {
+    const keys = key.split('.')
+    let value: any = translations
+    for (const k of keys) {
+      value = value?.[k]
+      if (!value) return key // Fallback to key if translation not found
+    }
+    // Handle interpolation
+    if (params && typeof value === 'string') {
+      return Object.entries(params).reduce((str, [paramKey, paramValue]) => {
+        return str.replace(`{{${paramKey}}}`, String(paramValue))
+      }, value)
+    }
+    return value || key
+  }
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const savedLocale = localStorage.getItem('locale') as Locale
@@ -587,7 +604,7 @@ function ReservationContent() {
 
     // Si acompte requis et pas de carte valide, erreur
     if (depositInfo && depositInfo.amount > 0 && !isCardValid()) {
-      setPaymentError('Please fill in all card details')
+      setPaymentError(t('booking.payment.fill_card_details'))
       return
     }
 
@@ -600,13 +617,13 @@ function ReservationContent() {
       const branchesData = await branchesResponse.json()
 
       if (!branchesData.success || !branchesData.branches || branchesData.branches.length === 0) {
-        alert('Aucune branche disponible. Veuillez contacter le support.')
+        alert(t('booking.errors.no_branches'))
         setIsSubmitting(false)
         return
       }
 
       if (!bookingData.branch) {
-        alert('Veuillez sélectionner une branche.')
+        alert(t('booking.errors.select_branch'))
         setIsSubmitting(false)
         return
       }
@@ -680,7 +697,7 @@ function ReservationContent() {
 
       if (!result.success) {
         console.error('Error saving order:', result.error)
-        alert(`Erreur: ${result.error || 'Erreur lors de la sauvegarde de la réservation'}`)
+        alert(`Erreur: ${result.error || t('booking.errors.save_reservation')}`)
         setIsSubmitting(false)
         return
       }
@@ -712,7 +729,7 @@ function ReservationContent() {
 
           if (!paymentResult.success) {
             // Paiement échoué - la commande est créée mais pas payée
-            setPaymentError(paymentResult.error || 'Payment failed. Please try again.')
+            setPaymentError(paymentResult.error || t('booking.payment.payment_failed'))
             setIsSubmitting(false)
             setIsProcessingPayment(false)
             return
@@ -722,7 +739,7 @@ function ReservationContent() {
           setPaymentSuccess(true)
         } catch (payError) {
           console.error('Payment error:', payError)
-          setPaymentError('Payment processing error. Please try again.')
+          setPaymentError(t('booking.payment.processing_error'))
           setIsSubmitting(false)
           setIsProcessingPayment(false)
           return
@@ -734,12 +751,12 @@ function ReservationContent() {
       // Succès final
       setReservationNumber(result.reference)
       setOrderStatus(result.status)
-      setOrderMessage(result.message || 'Booking confirmed')
+      setOrderMessage(result.message || t('booking.payment.confirmed'))
       setStep(8)
 
     } catch (error) {
       console.error('Error confirming reservation:', error)
-      alert('Erreur lors de la confirmation. Veuillez réessayer.')
+      alert(t('booking.errors.confirmation_error'))
     } finally {
       setIsSubmitting(false)
     }
@@ -1042,10 +1059,8 @@ function ReservationContent() {
                 <>
                   <div className="text-center mb-8">
                     <Gamepad2 className="w-16 h-16 text-primary mx-auto mb-4" />
-                    <h2 className="text-2xl font-bold mb-2" style={{ fontFamily: 'Orbitron, sans-serif' }}>
-                      Type de jeu
-                    </h2>
-                    <p className="text-gray-400">Choisissez votre activité</p>
+                    <h2 className="text-2xl font-bold mb-2" style={{ fontFamily: 'Orbitron, sans-serif' }}>{t('booking.step3_game.title')}</h2>
+                    <p className="text-gray-400">{t('booking.step3_game.subtitle')}</p>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
@@ -1062,7 +1077,7 @@ function ReservationContent() {
                     >
                       <Zap className="w-12 h-12 mx-auto mb-3 text-blue-500" />
                       <h3 className="text-xl font-bold mb-2">Active Games</h3>
-                      <p className="text-gray-400 text-sm">Jeux interactifs et challenges</p>
+                      <p className="text-gray-400 text-sm">{t('booking.game_area.active.description')}</p>
                     </motion.button>
 
                     {/* Laser - Target violet comme dans l'admin */}
@@ -1078,7 +1093,7 @@ function ReservationContent() {
                     >
                       <Target className="w-12 h-12 mx-auto mb-3 text-purple-500" />
                       <h3 className="text-xl font-bold mb-2">Laser City</h3>
-                      <p className="text-gray-400 text-sm">Labyrinthe laser</p>
+                      <p className="text-gray-400 text-sm">{t('booking.game_area.laser.description')}</p>
                     </motion.button>
 
                     {/* Mix/Sur mesure - Gamepad2 cyan */}
@@ -1093,8 +1108,8 @@ function ReservationContent() {
                       whileTap={{ scale: 0.98 }}
                     >
                       <Gamepad2 className="w-12 h-12 mx-auto mb-3 text-cyan-500" />
-                      <h3 className="text-xl font-bold mb-2">Sur mesure</h3>
-                      <p className="text-gray-400 text-sm">Combinaison Active + Laser</p>
+                      <h3 className="text-xl font-bold mb-2">{t('booking.game_area.mix.title')}</h3>
+                      <p className="text-gray-400 text-sm">{t('booking.game_area.mix.description')}</p>
                     </motion.button>
                   </div>
 
@@ -1108,7 +1123,7 @@ function ReservationContent() {
                       {/* Active Games = durée en heures */}
                       {bookingData.gameArea === 'ACTIVE' && (
                         <>
-                          <h3 className="text-lg font-bold text-center mb-4">Durée de jeu</h3>
+                          <h3 className="text-lg font-bold text-center mb-4">{t('booking.game_duration.title')}</h3>
                           <div className="flex justify-center gap-4 mb-6">
                             {[
                               { value: 2, label: '1h' },
@@ -1130,16 +1145,14 @@ function ReservationContent() {
                               </motion.button>
                             ))}
                           </div>
-                          <p className="text-center text-gray-400 text-sm mb-6">
-                            Jeux illimités pendant la durée choisie
-                          </p>
+                          <p className="text-center text-gray-400 text-sm mb-6">{t('booking.game_duration.unlimited')}</p>
                         </>
                       )}
 
                       {/* Laser = nombre de parties */}
                       {bookingData.gameArea === 'LASER' && (
                         <>
-                          <h3 className="text-lg font-bold text-center mb-4">Nombre de parties</h3>
+                          <h3 className="text-lg font-bold text-center mb-4">{t('booking.game_parties.title')}</h3>
                           <div className="flex justify-center gap-4 mb-6">
                             {[1, 2, 3].map((num) => (
                               <motion.button
@@ -1166,11 +1179,10 @@ function ReservationContent() {
                       {/* Mix = message explicatif */}
                       {bookingData.gameArea === 'MIX' && (
                         <>
-                          <h3 className="text-lg font-bold text-center mb-4">Formule Sur Mesure</h3>
+                          <h3 className="text-lg font-bold text-center mb-4">{t('booking.custom_formula.title')}</h3>
                           <div className={`p-4 rounded-xl bg-purple-500/10 border border-purple-500/30 mb-6`}>
-                            <p className="text-center text-purple-300">
-                              Combinaison Active Games + Laser City<br/>
-                              <span className="text-sm text-gray-400">Nous vous contacterons pour personnaliser votre expérience</span>
+                            <p className="text-center text-purple-300">{t('booking.custom_formula.description')}<br/>
+                              <span className="text-sm text-gray-400">{t('booking.custom_formula.note')}</span>
                             </p>
                           </div>
                         </>
@@ -1180,9 +1192,7 @@ function ReservationContent() {
                         <button
                           onClick={handleContinueToDate}
                           className="glow-button inline-flex items-center gap-2"
-                        >
-                          Continuer
-                          <ChevronRight className="w-5 h-5" />
+                        >{t('booking.continue')}<ChevronRight className="w-5 h-5" />
                         </button>
                       </div>
                     </motion.div>
@@ -1195,10 +1205,8 @@ function ReservationContent() {
                 <>
                   <div className="text-center mb-8">
                     <Cake className="w-16 h-16 text-primary mx-auto mb-4" />
-                    <h2 className="text-2xl font-bold mb-2" style={{ fontFamily: 'Orbitron, sans-serif' }}>
-                      Type de jeux
-                    </h2>
-                    <p className="text-gray-400">Quelle activité pour votre événement ?</p>
+                    <h2 className="text-2xl font-bold mb-2" style={{ fontFamily: 'Orbitron, sans-serif' }}>{t('booking.step3_event.title')}</h2>
+                    <p className="text-gray-400">{t('booking.step3_event.subtitle')}</p>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
@@ -1217,7 +1225,7 @@ function ReservationContent() {
                     >
                       <Zap className="w-12 h-12 mx-auto mb-3 text-blue-500" />
                       <h3 className="text-xl font-bold mb-2">Active Games</h3>
-                      <p className="text-gray-400 text-sm">1 heure de jeux</p>
+                      <p className="text-gray-400 text-sm">{t('booking.event_game.active_1h')}</p>
                     </motion.button>
 
                     {/* Laser 2 parties - Target violet comme dans l'admin */}
@@ -1235,7 +1243,7 @@ function ReservationContent() {
                     >
                       <Target className="w-12 h-12 mx-auto mb-3 text-purple-500" />
                       <h3 className="text-xl font-bold mb-2">Laser City</h3>
-                      <p className="text-gray-400 text-sm">2 parties de laser</p>
+                      <p className="text-gray-400 text-sm">{t('booking.event_game.laser_2games')}</p>
                     </motion.button>
 
                     {/* Mix - Gamepad2 cyan */}
@@ -1253,7 +1261,7 @@ function ReservationContent() {
                     >
                       <Gamepad2 className="w-12 h-12 mx-auto mb-3 text-cyan-500" />
                       <h3 className="text-xl font-bold mb-2">Mix</h3>
-                      <p className="text-gray-400 text-sm">30min Active + 1 Laser</p>
+                      <p className="text-gray-400 text-sm">{t('booking.event_game.mix')}</p>
                     </motion.button>
                   </div>
 
@@ -1267,9 +1275,7 @@ function ReservationContent() {
                       <button
                         onClick={handleContinueToDate}
                         className="glow-button inline-flex items-center gap-2"
-                      >
-                        Continuer
-                        <ChevronRight className="w-5 h-5" />
+                      >{t('booking.continue')}<ChevronRight className="w-5 h-5" />
                       </button>
                     </motion.div>
                   )}
@@ -1703,7 +1709,7 @@ function ReservationContent() {
                             ? (translations.booking?.game_area?.laser?.party || 'party')
                             : (translations.booking?.game_area?.laser?.parties || 'parties')}`
                         )}
-                        {bookingData.gameArea === 'MIX' && '30min Active + 1 Laser'}
+                        {bookingData.gameArea === 'MIX' && t('booking.event_game.mix')}
                       </span>
                     </div>
                   )}
@@ -1968,12 +1974,12 @@ function ReservationContent() {
                 {/* Title */}
                 <h2 className={`text-3xl font-bold mb-2 ${orderStatus === 'pending' ? 'text-yellow-500' : 'text-primary'}`} style={{ fontFamily: 'Orbitron, sans-serif' }}>
                   {orderStatus === 'pending' 
-                    ? 'Request Received!'
+                    ? t('booking.confirmation.request_received')
                     : (translations.booking?.confirmation?.title || 'Reservation Confirmed!')}
                 </h2>
                 <p className="text-gray-300 mb-8" style={{ fontFamily: 'Poppins, sans-serif' }}>
                   {orderStatus === 'pending'
-                    ? 'We will contact you shortly to confirm your reservation'
+                    ? t('booking.confirmation.contact_soon')
                     : (translations.booking?.confirmation?.subtitle || 'Thank you for your reservation')}
                 </p>
 
@@ -1981,7 +1987,7 @@ function ReservationContent() {
                 {orderStatus === 'pending' && (
                   <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4 mb-6">
                     <p className="text-yellow-500" style={{ fontFamily: 'Poppins, sans-serif' }}>
-                      {orderMessage || 'Your request has been received. We will contact you shortly to confirm your reservation.'}
+                      {orderMessage || t('booking.confirmation.contact_soon')}
                     </p>
                   </div>
                 )}
@@ -1994,7 +2000,7 @@ function ReservationContent() {
                 }`}>
                   <p className="text-gray-400 text-sm mb-2" style={{ fontFamily: 'Poppins, sans-serif' }}>
                     {orderStatus === 'pending'
-                      ? 'Request Number'
+                      ? t('booking.confirmation.request_number')
                       : (translations.booking?.confirmation?.reservation_number || 'Reservation Number')}
                   </p>
                   <p className={`text-2xl font-bold ${orderStatus === 'pending' ? 'text-yellow-500' : 'text-primary'}`} style={{ fontFamily: 'Orbitron, sans-serif', letterSpacing: '2px' }}>
@@ -2078,7 +2084,7 @@ function ReservationContent() {
                               ? (translations.booking?.game_area?.laser?.party || 'party')
                               : (translations.booking?.game_area?.laser?.parties || 'parties')}`
                           )}
-                          {bookingData.gameArea === 'MIX' && '30min Active + 1 Laser'}
+                          {bookingData.gameArea === 'MIX' && t('booking.event_game.mix')}
                         </span>
                       </div>
                     )}
@@ -2091,16 +2097,16 @@ function ReservationContent() {
                       <span className="font-bold text-white">{bookingData.time}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-400">Name:</span>
+                      <span className="text-gray-400">{t('booking.summary.name')}</span>
                       <span className="font-bold text-white">{bookingData.firstName} {bookingData.lastName}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-400">Phone:</span>
+                      <span className="text-gray-400">{t('booking.summary.phone')}</span>
                       <span className="font-bold text-white">{bookingData.phone}</span>
                     </div>
                     {bookingData.email && (
                       <div className="flex justify-between">
-                        <span className="text-gray-400">Email:</span>
+                        <span className="text-gray-400">{t('booking.summary.email')}</span>
                         <span className="font-bold text-white">{bookingData.email}</span>
                       </div>
                     )}

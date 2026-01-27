@@ -5,6 +5,7 @@ import { X, Save, Loader2, Settings, Gamepad2, Target, Cake, DollarSign } from '
 import { getClient } from '@/lib/supabase/client'
 import type { EventRoom, BranchSettings, LaserRoom } from '@/lib/supabase/types'
 import type { PostgrestError } from '@supabase/supabase-js'
+import { useTranslation } from '@/contexts/LanguageContext'
 
 type SettingsTab = 'general' | 'active' | 'laser' | 'rooms' | 'pricing'
 
@@ -27,6 +28,7 @@ export function SettingsModal({
   onUpdate,
   isDark,
 }: SettingsModalProps) {
+  const { t } = useTranslation()
   const [roomCapacities, setRoomCapacities] = useState<Record<string, number>>({})
   const [roomNames, setRoomNames] = useState<Record<string, string>>({})
   const [playersPerSlot, setPlayersPerSlot] = useState<number>(6)
@@ -275,7 +277,7 @@ export function SettingsModal({
       }, 1500)
     } catch (err) {
       console.error('Error saving settings:', err)
-      setError(err instanceof Error ? err.message : 'Erreur lors de la sauvegarde')
+      setError(err instanceof Error ? err.message : t('admin.settings_modal.save_error'))
     } finally {
       setLoading(false)
     }
@@ -284,11 +286,11 @@ export function SettingsModal({
   const sortedRooms = [...rooms].sort((a, b) => a.sort_order - b.sort_order)
 
   const tabs = [
-    { id: 'general' as SettingsTab, label: 'Général', icon: Settings },
-    { id: 'active' as SettingsTab, label: 'Active Games', icon: Gamepad2 },
-    { id: 'laser' as SettingsTab, label: 'Laser', icon: Target },
-    { id: 'rooms' as SettingsTab, label: 'Salles Anniversaire', icon: Cake },
-    { id: 'pricing' as SettingsTab, label: 'Tarifs', icon: DollarSign },
+    { id: 'general' as SettingsTab, label: t('admin.settings_modal.tabs.general'), icon: Settings },
+    { id: 'active' as SettingsTab, label: t('admin.settings_modal.tabs.active'), icon: Gamepad2 },
+    { id: 'laser' as SettingsTab, label: t('admin.settings_modal.tabs.laser'), icon: Target },
+    { id: 'rooms' as SettingsTab, label: t('admin.settings_modal.tabs.rooms'), icon: Cake },
+    { id: 'pricing' as SettingsTab, label: t('admin.settings_modal.tabs.pricing'), icon: DollarSign },
   ]
 
   return (
@@ -305,7 +307,7 @@ export function SettingsModal({
           }`}
         >
           <h2 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-            Paramètres
+            {t('admin.settings_modal.title')}
           </h2>
           <button
             onClick={onClose}
@@ -354,7 +356,7 @@ export function SettingsModal({
           {/* Capacités des salles */}
           <div>
             <h3 className={`text-lg font-semibold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-              Capacités des salles
+              {t('admin.settings_modal.room_capacities')}
             </h3>
             <div className="space-y-3">
               {sortedRooms.map((room, index) => (
@@ -371,7 +373,7 @@ export function SettingsModal({
                         isDark ? 'text-gray-300' : 'text-gray-700'
                       }`}
                     >
-                      Nom de la salle
+                      {t('admin.settings_modal.room_name')}
                     </label>
                     <input
                       type="text"
@@ -382,7 +384,7 @@ export function SettingsModal({
                           [room.id]: e.target.value,
                         })
                       }}
-                      placeholder={`Salle ${index + 1}`}
+                      placeholder={t('admin.settings_modal.room_placeholder', { number: index + 1 })}
                       className={`flex-1 max-w-xs px-3 py-2 rounded-lg border ${
                         isDark
                           ? 'bg-gray-800 border-gray-600 text-white'
@@ -397,7 +399,7 @@ export function SettingsModal({
                         isDark ? 'text-gray-300' : 'text-gray-700'
                       }`}
                     >
-                      Capacité
+                      {t('admin.settings_modal.capacity')}
                     </label>
                     <div className="flex items-center gap-3">
                       <input
@@ -419,7 +421,7 @@ export function SettingsModal({
                         } focus:outline-none focus:ring-2 focus:ring-blue-500`}
                       />
                       <span className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                        personnes
+                        {t('admin.settings_modal.people')}
                       </span>
                     </div>
                   </div>
@@ -436,7 +438,7 @@ export function SettingsModal({
           {/* Configuration des slots */}
           <div>
             <h3 className={`text-lg font-semibold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-              Configuration des slots
+              {t('admin.settings_modal.slot_configuration')}
             </h3>
             <div className="space-y-4">
               {/* Nombre total de slots */}
@@ -446,7 +448,7 @@ export function SettingsModal({
                 }`}
               >
                 <label className={`text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                  Nombre total de slots
+                  {t('admin.settings_modal.total_slots')}
                 </label>
                 <div className="flex items-center gap-3">
                   <input
@@ -465,12 +467,12 @@ export function SettingsModal({
                     } focus:outline-none focus:ring-2 focus:ring-blue-500`}
                   />
                   <span className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                    slots
+                    {t('admin.settings_modal.slots')}
                   </span>
                 </div>
               </div>
               <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                Nombre total de slots disponibles pour les réservations.
+                {t('admin.settings_modal.total_slots_desc')}
               </p>
 
               {/* Personnes par slot */}
@@ -480,7 +482,7 @@ export function SettingsModal({
                 }`}
               >
                 <label className={`text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                  Personnes par slot
+                  {t('admin.settings_modal.people_per_slot')}
                 </label>
                 <div className="flex items-center gap-3">
                   <input
@@ -504,7 +506,7 @@ export function SettingsModal({
                 </div>
               </div>
               <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                Nombre de personnes pouvant occuper un slot de jeu simultanément.
+                {t('admin.settings_modal.people_per_slot_desc')}
               </p>
             </div>
           </div>
@@ -517,11 +519,11 @@ export function SettingsModal({
           {/* Activation Laser */}
           <div>
             <h3 className={`text-lg font-semibold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-              Activation Laser
+              {t('admin.settings_modal.laser_activation')}
             </h3>
             <div className={`flex items-center justify-between p-4 rounded-lg ${isDark ? 'bg-gray-700/50' : 'bg-gray-50'}`}>
               <label className={`text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                Activer les salles Laser pour cette branche
+                {t('admin.settings_modal.enable_laser_rooms')}
               </label>
               <input
                 type="checkbox"
@@ -531,7 +533,7 @@ export function SettingsModal({
               />
             </div>
             <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-              Activez cette option pour permettre les réservations Laser dans cette branche.
+              {t('admin.settings_modal.enable_laser_desc')}
             </p>
           </div>
 
@@ -539,13 +541,13 @@ export function SettingsModal({
           {laserEnabled && (
             <div>
               <h3 className={`text-lg font-semibold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                Gestion des salles Laser
+                {t('admin.settings_modal.laser_room_management')}
               </h3>
               <div className="space-y-4">
                 {/* Nombre total de vestes */}
                 <div className={`flex items-center justify-between p-4 rounded-lg ${isDark ? 'bg-gray-700/50' : 'bg-gray-50'}`}>
                   <label className={`text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                    Nombre total de vestes disponibles
+                    {t('admin.settings_modal.total_vests')}
                   </label>
                   <div className="flex items-center gap-3">
                     <input
@@ -564,18 +566,18 @@ export function SettingsModal({
                       } focus:outline-none focus:ring-2 focus:ring-blue-500`}
                     />
                     <span className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                      vestes
+                      {t('admin.settings_modal.vests')}
                     </span>
                   </div>
                 </div>
                 <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                  Limite principale de vestes disponibles pour toutes les salles Laser combinées.
+                  {t('admin.settings_modal.total_vests_desc')}
                 </p>
 
                 {/* Seuil salle exclusive */}
                 <div>
                   <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                    Seuil salle exclusive
+                    {t('admin.settings_modal.exclusive_threshold')}
                   </label>
                   <div className="flex items-center gap-3">
                     <input
@@ -599,7 +601,7 @@ export function SettingsModal({
                   </div>
                 </div>
                 <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                  À partir de ce nombre de participants, le groupe doit avoir une salle vide pour lui seul ET la salle devient exclusive (bloquée aux autres groupes). Utilisé pour l'allocation automatique et le blocage de capacité.
+                  {t('admin.settings_modal.exclusive_threshold_desc')}
                 </p>
 
                 {/* Liste des salles Laser */}
@@ -669,13 +671,13 @@ export function SettingsModal({
                   isDark ? 'border-gray-600 bg-gray-700/30' : 'border-gray-300 bg-gray-50'
                 }`}>
                   <h4 className={`text-sm font-medium mb-3 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                    Ajouter une nouvelle salle Laser
+                    {t('admin.settings_modal.add_laser_room')}
                   </h4>
                   <div className="space-y-3">
                     <div className="flex items-center gap-3">
                       <input
                         type="text"
-                        placeholder="Nom (ex: L3)"
+                        placeholder={t('admin.settings_modal.name_placeholder')}
                         value={newLaserRoomName}
                         onChange={(e) => setNewLaserRoomName(e.target.value)}
                         className={`flex-1 px-3 py-2 rounded-lg border ${
@@ -688,7 +690,7 @@ export function SettingsModal({
                         type="number"
                         min="1"
                         max="50"
-                        placeholder="Capacité"
+                        placeholder={t('admin.settings_modal.capacity')}
                         value={newLaserRoomCapacity}
                         onChange={(e) => setNewLaserRoomCapacity(parseInt(e.target.value) || 15)}
                         className={`w-24 px-3 py-2 rounded-lg border ${
@@ -753,7 +755,7 @@ export function SettingsModal({
                             : 'bg-blue-600 hover:bg-blue-700 text-white'
                         }`}
                       >
-                        Ajouter
+                        {t('admin.settings_modal.add')}
                       </button>
                     </div>
                   </div>
@@ -770,13 +772,13 @@ export function SettingsModal({
           {/* Configuration de l'affichage du texte */}
           <div>
             <h3 className={`text-lg font-semibold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-              Affichage des réservations
+              {t('admin.settings_modal.booking_display')}
             </h3>
             <div className="space-y-4">
               {/* Taille de police */}
               <div className={`flex items-center justify-between p-4 rounded-lg ${isDark ? 'bg-gray-700/50' : 'bg-gray-50'}`}>
                 <label className={`text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                  Taille de police
+                  {t('admin.settings_modal.font_size')}
                 </label>
                 <select
                   value={textSize}
@@ -787,17 +789,17 @@ export function SettingsModal({
                       : 'bg-white border-gray-300 text-gray-900'
                   } focus:outline-none focus:ring-2 focus:ring-blue-500`}
                 >
-                  <option value="xs">Très petite (xs)</option>
-                  <option value="sm">Petite (sm)</option>
-                  <option value="base">Normale (base)</option>
-                  <option value="lg">Grande (lg)</option>
+                  <option value="xs">{t('admin.settings_modal.font_size_xs')}</option>
+                  <option value="sm">{t('admin.settings_modal.font_size_sm')}</option>
+                  <option value="base">{t('admin.settings_modal.font_size_base')}</option>
+                  <option value="lg">{t('admin.settings_modal.font_size_lg')}</option>
                 </select>
               </div>
 
               {/* Gras */}
               <div className={`flex items-center justify-between p-4 rounded-lg ${isDark ? 'bg-gray-700/50' : 'bg-gray-50'}`}>
                 <label className={`text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                  Épaisseur du texte
+                  {t('admin.settings_modal.font_weight')}
                 </label>
                 <select
                   value={textWeight}
@@ -808,16 +810,16 @@ export function SettingsModal({
                       : 'bg-white border-gray-300 text-gray-900'
                   } focus:outline-none focus:ring-2 focus:ring-blue-500`}
                 >
-                  <option value="normal">Normal</option>
-                  <option value="semibold">Semi-gras</option>
-                  <option value="bold">Gras</option>
+                  <option value="normal">{t('admin.settings_modal.font_weight_normal')}</option>
+                  <option value="semibold">{t('admin.settings_modal.font_weight_semibold')}</option>
+                  <option value="bold">{t('admin.settings_modal.font_weight_bold')}</option>
                 </select>
               </div>
 
               {/* Alignement */}
               <div className={`flex items-center justify-between p-4 rounded-lg ${isDark ? 'bg-gray-700/50' : 'bg-gray-50'}`}>
                 <label className={`text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                  Alignement
+                  {t('admin.settings_modal.text_align')}
                 </label>
                 <select
                   value={textAlign}
@@ -828,9 +830,9 @@ export function SettingsModal({
                       : 'bg-white border-gray-300 text-gray-900'
                   } focus:outline-none focus:ring-2 focus:ring-blue-500`}
                 >
-                  <option value="left">Gauche</option>
-                  <option value="center">Centre</option>
-                  <option value="right">Droite</option>
+                  <option value="left">{t('admin.settings_modal.align_left')}</option>
+                  <option value="center">{t('admin.settings_modal.align_center')}</option>
+                  <option value="right">{t('admin.settings_modal.align_right')}</option>
                 </select>
               </div>
             </div>
@@ -844,17 +846,17 @@ export function SettingsModal({
             {/* Paramètres iCount */}
             <div>
               <h3 className={`text-lg font-semibold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                Facturation iCount
+                {t('admin.settings_modal.icount_billing')}
               </h3>
               <div className="space-y-4">
                 {/* Toggle envoi auto */}
                 <div className={`flex items-center justify-between p-4 rounded-lg ${isDark ? 'bg-gray-700/50' : 'bg-gray-50'}`}>
                   <div>
                     <label className={`text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                      Envoi automatique des devis
+                      {t('admin.settings_modal.auto_send_quotes')}
                     </label>
                     <p className={`text-xs mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                      Envoyer automatiquement le devis par email à la confirmation de la réservation
+                      {t('admin.settings_modal.auto_send_quotes_desc')}
                     </p>
                   </div>
                   <button
@@ -877,7 +879,7 @@ export function SettingsModal({
             {/* Info sur le catalogue */}
             <div className={`p-4 rounded-lg ${isDark ? 'bg-gray-700/30 border border-gray-600' : 'bg-blue-50 border border-blue-200'}`}>
               <p className={`text-sm ${isDark ? 'text-gray-300' : 'text-blue-800'}`}>
-                Le catalogue de produits et formules iCount est configuré dans la section &quot;Catalogue iCount&quot; des paramètres généraux.
+                {t('admin.settings_modal.catalog_info')}
               </p>
             </div>
           </div>
@@ -891,7 +893,7 @@ export function SettingsModal({
           )}
           {success && (
             <div className={`p-3 rounded-lg bg-green-500/10 border border-green-500/20`}>
-              <p className="text-sm text-green-500">Paramètres sauvegardés avec succès !</p>
+              <p className="text-sm text-green-500">{t('admin.settings_modal.save_success')}</p>
             </div>
           )}
         </div>
@@ -910,7 +912,7 @@ export function SettingsModal({
                 : 'text-gray-700 hover:bg-gray-100'
             }`}
           >
-            Annuler
+            {t('admin.common.cancel')}
           </button>
           <button
             onClick={handleSave}
@@ -920,12 +922,12 @@ export function SettingsModal({
             {loading ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin" />
-                Sauvegarde...
+                {t('admin.common.saving')}
               </>
             ) : (
               <>
                 <Save className="w-4 h-4" />
-                Enregistrer
+                {t('admin.common.save')}
               </>
             )}
           </button>

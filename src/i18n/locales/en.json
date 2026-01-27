@@ -368,7 +368,8 @@
     "game_duration": {
       "title": "Game Duration",
       "description": "Unlimited games for the chosen duration",
-      "minutes": "minutes"
+      "minutes": "minutes",
+      "unlimited": "Unlimited games during the chosen duration"
     },
     "game_count": {
       "title": "Number of Games",
@@ -386,7 +387,13 @@
       "back_to_site": "Back to Site",
       "finished": "Finished",
       "download_reservation": "Download Reservation",
-      "download_order": "Download Order"
+      "download_order": "Download Order",
+      "request_received": "Request Received!",
+      "contact_soon": "We will contact you shortly to confirm your reservation",
+      "request_number": "Request Number",
+      "contact_info": "We have sent you a confirmation email. We will contact you shortly.",
+      "back_home": "Back to Home",
+      "new_booking": "New Booking"
     },
     "arrival_note": "Please arrive at least 10 minutes before your scheduled time",
     "summary": {
@@ -397,7 +404,75 @@
       "time": "Time:",
       "players": "Players:",
       "duration": "Duration:",
-      "games": "Games:"
+      "games": "Games:",
+      "name": "Name",
+      "phone": "Phone",
+      "email": "Email"
+    },
+    "step3_game": {
+      "title": "Game Type",
+      "subtitle": "Choose your activity"
+    },
+    "game_area": {
+      "active": {
+        "description": "Interactive games and challenges"
+      },
+      "laser": {
+        "description": "Laser maze",
+        "party": "party",
+        "parties": "parties"
+      },
+      "mix": {
+        "title": "Custom",
+        "description": "Active + Laser combination"
+      }
+    },
+    "game_parties": {
+      "title": "Number of games",
+      "laser_singular": "laser game",
+      "laser_plural": "laser games"
+    },
+    "custom_formula": {
+      "title": "Custom Package",
+      "description": "Active Games + Laser City combination",
+      "note": "We will contact you to customize your experience"
+    },
+    "continue": "Continue",
+    "step3_event": {
+      "title": "Type of games",
+      "subtitle": "Which activity for your event?"
+    },
+    "event_game": {
+      "active_1h": "1 hour of games",
+      "laser_2games": "2 laser games",
+      "mix": "30min Active + 1 Laser"
+    },
+    "payment": {
+      "breakdown": "Breakdown",
+      "total": "Total",
+      "deposit": "Deposit to pay now",
+      "card_title": "Secure Payment",
+      "card_number": "Card Number",
+      "expiry": "Expiry",
+      "holder_id": "ID Number (Teudat Zehut)",
+      "secure_notice": "Your payment information is encrypted and secure",
+      "loading": "Calculating...",
+      "fill_card_details": "Please fill in all card details",
+      "payment_failed": "Payment failed. Please try again.",
+      "processing_error": "Payment processing error. Please try again.",
+      "confirmed": "Booking confirmed"
+    },
+    "errors": {
+      "no_branches": "No branches available. Please contact support.",
+      "select_branch": "Please select a branch.",
+      "branch_not_found": "Branch \"{{branch}}\" not found. Please try again.",
+      "save_error": "Error: {{error}}",
+      "confirmation_error": "Error during confirmation. Please try again.",
+      "save_reservation": "Error saving the reservation"
+    },
+    "step7": {
+      "title": "Review & Payment",
+      "subtitle": "Please review your booking and complete the payment"
     }
   },
   "admin": {
@@ -789,6 +864,11 @@
         "partial": "Partial Payment",
         "paid": "Paid",
         "guaranteed": "Card Guarantee"
+      },
+      "game_areas": {
+        "laser": "Laser City",
+        "active": "Active Games",
+        "mix": "Active + Laser"
       }
     },
     "invoice": {

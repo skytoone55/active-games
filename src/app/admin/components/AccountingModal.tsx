@@ -186,20 +186,20 @@ export function AccountingModal({
     if (!order) return ''
 
     // Même logique pour GAME et EVENT
-    if (order.game_area === 'LASER') return 'Laser City'
-    if (order.game_area === 'MIX' || order.game_area === 'CUSTOM') return 'Active + Laser'
-    if (order.game_area === 'ACTIVE') return 'Active Games'
+    if (order.game_area === 'LASER') return t('admin.accounting.game_areas.laser')
+    if (order.game_area === 'MIX' || order.game_area === 'CUSTOM') return t('admin.accounting.game_areas.mix')
+    if (order.game_area === 'ACTIVE') return t('admin.accounting.game_areas.active')
 
     // Fallback sur event_type pour les anciennes commandes EVENT
     if (order.order_type === 'EVENT') {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const orderAny = order as any
-      if (orderAny.event_type === 'event_active') return 'Active Games'
-      if (orderAny.event_type === 'event_laser') return 'Laser City'
-      if (orderAny.event_type === 'event_mix') return 'Active + Laser'
+      if (orderAny.event_type === 'event_active') return t('admin.accounting.game_areas.active')
+      if (orderAny.event_type === 'event_laser') return t('admin.accounting.game_areas.laser')
+      if (orderAny.event_type === 'event_mix') return t('admin.accounting.game_areas.mix')
     }
 
-    return 'Active Games'
+    return t('admin.accounting.game_areas.active')
   }
 
   const getPaymentStatus = (): PaymentStatus => {

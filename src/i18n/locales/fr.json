@@ -423,9 +423,10 @@
       "custom_description": "Combinaison Active Games + Laser City"
     },
     "game_duration": {
-      "title": "Duree de jeu",
+      "title": "Durée de jeu",
       "description": "Jeux illimites pendant la duree choisie",
-      "minutes": "minutes"
+      "minutes": "minutes",
+      "unlimited": "Jeux illimités pendant la durée choisie"
     },
     "game_count": {
       "title": "Nombre de parties",
@@ -437,13 +438,19 @@
     "confirm": "Confirmer la reservation",
     "loading": "Chargement...",
     "confirmation": {
-      "title": "Reservation confirmee !",
-      "subtitle": "Merci pour votre reservation",
-      "reservation_number": "Numero de reservation",
+      "title": "Réservation confirmée !",
+      "subtitle": "Merci pour votre réservation",
+      "reservation_number": "Numéro de réservation",
       "back_to_site": "Retour au site",
       "finished": "Termine",
       "download_reservation": "Telecharger la reservation",
-      "download_order": "Telecharger la commande"
+      "download_order": "Telecharger la commande",
+      "request_received": "Demande reçue !",
+      "contact_soon": "Nous vous contacterons prochainement pour confirmer votre réservation",
+      "request_number": "Numéro de demande",
+      "contact_info": "Nous vous avons envoyé un email de confirmation. Nous vous contacterons prochainement.",
+      "back_home": "Retour à l'accueil",
+      "new_booking": "Nouvelle réservation"
     },
     "arrival_note": "Veuillez arriver au moins 10 minutes avant l'heure prevue",
     "summary": {
@@ -454,7 +461,75 @@
       "time": "Heure:",
       "players": "Joueurs:",
       "duration": "Duree:",
-      "games": "Parties:"
+      "games": "Parties:",
+      "name": "Nom",
+      "phone": "Téléphone",
+      "email": "Email"
+    },
+    "step3_game": {
+      "title": "Type de jeu",
+      "subtitle": "Choisissez votre activité"
+    },
+    "game_area": {
+      "active": {
+        "description": "Jeux interactifs et challenges"
+      },
+      "laser": {
+        "description": "Labyrinthe laser",
+        "party": "partie",
+        "parties": "parties"
+      },
+      "mix": {
+        "title": "Sur mesure",
+        "description": "Combinaison Active + Laser"
+      }
+    },
+    "game_parties": {
+      "title": "Nombre de parties",
+      "laser_singular": "partie de laser",
+      "laser_plural": "parties de laser"
+    },
+    "custom_formula": {
+      "title": "Formule Sur Mesure",
+      "description": "Combinaison Active Games + Laser City",
+      "note": "Nous vous contacterons pour personnaliser votre expérience"
+    },
+    "continue": "Continuer",
+    "step3_event": {
+      "title": "Type de jeux",
+      "subtitle": "Quelle activité pour votre événement ?"
+    },
+    "event_game": {
+      "active_1h": "1 heure de jeux",
+      "laser_2games": "2 parties de laser",
+      "mix": "30min Active + 1 Laser"
+    },
+    "payment": {
+      "breakdown": "Détails",
+      "total": "Total",
+      "deposit": "Acompte à payer maintenant",
+      "card_title": "Paiement sécurisé",
+      "card_number": "Numéro de carte",
+      "expiry": "Validité",
+      "holder_id": "Carte d'identité du titulaire",
+      "secure_notice": "Vos informations de paiement sont cryptées et sécurisées",
+      "loading": "Calcul en cours...",
+      "fill_card_details": "Veuillez remplir tous les détails de la carte",
+      "payment_failed": "Le paiement a échoué. Veuillez réessayer.",
+      "processing_error": "Erreur de traitement du paiement. Veuillez réessayer.",
+      "confirmed": "Réservation confirmée"
+    },
+    "errors": {
+      "no_branches": "Aucune branche disponible. Veuillez contacter le support.",
+      "select_branch": "Veuillez sélectionner une branche.",
+      "branch_not_found": "Branche \"{{branch}}\" non trouvée. Veuillez réessayer.",
+      "save_error": "Erreur : {{error}}",
+      "confirmation_error": "Erreur lors de la confirmation. Veuillez réessayer.",
+      "save_reservation": "Erreur lors de la sauvegarde de la réservation"
+    },
+    "step7": {
+      "title": "Vérification et paiement",
+      "subtitle": "Veuillez vérifier votre réservation et compléter le paiement"
     }
   },
   "admin": {
@@ -846,6 +921,11 @@
         "partial": "Paiement partiel",
         "paid": "Paye",
         "guaranteed": "Garantie carte"
+      },
+      "game_areas": {
+        "laser": "Laser City",
+        "active": "Active Games",
+        "mix": "Active + Laser"
       }
     },
     "invoice": {
@@ -1246,6 +1326,49 @@
         "capacity": "Capacite",
         "notifications": "Notifications"
       },
+      "room_capacities": "Capacites des salles",
+      "room_name": "Nom de la salle",
+      "room_placeholder": "Salle {{number}}",
+      "capacity": "Capacite",
+      "people": "personnes",
+      "slot_configuration": "Configuration des slots",
+      "total_slots": "Nombre total de slots",
+      "slots": "slots",
+      "total_slots_desc": "Nombre total de slots disponibles pour les reservations.",
+      "people_per_slot": "Personnes par slot",
+      "people_per_slot_desc": "Nombre de personnes pouvant occuper un slot de jeu simultanement.",
+      "laser_activation": "Activation Laser",
+      "enable_laser_rooms": "Activer les salles Laser pour cette branche",
+      "enable_laser_desc": "Activez cette option pour permettre les reservations Laser dans cette branche.",
+      "laser_room_management": "Gestion des salles Laser",
+      "total_vests": "Nombre total de vestes disponibles",
+      "vests": "vestes",
+      "total_vests_desc": "Limite principale de vestes disponibles pour toutes les salles Laser combinees.",
+      "exclusive_threshold": "Seuil salle exclusive",
+      "exclusive_threshold_desc": "A partir de ce nombre de participants, le groupe doit avoir une salle vide pour lui seul ET la salle devient exclusive (bloquee aux autres groupes). Utilise pour l'allocation automatique et le blocage de capacite.",
+      "add_laser_room": "Ajouter une nouvelle salle Laser",
+      "name_placeholder": "Nom (ex: L3)",
+      "add": "Ajouter",
+      "booking_display": "Affichage des reservations",
+      "font_size": "Taille de police",
+      "font_size_xs": "Tres petite (xs)",
+      "font_size_sm": "Petite (sm)",
+      "font_size_base": "Normale (base)",
+      "font_size_lg": "Grande (lg)",
+      "font_weight": "Epaisseur du texte",
+      "font_weight_normal": "Normal",
+      "font_weight_semibold": "Semi-gras",
+      "font_weight_bold": "Gras",
+      "text_align": "Alignement",
+      "align_left": "Gauche",
+      "align_center": "Centre",
+      "align_right": "Droite",
+      "icount_billing": "Facturation iCount",
+      "auto_send_quotes": "Envoi automatique des devis",
+      "auto_send_quotes_desc": "Envoyer automatiquement le devis par email a la confirmation de la reservation",
+      "catalog_info": "Le catalogue de produits et formules iCount est configure dans la section \"Catalogue iCount\" des parametres generaux.",
+      "save_error": "Erreur lors de la sauvegarde",
+      "save_success": "Parametres sauvegardes avec succes !",
       "general": {
         "branch_name": "Nom de l'agence",
         "phone": "Telephone",

@@ -260,8 +260,8 @@
       "subtitle_event": "אנא מלאו את פרטי יצירת הקשר שלכם ואת פרטי הזמנת האירוע"
     },
     "step7": {
-      "title": "סיכום ותשלום",
-      "subtitle": "אנא בדקו את פרטי ההזמנה והשלימו את התשלום"
+      "title": "סקירה ותשלום",
+      "subtitle": "אנא בדוק את ההזמנה והשלם את התשלום"
     },
     "contact": {
       "first_name": "שם פרטי",
@@ -381,15 +381,21 @@
     "confirm": "אשרו הזמנה",
     "loading": "טוען...",
     "confirmation": {
-      "title": "הזמנה אושרה!",
-      "subtitle": "תודה על ההזמנה שלכם",
+      "title": "ההזמנה אושרה!",
+      "subtitle": "תודה על ההזמנה",
       "reservation_number": "מספר הזמנה",
       "back_to_site": "חזרה לאתר",
       "finished": "סיום",
       "download_reservation": "הורדת הזמנה",
       "download_order": "הורדת הזמנה",
       "payment_success": "התשלום בוצע בהצלחה!",
-      "deposit_paid": "מקדמה שולמה:"
+      "deposit_paid": "מקדמה שולמה:",
+      "request_received": "הבקשה התקבלה!",
+      "contact_soon": "ניצור איתך קשר בקרוב לאישור ההזמנה",
+      "request_number": "מספר בקשה",
+      "contact_info": "שלחנו לך אימייל אישור. ניצור איתך קשר בקרוב.",
+      "back_home": "חזרה לדף הבית",
+      "new_booking": "הזמנה חדשה"
     },
     "arrival_note": "אנא הגיעו לפחות 10 דקות לפני השעה שנקבעה",
     "summary": {
@@ -400,37 +406,80 @@
       "duration": "משך:",
       "date": "תאריך:",
       "time": "שעה:",
-      "name": "שם:",
-      "phone": "טלפון:",
-      "email": "אימייל:"
+      "name": "שם",
+      "phone": "טלפון",
+      "email": "אימייל"
     },
     "payment": {
       "title": "סיכום מחיר",
-      "breakdown": "פירוט:",
-      "total": "סה״כ:",
-      "deposit": "מקדמה לתשלום עכשיו:",
+      "breakdown": "פירוט",
+      "total": "סה\"כ",
+      "deposit": "מקדמה לתשלום כעת",
       "remaining": "יתרה לתשלום במקום:",
       "card_title": "תשלום מאובטח",
       "card_number": "מספר כרטיס",
       "expiry": "תוקף",
       "cvv": "CVV",
-      "holder_id": "מספר תעודת זהות",
+      "holder_id": "ת.ז.",
       "secure_notice": "פרטי התשלום שלך מוצפנים ומאובטחים",
       "loading": "מחשב...",
-      "processing": "מעבד תשלום..."
+      "processing": "מעבד תשלום...",
+      "fill_card_details": "אנא מלא את כל פרטי הכרטיס",
+      "payment_failed": "התשלום נכשל. אנא נסה שוב.",
+      "processing_error": "שגיאה בעיבוד התשלום. אנא נסה שוב.",
+      "confirmed": "הזמנה אושרה"
     },
     "game_area": {
       "active": {
-        "title": "Active Games"
+        "title": "Active Games",
+        "description": "משחקים אינטראקטיביים ואתגרים"
       },
       "laser": {
         "title": "Laser Tag",
         "party": "משחק",
-        "parties": "משחקים"
+        "parties": "משחקים",
+        "description": "מבוך לייזר"
       },
       "mix": {
-        "title": "MIX (Active + Laser)"
+        "title": "מותאם אישית",
+        "description": "שילוב Active + Laser"
       }
+    },
+    "step3_game": {
+      "title": "סוג משחק",
+      "subtitle": "בחר את הפעילות שלך"
+    },
+    "game_duration": {
+      "title": "משך משחק",
+      "unlimited": "משחקים ללא הגבלה במשך הזמן שנבחר"
+    },
+    "game_parties": {
+      "title": "מספר משחקים",
+      "laser_singular": "משחק לייזר",
+      "laser_plural": "משחקי לייזר"
+    },
+    "custom_formula": {
+      "title": "חבילה מותאמת אישית",
+      "description": "שילוב Active Games + Laser City",
+      "note": "ניצור איתך קשר להתאמה אישית"
+    },
+    "continue": "המשך",
+    "step3_event": {
+      "title": "סוג משחקים",
+      "subtitle": "איזו פעילות לאירוע שלך?"
+    },
+    "event_game": {
+      "active_1h": "שעה של משחקים",
+      "laser_2games": "2 משחקי לייזר",
+      "mix": "30 דקות Active + 1 Laser"
+    },
+    "errors": {
+      "no_branches": "אין סניפים זמינים. אנא צור קשר עם התמיכה.",
+      "select_branch": "אנא בחר סניף.",
+      "branch_not_found": "סניף \"{{branch}}\" לא נמצא. אנא נסה שוב.",
+      "save_error": "שגיאה: {{error}}",
+      "confirmation_error": "שגיאה באישור. אנא נסה שוב.",
+      "save_reservation": "שגיאה בשמירת ההזמנה"
     }
   },
   "admin": {
@@ -873,6 +922,11 @@
         "partial": "תשלום חלקי",
         "paid": "שולם",
         "guaranteed": "ערבות כרטיס"
+      },
+      "game_areas": {
+        "laser": "לייזר סיטי",
+        "active": "אקטיב גיימס",
+        "mix": "אקטיב + לייזר"
       }
     },
     "invoice": {
@@ -1249,15 +1303,11 @@
         "placeholder_phone": "05XXXXXXXX"
       },
       "errors": {
-        "no_laser_room": "אין חדר לייזר זמין ל-{{participants}} משתתפים ב-{{time}}{{mode}}. קיבולת לא מספקת. אנא בחר זמן אחר, הפחת את מספר המשתתפים{{modeHint}}.",
-        "no_laser_room_full": "אין חדר לייזר זמין ל-{{participants}} משתתפים ב-{{time}}. החדרים מלאים או בעלי קיבולת לא מספקת. אנא בחר זמן אחר או הפחת את מספר המשתתפים.",
+        "no_laser_room": "אין חדר לייזר זמין ל-{{participants}} משתתפים ב-{{time}}{{mode}}. קיבולת לא מספקת. אנא בחר זמן אחר, הפחת משתתפים{{modeHint}}.",
         "no_room_for_quantity": "אין חדר זמין לכמות זו. אנא הפחת את מספר המשתתפים.",
-        "no_room_for_participants": "אין חדר זמין ל-{{participants}} משתתפים. אנא הפחת את מספר המשתתפים או בחר זמן אחר.",
         "vests_constraint": "הפרת מגבלת אפודים: {{current}} > {{max}} (נדחה). {{message}}",
-        "vests_constraint_spare": "הפרת מגבלת אפודים (כולל רזרבה): {{current}} > {{total}} (נדחה). {{message}}",
-        "vests_constraint_hard": "הפרת מגבלת אפודים קשה: {{current}} > {{max}} (נדחה). {{message}}",
         "booking_cancelled": "ההזמנה בוטלה. אנא הפחת את מספר המשתתפים או בחר זמן אחר.",
-        "create_error": "שגיאה ביצירת הזמנה",
+        "create_error": "שגיאה ביצירת ההזמנה",
         "generic_error": "אירעה שגיאה"
       },
       "calendar": {
@@ -1280,14 +1330,6 @@
         "min_participants": "מספר המשתתפים חייב להיות לפחות 1",
         "min_duration": "משך מינימלי הוא 15 דקות",
         "max_players": "מקסימום {{max}} שחקנים מותר"
-      },
-      "errors": {
-        "no_laser_room": "אין חדר לייזר זמין ל-{{participants}} משתתפים ב-{{time}}{{mode}}. קיבולת לא מספקת. אנא בחר זמן אחר, הפחת משתתפים{{modeHint}}.",
-        "no_room_for_quantity": "אין חדר זמין לכמות זו. אנא הפחת את מספר המשתתפים.",
-        "vests_constraint": "הפרת מגבלת אפודים: {{current}} > {{max}} (נדחה). {{message}}",
-        "booking_cancelled": "ההזמנה בוטלה. אנא הפחת את מספר המשתתפים או בחר זמן אחר.",
-        "create_error": "שגיאה ביצירת ההזמנה",
-        "generic_error": "אירעה שגיאה"
       }
     },
     "settings_modal": {
