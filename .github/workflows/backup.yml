@@ -54,8 +54,9 @@ jobs:
 
             const backupData = {
               timestamp: new Date().toISOString(),
-              version: '1.0',
+              version: '2.0',
               source: 'github-actions',
+              schema: {},
               tables: {},
               metadata: {
                 project: 'activelaser',
@@ -66,6 +67,33 @@ jobs:
 
             let totalRecords = 0;
 
+            // Export schema for each table
+            console.log('📋 Export du schéma...');
+            for (const table of tables) {
+              try {
+                const { data: schema, error } = await supabase.rpc('get_table_schema', { table_name: table });
+
+                if (!error && schema) {
+                  backupData.schema[table] = schema;
+                  console.log(`✅ Schéma ${table}`);
+                } else {
+                  // Fallback: get schema from information_schema
+                  const { data: columns } = await supabase
+                    .from('information_schema.columns')
+                    .select('*')
+                    .eq('table_name', table);
+
+                  backupData.schema[table] = columns || [];
+                  console.log(`✅ Schéma ${table} (fallback)`);
+                }
+              } catch (err) {
+                console.warn(`⚠️  Schéma ${table}: ${err.message}`);
+                backupData.schema[table] = { error: err.message };
+              }
+            }
+
+            // Export data for each table
+            console.log('📊 Export des données...');
             for (const table of tables) {
               try {
                 const { data, error, count } = await supabase
