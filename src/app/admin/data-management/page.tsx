@@ -127,24 +127,24 @@ export default function DataManagementPage() {
   const deletionGroups: DeletionGroup[] = [
     {
       id: 'logs',
-      label: 'Logs & Emails',
-      description: 'Historique des activités et emails envoyés',
+      label: t('admin.data_management.logs_group'),
+      description: t('admin.data_management.logs_description'),
       icon: <FileText className="w-6 h-6" />,
       tables: ['activity_logs', 'email_logs'],
       color: 'yellow'
     },
     {
       id: 'reservations',
-      label: 'Réservations',
-      description: 'Commandes, réservations, sessions et créneaux',
+      label: t('admin.data_management.reservations_group'),
+      description: t('admin.data_management.reservations_description'),
       icon: <Calendar className="w-6 h-6" />,
       tables: ['orders', 'bookings', 'game_sessions', 'booking_slots'],
       color: 'orange'
     },
     {
       id: 'contacts',
-      label: 'Contacts',
-      description: 'Tous les contacts clients',
+      label: t('admin.data_management.contacts_group'),
+      description: t('admin.data_management.contacts_description'),
       icon: <Users className="w-6 h-6" />,
       tables: ['contacts'],
       color: 'red',
@@ -157,7 +157,7 @@ export default function DataManagementPage() {
     if (group.requiresReservationsDeletion && counts) {
       const hasReservations = (counts.orders + counts.bookings + counts.game_sessions + counts.booking_slots) > 0
       if (hasReservations) {
-        alert('Vous devez d\'abord supprimer toutes les réservations avant de supprimer les contacts.')
+        alert(t('admin.data_management.delete_reservations_first'))
         return
       }
     }
@@ -188,7 +188,7 @@ export default function DataManagementPage() {
       const data = await response.json()
 
       if (!data.success) {
-        setPasswordError(data.error || 'Erreur lors de la suppression')
+        setPasswordError(data.error || t('admin.data_management.error'))
         setDeletingGroup(null)
         return
       }
@@ -201,7 +201,10 @@ export default function DataManagementPage() {
       setShowPasswordModal(false)
       setPendingDeletion(null)
       setPassword('')
-      setDeletionSuccess(`${pendingDeletion.label} supprimés avec succès (${totalDeleted} éléments)`)
+      setDeletionSuccess(t('admin.data_management.deletion_success', {
+        label: pendingDeletion.label,
+        count: totalDeleted
+      }))
 
       // Refresh counts
       await fetchCounts()
@@ -211,7 +214,7 @@ export default function DataManagementPage() {
 
     } catch (error) {
       console.error('Error deleting data:', error)
-      setPasswordError('Erreur de connexion au serveur')
+      setPasswordError(t('admin.data_management.server_error'))
     } finally {
       setDeletingGroup(null)
     }
@@ -266,10 +269,10 @@ export default function DataManagementPage() {
             </div>
             <div>
               <h1 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                Gestion des données
+                {t('admin.data_management.title')}
               </h1>
               <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                Zone de suppression massive - Super Admin uniquement
+                {t('admin.data_management.subtitle')}
               </p>
             </div>
           </div>
@@ -283,10 +286,10 @@ export default function DataManagementPage() {
             <AlertTriangle className={`w-6 h-6 flex-shrink-0 ${isDark ? 'text-red-400' : 'text-red-600'}`} />
             <div>
               <h3 className={`font-semibold ${isDark ? 'text-red-400' : 'text-red-700'}`}>
-                Attention - Actions irréversibles
+                {t('admin.data_management.warning_title')}
               </h3>
               <p className={`text-sm mt-1 ${isDark ? 'text-red-300' : 'text-red-600'}`}>
-                Les suppressions sont définitives. Assurez-vous d'avoir une sauvegarde avant de procéder.
+                {t('admin.data_management.warning_message')}
               </p>
             </div>
           </div>
@@ -309,7 +312,7 @@ export default function DataManagementPage() {
             className={`w-full flex items-center justify-between ${isDark ? 'text-white' : 'text-gray-900'}`}
           >
             <div className="flex items-center gap-2">
-              <span className="font-medium">Branches sélectionnées:</span>
+              <span className="font-medium">{t('admin.data_management.branches_selected')}</span>
               <span className={`px-2 py-0.5 rounded text-sm ${
                 isDark ? 'bg-blue-900/50 text-blue-300' : 'bg-blue-100 text-blue-700'
               }`}>
@@ -328,7 +331,7 @@ export default function DataManagementPage() {
                     isDark ? 'bg-gray-700 hover:bg-gray-600 text-gray-300' : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
                   }`}
                 >
-                  Tout sélectionner
+                  {t('admin.data_management.select_all')}
                 </button>
                 <button
                   onClick={deselectAllBranches}
@@ -336,7 +339,7 @@ export default function DataManagementPage() {
                     isDark ? 'bg-gray-700 hover:bg-gray-600 text-gray-300' : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
                   }`}
                 >
-                  Tout désélectionner
+                  {t('admin.data_management.deselect_all')}
                 </button>
               </div>
               {branches.map(branch => (
@@ -362,7 +365,7 @@ export default function DataManagementPage() {
         {/* Deletion Groups */}
         {selectedBranches.length === 0 ? (
           <div className={`text-center py-12 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-            Sélectionnez au moins une branche pour voir les données
+            {t('admin.data_management.no_branch_selected')}
           </div>
         ) : loadingCounts ? (
           <div className="flex items-center justify-center py-12">
@@ -399,7 +402,7 @@ export default function DataManagementPage() {
                           {group.description}
                         </p>
                         <p className={`text-xs mt-1 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
-                          Tables: {group.tables.join(', ')}
+                          {t('admin.data_management.tables')}: {group.tables.join(', ')}
                         </p>
                       </div>
                     </div>
@@ -407,7 +410,7 @@ export default function DataManagementPage() {
                     <div className="flex items-center gap-4">
                       <div className={`text-right ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
                         <span className="text-2xl font-bold">{count.toLocaleString()}</span>
-                        <span className="text-sm ml-1">éléments</span>
+                        <span className="text-sm ml-1">{t('admin.data_management.items')}</span>
                       </div>
                       <button
                         onClick={() => handleDeleteClick(group)}
@@ -425,7 +428,7 @@ export default function DataManagementPage() {
                         ) : (
                           <Trash2 className="w-4 h-4" />
                         )}
-                        Supprimer
+                        {t('admin.data_management.delete_button')}
                       </button>
                     </div>
                   </div>
@@ -433,7 +436,7 @@ export default function DataManagementPage() {
                   {group.requiresReservationsDeletion && counts &&
                     (counts.orders + counts.bookings + counts.game_sessions + counts.booking_slots) > 0 && (
                     <p className={`mt-2 text-sm ${isDark ? 'text-orange-400' : 'text-orange-600'}`}>
-                      ⚠️ Supprimez d'abord les réservations pour pouvoir supprimer les contacts
+                      {t('admin.data_management.delete_reservations_first_warning')}
                     </p>
                   )}
                 </div>
@@ -446,29 +449,29 @@ export default function DataManagementPage() {
         {counts && selectedBranches.length > 0 && (
           <div className={`mt-6 p-4 rounded-xl ${isDark ? 'bg-gray-800' : 'bg-white'} shadow`}>
             <h3 className={`font-semibold mb-3 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-              Détail des données
+              {t('admin.data_management.data_details')}
             </h3>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
               <div className={isDark ? 'text-gray-400' : 'text-gray-600'}>
-                <span className="font-medium">Logs:</span> {counts.logs.toLocaleString()}
+                <span className="font-medium">{t('admin.data_management.activity_logs')}:</span> {counts.logs.toLocaleString()}
               </div>
               <div className={isDark ? 'text-gray-400' : 'text-gray-600'}>
-                <span className="font-medium">Emails:</span> {counts.emails.toLocaleString()}
+                <span className="font-medium">{t('admin.data_management.email_logs')}:</span> {counts.emails.toLocaleString()}
               </div>
               <div className={isDark ? 'text-gray-400' : 'text-gray-600'}>
-                <span className="font-medium">Orders:</span> {counts.orders.toLocaleString()}
+                <span className="font-medium">{t('admin.data_management.orders')}:</span> {counts.orders.toLocaleString()}
               </div>
               <div className={isDark ? 'text-gray-400' : 'text-gray-600'}>
-                <span className="font-medium">Bookings:</span> {counts.bookings.toLocaleString()}
+                <span className="font-medium">{t('admin.data_management.bookings')}:</span> {counts.bookings.toLocaleString()}
               </div>
               <div className={isDark ? 'text-gray-400' : 'text-gray-600'}>
-                <span className="font-medium">Sessions:</span> {counts.game_sessions.toLocaleString()}
+                <span className="font-medium">{t('admin.data_management.game_sessions')}:</span> {counts.game_sessions.toLocaleString()}
               </div>
               <div className={isDark ? 'text-gray-400' : 'text-gray-600'}>
-                <span className="font-medium">Slots:</span> {counts.booking_slots.toLocaleString()}
+                <span className="font-medium">{t('admin.data_management.booking_slots')}:</span> {counts.booking_slots.toLocaleString()}
               </div>
               <div className={isDark ? 'text-gray-400' : 'text-gray-600'}>
-                <span className="font-medium">Contacts:</span> {counts.contacts.toLocaleString()}
+                <span className="font-medium">{t('admin.data_management.contacts')}:</span> {counts.contacts.toLocaleString()}
               </div>
             </div>
           </div>
@@ -487,7 +490,7 @@ export default function DataManagementPage() {
               </div>
               <div>
                 <h3 className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                  Confirmer la suppression
+                  {t('admin.data_management.confirm_title')}
                 </h3>
                 <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
                   {pendingDeletion.label}
@@ -496,19 +499,18 @@ export default function DataManagementPage() {
             </div>
 
             <p className={`mb-4 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-              Vous êtes sur le point de supprimer définitivement <strong>{getGroupCount(pendingDeletion).toLocaleString()}</strong> éléments.
-              Cette action est irréversible.
+              {t('admin.data_management.confirm_message_detailed', { count: getGroupCount(pendingDeletion).toLocaleString() })}
             </p>
 
             <div className="mb-4">
               <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                Entrez votre mot de passe pour confirmer
+                {t('admin.data_management.enter_password')}
               </label>
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Mot de passe"
+                placeholder={t('admin.data_management.password_placeholder')}
                 className={`w-full px-4 py-2 rounded-lg border ${
                   passwordError
                     ? 'border-red-500'
@@ -535,7 +537,7 @@ export default function DataManagementPage() {
                     : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
                 }`}
               >
-                Annuler
+                {t('admin.data_management.cancel')}
               </button>
               <button
                 onClick={handleConfirmDeletion}
@@ -551,7 +553,7 @@ export default function DataManagementPage() {
                 ) : (
                   <Trash2 className="w-4 h-4" />
                 )}
-                Supprimer définitivement
+                {t('admin.data_management.confirm_delete')}
               </button>
             </div>
           </div>

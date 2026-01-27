@@ -482,6 +482,45 @@
       "save_reservation": "שגיאה בשמירת ההזמנה"
     }
   },
+  "cgv": {
+    "page_title": "אישור תנאי שימוש",
+    "page_subtitle": "צפה בפרטי ההזמנה שלך ואשר את התנאים",
+    "action_required": "⚠️ נדרשת פעולה",
+    "order_details": "פרטי ההזמנה שלך",
+    "reservation_number": "מספר הזמנה",
+    "date": "תאריך",
+    "participants": "משתתפים",
+    "event_type": "סוג אירוע",
+    "room": "חדר",
+    "games": "משחקים",
+    "formula": "נוסחה",
+    "unit_price": "מחיר ליחידה",
+    "subtotal": "סכום ביניים",
+    "total": "סה\"כ לתשלום",
+    "terms_checkbox": "קראתי ואני מאשר/ת את",
+    "terms_link": "תנאי השימוש",
+    "validate_button": "אישור תנאי השימוש",
+    "validating": "מאשר...",
+    "already_validated": "התנאים אושרו",
+    "already_validated_message": "תודה! אישרת את תנאי השימוש להזמנה שלך.",
+    "invalid_link": "קישור לא תקין",
+    "persons": "אנשים",
+    "price_breakdown": "פירוט מחיר",
+    "description": "תיאור",
+    "qty": "כמות",
+    "discount": "הנחה",
+    "event": "אירוע",
+    "game": "משחק",
+    "error": {
+      "invalid_link": "קישור לא תקין או פג תוקף",
+      "loading_error": "שגיאה בטעינה"
+    },
+    "modal": {
+      "title": "תנאי שימוש",
+      "loading": "טוען תנאי שימוש...",
+      "close": "סגור"
+    }
+  },
   "admin": {
     "common": {
       "loading": "טוען...",
@@ -604,23 +643,23 @@
     },
     "data_management": {
       "title": "ניהול נתונים",
-      "subtitle": "מחיקת נתונים קבועה לפי סניף",
+      "subtitle": "אזור מחיקה המונית - מנהל על בלבד",
       "select_branches": "בחר סניפים",
       "all_branches": "כל הסניפים",
       "deletion_zones": "אזורי מחיקה",
       "logs_group": "לוגים ואימיילים",
-      "logs_description": "לוגי פעילות והיסטוריית אימיילים",
+      "logs_description": "היסטוריית פעילות ואימיילים שנשלחו",
       "reservations_group": "הזמנות",
-      "reservations_description": "הזמנות, ברושורות, משחקים וחלונות זמן",
+      "reservations_description": "הזמנות, הזמנות, משחקים וחלונות זמן",
       "contacts_group": "אנשי קשר",
-      "contacts_description": "לקוחות ואנשי קשר (נדרשת מחיקת הזמנות קודם)",
+      "contacts_description": "כל אנשי הקשר של הלקוחות",
       "delete_button": "מחק",
-      "confirm_title": "אישור מחיקה",
+      "confirm_title": "אשר מחיקה",
       "confirm_message": "אתה עומד למחוק לצמיתות את הנתונים הבאים. פעולה זו היא בלתי הפיכה.",
       "enter_password": "הזן את הסיסמה שלך לאישור",
       "password_placeholder": "סיסמה",
       "cancel": "ביטול",
-      "confirm_delete": "אישור מחיקה",
+      "confirm_delete": "מחק לצמיתות",
       "deleting": "מוחק...",
       "success": "המחיקה הצליחה",
       "error": "שגיאה במחיקה",
@@ -632,7 +671,19 @@
       "bookings": "הזמנות",
       "game_sessions": "משחקים",
       "booking_slots": "חלונות זמן",
-      "contacts": "אנשי קשר"
+      "contacts": "אנשי קשר",
+      "warning_title": "אזהרה - פעולות בלתי הפיכות",
+      "warning_message": "מחיקות הן סופיות. וודא שיש לך גיבוי לפני שתמשיך.",
+      "branches_selected": "סניפים נבחרים:",
+      "select_all": "בחר הכל",
+      "deselect_all": "בטל בחירה מהכל",
+      "data_details": "פרטי נתונים",
+      "confirm_message_detailed": "אתה עומד למחוק לצמיתות <strong>{{count}}</strong> פריטים. פעולה זו היא בלתי הפיכה.",
+      "delete_reservations_first": "עליך למחוק תחילה את כל ההזמנות לפני מחיקת אנשי הקשר.",
+      "delete_reservations_first_warning": "⚠️ מחק תחילה את ההזמנות כדי שתוכל למחוק את אנשי הקשר",
+      "deletion_success": "{{label}} נמחקו בהצלחה ({{count}} פריטים)",
+      "server_error": "שגיאת חיבור לשרת",
+      "tables": "טבלאות"
     },
     "roles": {
       "super_admin": "מנהל על",
@@ -1115,7 +1166,69 @@
         "last_activity": "פעילות אחרונה"
       },
       "linked_bookings": "הזמנות מקושרות",
-      "no_linked_bookings": "אין הזמנות מקושרות לאיש קשר זה"
+      "no_linked_bookings": "אין הזמנות מקושרות לאיש קשר זה",
+      "modal": {
+        "title": {
+          "edit": "ערוך איש קשר",
+          "new": "איש קשר חדש"
+        },
+        "company": {
+          "label": "חברה",
+          "help": "(סמן אם זה לקוח עסקי)"
+        },
+        "company_name": "שם החברה *",
+        "company_name_placeholder": "חברה בע\"מ",
+        "vat_id": "ח.פ / ע.מ *",
+        "vat_id_placeholder": "51XXXXXXX",
+        "contact_first_name": "שם פרטי של איש קשר *",
+        "first_name": "שם פרטי *",
+        "first_name_placeholder": "שם פרטי",
+        "contact_last_name": "שם משפחה של איש קשר",
+        "last_name": "שם משפחה",
+        "last_name_placeholder": "שם משפחה (אופציונלי)",
+        "phone": "טלפון *",
+        "phone_placeholder": "05XXXXXXXX",
+        "email": "אימייל",
+        "email_placeholder": "email@example.com",
+        "email_language": "שפת האימיילים",
+        "email_language_help": "כל האימיילים (אישורים, תזכורות) יישלחו בשפה זו",
+        "client_notes": "הערות לקוח (העדפות, אלרגיות וכו')",
+        "client_notes_placeholder": "הערות כלליות על הלקוח (העדפות, אלרגיות וכו')",
+        "cancel": "ביטול",
+        "saving": "שומר...",
+        "creating": "יוצר...",
+        "save": "שמור",
+        "create": "צור איש קשר",
+        "errors": {
+          "first_name_required": "שם פרטי נדרש",
+          "phone_required": "טלפון נדרש",
+          "company_name_required": "שם החברה נדרש עבור חברות",
+          "vat_id_required": "ח.פ / ע.מ נדרש עבור חברות",
+          "error_updating": "שגיאה בעדכון איש הקשר",
+          "error_creating": "שגיאה ביצירת איש הקשר",
+          "generic_error": "אירעה שגיאה"
+        }
+      },
+      "merge_modal": {
+        "title": "מיזוג אנשי קשר",
+        "warning_title": "אזהרה:",
+        "warning_message": "פעולה זו תמזג {{count}} איש/אנשי קשר עם איש הקשר הראשי. אנשי קשר כפולים יאורכבו והזמנותיהם יועברו לאיש הקשר הראשי.",
+        "error": "שגיאה במיזוג אנשי קשר",
+        "field_label": "שדה",
+        "primary_contact": "איש קשר ראשי (לשמור)",
+        "duplicate": "כפילות {{number}}",
+        "fields": {
+          "first_name": "שם פרטי",
+          "last_name": "שם משפחה",
+          "phone": "טלפון",
+          "email": "אימייל",
+          "notes_client": "הערות"
+        },
+        "cancel": "ביטול",
+        "merge": "מזג אנשי קשר",
+        "merging": "ממזג...",
+        "archived_reason": "מוזג עם {{name}} (ID: {{id}})"
+      }
     },
     "booking_modal": {
       "title_new": "הזמנה חדשה",
@@ -1707,6 +1820,44 @@
       "clara": {
         "title": "Clara AI",
         "subtitle": "העוזרת הווירטואלית של האתר",
+        "settings": {
+          "title": "הגדרות קלרה",
+          "subtitle": "תצורת עוזר AI",
+          "save": "שמור",
+          "save_success": "ההגדרות נשמרו בהצלחה!",
+          "save_error": "שגיאה בשמירת ההגדרות",
+          "api_key": {
+            "section_title": "מפתח API של Anthropic",
+            "label": "מפתח API (sk-ant-...)",
+            "help_text": "קבל את המפתח שלך מ",
+            "test_button": "בדוק חיבור",
+            "required": "נא להזין מפתח API",
+            "success": "החיבור הצליח! קלרה מוכנה.",
+            "error": "שגיאת חיבור API"
+          },
+          "system_prompt": {
+            "section_title": "פרומפט מערכת",
+            "label": "הוראות בסיסיות לקלרה",
+            "help_text": "פרומפט זה מגדיר את האישיות והיכולות של קלרה."
+          },
+          "model": {
+            "section_title": "מודל AI",
+            "label": "מודל קלוד",
+            "max_tokens": "מקסימום טוקנים"
+          },
+          "connectors": {
+            "section_title": "מחברים",
+            "connected": "מחובר",
+            "not_connected": "לא מחובר",
+            "coming_soon": "בקרוב",
+            "github_subtitle": "ניהול קוד (בקרוב)",
+            "vercel_subtitle": "פריסה (בקרוב)"
+          },
+          "info": {
+            "line1": "קלרה משתמשת ב-API של Anthropic Claude כדי לספק תשובות חכמות.",
+            "line2": "הנתונים מעובדים בצורה מאובטחת ואינם מאוחסנים על ידי Anthropic."
+          }
+        },
         "tabs": {
           "general": "כללי",
           "prompt": "פרומפט מערכת",

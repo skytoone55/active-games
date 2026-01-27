@@ -5,6 +5,7 @@ import { X, Loader2, User, Phone, Mail, MessageSquare, Save, AlertCircle, Buildi
 import { useContacts } from '@/hooks/useContacts'
 import type { Contact, ClientType } from '@/lib/supabase/types'
 import { validateEmail, validateIsraeliPhone, formatIsraeliPhone, VALIDATION_MESSAGES } from '@/lib/validation'
+import { useTranslation } from '@/contexts/LanguageContext'
 
 interface ClientModalProps {
   isOpen: boolean
@@ -23,6 +24,7 @@ export function ClientModal({
   onSave,
   isDark,
 }: ClientModalProps) {
+  const { t } = useTranslation()
   const { createContact, updateContact } = useContacts(branchId)
 
   const [firstName, setFirstName] = useState('')
@@ -75,12 +77,12 @@ export function ClientModal({
 
     // Validations
     if (!firstName.trim()) {
-      setError('First name is required')
+      setError(t('admin.clients.modal.errors.first_name_required'))
       return
     }
 
     if (!phone.trim()) {
-      setError('Phone is required')
+      setError(t('admin.clients.modal.errors.phone_required'))
       return
     }
 
@@ -99,11 +101,11 @@ export function ClientModal({
     // Validation entreprise
     if (isCompany) {
       if (!companyName.trim()) {
-        setError('Company name is required for companies')
+        setError(t('admin.clients.modal.errors.company_name_required'))
         return
       }
       if (!vatId.trim()) {
-        setError('VAT ID is required for companies')
+        setError(t('admin.clients.modal.errors.vat_id_required'))
         return
       }
     }
@@ -132,7 +134,7 @@ export function ClientModal({
           await onSave(updated)
           onClose()
         } else {
-          setError('Error updating contact')
+          setError(t('admin.clients.modal.errors.error_updating'))
         }
       } else {
         // Création
@@ -154,12 +156,12 @@ export function ClientModal({
           await onSave(newContact)
           onClose()
         } else {
-          setError('Error creating contact')
+          setError(t('admin.clients.modal.errors.error_creating'))
         }
       }
     } catch (err) {
       console.error('Error saving contact:', err)
-      setError('An error occurred')
+      setError(t('admin.clients.modal.errors.generic_error'))
     } finally {
       setLoading(false)
     }
@@ -177,7 +179,7 @@ export function ClientModal({
         {/* Header */}
         <div className={`flex items-center justify-between p-6 border-b ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
           <h2 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-            {contact ? 'Edit Contact' : 'New Contact'}
+            {contact ? t('admin.clients.modal.title.edit') : t('admin.clients.modal.title.new')}
           </h2>
           <button
             onClick={onClose}
@@ -218,9 +220,9 @@ export function ClientModal({
             />
             <label htmlFor="isCompany" className={`flex items-center gap-2 cursor-pointer ${isDark ? 'text-white' : 'text-gray-900'}`}>
               <Building2 className="w-5 h-5" />
-              <span className="font-medium">Company</span>
+              <span className="font-medium">{t('admin.clients.modal.company.label')}</span>
               <span className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                (check if this is a business client)
+                {t('admin.clients.modal.company.help')}
               </span>
             </label>
           </div>
@@ -233,7 +235,7 @@ export function ClientModal({
               <div>
                 <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
                   <Building2 className="w-4 h-4 inline mr-1" />
-                  Company Name *
+                  {t('admin.clients.modal.company_name')}
                 </label>
                 <input
                   type="text"
@@ -244,12 +246,12 @@ export function ClientModal({
                       ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-500'
                       : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'
                   } focus:outline-none focus:ring-2 focus:ring-blue-500`}
-                  placeholder="Company Ltd."
+                  placeholder={t('admin.clients.modal.company_name_placeholder')}
                 />
               </div>
               <div>
                 <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                  VAT ID *
+                  {t('admin.clients.modal.vat_id')}
                 </label>
                 <input
                   type="text"
@@ -260,7 +262,7 @@ export function ClientModal({
                       ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-500'
                       : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'
                   } focus:outline-none focus:ring-2 focus:ring-blue-500`}
-                  placeholder="51XXXXXXX"
+                  placeholder={t('admin.clients.modal.vat_id_placeholder')}
                 />
               </div>
             </div>
@@ -271,7 +273,7 @@ export function ClientModal({
             <div>
               <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
                 <User className="w-4 h-4 inline mr-1" />
-                {isCompany ? 'Contact First Name *' : 'First Name *'}
+                {isCompany ? t('admin.clients.modal.contact_first_name') : t('admin.clients.modal.first_name')}
               </label>
               <input
                 type="text"
@@ -283,12 +285,12 @@ export function ClientModal({
                     ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-500'
                     : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'
                 } focus:outline-none focus:ring-2 focus:ring-blue-500`}
-                placeholder="First name"
+                placeholder={t('admin.clients.modal.first_name_placeholder')}
               />
             </div>
             <div>
               <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                {isCompany ? 'Contact Last Name' : 'Last Name'}
+                {isCompany ? t('admin.clients.modal.contact_last_name') : t('admin.clients.modal.last_name')}
               </label>
               <input
                 type="text"
@@ -299,7 +301,7 @@ export function ClientModal({
                     ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-500'
                     : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'
                 } focus:outline-none focus:ring-2 focus:ring-blue-500`}
-                placeholder="Last name (optional)"
+                placeholder={t('admin.clients.modal.last_name_placeholder')}
               />
             </div>
           </div>
@@ -309,7 +311,7 @@ export function ClientModal({
             <div>
               <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
                 <Phone className="w-4 h-4 inline mr-1" />
-                Phone *
+                {t('admin.clients.modal.phone')}
               </label>
               <input
                 type="tel"
@@ -333,7 +335,7 @@ export function ClientModal({
                     ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-500'
                     : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'
                 } focus:outline-none focus:ring-2 focus:ring-blue-500`}
-                placeholder="05XXXXXXXX"
+                placeholder={t('admin.clients.modal.phone_placeholder')}
               />
               {validationErrors.phone && (
                 <div className="flex items-center gap-1 mt-1 text-red-500 text-sm">
@@ -345,7 +347,7 @@ export function ClientModal({
             <div>
               <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
                 <Mail className="w-4 h-4 inline mr-1" />
-                Email
+                {t('admin.clients.modal.email')}
               </label>
               <input
                 type="email"
@@ -368,7 +370,7 @@ export function ClientModal({
                     ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-500'
                     : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'
                 } focus:outline-none focus:ring-2 focus:ring-blue-500`}
-                placeholder="email@example.com"
+                placeholder={t('admin.clients.modal.email_placeholder')}
               />
               {validationErrors.email && (
                 <div className="flex items-center gap-1 mt-1 text-red-500 text-sm">
@@ -383,7 +385,7 @@ export function ClientModal({
           <div>
             <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
               <Mail className="w-4 h-4 inline mr-1" />
-              Email Language
+              {t('admin.clients.modal.email_language')}
             </label>
             <div className="flex items-center gap-2">
               {([
@@ -414,7 +416,7 @@ export function ClientModal({
               ))}
             </div>
             <p className={`mt-1 text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
-              All emails (confirmations, reminders) will be sent in this language
+              {t('admin.clients.modal.email_language_help')}
             </p>
           </div>
 
@@ -422,7 +424,7 @@ export function ClientModal({
           <div>
             <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
               <MessageSquare className="w-4 h-4 inline mr-1" />
-              Client Notes (preferences, allergies, etc.)
+              {t('admin.clients.modal.client_notes')}
             </label>
             <textarea
               value={notesClient}
@@ -433,7 +435,7 @@ export function ClientModal({
                   ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-500'
                   : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'
               } focus:outline-none focus:ring-2 focus:ring-blue-500`}
-              placeholder="Global notes about the client (preferences, allergies, etc.)"
+              placeholder={t('admin.clients.modal.client_notes_placeholder')}
             />
           </div>
 
@@ -449,7 +451,7 @@ export function ClientModal({
                   : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
               } disabled:opacity-50`}
             >
-              Cancel
+              {t('admin.clients.modal.cancel')}
             </button>
             <button
               type="submit"
@@ -459,12 +461,12 @@ export function ClientModal({
               {loading ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  {contact ? 'Saving...' : 'Creating...'}
+                  {contact ? t('admin.clients.modal.saving') : t('admin.clients.modal.creating')}
                 </>
               ) : (
                 <>
                   <Save className="w-4 h-4" />
-                  {contact ? 'Save' : 'Create Contact'}
+                  {contact ? t('admin.clients.modal.save') : t('admin.clients.modal.create')}
                 </>
               )}
             </button>

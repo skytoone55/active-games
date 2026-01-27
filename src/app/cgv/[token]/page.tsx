@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
 import Image from 'next/image'
 import { Loader2, CheckCircle, AlertCircle, FileText, Calendar, Users, X, Receipt } from 'lucide-react'
+import { getTranslations, type Locale } from '@/i18n'
 
 interface PriceBreakdownLine {
   description: string
@@ -32,7 +33,7 @@ interface OrderInfo {
   totalAmount: number
 }
 
-export default function CGVValidationPage() {
+function CGVValidationContent() {
   const params = useParams()
   const token = params.token as string
 
@@ -81,14 +82,14 @@ export default function CGVValidationPage() {
       const data = await response.json()
 
       if (!data.success) {
-        setError(data.error || 'Lien invalide ou expiré')
+        setError(data.error || t('cgv.error.invalid_link'))
         return
       }
 
       setOrder(data.order)
     } catch (err) {
       console.error('Error fetching order:', err)
-      setError('Erreur lors du chargement')
+      setError(t('cgv.error.loading_error'))
     } finally {
       setLoading(false)
     }
@@ -108,116 +109,37 @@ export default function CGVValidationPage() {
       const data = await response.json()
 
       if (!data.success) {
-        setError(data.error || 'Erreur lors de la validation')
+        setError(data.error || t('cgv.error.loading_error'))
         return
       }
 
       setSuccess(true)
     } catch (err) {
       console.error('Error validating CGV:', err)
-      setError('Erreur lors de la validation')
+      setError(t('cgv.error.loading_error'))
     } finally {
       setSubmitting(false)
     }
   }
 
-  // Traductions multi-langues
-  const translations: Record<string, Record<string, string>> = {
-    he: {
-      pageTitle: 'אישור תנאי שימוש',
-      pageSubtitle: 'צפה בפרטי ההזמנה שלך ואשר את התנאים',
-      actionRequired: '⚠️ נדרשת פעולה',
-      orderDetails: 'פרטי ההזמנה שלך',
-      reservationNumber: 'מספר הזמנה',
-      date: 'תאריך',
-      participants: 'משתתפים',
-      eventType: 'סוג אירוע',
-      room: 'חדר',
-      games: 'משחקים',
-      formula: 'נוסחה',
-      unitPrice: 'מחיר ליחידה',
-      subtotal: 'סכום ביניים',
-      total: 'סה"כ לתשלום',
-      termsCheckbox: 'קראתי ואני מאשר/ת את',
-      termsLink: 'תנאי השימוש',
-      validateButton: 'אישור תנאי השימוש',
-      validating: 'מאשר...',
-      alreadyValidated: 'התנאים אושרו',
-      alreadyValidatedMessage: 'תודה! אישרת את תנאי השימוש להזמנה שלך.',
-      invalidLink: 'קישור לא תקין',
-      persons: 'אנשים',
-      priceBreakdown: 'פירוט מחיר',
-      description: 'תיאור',
-      qty: 'כמות',
-      discount: 'הנחה',
-      event: 'אירוע',
-      game: 'משחק',
-    },
-    fr: {
-      pageTitle: 'Validation des CGV',
-      pageSubtitle: 'Consultez les détails de votre commande et acceptez les conditions',
-      actionRequired: '⚠️ Action requise',
-      orderDetails: 'Détails de votre commande',
-      reservationNumber: 'Numéro de réservation',
-      date: 'Date',
-      participants: 'Participants',
-      eventType: "Type d'événement",
-      room: 'Salle',
-      games: 'parties',
-      formula: 'Formule',
-      unitPrice: 'Prix unitaire',
-      subtotal: 'Sous-total',
-      total: 'Total à payer',
-      termsCheckbox: "J'ai lu et j'accepte les",
-      termsLink: 'conditions générales de vente',
-      validateButton: 'Confirmer et accepter les CGV',
-      validating: 'Validation en cours...',
-      alreadyValidated: 'CGV acceptées',
-      alreadyValidatedMessage: 'Merci ! Vous avez accepté les conditions générales de vente pour votre réservation.',
-      invalidLink: 'Lien invalide',
-      persons: 'personnes',
-      priceBreakdown: 'Détail du prix',
-      description: 'Description',
-      qty: 'Qté',
-      discount: 'Remise',
-      event: 'Événement',
-      game: 'Jeu',
-    },
-    en: {
-      pageTitle: 'Terms & Conditions',
-      pageSubtitle: 'Review your order details and accept the terms',
-      actionRequired: '⚠️ Action required',
-      orderDetails: 'Your Order Details',
-      reservationNumber: 'Reservation number',
-      date: 'Date',
-      participants: 'Participants',
-      eventType: 'Event type',
-      room: 'Room',
-      games: 'games',
-      formula: 'Formula',
-      unitPrice: 'Unit price',
-      subtotal: 'Subtotal',
-      total: 'Total to pay',
-      termsCheckbox: 'I have read and accept the',
-      termsLink: 'terms and conditions',
-      validateButton: 'Confirm and accept T&C',
-      validating: 'Validating...',
-      alreadyValidated: 'Terms accepted',
-      alreadyValidatedMessage: 'Thank you! You have accepted the terms and conditions for your reservation.',
-      invalidLink: 'Invalid link',
-      persons: 'persons',
-      priceBreakdown: 'Price Breakdown',
-      description: 'Description',
-      qty: 'Qty',
-      discount: 'Discount',
-      event: 'Event',
-      game: 'Game',
-    },
-  }
 
+  // Translation helper that uses order's locale
   const t = (key: string) => {
-    const locale = order?.preferred_locale || 'he'
-    return translations[locale]?.[key] || translations['en'][key] || key
+    const locale = (order?.preferred_locale || 'he') as Locale
+    const translations = getTranslations(locale)
+    const keys = key.split('.')
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let value: any = translations
+
+    for (const k of keys) {
+      if (value && typeof value === 'object' && k in value) {
+        value = value[k]
+      } else {
+        return key
+      }
+    }
+
+    return typeof value === 'string' ? value : key
   }
 
   const formatDate = (dateStr: string) => {
@@ -251,7 +173,7 @@ export default function CGVValidationPage() {
               <AlertCircle className="w-12 h-12 text-red-400" />
             </div>
           </div>
-          <h1 className="text-2xl font-bold text-white mb-2">Lien invalide</h1>
+          <h1 className="text-2xl font-bold text-white mb-2">{t('cgv.error.invalid_link')}</h1>
           <p className="text-gray-400">{error}</p>
         </div>
       </div>
@@ -289,21 +211,21 @@ export default function CGVValidationPage() {
           <div className="bg-green-900/30 border border-green-700 rounded-xl p-4 mb-6 flex items-center gap-3">
             <CheckCircle className="w-8 h-8 text-green-400 flex-shrink-0" />
             <div>
-              <h2 className="text-lg font-semibold text-green-400">{t('alreadyValidated')}</h2>
-              <p className="text-green-300/80 text-sm">{t('alreadyValidatedMessage')}</p>
+              <h2 className="text-lg font-semibold text-green-400">{t('cgv.already_validated')}</h2>
+              <p className="text-green-300/80 text-sm">{t('cgv.already_validated_message')}</p>
             </div>
           </div>
 
           {/* Order details card */}
           <div className="bg-gray-800 rounded-2xl shadow-xl border border-gray-700 overflow-hidden">
             <div className="bg-gradient-to-r from-cyan-600 to-blue-600 px-6 py-4">
-              <h1 className="text-xl font-bold text-white">{t('orderDetails')}</h1>
+              <h1 className="text-xl font-bold text-white">{t('cgv.order_details')}</h1>
             </div>
 
             <div className="p-6">
               {/* Reference */}
               <div className="bg-gray-700/50 rounded-xl p-4 mb-6">
-                <p className="text-sm text-gray-400 mb-1">{t('reservationNumber')}</p>
+                <p className="text-sm text-gray-400 mb-1">{t('cgv.reservation_number')}</p>
                 <p className="text-2xl font-bold text-white">{order.request_reference}</p>
               </div>
 
@@ -314,7 +236,7 @@ export default function CGVValidationPage() {
                     <Calendar className="w-5 h-5 text-cyan-400" />
                   </div>
                   <div>
-                    <p className="text-sm text-gray-400">{t('date')}</p>
+                    <p className="text-sm text-gray-400">{t('cgv.date')}</p>
                     <p className="text-white text-sm">{formatDate(order.requested_date)}</p>
                     <p className="text-cyan-400 font-medium">{order.requested_time}</p>
                   </div>
@@ -324,8 +246,8 @@ export default function CGVValidationPage() {
                     <Users className="w-5 h-5 text-cyan-400" />
                   </div>
                   <div>
-                    <p className="text-sm text-gray-400">{t('participants')}</p>
-                    <p className="text-white">{order.participants_count} {t('persons')}</p>
+                    <p className="text-sm text-gray-400">{t('cgv.participants')}</p>
+                    <p className="text-white">{order.participants_count} {t('cgv.persons')}</p>
                   </div>
                 </div>
               </div>
@@ -335,17 +257,17 @@ export default function CGVValidationPage() {
                 <div className="border-t border-gray-700 pt-4">
                   <h3 className="text-sm font-medium text-gray-400 mb-3 flex items-center gap-2">
                     <Receipt className="w-4 h-4" />
-                    {t('priceBreakdown')}
+                    {t('cgv.price_breakdown')}
                   </h3>
 
                   {/* Table */}
                   <div className="rounded-xl border border-gray-700 overflow-hidden">
                     {/* Table Header */}
                     <div className="grid grid-cols-12 gap-2 px-4 py-2 text-xs font-medium bg-gray-700/50 text-gray-400">
-                      <div className="col-span-5">{t('description')}</div>
-                      <div className="col-span-2 text-center">{t('qty')}</div>
-                      <div className="col-span-2 text-right">{t('unitPrice')}</div>
-                      <div className="col-span-3 text-right">{t('total')}</div>
+                      <div className="col-span-5">{t('cgv.description')}</div>
+                      <div className="col-span-2 text-center">{t('cgv.qty')}</div>
+                      <div className="col-span-2 text-right">{t('cgv.unit_price')}</div>
+                      <div className="col-span-3 text-right">{t('cgv.total')}</div>
                     </div>
 
                     {/* Table Rows */}
@@ -373,11 +295,11 @@ export default function CGVValidationPage() {
                       {order.discountAmount > 0 && (
                         <>
                           <div className="flex justify-between text-sm">
-                            <span className="text-gray-400">{t('subtotal')}</span>
+                            <span className="text-gray-400">{t('cgv.subtotal')}</span>
                             <span className="text-gray-300">{order.subtotal.toLocaleString()} ₪</span>
                           </div>
                           <div className="flex justify-between text-sm text-green-400">
-                            <span>{t('discount')}</span>
+                            <span>{t('cgv.discount')}</span>
                             <span>-{order.discountAmount.toLocaleString()} ₪</span>
                           </div>
                         </>
@@ -387,7 +309,7 @@ export default function CGVValidationPage() {
                       <div className={`flex justify-between items-center pt-2 ${
                         order.discountAmount > 0 ? 'border-t border-gray-600' : ''
                       }`}>
-                        <span className="text-lg font-bold text-white">{t('total')}</span>
+                        <span className="text-lg font-bold text-white">{t('cgv.total')}</span>
                         <span className="text-2xl font-bold text-cyan-400">{order.totalAmount.toLocaleString()} ₪</span>
                       </div>
                     </div>
@@ -431,8 +353,8 @@ export default function CGVValidationPage() {
         <div className="bg-amber-900/30 border border-amber-700 rounded-xl p-4 mb-6 flex items-center gap-3">
           <AlertCircle className="w-8 h-8 text-amber-400 flex-shrink-0" />
           <div>
-            <h2 className="text-lg font-semibold text-amber-400">{t('actionRequired')}</h2>
-            <p className="text-amber-300/80 text-sm">{t('pageSubtitle')}</p>
+            <h2 className="text-lg font-semibold text-amber-400">{t('cgv.action_required')}</h2>
+            <p className="text-amber-300/80 text-sm">{t('cgv.page_subtitle')}</p>
           </div>
         </div>
 
@@ -480,7 +402,7 @@ export default function CGVValidationPage() {
                   <FileText className="w-5 h-5 text-cyan-400" />
                 </div>
                 <div>
-                  <p className="text-sm text-gray-400">{t('eventType')}</p>
+                  <p className="text-sm text-gray-400">{t('cgv.event_type')}</p>
                   <p className="text-white">{order.event_type}</p>
                 </div>
               </div>
@@ -561,13 +483,13 @@ export default function CGVValidationPage() {
                   className="mt-1 w-5 h-5 rounded border-gray-600 bg-gray-700 text-cyan-500 focus:ring-cyan-500 focus:ring-offset-gray-800"
                 />
                 <span className="text-gray-300 text-sm leading-relaxed">
-                  {t('termsCheckbox')}{' '}
+                  {t('cgv.terms_checkbox')}{' '}
                   <button
                     type="button"
                     onClick={() => setShowTermsModal(true)}
                     className="text-cyan-400 hover:text-cyan-300 underline"
                   >
-                    {t('termsLink')}
+                    {t('cgv.terms_link')}
                   </button>
                 </span>
               </label>
@@ -586,12 +508,12 @@ export default function CGVValidationPage() {
               {submitting ? (
                 <>
                   <Loader2 className="w-5 h-5 animate-spin" />
-                  {t('validating')}
+                  {t('cgv.validating')}
                 </>
               ) : (
                 <>
                   <CheckCircle className="w-5 h-5" />
-                  {t('validateButton')}
+                  {t('cgv.validate_button')}
                 </>
               )}
             </button>
@@ -621,7 +543,7 @@ export default function CGVValidationPage() {
             {/* Header */}
             <div className="flex items-center justify-between p-4 border-b border-gray-700">
               <h2 className="text-lg font-semibold text-white">
-                Conditions Générales de Vente
+                {t('cgv.modal.title')}
               </h2>
               <button
                 onClick={() => setShowTermsModal(false)}
@@ -651,7 +573,7 @@ export default function CGVValidationPage() {
                     />
                   ) : (
                     <p className="text-gray-400 text-center py-8">
-                      Les conditions générales sont en cours de chargement...
+                      {t('cgv.modal.loading')}
                     </p>
                   )}
                 </div>
@@ -706,7 +628,7 @@ export default function CGVValidationPage() {
                 onClick={() => setShowTermsModal(false)}
                 className="w-full py-2.5 px-4 bg-cyan-600 hover:bg-cyan-700 text-white rounded-xl font-medium transition-colors"
               >
-                Fermer
+                {t('cgv.modal.close')}
               </button>
             </div>
           </div>
@@ -714,4 +636,8 @@ export default function CGVValidationPage() {
       )}
     </div>
   )
+}
+
+export default function CGVValidationPage() {
+  return <CGVValidationContent />
 }

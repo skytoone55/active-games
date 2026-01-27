@@ -532,6 +532,45 @@
       "subtitle": "Veuillez vérifier votre réservation et compléter le paiement"
     }
   },
+  "cgv": {
+    "page_title": "Validation des CGV",
+    "page_subtitle": "Consultez les détails de votre commande et acceptez les conditions",
+    "action_required": "⚠️ Action requise",
+    "order_details": "Détails de votre commande",
+    "reservation_number": "Numéro de réservation",
+    "date": "Date",
+    "participants": "Participants",
+    "event_type": "Type d'événement",
+    "room": "Salle",
+    "games": "parties",
+    "formula": "Formule",
+    "unit_price": "Prix unitaire",
+    "subtotal": "Sous-total",
+    "total": "Total à payer",
+    "terms_checkbox": "J'ai lu et j'accepte les",
+    "terms_link": "conditions générales de vente",
+    "validate_button": "Confirmer et accepter les CGV",
+    "validating": "Validation en cours...",
+    "already_validated": "CGV acceptées",
+    "already_validated_message": "Merci ! Vous avez accepté les conditions générales de vente pour votre réservation.",
+    "invalid_link": "Lien invalide",
+    "persons": "personnes",
+    "price_breakdown": "Détail du prix",
+    "description": "Description",
+    "qty": "Qté",
+    "discount": "Remise",
+    "event": "Événement",
+    "game": "Jeu",
+    "error": {
+      "invalid_link": "Lien invalide ou expiré",
+      "loading_error": "Erreur lors du chargement"
+    },
+    "modal": {
+      "title": "Conditions Générales de Vente",
+      "loading": "Les conditions générales sont en cours de chargement...",
+      "close": "Fermer"
+    }
+  },
   "admin": {
     "common": {
       "loading": "Chargement...",
@@ -627,23 +666,23 @@
     },
     "data_management": {
       "title": "Gestion des donnees",
-      "subtitle": "Suppression definitive des donnees par branche",
+      "subtitle": "Zone de suppression massive - Super Admin uniquement",
       "select_branches": "Selectionner les branches",
       "all_branches": "Toutes les branches",
       "deletion_zones": "Zones de suppression",
       "logs_group": "Logs & Emails",
-      "logs_description": "Logs d'activite et historique des emails",
+      "logs_description": "Historique des activites et emails envoyes",
       "reservations_group": "Reservations",
-      "reservations_description": "Commandes, bookings, sessions et creneaux",
+      "reservations_description": "Commandes, reservations, sessions et creneaux",
       "contacts_group": "Contacts",
-      "contacts_description": "Clients et contacts (necessite suppression des reservations d'abord)",
+      "contacts_description": "Tous les contacts clients",
       "delete_button": "Supprimer",
-      "confirm_title": "Confirmation de suppression",
+      "confirm_title": "Confirmer la suppression",
       "confirm_message": "Vous etes sur le point de supprimer definitivement les donnees suivantes. Cette action est IRREVERSIBLE.",
       "enter_password": "Entrez votre mot de passe pour confirmer",
       "password_placeholder": "Mot de passe",
       "cancel": "Annuler",
-      "confirm_delete": "Confirmer la suppression",
+      "confirm_delete": "Supprimer definitivement",
       "deleting": "Suppression en cours...",
       "success": "Suppression reussie",
       "error": "Erreur lors de la suppression",
@@ -655,7 +694,19 @@
       "bookings": "Bookings",
       "game_sessions": "Sessions de jeu",
       "booking_slots": "Creneaux reserves",
-      "contacts": "Contacts"
+      "contacts": "Contacts",
+      "warning_title": "Attention - Actions irreversibles",
+      "warning_message": "Les suppressions sont definitives. Assurez-vous d'avoir une sauvegarde avant de proceder.",
+      "branches_selected": "Branches selectionnees:",
+      "select_all": "Tout selectionner",
+      "deselect_all": "Tout deselectionner",
+      "data_details": "Detail des donnees",
+      "confirm_message_detailed": "Vous etes sur le point de supprimer definitivement <strong>{{count}}</strong> elements. Cette action est irreversible.",
+      "delete_reservations_first": "Vous devez d'abord supprimer toutes les reservations avant de supprimer les contacts.",
+      "delete_reservations_first_warning": "⚠️ Supprimez d'abord les reservations pour pouvoir supprimer les contacts",
+      "deletion_success": "{{label}} supprimes avec succes ({{count}} elements)",
+      "server_error": "Erreur de connexion au serveur",
+      "tables": "Tables"
     },
     "roles": {
       "super_admin": "Super Admin",
@@ -1093,7 +1144,69 @@
         "last_activity": "Derniere activite"
       },
       "linked_bookings": "Reservations liees",
-      "no_linked_bookings": "Aucune reservation liee a ce contact"
+      "no_linked_bookings": "Aucune reservation liee a ce contact",
+      "merge_modal": {
+        "title": "Fusionner les contacts",
+        "warning_title": "Attention:",
+        "warning_message": "Cette action fusionnera {{count}} contact(s) avec le contact principal. Les contacts dupliqués seront archivés et leurs réservations transférées vers le contact principal.",
+        "error": "Erreur lors de la fusion des contacts",
+        "field_label": "Champ",
+        "primary_contact": "Contact principal (à conserver)",
+        "duplicate": "Doublon {{number}}",
+        "fields": {
+          "first_name": "Prénom",
+          "last_name": "Nom",
+          "phone": "Téléphone",
+          "email": "Email",
+          "notes_client": "Notes"
+        },
+        "cancel": "Annuler",
+        "merge": "Fusionner les contacts",
+        "merging": "Fusion en cours...",
+        "archived_reason": "Fusionné avec {{name}} (ID: {{id}})"
+      },
+      "modal": {
+        "title": {
+          "edit": "Modifier le contact",
+          "new": "Nouveau contact"
+        },
+        "company": {
+          "label": "Entreprise",
+          "help": "(cochez si c'est un client professionnel)"
+        },
+        "company_name": "Nom de l'entreprise *",
+        "company_name_placeholder": "Société SARL",
+        "vat_id": "N° TVA *",
+        "vat_id_placeholder": "51XXXXXXX",
+        "contact_first_name": "Prénom du contact *",
+        "first_name": "Prénom *",
+        "first_name_placeholder": "Prénom",
+        "contact_last_name": "Nom du contact",
+        "last_name": "Nom",
+        "last_name_placeholder": "Nom (optionnel)",
+        "phone": "Téléphone *",
+        "phone_placeholder": "05XXXXXXXX",
+        "email": "Email",
+        "email_placeholder": "email@exemple.com",
+        "email_language": "Langue des emails",
+        "email_language_help": "Tous les emails (confirmations, rappels) seront envoyés dans cette langue",
+        "client_notes": "Notes client (préférences, allergies, etc.)",
+        "client_notes_placeholder": "Notes globales sur le client (préférences, allergies, etc.)",
+        "cancel": "Annuler",
+        "saving": "Enregistrement...",
+        "creating": "Création...",
+        "save": "Enregistrer",
+        "create": "Créer le contact",
+        "errors": {
+          "first_name_required": "Le prénom est requis",
+          "phone_required": "Le téléphone est requis",
+          "company_name_required": "Le nom de l'entreprise est requis",
+          "vat_id_required": "Le numéro de TVA est requis",
+          "error_updating": "Erreur lors de la mise à jour du contact",
+          "error_creating": "Erreur lors de la création du contact",
+          "generic_error": "Une erreur est survenue"
+        }
+      }
     },
     "booking_modal": {
       "title_new": "Nouvelle reservation",
@@ -1329,7 +1442,13 @@
       "room_capacities": "Capacites des salles",
       "room_name": "Nom de la salle",
       "room_placeholder": "Salle {{number}}",
-      "capacity": "Capacite",
+      "capacity": {
+        "title": "Parametres de capacite",
+        "max_concurrent_players": "Joueurs simultanes max",
+        "slot_duration": "Duree du creneau (minutes)",
+        "game_duration": "Duree du jeu (minutes)",
+        "buffer_time": "Temps tampon (minutes)"
+      },
       "people": "personnes",
       "slot_configuration": "Configuration des slots",
       "total_slots": "Nombre total de slots",
@@ -1428,13 +1547,6 @@
           "friday": "Vendredi",
           "saturday": "Samedi"
         }
-      },
-      "capacity": {
-        "title": "Parametres de capacite",
-        "max_concurrent_players": "Joueurs simultanes max",
-        "slot_duration": "Duree du creneau (minutes)",
-        "game_duration": "Duree du jeu (minutes)",
-        "buffer_time": "Temps tampon (minutes)"
       },
       "notifications": {
         "title": "Parametres de notifications",
@@ -1777,6 +1889,44 @@
       "clara": {
         "title": "Clara AI",
         "subtitle": "Assistante virtuelle du site",
+        "settings": {
+          "title": "Paramètres Clara",
+          "subtitle": "Configuration de l'assistant IA",
+          "save": "Sauvegarder",
+          "save_success": "Paramètres sauvegardés avec succès!",
+          "save_error": "Erreur lors de la sauvegarde",
+          "api_key": {
+            "section_title": "Clé API Anthropic",
+            "label": "Clé API (sk-ant-...)",
+            "help_text": "Obtenez votre clé sur",
+            "test_button": "Tester la connexion",
+            "required": "Veuillez entrer une clé API",
+            "success": "Connexion réussie! Clara est prête.",
+            "error": "Erreur de connexion à l'API"
+          },
+          "system_prompt": {
+            "section_title": "Prompt Système",
+            "label": "Instructions de base pour Clara",
+            "help_text": "Ce prompt définit la personnalité et les capacités de Clara."
+          },
+          "model": {
+            "section_title": "Modèle IA",
+            "label": "Modèle Claude",
+            "max_tokens": "Max Tokens"
+          },
+          "connectors": {
+            "section_title": "Connecteurs",
+            "connected": "Connecté",
+            "not_connected": "Non connecté",
+            "coming_soon": "Bientôt disponible",
+            "github_subtitle": "Gestion de code (Bientôt)",
+            "vercel_subtitle": "Déploiement (Bientôt)"
+          },
+          "info": {
+            "line1": "Clara utilise l'API Anthropic Claude pour fournir des réponses intelligentes.",
+            "line2": "Les données sont traitées de manière sécurisée et ne sont pas stockées par Anthropic."
+          }
+        },
         "tabs": {
           "general": "General",
           "prompt": "Prompt Systeme",

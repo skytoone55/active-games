@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { ArrowLeft, Save, Key, MessageSquare, Link2, Loader2, CheckCircle, AlertCircle, Sparkles } from 'lucide-react'
 import Link from 'next/link'
+import { useTranslation } from '@/contexts/LanguageContext'
 
 interface ClaraSettings {
   anthropic_api_key: string
@@ -17,6 +18,7 @@ interface ClaraSettings {
 }
 
 export default function ClaraSettingsPage() {
+  const { t } = useTranslation()
   const [settings, setSettings] = useState<ClaraSettings>({
     anthropic_api_key: '',
     system_prompt: `Tu es Clara, l'assistante IA virtuelle pour ActiveLaser.
@@ -74,10 +76,10 @@ Sois proactive: si tu détectes des problèmes dans les données, mentionne-les.
       // For security, the API key should be stored server-side
       // This is a simplified version for demo purposes
 
-      setMessage({ type: 'success', text: 'Paramètres sauvegardés avec succès!' })
+      setMessage({ type: 'success', text: t('admin.clara.settings.save_success') })
     } catch (error) {
       console.error('Error saving settings:', error)
-      setMessage({ type: 'error', text: 'Erreur lors de la sauvegarde' })
+      setMessage({ type: 'error', text: t('admin.clara.settings.save_error') })
     } finally {
       setSaving(false)
     }
@@ -88,7 +90,7 @@ Sois proactive: si tu détectes des problèmes dans les données, mentionne-les.
     setTestResult(null)
 
     if (!settings.anthropic_api_key) {
-      setTestResult({ success: false, message: 'Veuillez entrer une clé API' })
+      setTestResult({ success: false, message: t('admin.clara.settings.api_key.required') })
       return
     }
 
@@ -105,13 +107,13 @@ Sois proactive: si tu détectes des problèmes dans les données, mentionne-les.
       const data = await response.json()
 
       if (data.success && data.answer) {
-        setTestResult({ success: true, message: 'Connexion réussie! Clara est prête.' })
+        setTestResult({ success: true, message: t('admin.clara.settings.api_key.success') })
       } else {
-        setTestResult({ success: false, message: data.error || 'Erreur de connexion' })
+        setTestResult({ success: false, message: data.error || t('admin.clara.settings.api_key.error') })
       }
     } catch (error) {
       console.error('Test error:', error)
-      setTestResult({ success: false, message: 'Erreur de connexion à l\'API' })
+      setTestResult({ success: false, message: t('admin.clara.settings.api_key.error') })
     }
   }
 
@@ -140,8 +142,8 @@ Sois proactive: si tu détectes des problèmes dans les données, mentionne-les.
                 <Sparkles className="w-5 h-5 text-white" />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-white">Paramètres Clara</h1>
-                <p className="text-sm text-gray-400">Configuration de l&apos;assistant IA</p>
+                <h1 className="text-xl font-bold text-white">{t('admin.clara.settings.title')}</h1>
+                <p className="text-sm text-gray-400">{t('admin.clara.settings.subtitle')}</p>
               </div>
             </div>
           </div>
@@ -156,7 +158,7 @@ Sois proactive: si tu détectes des problèmes dans les données, mentionne-les.
             ) : (
               <Save className="w-4 h-4" />
             )}
-            Sauvegarder
+            {t('admin.clara.settings.save')}
           </button>
         </div>
       </header>
@@ -183,13 +185,13 @@ Sois proactive: si tu détectes des problèmes dans les données, mentionne-les.
         <section className="bg-dark-200/50 rounded-xl border border-primary/20 p-6">
           <div className="flex items-center gap-3 mb-6">
             <Key className="w-5 h-5 text-primary" />
-            <h2 className="text-lg font-bold text-white">Clé API Anthropic</h2>
+            <h2 className="text-lg font-bold text-white">{t('admin.clara.settings.api_key.section_title')}</h2>
           </div>
 
           <div className="space-y-4">
             <div>
               <label className="block text-sm text-gray-400 mb-2">
-                Clé API (sk-ant-...)
+                {t('admin.clara.settings.api_key.label')}
               </label>
               <input
                 type="password"
@@ -199,7 +201,7 @@ Sois proactive: si tu détectes des problèmes dans les données, mentionne-les.
                 className="w-full bg-dark-300 border border-primary/20 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-primary"
               />
               <p className="text-xs text-gray-500 mt-2">
-                Obtenez votre clé sur <a href="https://console.anthropic.com" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">console.anthropic.com</a>
+                {t('admin.clara.settings.api_key.help_text')} <a href="https://console.anthropic.com" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">console.anthropic.com</a>
               </p>
             </div>
 
@@ -208,7 +210,7 @@ Sois proactive: si tu détectes des problèmes dans les données, mentionne-les.
                 onClick={handleTestConnection}
                 className="px-4 py-2 border border-primary text-primary rounded-lg hover:bg-primary/10 transition-colors"
               >
-                Tester la connexion
+                {t('admin.clara.settings.api_key.test_button')}
               </button>
 
               {testResult && (
@@ -231,12 +233,12 @@ Sois proactive: si tu détectes des problèmes dans les données, mentionne-les.
         <section className="bg-dark-200/50 rounded-xl border border-primary/20 p-6">
           <div className="flex items-center gap-3 mb-6">
             <MessageSquare className="w-5 h-5 text-primary" />
-            <h2 className="text-lg font-bold text-white">Prompt Système</h2>
+            <h2 className="text-lg font-bold text-white">{t('admin.clara.settings.system_prompt.section_title')}</h2>
           </div>
 
           <div>
             <label className="block text-sm text-gray-400 mb-2">
-              Instructions de base pour Clara
+              {t('admin.clara.settings.system_prompt.label')}
             </label>
             <textarea
               value={settings.system_prompt}
@@ -245,7 +247,7 @@ Sois proactive: si tu détectes des problèmes dans les données, mentionne-les.
               className="w-full bg-dark-300 border border-primary/20 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-primary resize-y"
             />
             <p className="text-xs text-gray-500 mt-2">
-              Ce prompt définit la personnalité et les capacités de Clara.
+              {t('admin.clara.settings.system_prompt.help_text')}
             </p>
           </div>
         </section>
@@ -254,13 +256,13 @@ Sois proactive: si tu détectes des problèmes dans les données, mentionne-les.
         <section className="bg-dark-200/50 rounded-xl border border-primary/20 p-6">
           <div className="flex items-center gap-3 mb-6">
             <Sparkles className="w-5 h-5 text-primary" />
-            <h2 className="text-lg font-bold text-white">Modèle IA</h2>
+            <h2 className="text-lg font-bold text-white">{t('admin.clara.settings.model.section_title')}</h2>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm text-gray-400 mb-2">
-                Modèle Claude
+                {t('admin.clara.settings.model.label')}
               </label>
               <select
                 value={settings.model}
@@ -275,7 +277,7 @@ Sois proactive: si tu détectes des problèmes dans les données, mentionne-les.
 
             <div>
               <label className="block text-sm text-gray-400 mb-2">
-                Max Tokens
+                {t('admin.clara.settings.model.max_tokens')}
               </label>
               <input
                 type="number"
@@ -293,7 +295,7 @@ Sois proactive: si tu détectes des problèmes dans les données, mentionne-les.
         <section className="bg-dark-200/50 rounded-xl border border-primary/20 p-6">
           <div className="flex items-center gap-3 mb-6">
             <Link2 className="w-5 h-5 text-primary" />
-            <h2 className="text-lg font-bold text-white">Connecteurs</h2>
+            <h2 className="text-lg font-bold text-white">{t('admin.clara.settings.connectors.section_title')}</h2>
           </div>
 
           <div className="space-y-4">
@@ -312,7 +314,7 @@ Sois proactive: si tu détectes des problèmes dans les données, mentionne-les.
                   ? 'bg-green-600/20 text-green-400'
                   : 'bg-gray-600/20 text-gray-400'
               }`}>
-                {settings.connectors.supabase ? 'Connecté' : 'Non connecté'}
+                {settings.connectors.supabase ? t('admin.clara.settings.connectors.connected') : t('admin.clara.settings.connectors.not_connected')}
               </div>
             </div>
 
@@ -323,11 +325,11 @@ Sois proactive: si tu détectes des problèmes dans les données, mentionne-les.
                 </div>
                 <div>
                   <h3 className="font-medium text-white">GitHub</h3>
-                  <p className="text-sm text-gray-400">Gestion de code (Bientôt)</p>
+                  <p className="text-sm text-gray-400">{t('admin.clara.settings.connectors.github_subtitle')}</p>
                 </div>
               </div>
               <div className="px-3 py-1 rounded-full text-xs bg-gray-600/20 text-gray-400">
-                Bientôt disponible
+                {t('admin.clara.settings.connectors.coming_soon')}
               </div>
             </div>
 
@@ -338,11 +340,11 @@ Sois proactive: si tu détectes des problèmes dans les données, mentionne-les.
                 </div>
                 <div>
                   <h3 className="font-medium text-white">Vercel</h3>
-                  <p className="text-sm text-gray-400">Déploiement (Bientôt)</p>
+                  <p className="text-sm text-gray-400">{t('admin.clara.settings.connectors.vercel_subtitle')}</p>
                 </div>
               </div>
               <div className="px-3 py-1 rounded-full text-xs bg-gray-600/20 text-gray-400">
-                Bientôt disponible
+                {t('admin.clara.settings.connectors.coming_soon')}
               </div>
             </div>
           </div>
@@ -350,8 +352,8 @@ Sois proactive: si tu détectes des problèmes dans les données, mentionne-les.
 
         {/* Info */}
         <div className="text-center text-gray-500 text-sm">
-          <p>Clara utilise l&apos;API Anthropic Claude pour fournir des réponses intelligentes.</p>
-          <p>Les données sont traitées de manière sécurisée et ne sont pas stockées par Anthropic.</p>
+          <p>{t('admin.clara.settings.info.line1')}</p>
+          <p>{t('admin.clara.settings.info.line2')}</p>
         </div>
       </main>
     </div>

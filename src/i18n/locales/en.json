@@ -475,6 +475,45 @@
       "subtitle": "Please review your booking and complete the payment"
     }
   },
+  "cgv": {
+    "page_title": "Terms & Conditions",
+    "page_subtitle": "Review your order details and accept the terms",
+    "action_required": "⚠️ Action required",
+    "order_details": "Your Order Details",
+    "reservation_number": "Reservation number",
+    "date": "Date",
+    "participants": "Participants",
+    "event_type": "Event type",
+    "room": "Room",
+    "games": "games",
+    "formula": "Formula",
+    "unit_price": "Unit price",
+    "subtotal": "Subtotal",
+    "total": "Total to pay",
+    "terms_checkbox": "I have read and accept the",
+    "terms_link": "terms and conditions",
+    "validate_button": "Confirm and accept T&C",
+    "validating": "Validating...",
+    "already_validated": "Terms accepted",
+    "already_validated_message": "Thank you! You have accepted the terms and conditions for your reservation.",
+    "invalid_link": "Invalid link",
+    "persons": "persons",
+    "price_breakdown": "Price Breakdown",
+    "description": "Description",
+    "qty": "Qty",
+    "discount": "Discount",
+    "event": "Event",
+    "game": "Game",
+    "error": {
+      "invalid_link": "Invalid or expired link",
+      "loading_error": "Error loading"
+    },
+    "modal": {
+      "title": "Terms and Conditions",
+      "loading": "Loading terms...",
+      "close": "Close"
+    }
+  },
   "admin": {
     "common": {
       "loading": "Loading...",
@@ -570,23 +609,23 @@
     },
     "data_management": {
       "title": "Data Management",
-      "subtitle": "Permanent data deletion by branch",
+      "subtitle": "Mass deletion zone - Super Admin only",
       "select_branches": "Select branches",
       "all_branches": "All branches",
       "deletion_zones": "Deletion zones",
       "logs_group": "Logs & Emails",
-      "logs_description": "Activity logs and email history",
+      "logs_description": "Activity history and sent emails",
       "reservations_group": "Reservations",
       "reservations_description": "Orders, bookings, sessions and slots",
       "contacts_group": "Contacts",
-      "contacts_description": "Clients and contacts (requires deleting reservations first)",
+      "contacts_description": "All client contacts",
       "delete_button": "Delete",
-      "confirm_title": "Delete Confirmation",
+      "confirm_title": "Confirm deletion",
       "confirm_message": "You are about to permanently delete the following data. This action is IRREVERSIBLE.",
       "enter_password": "Enter your password to confirm",
       "password_placeholder": "Password",
       "cancel": "Cancel",
-      "confirm_delete": "Confirm deletion",
+      "confirm_delete": "Delete permanently",
       "deleting": "Deleting...",
       "success": "Deletion successful",
       "error": "Error during deletion",
@@ -598,7 +637,19 @@
       "bookings": "Bookings",
       "game_sessions": "Game sessions",
       "booking_slots": "Booking slots",
-      "contacts": "Contacts"
+      "contacts": "Contacts",
+      "warning_title": "Warning - Irreversible actions",
+      "warning_message": "Deletions are final. Make sure you have a backup before proceeding.",
+      "branches_selected": "Selected branches:",
+      "select_all": "Select all",
+      "deselect_all": "Deselect all",
+      "data_details": "Data details",
+      "confirm_message_detailed": "You are about to permanently delete <strong>{{count}}</strong> items. This action is irreversible.",
+      "delete_reservations_first": "You must first delete all reservations before deleting contacts.",
+      "delete_reservations_first_warning": "⚠️ Delete reservations first to be able to delete contacts",
+      "deletion_success": "{{label}} deleted successfully ({{count}} items)",
+      "server_error": "Server connection error",
+      "tables": "Tables"
     },
     "roles": {
       "super_admin": "Super Admin",
@@ -1036,7 +1087,69 @@
         "last_activity": "Last activity"
       },
       "linked_bookings": "Linked bookings",
-      "no_linked_bookings": "No bookings linked to this contact"
+      "no_linked_bookings": "No bookings linked to this contact",
+      "merge_modal": {
+        "title": "Merge Contacts",
+        "warning_title": "Warning:",
+        "warning_message": "This action will merge {{count}} contact(s) with the primary contact. Duplicate contacts will be archived and their bookings transferred to the primary contact.",
+        "error": "Error merging contacts",
+        "field_label": "Field",
+        "primary_contact": "Primary contact (to keep)",
+        "duplicate": "Duplicate {{number}}",
+        "fields": {
+          "first_name": "First name",
+          "last_name": "Last name",
+          "phone": "Phone",
+          "email": "Email",
+          "notes_client": "Notes"
+        },
+        "cancel": "Cancel",
+        "merge": "Merge contacts",
+        "merging": "Merging...",
+        "archived_reason": "Merged with {{name}} (ID: {{id}})"
+      },
+      "modal": {
+        "title": {
+          "edit": "Edit Contact",
+          "new": "New Contact"
+        },
+        "company": {
+          "label": "Company",
+          "help": "(check if this is a business client)"
+        },
+        "company_name": "Company Name *",
+        "company_name_placeholder": "Company Ltd.",
+        "vat_id": "VAT ID *",
+        "vat_id_placeholder": "51XXXXXXX",
+        "contact_first_name": "Contact First Name *",
+        "first_name": "First Name *",
+        "first_name_placeholder": "First name",
+        "contact_last_name": "Contact Last Name",
+        "last_name": "Last Name",
+        "last_name_placeholder": "Last name (optional)",
+        "phone": "Phone *",
+        "phone_placeholder": "05XXXXXXXX",
+        "email": "Email",
+        "email_placeholder": "email@example.com",
+        "email_language": "Email Language",
+        "email_language_help": "All emails (confirmations, reminders) will be sent in this language",
+        "client_notes": "Client Notes (preferences, allergies, etc.)",
+        "client_notes_placeholder": "Global notes about the client (preferences, allergies, etc.)",
+        "cancel": "Cancel",
+        "saving": "Saving...",
+        "creating": "Creating...",
+        "save": "Save",
+        "create": "Create Contact",
+        "errors": {
+          "first_name_required": "First name is required",
+          "phone_required": "Phone is required",
+          "company_name_required": "Company name is required for companies",
+          "vat_id_required": "VAT ID is required for companies",
+          "error_updating": "Error updating contact",
+          "error_creating": "Error creating contact",
+          "generic_error": "An error occurred"
+        }
+      }
     },
     "booking_modal": {
       "title_new": "New booking",
@@ -1677,6 +1790,44 @@
       "clara": {
         "title": "Clara AI",
         "subtitle": "Virtual assistant of the site",
+        "settings": {
+          "title": "Clara Settings",
+          "subtitle": "AI Assistant Configuration",
+          "save": "Save",
+          "save_success": "Settings saved successfully!",
+          "save_error": "Error saving settings",
+          "api_key": {
+            "section_title": "Anthropic API Key",
+            "label": "API Key (sk-ant-...)",
+            "help_text": "Get your key from",
+            "test_button": "Test connection",
+            "required": "Please enter an API key",
+            "success": "Connection successful! Clara is ready.",
+            "error": "API connection error"
+          },
+          "system_prompt": {
+            "section_title": "System Prompt",
+            "label": "Basic instructions for Clara",
+            "help_text": "This prompt defines Clara's personality and capabilities."
+          },
+          "model": {
+            "section_title": "AI Model",
+            "label": "Claude Model",
+            "max_tokens": "Max Tokens"
+          },
+          "connectors": {
+            "section_title": "Connectors",
+            "connected": "Connected",
+            "not_connected": "Not connected",
+            "coming_soon": "Coming soon",
+            "github_subtitle": "Code Management (Coming soon)",
+            "vercel_subtitle": "Deployment (Coming soon)"
+          },
+          "info": {
+            "line1": "Clara uses the Anthropic Claude API to provide intelligent responses.",
+            "line2": "Data is processed securely and is not stored by Anthropic."
+          }
+        },
         "tabs": {
           "general": "General",
           "prompt": "System Prompt",

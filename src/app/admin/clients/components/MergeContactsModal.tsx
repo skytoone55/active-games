@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { X, Loader2, User, Phone, Mail, AlertTriangle, Check } from 'lucide-react'
 import { useContacts, type UpdateContactData } from '@/hooks/useContacts'
 import type { Contact, BookingContactUpdate } from '@/lib/supabase/types'
+import { useTranslation } from 'react-i18next'
 
 type ContactField = 'first_name' | 'last_name' | 'phone' | 'email' | 'notes_client'
 import { getClient } from '@/lib/supabase/client'
@@ -25,6 +26,7 @@ export function MergeContactsModal({
   branchId,
   isDark,
 }: MergeContactsModalProps) {
+  const { t } = useTranslation()
   const { updateContact, archiveContact } = useContacts(branchId)
   const [selectedFields, setSelectedFields] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(false)
@@ -32,11 +34,9 @@ export function MergeContactsModal({
 
   if (!isOpen || contacts.length < 2) return null
 
-  // Le premier contact sera le contact principal (celui qui sera conservé)
   const primaryContact = contacts[0]
   const duplicateContacts = contacts.slice(1)
 
-  // Initialiser les champs sélectionnés avec les valeurs du contact principal
   const initializeFields = () => {
     const fields: Record<string, string> = {}
     fields.first_name = primaryContact.id
@@ -62,7 +62,6 @@ export function MergeContactsModal({
     try {
       const supabase = getClient()
 
-      // Récupérer les valeurs sélectionnées
       const allContacts = [primaryContact, ...duplicateContacts]
       const mergedData: UpdateContactData = {}
 
@@ -84,7 +83,6 @@ export function MergeContactsModal({
         }
       })
 
-      // Fusionner les notes (concaténer)
       const allNotes = allContacts
         .map(c => c.notes_client)
         .filter(Boolean)
@@ -93,12 +91,9 @@ export function MergeContactsModal({
         mergedData.notes_client = allNotes
       }
 
-      // Mettre à jour le contact principal avec les données fusionnées
       await updateContact(primaryContact.id, mergedData)
 
-      // Transférer les réservations des contacts dupliqués vers le contact principal
       for (const duplicate of duplicateContacts) {
-        // Récupérer les réservations liées
         const { data: bookingContacts } = await supabase
           .from('booking_contacts')
           .select('booking_id, contact_id')
@@ -106,7 +101,6 @@ export function MergeContactsModal({
           .returns<Array<{ booking_id: string; contact_id: string }>>()
 
         if (bookingContacts && bookingContacts.length > 0) {
-          // Pour chaque réservation, vérifier si le contact principal est déjà lié
           for (const bc of bookingContacts) {
             const bookingId = bc.booking_id
             const { data: existing } = await supabase
@@ -117,7 +111,6 @@ export function MergeContactsModal({
               .single()
 
             if (!existing) {
-              // Transférer la liaison - mettre à jour contact_id
               const updateData: BookingContactUpdate = { contact_id: primaryContact.id }
               await supabase
                 .from('booking_contacts')
@@ -126,7 +119,6 @@ export function MergeContactsModal({
                 .eq('booking_id', bookingId)
                 .eq('contact_id', duplicate.id)
             } else {
-              // Supprimer la liaison dupliquée
               await supabase
                 .from('booking_contacts')
                 .delete()
@@ -136,10 +128,12 @@ export function MergeContactsModal({
           }
         }
 
-        // Archiver les contacts dupliqués avec raison
         await archiveContact(duplicate.id)
         await updateContact(duplicate.id, {
-          archived_reason: `Fusionné avec ${primaryContact.first_name} ${primaryContact.last_name || ''} (ID: ${primaryContact.id})`,
+          archived_reason: t('admin.clients.merge_modal.archived_reason', {
+            name: `${primaryContact.first_name} ${primaryContact.last_name || ''}`.trim(),
+            id: primaryContact.id
+          }),
         })
       }
 
@@ -147,7 +141,7 @@ export function MergeContactsModal({
       onClose()
     } catch (err) {
       console.error('Error merging contacts:', err)
-      setError('Erreur lors de la fusion des contacts')
+      setError(t('admin.clients.merge_modal.error'))
     } finally {
       setLoading(false)
     }
@@ -169,7 +163,7 @@ export function MergeContactsModal({
           <div className="flex items-center gap-3">
             <AlertTriangle className={`w-6 h-6 ${isDark ? 'text-yellow-400' : 'text-yellow-600'}`} />
             <h2 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-              Fusionner les contacts
+              {t('admin.clients.merge_modal.title')}
             </h2>
           </div>
           <button
@@ -194,12 +188,11 @@ export function MergeContactsModal({
               : 'bg-yellow-50 border-yellow-200 text-yellow-700'
           }`}>
             <p className="text-sm">
-              <strong>Attention:</strong> Cette action fusionnera {duplicateContacts.length} contact(s) avec le contact principal. 
-              Les contacts dupliqués seront archivés et leurs réservations transférées vers le contact principal.
+              <strong>{t('admin.clients.merge_modal.warning_title')}</strong> {t('admin.clients.merge_modal.warning_message', { count: duplicateContacts.length })}
             </p>
           </div>
 
-          {/* Erreur */}
+          {/* Error */}
           {error && (
             <div className={`p-4 rounded-lg border ${
               isDark
@@ -210,20 +203,20 @@ export function MergeContactsModal({
             </div>
           )}
 
-          {/* Table de sélection */}
+          {/* Selection table */}
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead className={isDark ? 'bg-gray-700/50' : 'bg-gray-100'}>
                 <tr>
                   <th className={`px-4 py-3 text-left text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                    Champ
+                    {t('admin.clients.merge_modal.field_label')}
                   </th>
                   <th className={`px-4 py-3 text-center text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                    Contact principal (à conserver)
+                    {t('admin.clients.merge_modal.primary_contact')}
                   </th>
                   {duplicateContacts.map((contact, idx) => (
                     <th key={contact.id} className={`px-4 py-3 text-center text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                      Doublon {idx + 1}
+                      {t('admin.clients.merge_modal.duplicate', { number: idx + 1 })}
                     </th>
                   ))}
                 </tr>
@@ -232,11 +225,7 @@ export function MergeContactsModal({
                 {(['first_name', 'last_name', 'phone', 'email', 'notes_client'] as ContactField[]).map((field) => (
                   <tr key={field}>
                     <td className={`px-4 py-3 font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                      {field === 'first_name' ? 'Prénom' :
-                       field === 'last_name' ? 'Nom' :
-                       field === 'phone' ? 'Téléphone' :
-                       field === 'email' ? 'Email' :
-                       'Notes'}
+                      {t(`admin.clients.merge_modal.fields.${field}`)}
                     </td>
                     <td className="px-4 py-3">
                       <label className="flex items-center justify-center cursor-pointer">
@@ -286,7 +275,7 @@ export function MergeContactsModal({
                   : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
               } disabled:opacity-50`}
             >
-              Annuler
+              {t('admin.clients.merge_modal.cancel')}
             </button>
             <button
               onClick={handleMerge}
@@ -296,12 +285,12 @@ export function MergeContactsModal({
               {loading ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  Fusion en cours...
+                  {t('admin.clients.merge_modal.merging')}
                 </>
               ) : (
                 <>
                   <Check className="w-4 h-4" />
-                  Fusionner les contacts
+                  {t('admin.clients.merge_modal.merge')}
                 </>
               )}
             </button>
