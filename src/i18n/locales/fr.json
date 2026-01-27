@@ -784,6 +784,7 @@
       "close_order": "Cloturer la commande",
       "close_order_confirm": "Voulez-vous vraiment cloturer cette commande ? Cela va creer la facture/recu dans iCount et annuler le devis.",
       "close_order_success": "Commande cloturee avec succes. La facture/recu a ete creee.",
+      "close_order_error": "Erreur lors de la cloture de la commande",
       "modal": {
         "cancel_title": "Annuler la commande",
         "cancel_message": "Voulez-vous vraiment annuler cette commande ? Cette action est reversible.",
@@ -1195,7 +1196,9 @@
         "vests_limit_reached": "La limite principale de {{max}} vestes est atteinte.",
         "spare_vests_available": "Les {{spare}} vestes de spare sont-elles disponibles ?",
         "no_cancel": "Non - Annuler",
-        "yes_authorize": "Oui - Autoriser"
+        "yes_authorize": "Oui - Autoriser",
+        "vests_exceeded_with_spare": "Dépassement de la contrainte vestes (incluant spare) : {{totalWithNew}} > {{totalVests}} (REFUS)",
+        "vests_main_limit_reached": "Limite principale atteinte ({{maxVests}} vestes). {{spareVests}} vestes spare disponibles."
       },
       "calendar": {
         "previous_year": "Annee precedente",

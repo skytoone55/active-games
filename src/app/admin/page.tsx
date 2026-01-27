@@ -890,7 +890,7 @@ export default function AdminPage() {
             setConfirmationModal({
               isOpen: true,
               title: t('admin.common.error'),
-              message: result.error || 'Failed to close order',
+              message: result.error || t('admin.orders.close_order_error'),
               type: 'warning',
               onConfirm: () => {},
             })
@@ -900,7 +900,7 @@ export default function AdminPage() {
           setConfirmationModal({
             isOpen: true,
             title: t('admin.common.error'),
-            message: 'Failed to close order',
+            message: t('admin.orders.close_order_error'),
             type: 'warning',
             onConfirm: () => {},
           })
@@ -1868,9 +1868,9 @@ export default function AdminPage() {
       spareVests,
       totalVests,
       message: exceedsTotal
-        ? `Dépassement de la contrainte vestes (incluant spare) : ${totalWithNew} > ${totalVests} (REFUS)`
+        ? t('admin.booking.modals.vests_exceeded_with_spare', { totalWithNew, totalVests })
         : exceedsMain
-          ? `Limite principale atteinte (${maxVests} vestes). ${spareVests} vestes spare disponibles.`
+          ? t('admin.booking.modals.vests_main_limit_reached', { maxVests, spareVests })
           : ''
     }
   }

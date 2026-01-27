@@ -727,6 +727,7 @@
       "close_order": "Close order",
       "close_order_confirm": "Are you sure you want to close this order? This will create the invoice/receipt in iCount and cancel the quote.",
       "close_order_success": "Order closed successfully. Invoice/receipt has been created.",
+      "close_order_error": "Error closing the order",
       "modal": {
         "cancel_title": "Cancel order",
         "cancel_message": "Are you sure you want to cancel this order? This action is reversible.",
@@ -1115,7 +1116,9 @@
         "vests_limit_reached": "The main limit of {{max}} vests has been reached.",
         "spare_vests_available": "Are the {{spare}} spare vests available?",
         "no_cancel": "No - Cancel",
-        "yes_authorize": "Yes - Authorize"
+        "yes_authorize": "Yes - Authorize",
+        "vests_exceeded_with_spare": "Vest limit exceeded (including spare): {{totalWithNew}} > {{totalVests}} (DENIED)",
+        "vests_main_limit_reached": "Main limit reached ({{maxVests}} vests). {{spareVests}} spare vests available."
       },
       "discount": {
         "label": "Discount",

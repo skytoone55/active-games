@@ -813,6 +813,7 @@
       "close_order": "סגור הזמנה",
       "close_order_confirm": "האם אתה בטוח שברצונך לסגור הזמנה זו? פעולה זו תיצור חשבונית/קבלה ב-iCount ותבטל את הצעת המחיר.",
       "close_order_success": "ההזמנה נסגרה בהצלחה. החשבונית/קבלה נוצרה.",
+      "close_order_error": "שגיאה בסגירת ההזמנה",
       "modal": {
         "cancel_title": "ביטול הזמנה",
         "cancel_message": "האם אתה בטוח שברצונך לבטל הזמנה זו? פעולה זו ניתנת לביטול.",
@@ -1220,7 +1221,9 @@
         "vests_limit_reached": "המגבלה העיקרית של {{max}} אפודים הושגה.",
         "spare_vests_available": "האם {{spare}} האפודים הרזרביים זמינים?",
         "no_cancel": "לא - בטל",
-        "yes_authorize": "כן - אשר"
+        "yes_authorize": "כן - אשר",
+        "vests_exceeded_with_spare": "חריגה ממגבלת האפודים (כולל רזרבה): {{totalWithNew}} > {{totalVests}} (סירוב)",
+        "vests_main_limit_reached": "הגעת למגבלה העיקרית ({{maxVests}} אפודים). {{spareVests}} אפודים רזרביים זמינים."
       },
       "discount": {
         "label": "הנחה",
