@@ -7,7 +7,6 @@ export { ICountClientsModule } from './clients'
 export { ICountDocumentsModule } from './documents'
 export { ICountItemsModule } from './items'
 export { ICountCreditCardModule } from './credit-card'
-export { ICountPayPagesModule } from './paypages'
 export type {
   ICountDocType,
   ICountDocumentItem,
@@ -29,8 +28,3 @@ export type {
   BillCardParams,
   GetTokenParams,
 } from './credit-card'
-export type {
-  GenerateSaleParams,
-  GenerateSaleResult,
-  PayPageWebhookPayload,
-} from './paypages'
