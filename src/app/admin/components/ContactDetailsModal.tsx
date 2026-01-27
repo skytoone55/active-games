@@ -421,7 +421,7 @@ export function ContactDetailsModal({
                             <div className={`font-medium truncate ${
                               isDark ? 'text-white' : 'text-gray-900'
                             }`}>
-                              {booking.reference_code || 'N/A'} - {booking.participants_count || 0} pers.
+                              {booking.reference_code || t('admin.common.na')} - {booking.participants_count || 0} {t('admin.common.people_short')}
                             </div>
                             <div className={`text-sm flex items-center gap-2 ${
                               isDark ? 'text-gray-400' : 'text-gray-600'
@@ -439,7 +439,7 @@ export function ContactDetailsModal({
                                     ? 'bg-orange-500/20 text-orange-400'
                                     : 'bg-teal-500/20 text-teal-400'
                                 }`}>
-                                  {booking.source === 'admin_agenda' ? 'Admin' : 'Site'}
+                                  {booking.source === 'admin_agenda' ? t('admin.common.source_admin') : t('admin.common.source_site')}
                                 </span>
                               )}
                             </div>

@@ -697,7 +697,7 @@ export function OrderDetailModal({
                       ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400'
                       : 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400'
                   }`}>
-                    {order.source === 'admin_agenda' ? 'Admin' : t('admin.orders.source_website')}
+                    {order.source === 'admin_agenda' ? t('admin.common.source_admin') : t('admin.orders.source_website')}
                   </span>
                 </div>
                 {order.branch?.name && (

@@ -442,7 +442,7 @@ export default function ClientsPage() {
                   { value: 'active', label: t('admin.clients.status.active') },
                   { value: 'archived', label: t('admin.clients.status.archived') },
                 ]}
-                placeholder="Sélectionner un statut"
+                placeholder={t('admin.clients.select_status')}
                 isDark={isDark}
               />
             </div>
@@ -463,7 +463,7 @@ export default function ClientsPage() {
                   { value: 'admin_agenda', label: t('admin.clients.source.admin_agenda') },
                   { value: 'public_booking', label: t('admin.clients.source.public_booking') },
                 ]}
-                placeholder="Sélectionner une source"
+                placeholder={t('admin.clients.select_source')}
                 isDark={isDark}
               />
             </div>

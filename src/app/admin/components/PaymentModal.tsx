@@ -667,7 +667,7 @@ export function PaymentModal({
                         </div>
                         <div>
                           <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                            CVV
+                            {t('admin.payment.card_cvv')}
                           </label>
                           <input
                             type="text"

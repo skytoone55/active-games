@@ -6,6 +6,7 @@ import type { UserRole, Branch, Role } from '@/lib/supabase/types'
 import { validateEmail, validateIsraeliPhone, VALIDATION_MESSAGES } from '@/lib/validation'
 import { CustomSelect } from '../../components/CustomSelect'
 import { useRoles } from '@/hooks/useRoles'
+import { useTranslation } from '@/contexts/LanguageContext'
 
 interface CreateUserModalProps {
   isOpen: boolean
@@ -36,6 +37,7 @@ export function CreateUserModal({
   currentUserLevel = 10,
   isDark,
 }: CreateUserModalProps) {
+  const { t } = useTranslation()
   const { roles, getAssignableRoles, loading: rolesLoading } = useRoles()
 
   const [email, setEmail] = useState('')
@@ -99,12 +101,12 @@ export function CreateUserModal({
     }
 
     if (selectedBranchIds.length === 0) {
-      setError('Veuillez sélectionner au moins une branche')
+      setError(t('admin.users.errors.select_branch'))
       return
     }
 
     if (!selectedRoleId) {
-      setError('Veuillez sélectionner un rôle')
+      setError(t('admin.users.errors.select_role'))
       return
     }
 
@@ -128,7 +130,7 @@ export function CreateUserModal({
         onClose()
       }
     } else {
-      setError(result.error || 'Erreur lors de la création')
+      setError(result.error || t('admin.users.errors.create_failed'))
     }
   }
 
@@ -190,7 +192,7 @@ export function CreateUserModal({
               </div>
               <div>
                 <h2 className={`text-xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                  Utilisateur créé !
+                  {t('admin.users.modal.user_created')}
                 </h2>
                 <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
                   {email}
@@ -205,10 +207,10 @@ export function CreateUserModal({
                 <AlertCircle className="w-5 h-5 text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5" />
                 <div className="flex-1">
                   <p className={`text-sm font-medium ${isDark ? 'text-yellow-300' : 'text-yellow-800'}`}>
-                    Mot de passe temporaire généré
+                    {t('admin.users.modal.temp_password_generated')}
                   </p>
                   <p className={`text-sm mt-1 ${isDark ? 'text-yellow-400' : 'text-yellow-700'}`}>
-                    Copiez ce mot de passe et communiquez-le à l'utilisateur. Il devra le changer à sa première connexion.
+                    {t('admin.users.modal.temp_password_instruction')}
                   </p>
                 </div>
               </div>
@@ -216,7 +218,7 @@ export function CreateUserModal({
 
             <div>
               <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                Mot de passe temporaire
+                {t('admin.users.modal.temp_password')}
               </label>
               <div className="flex items-center gap-2">
                 <input
@@ -237,7 +239,7 @@ export function CreateUserModal({
                       ? 'hover:bg-gray-700 text-gray-400'
                       : 'hover:bg-gray-100 text-gray-600'
                   }`}
-                  title={showPassword ? 'Masquer' : 'Afficher'}
+                  title={showPassword ? t('admin.users.modal.hide_password') : t('admin.users.modal.show_password')}
                 >
                   {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
@@ -253,12 +255,12 @@ export function CreateUserModal({
                   {passwordCopied ? (
                     <>
                       <Check className="w-4 h-4" />
-                      Copié
+                      {t('admin.users.modal.copied')}
                     </>
                   ) : (
                     <>
                       <Copy className="w-4 h-4" />
-                      Copier
+                      {t('admin.users.modal.copy')}
                     </>
                   )}
                 </button>
@@ -271,7 +273,7 @@ export function CreateUserModal({
               onClick={onClose}
               className="w-full px-6 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition-colors"
             >
-              Fermer
+              {t('admin.common.close')}
             </button>
           </div>
         </div>
@@ -285,7 +287,7 @@ export function CreateUserModal({
         {/* Header */}
         <div className={`flex items-center justify-between p-6 border-b ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
           <h2 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-            Créer un utilisateur
+            {t('admin.users.modal.create_title')}
           </h2>
           <button
             onClick={onClose}
@@ -317,7 +319,7 @@ export function CreateUserModal({
           <div>
             <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
               <Mail className="w-4 h-4 inline mr-1" />
-              Email *
+              {t('admin.users.fields.email')}
             </label>
             <input
               type="email"
@@ -340,7 +342,7 @@ export function CreateUserModal({
                   ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-500'
                   : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'
               } focus:outline-none focus:ring-2 focus:ring-blue-500`}
-              placeholder="utilisateur@example.com"
+              placeholder={t('admin.users.fields.email_placeholder')}
             />
             {validationErrors.email && (
               <div className="flex items-center gap-1 mt-1 text-red-500 text-sm">
@@ -355,7 +357,7 @@ export function CreateUserModal({
             <div>
               <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
                 <User className="w-4 h-4 inline mr-1" />
-                Prénom *
+                {t('admin.users.fields.first_name')}
               </label>
               <input
                 type="text"
@@ -367,12 +369,12 @@ export function CreateUserModal({
                     ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-500'
                     : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'
                 } focus:outline-none focus:ring-2 focus:ring-blue-500`}
-                placeholder="Prénom"
+                placeholder={t('admin.users.fields.first_name_placeholder')}
               />
             </div>
             <div>
               <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                Nom *
+                {t('admin.users.fields.last_name')}
               </label>
               <input
                 type="text"
@@ -384,7 +386,7 @@ export function CreateUserModal({
                     ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-500'
                     : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'
                 } focus:outline-none focus:ring-2 focus:ring-blue-500`}
-                placeholder="Nom"
+                placeholder={t('admin.users.fields.last_name_placeholder')}
               />
             </div>
           </div>
@@ -393,7 +395,7 @@ export function CreateUserModal({
           <div>
             <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
               <Phone className="w-4 h-4 inline mr-1" />
-              Téléphone *
+              {t('admin.users.fields.phone')}
             </label>
             <input
               type="tel"
@@ -416,7 +418,7 @@ export function CreateUserModal({
                   ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-500'
                   : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'
               } focus:outline-none focus:ring-2 focus:ring-blue-500`}
-              placeholder="05XXXXXXXX"
+              placeholder={t('admin.users.fields.phone_placeholder')}
             />
             {validationErrors.phone && (
               <div className="flex items-center gap-1 mt-1 text-red-500 text-sm">
@@ -430,7 +432,7 @@ export function CreateUserModal({
           <div>
             <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
               <Shield className="w-4 h-4 inline mr-1" />
-              Rôle *
+              {t('admin.users.fields.role')}
             </label>
             <CustomSelect
               value={selectedRoleId}
@@ -440,7 +442,7 @@ export function CreateUserModal({
             />
             {assignableRoles.length === 0 && (
               <p className={`text-xs mt-1 ${isDark ? 'text-yellow-400' : 'text-yellow-600'}`}>
-                Aucun rôle disponible pour l'assignation
+                {t('admin.users.fields.no_roles_available')}
               </p>
             )}
           </div>
@@ -449,7 +451,7 @@ export function CreateUserModal({
           <div>
             <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
               <Building2 className="w-4 h-4 inline mr-1" />
-              Branche(s) *
+              {t('admin.users.fields.branches')}
             </label>
             <div className={`border rounded-lg p-3 space-y-2 max-h-40 overflow-y-auto ${
               isDark ? 'border-gray-600 bg-gray-700' : 'border-gray-300 bg-gray-50'
@@ -473,7 +475,7 @@ export function CreateUserModal({
             </div>
             {selectedBranchIds.length === 0 && (
               <p className={`text-xs mt-1 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
-                Veuillez sélectionner au moins une branche
+                {t('admin.users.fields.select_branch_hint')}
               </p>
             )}
           </div>
@@ -490,7 +492,7 @@ export function CreateUserModal({
                   : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
               } disabled:opacity-50`}
             >
-              Annuler
+              {t('admin.common.cancel')}
             </button>
             <button
               type="submit"
@@ -500,10 +502,10 @@ export function CreateUserModal({
               {loading ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  Création...
+                  {t('admin.users.modal.creating')}
                 </>
               ) : (
-                'Créer l\'utilisateur'
+                t('admin.users.modal.create_button')
               )}
             </button>
           </div>

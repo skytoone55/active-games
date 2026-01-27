@@ -24,10 +24,10 @@ interface AdminHeaderProps {
   onToggleTheme: () => void
 }
 
-const languageFlags: Record<Locale, { flag: string; label: string }> = {
-  fr: { flag: '🇫🇷', label: 'Français' },
-  en: { flag: '🇬🇧', label: 'English' },
-  he: { flag: '🇮🇱', label: 'עברית' }
+const languageFlags: Record<Locale, { flag: string; key: string }> = {
+  fr: { flag: '🇫🇷', key: 'admin.header.language_french' },
+  en: { flag: '🇬🇧', key: 'admin.header.language_english' },
+  he: { flag: '🇮🇱', key: 'admin.header.language_hebrew' }
 }
 
 function AdminHeaderComponent({
@@ -254,7 +254,7 @@ function AdminHeaderComponent({
                     }`}
                   >
                     <span className="text-lg">{languageFlags[lang].flag}</span>
-                    <span>{languageFlags[lang].label}</span>
+                    <span>{t(languageFlags[lang].key)}</span>
                   </button>
                 ))}
               </div>
@@ -318,7 +318,7 @@ function AdminHeaderComponent({
                   <div className={`text-sm font-medium ${
                     theme === 'dark' ? 'text-white' : 'text-gray-900'
                   }`}>
-                    {user.profile?.full_name || 'Utilisateur'}
+                    {user.profile?.full_name || t('admin.header.user')}
                   </div>
                   <div className={`text-xs ${
                     theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
@@ -398,7 +398,7 @@ function AdminHeaderComponent({
                       }`}
                     >
                       <BarChart3 className="w-4 h-4" />
-                      {t('admin.header.statistics') || 'Statistiques'}
+                      {t('admin.header.statistics')}
                     </Link>
                     <Link
                       href="/admin/settings"
@@ -426,7 +426,7 @@ function AdminHeaderComponent({
                       }`}
                     >
                       <Trash2 className="w-4 h-4" />
-                      {t('admin.header.data_management') || 'Gestion des données'}
+                      {t('admin.header.data_management')}
                     </Link>
                   </div>
                 )}
@@ -573,7 +573,7 @@ function AdminHeaderComponent({
                     }`}
                   >
                     <span>{languageFlags[lang].flag}</span>
-                    <span className="text-sm">{languageFlags[lang].label}</span>
+                    <span className="text-sm">{t(languageFlags[lang].key)}</span>
                   </button>
                 ))}
               </div>
@@ -656,7 +656,7 @@ function AdminHeaderComponent({
                     }`}
                   >
                     <BarChart3 className="w-4 h-4" />
-                    <span>{t('admin.header.statistics') || 'Statistiques'}</span>
+                    <span>{t('admin.header.statistics')}</span>
                   </Link>
                   <Link
                     href="/admin/settings"

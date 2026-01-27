@@ -268,7 +268,7 @@ export function AccountingModal({
       }
     } catch (err) {
       console.error('Payment error:', err)
-      return { success: false, error: 'Network error' }
+      return { success: false, error: t('errors.networkError') }
     }
   }
 

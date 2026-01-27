@@ -298,7 +298,7 @@ export default function OrdersPage() {
             setConfirmModal({
               isOpen: true,
               title: t('admin.common.error'),
-              message: result.error || 'Erreur lors de la clôture',
+              message: result.error || t('admin.orders.close_error'),
               type: 'warning',
               onConfirm: () => {}
             })
@@ -308,7 +308,7 @@ export default function OrdersPage() {
           setConfirmModal({
             isOpen: true,
             title: t('admin.common.error'),
-            message: 'Erreur réseau',
+            message: t('admin.orders.network_error'),
             type: 'warning',
             onConfirm: () => {}
           })
@@ -363,7 +363,7 @@ export default function OrdersPage() {
       return data
     } catch (error) {
       console.error('Error resending email:', error)
-      return { success: false, error: 'Network error' }
+      return { success: false, error: t('admin.orders.network_error') }
     }
   }
 
@@ -381,7 +381,7 @@ export default function OrdersPage() {
       return data
     } catch (error) {
       console.error('Error resending CGV reminder:', error)
-      return { success: false, error: 'Network error' }
+      return { success: false, error: t('admin.orders.network_error') }
     }
   }
 

@@ -501,7 +501,7 @@ export function SettingsModal({
                     } focus:outline-none focus:ring-2 focus:ring-blue-500`}
                   />
                   <span className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                    personnes
+                    {t('admin.settings_modal.people')}
                   </span>
                 </div>
               </div>
@@ -596,7 +596,7 @@ export function SettingsModal({
                       } focus:outline-none focus:ring-2 focus:ring-blue-500`}
                     />
                     <span className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                      personnes
+                      {t('admin.settings_modal.people')}
                     </span>
                   </div>
                 </div>
@@ -615,7 +615,7 @@ export function SettingsModal({
                     >
                       <div className="flex items-center justify-between">
                         <label className={`text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                          Nom de la salle
+                          {t('admin.settings_modal.room_name')}
                         </label>
                         <input
                           type="text"
@@ -636,7 +636,7 @@ export function SettingsModal({
                       </div>
                       <div className="flex items-center justify-between">
                         <label className={`text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                          Capacité
+                          {t('admin.settings_modal.capacity')}
                         </label>
                         <div className="flex items-center gap-3">
                           <input
@@ -658,7 +658,7 @@ export function SettingsModal({
                             } focus:outline-none focus:ring-2 focus:ring-blue-500`}
                           />
                           <span className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                            personnes
+                            {t('admin.settings_modal.people')}
                           </span>
                         </div>
                       </div>

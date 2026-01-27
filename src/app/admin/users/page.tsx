@@ -91,7 +91,7 @@ export default function UsersPage() {
       setShowDeleteConfirm(false)
       setSelectedUser(null)
     } else {
-      alert(result.error || 'Erreur lors de la suppression')
+      alert(result.error || t('admin.users.errors.delete_failed'))
     }
   }
 

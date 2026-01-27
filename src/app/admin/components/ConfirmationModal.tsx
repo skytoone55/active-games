@@ -1,6 +1,7 @@
 'use client'
 
 import { X, AlertTriangle, CheckCircle, Info } from 'lucide-react'
+import { useTranslation } from '@/contexts/LanguageContext'
 
 interface ConfirmationModalProps {
   isOpen: boolean
@@ -21,10 +22,11 @@ export function ConfirmationModal({
   title,
   message,
   type = 'warning',
-  confirmText = 'Confirmer',
-  cancelText = 'Annuler',
+  confirmText,
+  cancelText,
   isDark,
 }: ConfirmationModalProps) {
+  const { t } = useTranslation()
   if (!isOpen) return null
 
   const handleConfirm = async () => {
@@ -105,7 +107,7 @@ export function ConfirmationModal({
               onClick={onClose}
               className={`px-4 py-2 rounded-lg transition-colors text-white ${getConfirmButtonColor()}`}
             >
-              OK
+              {t('admin.common.ok')}
             </button>
           ) : (
             <>
