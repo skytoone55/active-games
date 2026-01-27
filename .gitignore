@@ -4,3 +4,6 @@ node_modules
 data/
 .env.local
 .env*.local
+.vercel
+backup_*.sql
+backup_*.json
