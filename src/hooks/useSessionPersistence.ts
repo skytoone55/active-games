@@ -33,11 +33,21 @@ export function useSessionPersistence() {
     const supabase = getClient()
 
     try {
+      // D'abord vérifier si on a une session active
+      const { data: { session: currentSession } } = await supabase.auth.getSession()
+
+      if (!currentSession) {
+        console.warn('No active session to refresh')
+        return false
+      }
+
+      // Essayer de rafraîchir
       const { data: { session }, error } = await supabase.auth.refreshSession()
 
       if (error) {
         console.warn('Session refresh failed:', error.message)
-        // Ne pas déconnecter immédiatement - essayer à nouveau plus tard
+        // Si le refresh échoue, la session est probablement invalide
+        // Supabase va automatiquement déclencher SIGNED_OUT
         return false
       }
 
