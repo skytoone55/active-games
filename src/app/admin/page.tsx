@@ -1784,10 +1784,10 @@ export default function AdminPage() {
       return null // Vraiment plein
     }
     
-    // Groupe >= exclusiveThreshold : PRÉFÈRE une salle vide seule, mais peut partager si nécessaire
+    // Groupe >= exclusiveThreshold : DOIT être seul dans une salle vide
     // Si >= exclusiveThreshold, la salle deviendra exclusive (bloquée aux autres) après allocation
     if (participants >= exclusiveThreshold) {
-      // D'abord chercher une salle vide avec capacité suffisante
+      // Chercher UNIQUEMENT une salle vide avec capacité suffisante
       for (const room of sortedRoomsByCapacity) {
         const remaining = getRoomRemainingCapacity(room.id)
         if (remaining === room.capacity && room.capacity >= participants) {
@@ -1795,17 +1795,10 @@ export default function AdminPage() {
           return { roomIds: [room.id], requiresTwoRooms: false }
         }
       }
-      
-      // Sinon, chercher une salle avec capacité restante suffisante (partage)
-      for (const room of sortedRoomsByCapacity) {
-        const remaining = getRoomRemainingCapacity(room.id)
-        if (remaining >= participants) {
-          // Capacité restante suffisante pour partager
-          return { roomIds: [room.id], requiresTwoRooms: false }
-        }
-      }
-      
-      return null // Aucune salle ne peut accueillir le groupe
+
+      // Aucune salle vide disponible : refuser l'allocation
+      // Les groupes 10+ ne peuvent PAS partager une salle occupée
+      return null
     }
     
     // Groupe < threshold : PEUT partager, chercher la plus petite salle avec capacité restante

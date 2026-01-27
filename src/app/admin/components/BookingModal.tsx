@@ -1614,12 +1614,12 @@ export function BookingModal({
             sessionEnd.setMinutes(sessionEnd.getMinutes() + duration)
             
             // Allocation Laser si nécessaire
-            let laserRoomId: string | null = null
+            let allocatedRoomIds: string[] = []
             if (area === 'LASER') {
               if (findBestLaserRoom) {
                 const allocation = await findBestLaserRoom(parsedParticipants, sessionStart, sessionEnd, editingBooking?.id, bookingBranchId, laserAllocationMode)
                 if (allocation && allocation.roomIds.length > 0) {
-                  laserRoomId = allocation.roomIds[0]
+                  allocatedRoomIds = allocation.roomIds
                 } else {
                   // AUCUNE SALLE DISPONIBLE : BLOQUER LA CRÉATION
                   const timeStr = `${String(sessionStart.getHours()).padStart(2, '0')}:${String(sessionStart.getMinutes()).padStart(2, '0')}`
@@ -1631,15 +1631,30 @@ export function BookingModal({
                 }
               }
             }
-            
-            game_sessions.push({
-              game_area: area,
-              start_datetime: sessionStart.toISOString(),
-              end_datetime: sessionEnd.toISOString(),
-              laser_room_id: laserRoomId,
-              session_order: i + 1,
-              pause_before_minutes: i === 0 ? 15 : (eventGamePauses[i - 1] ?? 0) // Pause avant le premier jeu = 15 min (salle + 15), puis pause après chaque jeu précédent
-            })
+
+            // Créer une session par salle laser allouée (si mode MAXI avec L1+L2, créer 2 sessions)
+            if (area === 'LASER' && allocatedRoomIds.length > 0) {
+              allocatedRoomIds.forEach((roomId) => {
+                game_sessions.push({
+                  game_area: area,
+                  start_datetime: sessionStart.toISOString(),
+                  end_datetime: sessionEnd.toISOString(),
+                  laser_room_id: roomId,
+                  session_order: i + 1,
+                  pause_before_minutes: i === 0 ? 15 : (eventGamePauses[i - 1] ?? 0)
+                })
+              })
+            } else {
+              // Non-laser ou pas d'allocation
+              game_sessions.push({
+                game_area: area,
+                start_datetime: sessionStart.toISOString(),
+                end_datetime: sessionEnd.toISOString(),
+                laser_room_id: null,
+                session_order: i + 1,
+                pause_before_minutes: i === 0 ? 15 : (eventGamePauses[i - 1] ?? 0)
+              })
+            }
             
             // Préparer le début du prochain jeu (après la pause)
             if (i < gameCount - 1) {
@@ -1662,12 +1677,12 @@ export function BookingModal({
             sessionEnd.setMinutes(sessionEnd.getMinutes() + duration)
             
               // Allocation Laser si nécessaire
-              let laserRoomId: string | null = null
+              let allocatedRoomIds: string[] = []
               if (area === 'LASER') {
                 if (findBestLaserRoom) {
                   const allocation = await findBestLaserRoom(parsedParticipants, sessionStart, sessionEnd, editingBooking?.id, bookingBranchId, laserAllocationMode)
                   if (allocation && allocation.roomIds.length > 0) {
-                    laserRoomId = allocation.roomIds[0]
+                    allocatedRoomIds = allocation.roomIds
                   } else {
                     // AUCUNE SALLE DISPONIBLE : BLOQUER LA CRÉATION
                     const timeStr = `${String(sessionStart.getHours()).padStart(2, '0')}:${String(sessionStart.getMinutes()).padStart(2, '0')}`
@@ -1676,15 +1691,30 @@ export function BookingModal({
                   }
                 }
               }
-              
-              game_sessions.push({
-                game_area: area,
-                start_datetime: sessionStart.toISOString(),
-                end_datetime: sessionEnd.toISOString(),
-                laser_room_id: laserRoomId,
-                session_order: i + 1,
-                pause_before_minutes: i === 0 ? 15 : (eventCustomGamePauses[i - 1] ?? 0) // Pause avant le premier jeu = 15 min (salle + 15), puis pause après chaque jeu précédent
-              })
+
+              // Créer une session par salle laser allouée (si mode MAXI avec L1+L2, créer 2 sessions)
+              if (area === 'LASER' && allocatedRoomIds.length > 0) {
+                allocatedRoomIds.forEach((roomId) => {
+                  game_sessions.push({
+                    game_area: area,
+                    start_datetime: sessionStart.toISOString(),
+                    end_datetime: sessionEnd.toISOString(),
+                    laser_room_id: roomId,
+                    session_order: i + 1,
+                    pause_before_minutes: i === 0 ? 15 : (eventCustomGamePauses[i - 1] ?? 0)
+                  })
+                })
+              } else {
+                // Non-laser ou pas d'allocation
+                game_sessions.push({
+                  game_area: area,
+                  start_datetime: sessionStart.toISOString(),
+                  end_datetime: sessionEnd.toISOString(),
+                  laser_room_id: null,
+                  session_order: i + 1,
+                  pause_before_minutes: i === 0 ? 15 : (eventCustomGamePauses[i - 1] ?? 0)
+                })
+              }
             
             // Préparer le début du prochain jeu (après la pause)
             if (i < gameCount - 1) {
