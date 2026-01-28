@@ -861,9 +861,28 @@ export function ClaraAssistant({
 
               {loading && (
                 <div className="flex justify-start">
-                  <div className={`rounded-xl px-4 py-2 flex items-center gap-2 ${themeClasses.assistantBubble}`}>
-                    <Loader2 className="w-4 h-4 animate-spin text-cyan-500" />
-                    <span className={isDark ? 'text-gray-400' : 'text-gray-500'} style={{ fontSize }}>Clara réfléchit...</span>
+                  <div className={`rounded-xl px-5 py-4 ${themeClasses.assistantBubble} flex items-center gap-1.5`}>
+                    <span
+                      className="w-2 h-2 rounded-full bg-cyan-500 animate-bounce"
+                      style={{
+                        animationDelay: '0ms',
+                        animationDuration: '1s'
+                      }}
+                    />
+                    <span
+                      className="w-2 h-2 rounded-full bg-cyan-500 animate-bounce"
+                      style={{
+                        animationDelay: '150ms',
+                        animationDuration: '1s'
+                      }}
+                    />
+                    <span
+                      className="w-2 h-2 rounded-full bg-cyan-500 animate-bounce"
+                      style={{
+                        animationDelay: '300ms',
+                        animationDuration: '1s'
+                      }}
+                    />
                   </div>
                 </div>
               )}
