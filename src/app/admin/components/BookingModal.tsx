@@ -216,6 +216,9 @@ export function BookingModal({
   const [eventAlias, setEventAlias] = useState('') // Alias : nom de la personne qui fête l'événement
   const [eventNotes, setEventNotes] = useState('') // Notes spécifiques à l'événement/salle
 
+  // État OUT pour le bouton invisible
+  const [isOrderOut, setIsOrderOut] = useState(false)
+
   // Gestion Laser et game_sessions
   // Pour GAME : game_area (ACTIVE/LASER/CUSTOM), nombre de jeux (1/2/3), durées, pauses
   const [gameArea, setGameArea] = useState<GameArea | 'CUSTOM' | null>(null) // ACTIVE, LASER ou CUSTOM (sur mesure) pour GAME, null par défaut pour nouvelle réservation
@@ -968,7 +971,7 @@ export function BookingModal({
   useEffect(() => {
     const currentDefaultColor = bookingType === 'GAME' ? COLORS[0].value : COLORS[1].value
     const oppositeDefaultColor = bookingType === 'GAME' ? COLORS[1].value : COLORS[0].value
-    
+
     // Changer automatiquement la couleur si :
     // 1. La couleur actuelle est une des couleurs par défaut (bleu ou vert)
     // 2. Elle correspond à la couleur opposée du type actuel
@@ -982,6 +985,32 @@ export function BookingModal({
     }
     // Si la couleur est personnalisée (rouge, orange, etc.), ne pas la changer automatiquement
   }, [bookingType, color])
+
+  // Vérifier l'état OUT initial de l'ordre quand le modal s'ouvre
+  useEffect(() => {
+    if (isOpen && editingBooking && orderId) {
+      // Faire une requête pour vérifier l'état OUT de l'ordre
+      fetch(`/api/orders/${orderId}/toggle-out`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ checkOnly: true })
+      })
+        .then(res => res.json())
+        .then(data => {
+          if (data.is_out) {
+            setIsOrderOut(true)
+          } else {
+            setIsOrderOut(false)
+          }
+        })
+        .catch(err => {
+          console.error('Error checking OUT status:', err)
+          setIsOrderOut(false)
+        })
+    } else {
+      setIsOrderOut(false)
+    }
+  }, [isOpen, editingBooking, orderId])
 
   // Pour les EVENT : synchroniser automatiquement l'heure du jeu avec l'heure de la salle + 15 minutes
   // (l'heure de la salle est la source de vérité quand on clique sur une case de salle)
@@ -2548,6 +2577,40 @@ export function BookingModal({
                   </>
                 )}
               </div>
+
+              {/* Bouton invisible OUT - seulement en mode édition */}
+              {editingBooking && orderId && (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    // Ne rien faire si déjà OUT
+                    if (isOrderOut) return
+
+                    try {
+                      const response = await fetch(`/api/orders/${orderId}/toggle-out`, {
+                        method: 'POST',
+                      })
+
+                      if (!response.ok) {
+                        throw new Error('Failed to toggle OUT status')
+                      }
+
+                      const data = await response.json()
+
+                      // Si le toggle a réussi et que l'ordre est maintenant OUT
+                      if (data.is_out) {
+                        setIsOrderOut(true)
+                        console.log('OUT status: ON')
+                      }
+                    } catch (error) {
+                      console.error('Error toggling OUT:', error)
+                    }
+                  }}
+                  disabled={isOrderOut}
+                  className="opacity-0 w-8 h-8 ml-2"
+                  aria-label="Toggle OUT status"
+                />
+              )}
             </div>
           </div>
           <div className="flex items-center gap-1">
@@ -2697,53 +2760,6 @@ export function BookingModal({
             </div>
 
             {/* Remise (Discount) */}
-            <div className="flex items-center gap-3 mt-3">
-              <span className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{t('admin.booking_modal.discount.label')}:</span>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setDiscountType(discountType === 'percent' ? null : 'percent')}
-                  className={`px-3 py-1 rounded-lg text-sm transition-all ${
-                    discountType === 'percent'
-                      ? 'bg-purple-500 text-white'
-                      : isDark ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                  }`}
-                >
-                  %
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setDiscountType(discountType === 'fixed' ? null : 'fixed')}
-                  className={`px-3 py-1 rounded-lg text-sm transition-all ${
-                    discountType === 'fixed'
-                      ? 'bg-purple-500 text-white'
-                      : isDark ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                  }`}
-                >
-                  ₪
-                </button>
-                {discountType && (
-                  <input
-                    type="number"
-                    value={discountValue}
-                    onChange={(e) => setDiscountValue(e.target.value)}
-                    placeholder={discountType === 'percent' ? t('admin.booking_modal.discount.percent_placeholder') : t('admin.booking_modal.discount.fixed_placeholder')}
-                    className={`w-20 px-2 py-1 rounded-lg border text-sm ${
-                      isDark
-                        ? 'bg-gray-800 border-gray-600 text-white'
-                        : 'bg-white border-gray-300 text-gray-900'
-                    }`}
-                    min="0"
-                    max={discountType === 'percent' ? '100' : undefined}
-                  />
-                )}
-                {discountType && discountValue && (
-                  <span className={`text-xs ${isDark ? 'text-purple-400' : 'text-purple-600'}`}>
-                    {discountType === 'percent' ? `${discountValue}%` : `${discountValue}₪`}
-                  </span>
-                )}
-              </div>
-            </div>
           </div>
 
           {/* EVENT : Salle d'événement - EN PREMIER (définit l'heure de début) */}
@@ -4000,6 +4016,55 @@ export function BookingModal({
               placeholder={t('admin.booking_modal.fields.notes_additional')}
               style={{ minHeight: '48px', maxHeight: '120px' }}
             />
+          </div>
+
+          {/* Discount (remise) */}
+          <div className="flex items-center gap-3 mt-4">
+            <span className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{t('admin.booking_modal.discount.label')}:</span>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setDiscountType(discountType === 'percent' ? null : 'percent')}
+                className={`px-3 py-1 rounded-lg text-sm transition-all ${
+                  discountType === 'percent'
+                    ? 'bg-purple-500 text-white'
+                    : isDark ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                %
+              </button>
+              <button
+                type="button"
+                onClick={() => setDiscountType(discountType === 'fixed' ? null : 'fixed')}
+                className={`px-3 py-1 rounded-lg text-sm transition-all ${
+                  discountType === 'fixed'
+                    ? 'bg-purple-500 text-white'
+                    : isDark ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                ₪
+              </button>
+              {discountType && (
+                <input
+                  type="number"
+                  value={discountValue}
+                  onChange={(e) => setDiscountValue(e.target.value)}
+                  placeholder={discountType === 'percent' ? t('admin.booking_modal.discount.percent_placeholder') : t('admin.booking_modal.discount.fixed_placeholder')}
+                  className={`w-20 px-2 py-1 rounded-lg border text-sm ${
+                    isDark
+                      ? 'bg-gray-800 border-gray-600 text-white'
+                      : 'bg-white border-gray-300 text-gray-900'
+                  }`}
+                  min="0"
+                  max={discountType === 'percent' ? '100' : undefined}
+                />
+              )}
+              {discountType && discountValue && (
+                <span className={`text-xs ${isDark ? 'text-purple-400' : 'text-purple-600'}`}>
+                  {discountType === 'percent' ? `${discountValue}%` : `${discountValue}₪`}
+                </span>
+              )}
+            </div>
           </div>
 
           {/* Erreur */}
