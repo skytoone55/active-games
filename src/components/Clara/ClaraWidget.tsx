@@ -151,7 +151,32 @@ function MessageContent({ content, isStreaming, fontSize, primaryColor, locale, 
       <>
         {normalizedContent}
         {isStreaming && (
-          <span className="inline-block w-2 h-4 ml-1 bg-current animate-pulse" />
+          <span className="inline-flex items-center gap-0.5 ml-1">
+            <span
+              className="w-1 h-1 rounded-full animate-bounce"
+              style={{
+                backgroundColor: primaryColor,
+                animationDelay: '0ms',
+                animationDuration: '1s'
+              }}
+            />
+            <span
+              className="w-1 h-1 rounded-full animate-bounce"
+              style={{
+                backgroundColor: primaryColor,
+                animationDelay: '150ms',
+                animationDuration: '1s'
+              }}
+            />
+            <span
+              className="w-1 h-1 rounded-full animate-bounce"
+              style={{
+                backgroundColor: primaryColor,
+                animationDelay: '300ms',
+                animationDuration: '1s'
+              }}
+            />
+          </span>
         )}
       </>
     )
@@ -208,7 +233,32 @@ function MessageContent({ content, isStreaming, fontSize, primaryColor, locale, 
         return <span key={index}>{cleanedPart}</span>
       })}
       {isStreaming && (
-        <span className="inline-block w-2 h-4 ml-1 bg-current animate-pulse" />
+        <span className="inline-flex items-center gap-0.5 ml-1">
+          <span
+            className="w-1 h-1 rounded-full animate-bounce"
+            style={{
+              backgroundColor: primaryColor,
+              animationDelay: '0ms',
+              animationDuration: '1s'
+            }}
+          />
+          <span
+            className="w-1 h-1 rounded-full animate-bounce"
+            style={{
+              backgroundColor: primaryColor,
+              animationDelay: '150ms',
+              animationDuration: '1s'
+            }}
+          />
+          <span
+            className="w-1 h-1 rounded-full animate-bounce"
+            style={{
+              backgroundColor: primaryColor,
+              animationDelay: '300ms',
+              animationDuration: '1s'
+            }}
+          />
+        </span>
       )}
     </>
   )
