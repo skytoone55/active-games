@@ -34,7 +34,7 @@
         .widget-video-container {
             position: relative;
             width: 100%;
-            height: 300px;
+            height: 340px;
             overflow: hidden;
         }
 
@@ -145,24 +145,24 @@
         }
 
         .widget-content {
-            padding: 18px 20px;
+            padding: 15px 18px;
             text-align: center;
         }
 
         .widget-title {
             color: #ff00ff;
             font-family: 'Heebo', sans-serif;
-            font-size: 16px;
+            font-size: 15px;
             font-weight: 700;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
             text-shadow: 0 0 10px rgba(255, 0, 255, 0.8);
         }
 
         .widget-logo {
             width: 100%;
-            max-width: 180px;
+            max-width: 160px;
             height: auto;
-            margin: 0 auto 10px;
+            margin: 0 auto 8px;
             filter: drop-shadow(0 0 15px rgba(0, 240, 255, 0.6))
                     drop-shadow(0 0 25px rgba(0, 240, 255, 0.3));
             animation: logoGlow 3s ease-in-out infinite;
@@ -181,9 +181,9 @@
 
         .widget-description {
             color: #D2DDFF;
-            font-size: 14px;
-            line-height: 1.5;
-            margin-bottom: 15px;
+            font-size: 13px;
+            line-height: 1.4;
+            margin-bottom: 12px;
         }
 
         .widget-buttons {
@@ -192,10 +192,10 @@
         }
 
         .widget-btn {
-            padding: 14px 35px;
+            padding: 12px 30px;
             border-radius: 30px;
             font-family: 'Heebo', sans-serif;
-            font-size: 16px;
+            font-size: 15px;
             font-weight: 700;
             text-decoration: none;
             transition: all 0.3s ease;
@@ -288,7 +288,7 @@
         <div class="close-btn" onclick="window.closeActiveGamesWidget()"></div>
         <div class="new-badge">פתיחה קרובה - היו הראשונים!</div>
         <div class="widget-video-container">
-            <video autoplay muted loop playsinline>
+            <video autoplay muted loop playsinline controls="false" controlslist="nodownload nofullscreen noremoteplayback" disablepictureinpicture>
                 <source src="https://activegames.co.il/videos/activegames.mp4" type="video/mp4">
             </video>
             <div class="video-overlay"></div>
