@@ -42,6 +42,15 @@
             width: 100%;
             height: 100%;
             object-fit: cover;
+            pointer-events: none;
+        }
+
+        .widget-video-container video::-webkit-media-controls {
+            display: none !important;
+        }
+
+        .widget-video-container video::-webkit-media-controls-enclosure {
+            display: none !important;
         }
 
         .video-overlay {
