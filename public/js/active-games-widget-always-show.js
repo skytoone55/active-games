@@ -34,7 +34,7 @@
         .widget-video-container {
             position: relative;
             width: 100%;
-            height: 250px;
+            height: 300px;
             overflow: hidden;
         }
 
@@ -50,6 +50,18 @@
         }
 
         .widget-video-container video::-webkit-media-controls-enclosure {
+            display: none !important;
+        }
+
+        .widget-video-container video::-webkit-media-controls-panel {
+            display: none !important;
+        }
+
+        .widget-video-container video::-moz-media-controls {
+            display: none !important;
+        }
+
+        .widget-video-container video::--media-controls {
             display: none !important;
         }
 
@@ -119,24 +131,24 @@
         }
 
         .widget-content {
-            padding: 25px;
+            padding: 18px 20px;
             text-align: center;
         }
 
         .widget-title {
             color: #ff00ff;
             font-family: 'Heebo', sans-serif;
-            font-size: 18px;
+            font-size: 16px;
             font-weight: 700;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
             text-shadow: 0 0 10px rgba(255, 0, 255, 0.8);
         }
 
         .widget-logo {
             width: 100%;
-            max-width: 220px;
+            max-width: 180px;
             height: auto;
-            margin: 0 auto 15px;
+            margin: 0 auto 10px;
             filter: drop-shadow(0 0 15px rgba(0, 240, 255, 0.6))
                     drop-shadow(0 0 25px rgba(0, 240, 255, 0.3));
             animation: logoGlow 3s ease-in-out infinite;
@@ -155,9 +167,9 @@
 
         .widget-description {
             color: #D2DDFF;
-            font-size: 15px;
-            line-height: 1.6;
-            margin-bottom: 20px;
+            font-size: 14px;
+            line-height: 1.5;
+            margin-bottom: 15px;
         }
 
         .widget-buttons {
@@ -166,10 +178,10 @@
         }
 
         .widget-btn {
-            padding: 16px 40px;
+            padding: 14px 35px;
             border-radius: 30px;
             font-family: 'Heebo', sans-serif;
-            font-size: 18px;
+            font-size: 16px;
             font-weight: 700;
             text-decoration: none;
             transition: all 0.3s ease;
