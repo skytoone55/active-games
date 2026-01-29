@@ -47,6 +47,8 @@ export default function DataCleanupPage() {
   const [isDeleting, setIsDeleting] = useState(false)
   const [deletionSuccess, setDeletionSuccess] = useState<string | null>(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [password, setPassword] = useState('')
+  const [passwordError, setPasswordError] = useState('')
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -176,7 +178,13 @@ export default function DataCleanupPage() {
       return
     }
 
-    // Step 2 - Actually delete
+    // Step 2 - Validate password and delete
+    if (!password) {
+      setPasswordError(t('admin.data_management.password_required'))
+      return
+    }
+
+    setPasswordError('')
     setIsDeleting(true)
 
     try {
@@ -185,17 +193,23 @@ export default function DataCleanupPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           group: selectedGroup.id,
-          branchIds: selectedBranches
+          branchIds: selectedBranches,
+          password: password
         })
       })
 
       const data = await response.json()
 
       if (!data.success) {
-        setErrorMessage(data.error || t('admin.data_management.error'))
-        setIsDeleting(false)
-        setShowDeleteModal(false)
-        setTimeout(() => setErrorMessage(null), 5000)
+        if (data.error?.includes('Mot de passe')) {
+          setPasswordError(data.error)
+          setIsDeleting(false)
+        } else {
+          setErrorMessage(data.error || t('admin.data_management.error'))
+          setIsDeleting(false)
+          setShowDeleteModal(false)
+          setTimeout(() => setErrorMessage(null), 5000)
+        }
         return
       }
 
@@ -224,6 +238,8 @@ export default function DataCleanupPage() {
       setShowDeleteModal(false)
       setDeleteConfirmStep(1)
       setSelectedGroup(null)
+      setPassword('')
+      setPasswordError('')
     }
   }
 
@@ -537,6 +553,8 @@ export default function DataCleanupPage() {
                       setShowDeleteModal(false)
                       setDeleteConfirmStep(1)
                       setSelectedGroup(null)
+                      setPassword('')
+                      setPasswordError('')
                     }}
                     className={`flex-1 py-2 px-4 rounded-lg font-medium ${
                       isDark
@@ -568,9 +586,38 @@ export default function DataCleanupPage() {
                   </p>
                 </div>
 
+                <div className="mb-4">
+                  <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                    {t('admin.data_management.enter_password')}
+                  </label>
+                  <input
+                    type="password"
+                    value={password}
+                    onChange={(e) => {
+                      setPassword(e.target.value)
+                      setPasswordError('')
+                    }}
+                    onKeyPress={(e) => e.key === 'Enter' && handleConfirmDeletion()}
+                    placeholder={t('admin.data_management.password_placeholder')}
+                    className={`w-full px-4 py-3 rounded-lg border ${
+                      passwordError
+                        ? 'border-red-500'
+                        : isDark ? 'border-gray-700 bg-gray-800 text-white' : 'border-gray-300 bg-white text-gray-900'
+                    }`}
+                    autoFocus
+                  />
+                  {passwordError && (
+                    <p className="mt-2 text-sm text-red-500">{passwordError}</p>
+                  )}
+                </div>
+
                 <div className="flex gap-3">
                   <button
-                    onClick={() => setDeleteConfirmStep(1)}
+                    onClick={() => {
+                      setDeleteConfirmStep(1)
+                      setPassword('')
+                      setPasswordError('')
+                    }}
                     disabled={isDeleting}
                     className={`flex-1 py-2 px-4 rounded-lg font-medium ${
                       isDark
@@ -582,8 +629,12 @@ export default function DataCleanupPage() {
                   </button>
                   <button
                     onClick={handleConfirmDeletion}
-                    disabled={isDeleting}
-                    className="flex-1 py-2 px-4 rounded-lg font-medium bg-red-600 hover:bg-red-700 text-white flex items-center justify-center gap-2"
+                    disabled={isDeleting || !password}
+                    className={`flex-1 py-2 px-4 rounded-lg font-medium flex items-center justify-center gap-2 ${
+                      isDeleting || !password
+                        ? 'bg-red-400 cursor-not-allowed'
+                        : 'bg-red-600 hover:bg-red-700'
+                    } text-white`}
                   >
                     {isDeleting ? (
                       <>
