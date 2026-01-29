@@ -11,9 +11,9 @@
         .active-games-widget {
             position: fixed;
             left: 20px;
-            top: 50%;
+            top: 55%;
             transform: translateY(-50%);
-            width: 350px;
+            width: 320px;
             background: linear-gradient(135deg, #0A0E27 0%, #1a1f3a 100%);
             border-radius: 20px;
             box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3),
@@ -48,22 +48,36 @@
 
         .widget-video-container video::-webkit-media-controls {
             display: none !important;
+            opacity: 0 !important;
+            visibility: hidden !important;
         }
 
         .widget-video-container video::-webkit-media-controls-enclosure {
             display: none !important;
+            opacity: 0 !important;
+            visibility: hidden !important;
         }
 
         .widget-video-container video::-webkit-media-controls-panel {
             display: none !important;
+            opacity: 0 !important;
+            visibility: hidden !important;
+        }
+
+        .widget-video-container video::-webkit-media-controls-start-playback-button {
+            display: none !important;
+            opacity: 0 !important;
+            visibility: hidden !important;
         }
 
         .widget-video-container video::-moz-media-controls {
             display: none !important;
+            opacity: 0 !important;
         }
 
         .widget-video-container video::--media-controls {
             display: none !important;
+            opacity: 0 !important;
         }
 
         .video-overlay {
@@ -112,16 +126,16 @@
 
         .new-badge {
             position: fixed;
-            left: 380px;
-            top: 50%;
+            left: 350px;
+            top: 40%;
             transform: translateY(-50%) rotate(-5deg);
             background: rgba(255, 0, 255, 0.95);
             backdrop-filter: blur(10px);
             color: white;
-            padding: 10px 22px;
+            padding: 12px 26px;
             border-radius: 25px;
             font-weight: 700;
-            font-size: 13px;
+            font-size: 15px;
             text-shadow: 0 0 10px rgba(255, 0, 255, 0.9), 0 0 20px rgba(255, 0, 255, 0.6);
             box-shadow: 0 0 25px rgba(255, 0, 255, 0.7),
                         0 4px 20px rgba(255, 0, 255, 0.5),
@@ -296,7 +310,7 @@
     widget.innerHTML = `
         <div class="close-btn" onclick="window.closeActiveGamesWidget()"></div>
         <div class="widget-video-container">
-            <video autoplay muted loop playsinline controlslist="nodownload nofullscreen noremoteplayback" disablepictureinpicture>
+            <video autoplay muted loop playsinline>
                 <source src="https://activegames.co.il/videos/activegames.mp4" type="video/mp4">
             </video>
             <div class="video-overlay"></div>
