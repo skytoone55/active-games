@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Split Hero Section - Laser City + Active Games</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Heebo:wght@400;700;900&family=Orbitron:wght@700&family=Poppins:wght@400;600&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            overflow-x: hidden;
+        }
+
+        .glow-button {
+            padding: 16px 40px;
+            border-radius: 9999px;
+            font-weight: 600;
+            transition: all 0.3s;
+            background: linear-gradient(135deg, #08F7FE 0%, #09FBD3 100%);
+            color: #0A0E27;
+            border: none;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            box-shadow: 0 0 30px rgba(8, 247, 254, 0.5);
+        }
+
+        .glow-button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 40px rgba(8, 247, 254, 0.8);
+        }
+    </style>
+</head>
+<body>
+    <section class="relative h-screen w-full overflow-hidden">
+        <!-- Container for split layout -->
+        <div class="absolute inset-0 flex flex-col md:flex-row">
+
+            <!-- LEFT SIDE - LASER CITY -->
+            <div id="leftSide" class="relative h-full group transition-all duration-600" style="width: 50%;">
+                <!-- Background Video - Laser City -->
+                <div class="absolute inset-0">
+                    <video autoplay muted loop playsinline class="w-full h-full object-cover">
+                        <source src="lasercity.mp4" type="video/mp4" />
+                    </video>
+                </div>
+
+                <!-- Dark overlay for readability -->
+                <div class="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black/70"></div>
+
+                <!-- Animated glow effects -->
+                <div class="absolute inset-0 opacity-20">
+                    <div class="absolute top-1/4 left-1/4 w-96 h-96 rounded-full blur-[120px] animate-pulse" style="background-color: rgba(0, 212, 255, 0.4);"></div>
+                    <div class="absolute bottom-1/4 right-1/4 w-96 h-96 rounded-full blur-[120px] animate-pulse" style="background-color: rgba(255, 165, 0, 0.4); animation-delay: 1s;"></div>
+                </div>
+
+                <!-- Content - Laser City -->
+                <div class="relative z-10 flex flex-col items-center justify-center h-full px-8 text-center" dir="rtl">
+                    <div class="max-w-4xl">
+                        <!-- Title -->
+                        <h1 style="
+                            color: #ffffff;
+                            font-family: 'Heebo', sans-serif;
+                            font-size: clamp(48px, 8vw, 96px);
+                            font-weight: 900;
+                            text-shadow: 0 0 20px rgba(0, 212, 255, 0.8), 0 0 40px rgba(0, 212, 255, 0.4);
+                            margin-bottom: clamp(10px, 2vw, 20px);
+                            letter-spacing: 0.05em;
+                        ">
+                            לייזר סיטי
+                        </h1>
+
+                        <!-- Subtitle -->
+                        <p style="
+                            color: #00D4FF;
+                            font-family: 'Heebo', sans-serif;
+                            font-size: clamp(20px, 3vw, 32px);
+                            font-weight: 700;
+                            text-shadow: 0 0 10px rgba(0, 212, 255, 0.8);
+                            margin-bottom: clamp(15px, 3vw, 30px);
+                        ">
+                            חוויה בלתי נשכחת
+                        </p>
+
+                        <!-- Description -->
+                        <p style="
+                            color: #ffffff;
+                            font-family: 'Heebo', sans-serif;
+                            font-size: clamp(16px, 2vw, 20px);
+                            font-weight: 400;
+                            line-height: 1.6;
+                            margin-bottom: clamp(30px, 5vw, 50px);
+                            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8);
+                        ">
+                            לייזר סיטי מביא לישראל את חווית הלייזר טאג האולטימטיבית<br />
+                            עם מתחמי ענק בראשל"צ, גלילות ופתח תקווה
+                        </p>
+
+                        <!-- CTAs -->
+                        <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                            <a href="#contact" class="px-10 py-4 rounded-full font-bold transition-all hover:scale-105" style="
+                                font-family: 'Heebo', sans-serif;
+                                font-size: clamp(16px, 2vw, 20px);
+                                background: transparent;
+                                border: 3px solid #00D4FF;
+                                color: #00D4FF;
+                                box-shadow: 0 0 30px rgba(0, 212, 255, 0.5);
+                                text-decoration: none;
+                            ">
+                                הזמינו משחק
+                            </a>
+                            <a href="#contact" class="px-10 py-4 rounded-full font-bold transition-all hover:scale-105" style="
+                                font-family: 'Heebo', sans-serif;
+                                font-size: clamp(16px, 2vw, 20px);
+                                background: transparent;
+                                border: 3px solid #00D4FF;
+                                color: #00D4FF;
+                                box-shadow: 0 0 30px rgba(0, 212, 255, 0.5);
+                                text-decoration: none;
+                            ">
+                                צרו קשר
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SEPARATOR LINE -->
+            <div id="separator" class="absolute top-0 bottom-0 w-[3px] bg-gradient-to-b from-transparent via-cyan-500/80 to-transparent hidden md:block z-50 transition-all duration-600" style="left: 50%; transform: translateX(-50%);">
+                <div class="absolute inset-0 bg-cyan-400/50 blur-md animate-pulse"></div>
+            </div>
+
+            <!-- RIGHT SIDE - ACTIVE GAMES -->
+            <div id="rightSide" class="relative h-full group transition-all duration-600" style="width: 50%;">
+                <!-- Background Video -->
+                <div class="absolute inset-0">
+                    <video autoplay muted loop playsinline class="w-full h-full object-cover">
+                        <source src="activegames.mp4" type="video/mp4" />
+                    </video>
+                    <!-- Dark overlay -->
+                    <div class="absolute inset-0 bg-gradient-to-b from-black/70 via-black/50 to-black"></div>
+                    <!-- Animated glow effects -->
+                    <div class="absolute inset-0 opacity-40">
+                        <div class="absolute top-1/4 left-1/4 w-96 h-96 rounded-full blur-[120px] animate-pulse" style="background-color: rgba(8, 247, 254, 0.3);"></div>
+                        <div class="absolute bottom-1/4 right-1/4 w-96 h-96 rounded-full blur-[120px] animate-pulse" style="background-color: rgba(255, 0, 229, 0.3); animation-delay: 1s;"></div>
+                    </div>
+                </div>
+
+                <!-- Content -->
+                <div class="relative z-10 flex items-center justify-center h-full px-8 text-center">
+                    <div class="max-w-4xl">
+                        <!-- Subtitle -->
+                        <p class="uppercase tracking-widest" style="
+                            color: #FF00E5;
+                            font-family: 'Orbitron', sans-serif;
+                            font-size: clamp(16px, 2.4vw, 24px);
+                            font-weight: 700;
+                            text-shadow: 0 0 10px rgba(255, 0, 229, 0.9), 0 0 30px rgba(255, 0, 229, 0.5);
+                            margin-bottom: clamp(-5px, -0.5vw, -2px);
+                        ">
+                            NEXT-GEN GAMING
+                        </p>
+
+                        <!-- Title -->
+                        <h1 class="tracking-tight" style="
+                            color: #08F7FE;
+                            font-family: 'Orbitron', sans-serif;
+                            font-size: clamp(38px, 6.5vw, 72px);
+                            font-weight: 700;
+                            text-transform: uppercase;
+                            text-shadow: 0 0 15px rgba(8, 247, 254, 0.9), 0 0 40px rgba(8, 247, 254, 0.55), 0 0 60px rgba(8, 247, 254, 0.3);
+                            margin-bottom: clamp(5px, 1vw, 10px);
+                        ">
+                            ACTIVE GAMES
+                        </h1>
+
+                        <!-- Description -->
+                        <p style="
+                            color: #D2DDFF;
+                            font-family: 'Poppins', sans-serif;
+                            font-size: clamp(16px, 2.5vw, 22px);
+                            font-weight: 400;
+                            line-height: 1.5;
+                            margin-top: clamp(5px, 1vw, 10px);
+                            margin-bottom: clamp(30px, 5vw, 60px);
+                        ">
+                            Experience the future of interactive entertainment with cutting-edge technology
+                        </p>
+
+                        <!-- CTAs -->
+                        <div class="flex flex-col sm:flex-row gap-4 justify-center mb-8">
+                            <a href="#games" class="glow-button" style="font-family: 'Poppins', sans-serif;">
+                                Explore Games
+                            </a>
+                            <a href="#concept" class="glow-button" style="font-family: 'Poppins', sans-serif;">
+                                Learn More
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <script>
+        const leftSide = document.getElementById('leftSide');
+        const rightSide = document.getElementById('rightSide');
+        const separator = document.getElementById('separator');
+
+        leftSide.addEventListener('mouseenter', () => {
+            leftSide.style.width = '60%';
+            rightSide.style.width = '40%';
+            separator.style.left = '60%';
+        });
+
+        leftSide.addEventListener('mouseleave', () => {
+            leftSide.style.width = '50%';
+            rightSide.style.width = '50%';
+            separator.style.left = '50%';
+        });
+
+        rightSide.addEventListener('mouseenter', () => {
+            leftSide.style.width = '40%';
+            rightSide.style.width = '60%';
+            separator.style.left = '40%';
+        });
+
+        rightSide.addEventListener('mouseleave', () => {
+            leftSide.style.width = '50%';
+            rightSide.style.width = '50%';
+            separator.style.left = '50%';
+        });
+    </script>
+</body>
+</html>
