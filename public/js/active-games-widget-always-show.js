@@ -275,6 +275,7 @@
             <div class="widget-title">חדש! משחקים אינטראקטיביים</div>
             <img src="https://activegames.co.il/images/logo-activegames.png" alt="Active Games" class="widget-logo">
             <div class="widget-description">
+                פתיחה קרובה - היו הראשונים!<br>
                 חוו את עתיד הבידור האינטראקטיבי עם טכנולוגיה מתקדמת ומשחקים מרגשים!
             </div>
             <div class="widget-buttons">
