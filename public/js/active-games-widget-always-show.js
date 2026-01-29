@@ -111,23 +111,37 @@
 
         .new-badge {
             position: absolute;
-            top: 15px;
-            right: 15px;
-            background: #ff00ff;
+            top: -10px;
+            right: -15px;
+            background: rgba(255, 0, 255, 0.95);
+            backdrop-filter: blur(10px);
             color: white;
-            padding: 8px 20px;
-            border-radius: 20px;
+            padding: 10px 22px;
+            border-radius: 25px;
             font-weight: 700;
-            font-size: 14px;
+            font-size: 13px;
             text-shadow: 0 0 10px rgba(255, 0, 255, 0.9), 0 0 20px rgba(255, 0, 255, 0.6);
-            box-shadow: 0 0 20px rgba(255, 0, 255, 0.6), 0 4px 15px rgba(255, 0, 255, 0.4);
+            box-shadow: 0 0 25px rgba(255, 0, 255, 0.7),
+                        0 4px 20px rgba(255, 0, 255, 0.5),
+                        0 0 0 2px rgba(255, 0, 255, 0.3);
             animation: newBadgePulse 2s ease-in-out infinite;
-            z-index: 10;
+            z-index: 100001;
+            transform: rotate(5deg);
         }
 
         @keyframes newBadgePulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.05); }
+            0%, 100% {
+                transform: rotate(5deg) scale(1);
+                box-shadow: 0 0 25px rgba(255, 0, 255, 0.7),
+                            0 4px 20px rgba(255, 0, 255, 0.5),
+                            0 0 0 2px rgba(255, 0, 255, 0.3);
+            }
+            50% {
+                transform: rotate(5deg) scale(1.08);
+                box-shadow: 0 0 35px rgba(255, 0, 255, 0.9),
+                            0 6px 25px rgba(255, 0, 255, 0.7),
+                            0 0 0 3px rgba(255, 0, 255, 0.5);
+            }
         }
 
         .widget-content {
@@ -272,7 +286,7 @@
     widget.className = 'active-games-widget';
     widget.innerHTML = `
         <div class="close-btn" onclick="window.closeActiveGamesWidget()"></div>
-        <div class="new-badge">חדש במרכזים שלנו!</div>
+        <div class="new-badge">פתיחה קרובה - היו הראשונים!</div>
         <div class="widget-video-container">
             <video autoplay muted loop playsinline>
                 <source src="https://activegames.co.il/videos/activegames.mp4" type="video/mp4">
@@ -287,7 +301,6 @@
             <div class="widget-title">חדש! משחקים אינטראקטיביים</div>
             <img src="https://activegames.co.il/images/logo-activegames.png" alt="Active Games" class="widget-logo">
             <div class="widget-description">
-                פתיחה קרובה - היו הראשונים!<br>
                 חוו את עתיד הבידור האינטראקטיבי עם טכנולוגיה מתקדמת ומשחקים מרגשים!
             </div>
             <div class="widget-buttons">
