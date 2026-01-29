@@ -27,7 +27,7 @@ export default function HeroSection({ translations }: HeroSectionProps) {
           playsInline
           className="w-full h-full object-cover"
         >
-          <source src="/videos/grid.mp4" type="video/mp4" />
+          <source src="/videos/activegames.mp4" type="video/mp4" />
         </video>
         {/* Dark overlay for readability */}
         <div className="absolute inset-0 bg-gradient-to-b from-dark/70 via-dark/50 to-dark" />
