@@ -13,13 +13,13 @@
             left: 20px;
             top: 50%;
             transform: translateY(-50%);
-            width: 380px;
+            width: 350px;
             background: linear-gradient(135deg, #0A0E27 0%, #1a1f3a 100%);
             border-radius: 20px;
             box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3),
                         0 0 0 3px rgba(8, 247, 254, 0.2),
                         0 0 30px rgba(8, 247, 254, 0.3);
-            overflow: hidden;
+            overflow: visible;
             transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
             z-index: 99999;
         }
@@ -36,6 +36,7 @@
             width: 100%;
             height: 340px;
             overflow: hidden;
+            border-radius: 20px 20px 0 0;
         }
 
         .widget-video-container video {
@@ -110,9 +111,10 @@
         }
 
         .new-badge {
-            position: absolute;
-            top: -10px;
-            right: -15px;
+            position: fixed;
+            left: 380px;
+            top: 50%;
+            transform: translateY(-50%) rotate(-5deg);
             background: rgba(255, 0, 255, 0.95);
             backdrop-filter: blur(10px);
             color: white;
@@ -125,19 +127,19 @@
                         0 4px 20px rgba(255, 0, 255, 0.5),
                         0 0 0 2px rgba(255, 0, 255, 0.3);
             animation: newBadgePulse 2s ease-in-out infinite;
-            z-index: 100001;
-            transform: rotate(5deg);
+            z-index: 100000;
+            white-space: nowrap;
         }
 
         @keyframes newBadgePulse {
             0%, 100% {
-                transform: rotate(5deg) scale(1);
+                transform: translateY(-50%) rotate(-5deg) scale(1);
                 box-shadow: 0 0 25px rgba(255, 0, 255, 0.7),
                             0 4px 20px rgba(255, 0, 255, 0.5),
                             0 0 0 2px rgba(255, 0, 255, 0.3);
             }
             50% {
-                transform: rotate(5deg) scale(1.08);
+                transform: translateY(-50%) rotate(-5deg) scale(1.08);
                 box-shadow: 0 0 35px rgba(255, 0, 255, 0.9),
                             0 6px 25px rgba(255, 0, 255, 0.7),
                             0 0 0 3px rgba(255, 0, 255, 0.5);
@@ -273,6 +275,13 @@
                 transform: translateY(0) scale(1.02);
             }
 
+            .new-badge {
+                left: 50%;
+                top: auto;
+                bottom: 420px;
+                transform: translateX(-50%) rotate(-5deg);
+            }
+
             .widget-hidden {
                 transform: translateY(120%);
             }
@@ -286,9 +295,8 @@
     widget.className = 'active-games-widget';
     widget.innerHTML = `
         <div class="close-btn" onclick="window.closeActiveGamesWidget()"></div>
-        <div class="new-badge">פתיחה קרובה - היו הראשונים!</div>
         <div class="widget-video-container">
-            <video autoplay muted loop playsinline controls="false" controlslist="nodownload nofullscreen noremoteplayback" disablepictureinpicture>
+            <video autoplay muted loop playsinline controlslist="nodownload nofullscreen noremoteplayback" disablepictureinpicture>
                 <source src="https://activegames.co.il/videos/activegames.mp4" type="video/mp4">
             </video>
             <div class="video-overlay"></div>
@@ -311,19 +319,29 @@
         </div>
     `;
 
-    // Add widget to page when DOM is ready
+    // Create badge separately (outside widget)
+    const badge = document.createElement('div');
+    badge.id = 'activeGamesBadge';
+    badge.className = 'new-badge';
+    badge.textContent = 'פתיחה קרובה - היו הראשונים!';
+
+    // Add widget and badge to page when DOM is ready
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', function() {
             document.body.appendChild(widget);
+            document.body.appendChild(badge);
         });
     } else {
         document.body.appendChild(widget);
+        document.body.appendChild(badge);
     }
 
     // Close function - just hides for this session only
     window.closeActiveGamesWidget = function() {
         const widget = document.getElementById('activeGamesWidget');
+        const badge = document.getElementById('activeGamesBadge');
         widget.classList.add('widget-hidden');
+        if (badge) badge.style.display = 'none';
         // Pas de localStorage - réapparaît à la prochaine visite
     };
 
