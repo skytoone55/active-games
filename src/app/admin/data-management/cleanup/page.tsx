@@ -41,8 +41,12 @@ export default function DataCleanupPage() {
   const [showBranchSelector, setShowBranchSelector] = useState(false)
 
   // Deletion state
-  const [deletingGroup, setDeletingGroup] = useState<string | null>(null)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [selectedGroup, setSelectedGroup] = useState<DeletionGroup | null>(null)
+  const [deleteConfirmStep, setDeleteConfirmStep] = useState<1 | 2>(1)
+  const [isDeleting, setIsDeleting] = useState(false)
   const [deletionSuccess, setDeletionSuccess] = useState<string | null>(null)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -122,24 +126,24 @@ export default function DataCleanupPage() {
   const deletionGroups: DeletionGroup[] = [
     {
       id: 'logs',
-      label: t('admin.data_management.cleanup.logs_label') || 'Logs & Emails',
-      description: t('admin.data_management.cleanup.logs_description') || 'Historique des activités et emails envoyés',
+      label: t('admin.data_management.logs_group'),
+      description: t('admin.data_management.logs_description'),
       icon: <FileText className="w-6 h-6" />,
       tables: ['activity_logs', 'email_logs'],
       color: 'yellow'
     },
     {
       id: 'reservations',
-      label: t('admin.data_management.cleanup.reservations_label') || 'Réservations',
-      description: t('admin.data_management.cleanup.reservations_description') || 'Commandes, réservations, sessions et créneaux',
+      label: t('admin.data_management.reservations_group'),
+      description: t('admin.data_management.reservations_description'),
       icon: <Calendar className="w-6 h-6" />,
       tables: ['orders', 'bookings', 'game_sessions', 'booking_slots'],
       color: 'orange'
     },
     {
       id: 'contacts',
-      label: t('admin.data_management.cleanup.contacts_label') || 'Contacts',
-      description: t('admin.data_management.cleanup.contacts_description') || 'Tous les contacts clients',
+      label: t('admin.data_management.contacts_group'),
+      description: t('admin.data_management.contacts_description'),
       icon: <Users className="w-6 h-6" />,
       tables: ['contacts'],
       color: 'red',
@@ -147,34 +151,40 @@ export default function DataCleanupPage() {
     }
   ]
 
-  const handleDeleteClick = async (group: DeletionGroup) => {
+  const handleDeleteClick = (group: DeletionGroup) => {
     // Check if contacts deletion requires reservations to be deleted first
     if (group.requiresReservationsDeletion && counts) {
       const hasReservations = (counts.orders + counts.bookings + counts.game_sessions + counts.booking_slots) > 0
       if (hasReservations) {
-        alert(t('admin.data_management.cleanup.delete_reservations_first') || 'Vous devez d\'abord supprimer toutes les réservations avant de supprimer les contacts.')
+        setErrorMessage(t('admin.data_management.delete_reservations_first'))
+        setTimeout(() => setErrorMessage(null), 5000)
         return
       }
     }
 
-    // Confirm deletion
-    const confirmed = confirm(
-      `${t('admin.data_management.cleanup.confirm_delete') || 'Confirmer la suppression'}\n\n` +
-      `${t('admin.data_management.cleanup.deleting') || 'Vous allez supprimer'} ${getGroupCount(group).toLocaleString()} ${t('admin.data_management.cleanup.elements') || 'éléments'}.\n` +
-      `${t('admin.data_management.cleanup.irreversible') || 'Cette action est irréversible.'}\n\n` +
-      `${t('admin.data_management.cleanup.type_continue') || 'Tapez "CONTINUER" pour confirmer'}`
-    )
+    // Open modal for confirmation
+    setSelectedGroup(group)
+    setDeleteConfirmStep(1)
+    setShowDeleteModal(true)
+  }
 
-    if (!confirmed) return
+  const handleConfirmDeletion = async () => {
+    if (!selectedGroup) return
 
-    setDeletingGroup(group.id)
+    if (deleteConfirmStep === 1) {
+      setDeleteConfirmStep(2)
+      return
+    }
+
+    // Step 2 - Actually delete
+    setIsDeleting(true)
 
     try {
       const response = await fetch('/api/admin/data-management/delete', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          group: group.id,
+          group: selectedGroup.id,
           branchIds: selectedBranches
         })
       })
@@ -182,8 +192,10 @@ export default function DataCleanupPage() {
       const data = await response.json()
 
       if (!data.success) {
-        alert(data.error || t('admin.data_management.cleanup.error_deleting') || 'Erreur lors de la suppression')
-        setDeletingGroup(null)
+        setErrorMessage(data.error || t('admin.data_management.error'))
+        setIsDeleting(false)
+        setShowDeleteModal(false)
+        setTimeout(() => setErrorMessage(null), 5000)
         return
       }
 
@@ -192,7 +204,10 @@ export default function DataCleanupPage() {
       const totalDeleted = Object.values(deleted).reduce((sum: number, val) => sum + (val as number), 0)
 
       // Success
-      setDeletionSuccess(`${group.label} ${t('admin.data_management.cleanup.deleted_successfully') || 'supprimés avec succès'} (${totalDeleted} ${t('admin.data_management.cleanup.elements') || 'éléments'})`)
+      setDeletionSuccess(t('admin.data_management.deletion_success', {
+        label: selectedGroup.label,
+        count: totalDeleted.toString()
+      }))
 
       // Refresh counts
       await fetchCounts()
@@ -202,9 +217,13 @@ export default function DataCleanupPage() {
 
     } catch (error) {
       console.error('Error deleting data:', error)
-      alert(t('admin.data_management.cleanup.server_error') || 'Erreur de connexion au serveur')
+      setErrorMessage(t('admin.data_management.server_error'))
+      setTimeout(() => setErrorMessage(null), 5000)
     } finally {
-      setDeletingGroup(null)
+      setIsDeleting(false)
+      setShowDeleteModal(false)
+      setDeleteConfirmStep(1)
+      setSelectedGroup(null)
     }
   }
 
@@ -257,10 +276,10 @@ export default function DataCleanupPage() {
             </div>
             <div>
               <h1 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                {t('admin.data_management.cleanup_title') || 'Data Cleanup'}
+                {t('admin.data_management.cleanup_title')}
               </h1>
               <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                {t('admin.data_management.cleanup_subtitle') || 'Zone de suppression massive - Super Admin uniquement'}
+                {t('admin.data_management.subtitle')}
               </p>
             </div>
           </div>
@@ -274,10 +293,10 @@ export default function DataCleanupPage() {
             <AlertTriangle className={`w-6 h-6 flex-shrink-0 ${isDark ? 'text-red-400' : 'text-red-600'}`} />
             <div>
               <h3 className={`font-semibold ${isDark ? 'text-red-400' : 'text-red-700'}`}>
-                {t('admin.data_management.cleanup.warning_title') || 'Attention - Actions irréversibles'}
+                {t('admin.data_management.warning_title')}
               </h3>
               <p className={`text-sm mt-1 ${isDark ? 'text-red-300' : 'text-red-600'}`}>
-                {t('admin.data_management.cleanup.warning_message') || 'Les suppressions sont définitives. Assurez-vous d\'avoir une sauvegarde avant de procéder.'}
+                {t('admin.data_management.warning_message')}
               </p>
             </div>
           </div>
@@ -293,6 +312,16 @@ export default function DataCleanupPage() {
           </div>
         )}
 
+        {/* Error Message */}
+        {errorMessage && (
+          <div className={`mb-6 p-4 rounded-xl flex items-center gap-3 ${
+            isDark ? 'bg-red-900/30 text-red-400' : 'bg-red-100 text-red-700'
+          }`}>
+            <AlertTriangle className="w-5 h-5" />
+            {errorMessage}
+          </div>
+        )}
+
         {/* Branch Selector */}
         <div className={`mb-6 p-4 rounded-xl ${isDark ? 'bg-gray-800' : 'bg-white'} shadow`}>
           <button
@@ -300,7 +329,7 @@ export default function DataCleanupPage() {
             className={`w-full flex items-center justify-between ${isDark ? 'text-white' : 'text-gray-900'}`}
           >
             <div className="flex items-center gap-2">
-              <span className="font-medium">{t('admin.data_management.cleanup.branches_selected') || 'Branches sélectionnées'}:</span>
+              <span className="font-medium">{t('admin.data_management.branches_selected')}</span>
               <span className={`px-2 py-0.5 rounded text-sm ${
                 isDark ? 'bg-blue-900/50 text-blue-300' : 'bg-blue-100 text-blue-700'
               }`}>
@@ -319,7 +348,7 @@ export default function DataCleanupPage() {
                     isDark ? 'bg-gray-700 hover:bg-gray-600 text-gray-300' : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
                   }`}
                 >
-                  {t('admin.data_management.cleanup.select_all') || 'Tout sélectionner'}
+                  {t('admin.data_management.select_all')}
                 </button>
                 <button
                   onClick={deselectAllBranches}
@@ -327,7 +356,7 @@ export default function DataCleanupPage() {
                     isDark ? 'bg-gray-700 hover:bg-gray-600 text-gray-300' : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
                   }`}
                 >
-                  {t('admin.data_management.cleanup.deselect_all') || 'Tout désélectionner'}
+                  {t('admin.data_management.deselect_all')}
                 </button>
               </div>
               {branches.map(branch => (
@@ -353,7 +382,7 @@ export default function DataCleanupPage() {
         {/* Deletion Groups */}
         {selectedBranches.length === 0 ? (
           <div className={`text-center py-12 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-            {t('admin.data_management.cleanup.select_branch') || 'Sélectionnez au moins une branche pour voir les données'}
+            {t('admin.data_management.no_branch_selected')}
           </div>
         ) : loadingCounts ? (
           <div className="flex items-center justify-center py-12">
@@ -390,7 +419,7 @@ export default function DataCleanupPage() {
                           {group.description}
                         </p>
                         <p className={`text-xs mt-1 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
-                          Tables: {group.tables.join(', ')}
+                          {t('admin.data_management.tables')}: {group.tables.join(', ')}
                         </p>
                       </div>
                     </div>
@@ -398,25 +427,25 @@ export default function DataCleanupPage() {
                     <div className="flex items-center gap-4">
                       <div className={`text-right ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
                         <span className="text-2xl font-bold">{count.toLocaleString()}</span>
-                        <span className="text-sm ml-1">{t('admin.data_management.cleanup.elements') || 'éléments'}</span>
+                        <span className="text-sm ml-1">{t('admin.data_management.items')}</span>
                       </div>
                       <button
                         onClick={() => handleDeleteClick(group)}
-                        disabled={isDisabled || deletingGroup === group.id}
+                        disabled={isDisabled || isDeleting}
                         className={`px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition-colors ${
                           isDisabled
                             ? 'bg-gray-400 cursor-not-allowed opacity-50 text-white'
-                            : deletingGroup === group.id
+                            : isDeleting
                               ? 'bg-red-400 cursor-wait text-white'
                               : 'bg-red-600 hover:bg-red-700 text-white'
                         }`}
                       >
-                        {deletingGroup === group.id ? (
+                        {isDeleting ? (
                           <Loader2 className="w-4 h-4 animate-spin" />
                         ) : (
                           <Trash2 className="w-4 h-4" />
                         )}
-                        {t('admin.data_management.cleanup.delete') || 'Supprimer'}
+                        {t('admin.data_management.delete_button')}
                       </button>
                     </div>
                   </div>
@@ -424,7 +453,7 @@ export default function DataCleanupPage() {
                   {group.requiresReservationsDeletion && counts &&
                     (counts.orders + counts.bookings + counts.game_sessions + counts.booking_slots) > 0 && (
                     <p className={`mt-2 text-sm ${isDark ? 'text-orange-400' : 'text-orange-600'}`}>
-                      ⚠️ {t('admin.data_management.cleanup.delete_reservations_warning') || 'Supprimez d\'abord les réservations pour pouvoir supprimer les contacts'}
+                      {t('admin.data_management.delete_reservations_first_warning')}
                     </p>
                   )}
                 </div>
@@ -437,34 +466,140 @@ export default function DataCleanupPage() {
         {counts && selectedBranches.length > 0 && (
           <div className={`mt-6 p-4 rounded-xl ${isDark ? 'bg-gray-800' : 'bg-white'} shadow`}>
             <h3 className={`font-semibold mb-3 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-              {t('admin.data_management.cleanup.data_details') || 'Détail des données'}
+              {t('admin.data_management.data_details')}
             </h3>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
               <div className={isDark ? 'text-gray-400' : 'text-gray-600'}>
-                <span className="font-medium">Logs:</span> {counts.logs.toLocaleString()}
+                <span className="font-medium">{t('admin.data_management.activity_logs')}:</span> {counts.logs.toLocaleString()}
               </div>
               <div className={isDark ? 'text-gray-400' : 'text-gray-600'}>
-                <span className="font-medium">Emails:</span> {counts.emails.toLocaleString()}
+                <span className="font-medium">{t('admin.data_management.email_logs')}:</span> {counts.emails.toLocaleString()}
               </div>
               <div className={isDark ? 'text-gray-400' : 'text-gray-600'}>
-                <span className="font-medium">Orders:</span> {counts.orders.toLocaleString()}
+                <span className="font-medium">{t('admin.data_management.orders')}:</span> {counts.orders.toLocaleString()}
               </div>
               <div className={isDark ? 'text-gray-400' : 'text-gray-600'}>
-                <span className="font-medium">Bookings:</span> {counts.bookings.toLocaleString()}
+                <span className="font-medium">{t('admin.data_management.bookings')}:</span> {counts.bookings.toLocaleString()}
               </div>
               <div className={isDark ? 'text-gray-400' : 'text-gray-600'}>
-                <span className="font-medium">Sessions:</span> {counts.game_sessions.toLocaleString()}
+                <span className="font-medium">{t('admin.data_management.game_sessions')}:</span> {counts.game_sessions.toLocaleString()}
               </div>
               <div className={isDark ? 'text-gray-400' : 'text-gray-600'}>
-                <span className="font-medium">Slots:</span> {counts.booking_slots.toLocaleString()}
+                <span className="font-medium">{t('admin.data_management.booking_slots')}:</span> {counts.booking_slots.toLocaleString()}
               </div>
               <div className={isDark ? 'text-gray-400' : 'text-gray-600'}>
-                <span className="font-medium">Contacts:</span> {counts.contacts.toLocaleString()}
+                <span className="font-medium">{t('admin.data_management.contacts')}:</span> {counts.contacts.toLocaleString()}
               </div>
             </div>
           </div>
         )}
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && selectedGroup && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className={`w-full max-w-md mx-4 p-6 rounded-2xl shadow-2xl ${
+            isDark ? 'bg-gray-900' : 'bg-white'
+          }`}>
+            <div className="flex items-center gap-3 mb-4">
+              <div className={`p-3 rounded-xl bg-red-900/30`}>
+                <AlertTriangle className="w-6 h-6 text-red-400" />
+              </div>
+              <div>
+                <h3 className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                  {deleteConfirmStep === 1
+                    ? t('admin.data_management.confirm_title')
+                    : t('admin.data_management.confirm_title')}
+                </h3>
+              </div>
+            </div>
+
+            {deleteConfirmStep === 1 ? (
+              <>
+                <p className={`mb-4 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                  {t('admin.data_management.confirm_message')}
+                </p>
+
+                <div className={`mb-4 p-3 rounded-lg ${isDark ? 'bg-gray-800' : 'bg-gray-100'}`}>
+                  <div className="flex justify-between items-center">
+                    <span className={`font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                      {selectedGroup.label}
+                    </span>
+                    <span className={`font-bold text-lg ${isDark ? 'text-red-400' : 'text-red-600'}`}>
+                      {getGroupCount(selectedGroup).toLocaleString()} {t('admin.data_management.items')}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => {
+                      setShowDeleteModal(false)
+                      setDeleteConfirmStep(1)
+                      setSelectedGroup(null)
+                    }}
+                    className={`flex-1 py-2 px-4 rounded-lg font-medium ${
+                      isDark
+                        ? 'bg-gray-700 hover:bg-gray-600 text-gray-300'
+                        : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
+                    }`}
+                  >
+                    {t('admin.data_management.cancel')}
+                  </button>
+                  <button
+                    onClick={handleConfirmDeletion}
+                    className="flex-1 py-2 px-4 rounded-lg font-medium bg-red-600 hover:bg-red-700 text-white"
+                  >
+                    {t('admin.data_management.confirm_delete')}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <p className={`mb-4 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                  {t('admin.data_management.confirm_message')}
+                </p>
+
+                <div className={`mb-4 p-3 rounded-lg border-2 ${
+                  isDark ? 'bg-red-900/20 border-red-800' : 'bg-red-50 border-red-200'
+                }`}>
+                  <p className={`font-bold ${isDark ? 'text-red-400' : 'text-red-700'}`}>
+                    {getGroupCount(selectedGroup).toLocaleString()} {selectedGroup.label}
+                  </p>
+                </div>
+
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setDeleteConfirmStep(1)}
+                    disabled={isDeleting}
+                    className={`flex-1 py-2 px-4 rounded-lg font-medium ${
+                      isDark
+                        ? 'bg-gray-700 hover:bg-gray-600 text-gray-300'
+                        : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
+                    }`}
+                  >
+                    {t('admin.data_management.cancel')}
+                  </button>
+                  <button
+                    onClick={handleConfirmDeletion}
+                    disabled={isDeleting}
+                    className="flex-1 py-2 px-4 rounded-lg font-medium bg-red-600 hover:bg-red-700 text-white flex items-center justify-center gap-2"
+                  >
+                    {isDeleting ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        {t('admin.data_management.deleting')}
+                      </>
+                    ) : (
+                      t('admin.data_management.confirm_delete')
+                    )}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
