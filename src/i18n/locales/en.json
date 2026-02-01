@@ -1929,8 +1929,13 @@
           "temperature_creative": "Creative",
           "max_tokens": "Maximum tokens (response length)",
           "rate_limit_minute": "Limit / minute",
+          "rate_limit_minute_desc": "Total maximum messages per minute (all users combined)",
           "rate_limit_hour": "Limit / hour",
-          "max_messages": "Max messages per conversation"
+          "rate_limit_hour_desc": "Total maximum messages per hour (all users combined)",
+          "session_timeout": "Session timeout (minutes)",
+          "session_timeout_desc": "Inactivity duration before session expires",
+          "max_messages": "Max messages per conversation",
+          "max_messages_desc": "Maximum number of messages kept in history for each individual conversation"
         },
         "actions": {
           "save": "Save",

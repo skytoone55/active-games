@@ -990,46 +990,76 @@ export function ClaraSection({ isDark }: ClaraSectionProps) {
             </div>
 
             {/* Rate Limiting */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                  <Clock className="w-4 h-4 inline mr-2" />
-                  {t('admin.settings.clara.model.rate_limit_minute')}
-                </label>
-                <input
-                  type="number"
-                  value={settings.rate_limit_per_minute}
-                  onChange={(e) => setSettings({ ...settings, rate_limit_per_minute: parseInt(e.target.value) || 30 })}
-                  min={1}
-                  max={100}
-                  className={`w-full px-4 py-3 rounded-lg border transition-colors ${
-                    isDark
-                      ? 'bg-gray-700 border-gray-600 text-white focus:border-pink-500'
-                      : 'bg-white border-gray-300 text-gray-900 focus:border-pink-500'
-                  } focus:outline-none focus:ring-2 focus:ring-pink-500/20`}
-                />
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                    <Clock className="w-4 h-4 inline mr-2" />
+                    {t('admin.settings.clara.model.rate_limit_minute')}
+                  </label>
+                  <input
+                    type="number"
+                    value={settings.rate_limit_per_minute}
+                    onChange={(e) => setSettings({ ...settings, rate_limit_per_minute: parseInt(e.target.value) || 30 })}
+                    min={1}
+                    max={100}
+                    className={`w-full px-4 py-3 rounded-lg border transition-colors ${
+                      isDark
+                        ? 'bg-gray-700 border-gray-600 text-white focus:border-pink-500'
+                        : 'bg-white border-gray-300 text-gray-900 focus:border-pink-500'
+                    } focus:outline-none focus:ring-2 focus:ring-pink-500/20`}
+                  />
+                  <p className={`text-xs mt-1 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                    {t('admin.settings.clara.model.rate_limit_minute_desc')}
+                  </p>
+                </div>
+                <div>
+                  <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                    <Clock className="w-4 h-4 inline mr-2" />
+                    {t('admin.settings.clara.model.rate_limit_hour')}
+                  </label>
+                  <input
+                    type="number"
+                    value={settings.rate_limit_per_hour}
+                    onChange={(e) => setSettings({ ...settings, rate_limit_per_hour: parseInt(e.target.value) || 200 })}
+                    min={10}
+                    max={5000}
+                    className={`w-full px-4 py-3 rounded-lg border transition-colors ${
+                      isDark
+                        ? 'bg-gray-700 border-gray-600 text-white focus:border-pink-500'
+                        : 'bg-white border-gray-300 text-gray-900 focus:border-pink-500'
+                    } focus:outline-none focus:ring-2 focus:ring-pink-500/20`}
+                  />
+                  <p className={`text-xs mt-1 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                    {t('admin.settings.clara.model.rate_limit_hour_desc')}
+                  </p>
+                </div>
               </div>
+
               <div>
                 <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
                   <Clock className="w-4 h-4 inline mr-2" />
-                  {t('admin.settings.clara.model.rate_limit_hour')}
+                  {t('admin.settings.clara.model.session_timeout')}
                 </label>
                 <input
                   type="number"
-                  value={settings.rate_limit_per_hour}
-                  onChange={(e) => setSettings({ ...settings, rate_limit_per_hour: parseInt(e.target.value) || 200 })}
-                  min={10}
-                  max={1000}
+                  value={settings.session_timeout_minutes}
+                  onChange={(e) => setSettings({ ...settings, session_timeout_minutes: parseInt(e.target.value) || 30 })}
+                  min={5}
+                  max={120}
                   className={`w-full px-4 py-3 rounded-lg border transition-colors ${
                     isDark
                       ? 'bg-gray-700 border-gray-600 text-white focus:border-pink-500'
                       : 'bg-white border-gray-300 text-gray-900 focus:border-pink-500'
                   } focus:outline-none focus:ring-2 focus:ring-pink-500/20`}
                 />
+                <p className={`text-xs mt-1 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                  {t('admin.settings.clara.model.session_timeout_desc')}
+                </p>
               </div>
             </div>
 
-            {/* Max Messages */}
+            {/* Max Messages per Conversation */}
             <div>
               <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
                 <Users className="w-4 h-4 inline mr-2" />
@@ -1040,13 +1070,16 @@ export function ClaraSection({ isDark }: ClaraSectionProps) {
                 value={settings.max_conversation_messages}
                 onChange={(e) => setSettings({ ...settings, max_conversation_messages: parseInt(e.target.value) || 150 })}
                 min={10}
-                max={200}
+                max={500}
                 className={`w-full px-4 py-3 rounded-lg border transition-colors ${
                   isDark
                     ? 'bg-gray-700 border-gray-600 text-white focus:border-pink-500'
                     : 'bg-white border-gray-300 text-gray-900 focus:border-pink-500'
                 } focus:outline-none focus:ring-2 focus:ring-pink-500/20`}
               />
+              <p className={`text-xs mt-1 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                {t('admin.settings.clara.model.max_messages_desc')}
+              </p>
             </div>
 
             {/* Save Button */}

@@ -2028,8 +2028,13 @@
           "temperature_creative": "Creatif",
           "max_tokens": "Tokens maximum (longueur reponse)",
           "rate_limit_minute": "Limite / minute",
+          "rate_limit_minute_desc": "Nombre total de messages maximum par minute (tous utilisateurs confondus)",
           "rate_limit_hour": "Limite / heure",
-          "max_messages": "Messages max par conversation"
+          "rate_limit_hour_desc": "Nombre total de messages maximum par heure (tous utilisateurs confondus)",
+          "session_timeout": "Timeout session (minutes)",
+          "session_timeout_desc": "Duree d'inactivite avant expiration d'une session",
+          "max_messages": "Messages max par conversation",
+          "max_messages_desc": "Nombre maximum de messages conserves dans l'historique par conversation individuelle"
         },
         "actions": {
           "save": "Sauvegarder",

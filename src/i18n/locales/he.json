@@ -1959,8 +1959,13 @@
           "temperature_creative": "יצירתי",
           "max_tokens": "מקסימום טוקנים (אורך תגובה)",
           "rate_limit_minute": "מגבלה / דקה",
+          "rate_limit_minute_desc": "מספר הודעות מקסימלי בדקה (כל המשתמשים ביחד)",
           "rate_limit_hour": "מגבלה / שעה",
-          "max_messages": "מקסימום הודעות לשיחה"
+          "rate_limit_hour_desc": "מספר הודעות מקסימלי בשעה (כל המשתמשים ביחד)",
+          "session_timeout": "זמן קצוב לסשן (דקות)",
+          "session_timeout_desc": "זמן חוסר פעילות לפני פקיעת סשן",
+          "max_messages": "מקסימום הודעות לשיחה",
+          "max_messages_desc": "מספר מקסימלי של הודעות בהיסטוריה לכל שיחה בודדת"
         },
         "actions": {
           "save": "שמור",

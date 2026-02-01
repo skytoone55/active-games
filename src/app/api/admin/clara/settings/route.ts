@@ -146,8 +146,22 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // Merger les settings DB avec les defaults (DB values override defaults)
+    const mergedSettings = {
+      ...DEFAULT_CLARA_SETTINGS,
+      ...(claraSettings?.value || {}),
+      public_chat: {
+        ...DEFAULT_CLARA_SETTINGS.public_chat,
+        ...(claraSettings?.value as Record<string, unknown>)?.public_chat || {},
+      },
+      crm_chat: {
+        ...DEFAULT_CLARA_SETTINGS.crm_chat,
+        ...(claraSettings?.value as Record<string, unknown>)?.crm_chat || {},
+      },
+    }
+
     return NextResponse.json({
-      settings: claraSettings?.value || DEFAULT_CLARA_SETTINGS,
+      settings: mergedSettings,
       customPrompt: (promptSetting?.value as { prompt?: string })?.prompt || null,
       customKnowledge: (knowledgeSetting?.value as { knowledge?: string })?.knowledge || null,
       defaultPrompt: DEFAULT_PUBLIC_PROMPT,
