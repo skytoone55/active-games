@@ -277,7 +277,21 @@ export function SettingsModal({
       }, 1500)
     } catch (err) {
       console.error('Error saving settings:', err)
-      setError(err instanceof Error ? err.message : t('admin.settings_modal.save_error'))
+      // Extraire le message d'erreur de manière robuste
+      let errorMessage = t('admin.settings_modal.save_error')
+      if (err instanceof Error) {
+        errorMessage = err.message
+      } else if (typeof err === 'object' && err !== null) {
+        const errObj = err as any
+        if (errObj.message) {
+          errorMessage = errObj.message
+        } else if (errObj.error?.message) {
+          errorMessage = errObj.error.message
+        } else {
+          errorMessage = JSON.stringify(err)
+        }
+      }
+      setError(errorMessage)
     } finally {
       setLoading(false)
     }

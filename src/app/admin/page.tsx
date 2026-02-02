@@ -2239,6 +2239,11 @@ export default function AdminPage() {
           onBranchSelect={(branchId) => {
             branchesHook.selectBranch(branchId) // Utiliser selectBranch du hook pour synchroniser avec le CRM
             setShowBranchMenu(false)
+            // Fermer tous les modals quand la branche change
+            setShowBookingModal(false)
+            setShowCalendarModal(false)
+            setShowBranchSettingsModal(false)
+            setShowGridSettingsModal(false)
           }}
           onSignOut={handleSignOut}
           theme={theme}

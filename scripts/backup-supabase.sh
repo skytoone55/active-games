@@ -2,10 +2,10 @@
 
 # Configuration
 DB_HOST="db.zapwlcrjnabrfhoxfgqo.supabase.co"
-DB_PORT="5432"
+DB_PORT="6543"
 DB_USER="postgres"
 DB_NAME="postgres"
-DB_PASSWORD="activelaserbackup"
+DB_PASSWORD="Activegames20000"
 BACKUP_DIR="$HOME/Desktop/claude/activelaser/backups"
 DATE=$(date +%Y%m%d_%H%M%S)
 
