@@ -52,10 +52,14 @@ export type ActionType =
   | 'log_deleted'
   | 'email_sent'
 
-export type TargetType = 'booking' | 'order' | 'contact' | 'user' | 'branch' | 'settings' | 'log' | 'email'
+export type TargetType = 'booking' | 'order' | 'contact' | 'user' | 'branch' | 'settings' | 'log' | 'email' | 'call'
+
+// Types pour Calls (appels téléphoniques)
+export type CallDirection = 'inbound' | 'outbound'
+export type CallStatus = 'completed' | 'missed' | 'busy' | 'failed' | 'no-answer'
 
 // Types pour Permissions
-export type ResourceType = 'agenda' | 'orders' | 'clients' | 'users' | 'logs' | 'settings' | 'permissions'
+export type ResourceType = 'agenda' | 'orders' | 'clients' | 'users' | 'logs' | 'settings' | 'permissions' | 'calls'
 
 // Type pour la table roles (rôles dynamiques avec hiérarchie)
 export interface Role {
@@ -763,4 +767,31 @@ export interface AIConversationWithMessages extends AIConversation {
 export interface PublicConversationWithMessages extends PublicConversation {
   messages?: PublicMessage[]
   branch?: Branch | null
+}
+
+// Interface pour les appels téléphoniques (Telnyx)
+export interface Call {
+  id: string
+  telnyx_call_control_id: string
+  telnyx_call_session_id: string | null
+  direction: CallDirection
+  status: CallStatus
+  from_number: string
+  to_number: string
+  from_number_normalized: string | null
+  to_number_normalized: string | null
+  started_at: string
+  answered_at: string | null
+  ended_at: string | null
+  duration_seconds: number
+  recording_url: string | null
+  recording_duration_seconds: number | null
+  contact_id: string | null
+  contact_linked_at: string | null
+  contact_linked_by: string | null
+  branch_id: string | null
+  notes: string | null
+  metadata: Json
+  created_at: string
+  updated_at: string
 }
