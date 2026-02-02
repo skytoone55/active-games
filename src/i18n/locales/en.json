@@ -564,7 +564,14 @@
       "at": "at",
       "page": "Page",
       "show": "Show",
-      "rows": "rows"
+      "rows": "rows",
+      "people_short": "ppl",
+      "source_site": "Website",
+      "source_phone": "Phone",
+      "source_walkin": "Walk-in",
+      "source_agenda": "Agenda",
+      "source_admin": "Admin",
+      "na": "N/A"
     },
     "layout": {
       "loading": "Loading...",

@@ -621,7 +621,14 @@
       "at": "a",
       "page": "Page",
       "show": "Afficher",
-      "rows": "lignes"
+      "rows": "lignes",
+      "people_short": "pers.",
+      "source_site": "Site web",
+      "source_phone": "Téléphone",
+      "source_walkin": "Sur place",
+      "source_agenda": "Agenda",
+      "source_admin": "Admin",
+      "na": "N/A"
     },
     "layout": {
       "loading": "Chargement...",
