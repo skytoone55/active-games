@@ -11,11 +11,9 @@ import type { CallDirection, CallStatus } from '@/lib/supabase/types'
 function normalizePhone(phone: string): string | null {
   if (!phone) return null
   const cleaned = phone.replace(/[\s\-\(\)]/g, '')
-  if (cleaned.startsWith('+9725')) return '0' + cleaned.substring(5)
-  if (cleaned.startsWith('9725')) return '0' + cleaned.substring(4)
-  if (cleaned.startsWith('+972')) return '0' + cleaned.substring(4)
-  if (cleaned.startsWith('972')) return '0' + cleaned.substring(3)
-  if (cleaned.match(/^05\d{8}$/)) return cleaned
+  // Chercher le pattern "5" suivi de 8 chiffres, peu importe le préfixe
+  const match = cleaned.match(/5(\d{8})/)
+  if (match) return '05' + match[1]
   return null
 }
 

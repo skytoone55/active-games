@@ -35,6 +35,9 @@ export default function CallsPage() {
   const [contactModalOpen, setContactModalOpen] = useState(false)
   const [sortBy, setSortBy] = useState<'started_at' | 'duration_seconds'>('started_at')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
+  const [dateFilter, setDateFilter] = useState<'today' | '1day' | '1week' | '1month' | 'custom'>('today')
+  const [startDate, setStartDate] = useState('')
+  const [endDate, setEndDate] = useState('')
 
   // Thème (pour correspondre au pattern des autres pages)
   const [theme, setTheme] = useState<'light' | 'dark'>('dark')
@@ -85,15 +88,49 @@ export default function CallsPage() {
         }
       })
 
-      setCalls(sortedCalls)
-      setTotal(result.total)
-      setTotalPages(result.totalPages)
+      // Filtrer par date côté client
+      const filteredByDate = sortedCalls.filter((call: any) => {
+        const callDate = new Date(call.started_at)
+        const now = new Date()
+
+        switch (dateFilter) {
+          case 'today': {
+            const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+            const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59)
+            return callDate >= todayStart && callDate <= todayEnd
+          }
+          case '1day': {
+            const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000)
+            return callDate >= oneDayAgo
+          }
+          case '1week': {
+            const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+            return callDate >= oneWeekAgo
+          }
+          case '1month': {
+            const oneMonthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
+            return callDate >= oneMonthAgo
+          }
+          case 'custom': {
+            if (!startDate && !endDate) return true
+            const start = startDate ? new Date(startDate) : new Date(0)
+            const end = endDate ? new Date(endDate + 'T23:59:59') : new Date()
+            return callDate >= start && callDate <= end
+          }
+          default:
+            return true
+        }
+      })
+
+      setCalls(filteredByDate)
+      setTotal(filteredByDate.length)
+      setTotalPages(Math.ceil(filteredByDate.length / pageSize))
     } catch (err) {
       console.error('Error searching calls:', err)
     } finally {
       setLoading(false)
     }
-  }, [selectedBranch, branches, searchCalls, searchQuery, page, pageSize, sortBy, sortOrder])
+  }, [selectedBranch, branches, searchCalls, searchQuery, page, pageSize, sortBy, sortOrder, dateFilter, startDate, endDate])
 
   useEffect(() => {
     if (effectiveSelectedBranch?.id) {
@@ -177,7 +214,7 @@ export default function CallsPage() {
       if (data.success) {
         setSyncMessage({
           type: 'success',
-          text: `✅ ${data.imported} appels importés, ${data.skipped} ignorés (déjà présents)`
+          text: `✅ ${data.imported} appels importés`
         })
         // Rafraîchir la liste
         await performSearch()
@@ -256,7 +293,7 @@ export default function CallsPage() {
           </div>
         )}
 
-        {/* Barre de recherche et lignes par page */}
+        {/* Barre de recherche et filtre de date */}
         <div className={`${isDark ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow p-4 mb-6`}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Recherche */}
@@ -283,27 +320,70 @@ export default function CallsPage() {
               />
             </div>
 
-            {/* Lignes par page */}
+            {/* Filtre de période */}
             <div>
               <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                Lignes par page
+                Période
               </label>
               <CustomSelect
                 options={[
-                  { value: '10', label: '10' },
-                  { value: '20', label: '20' },
-                  { value: '50', label: '50' },
-                  { value: '100', label: '100' },
+                  { value: 'today', label: "Aujourd'hui" },
+                  { value: '1day', label: 'Dernières 24h' },
+                  { value: '1week', label: 'Dernière semaine' },
+                  { value: '1month', label: 'Dernier mois' },
+                  { value: 'custom', label: 'Période personnalisée' },
                 ]}
-                value={String(pageSize)}
+                value={dateFilter}
                 onChange={(value) => {
-                  setPageSize(parseInt(value))
+                  setDateFilter(value as 'today' | '1day' | '1week' | '1month' | 'custom')
                   setPage(1)
                 }}
                 isDark={isDark}
               />
             </div>
           </div>
+
+          {/* Champs de dates personnalisées */}
+          {dateFilter === 'custom' && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+              <div>
+                <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                  Date de début
+                </label>
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => {
+                    setStartDate(e.target.value)
+                    setPage(1)
+                  }}
+                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                    isDark
+                      ? 'bg-gray-700 border-gray-600 text-white'
+                      : 'bg-white border-gray-300 text-gray-900'
+                  }`}
+                />
+              </div>
+              <div>
+                <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                  Date de fin
+                </label>
+                <input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => {
+                    setEndDate(e.target.value)
+                    setPage(1)
+                  }}
+                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                    isDark
+                      ? 'bg-gray-700 border-gray-600 text-white'
+                      : 'bg-white border-gray-300 text-gray-900'
+                  }`}
+                />
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Table des appels */}
@@ -435,7 +515,7 @@ export default function CallsPage() {
                         {call.recording_url ? (
                           <div className="flex items-center gap-2">
                             <button
-                              onClick={() => window.open(call.recording_url, '_blank')}
+                              onClick={() => window.open(`/api/calls/${call.id}/recording`, '_blank')}
                               className={`p-2 rounded-lg transition-colors ${
                                 isDark
                                   ? 'bg-green-900/50 hover:bg-green-800 text-green-400'
@@ -446,7 +526,7 @@ export default function CallsPage() {
                               <Play className="w-4 h-4" />
                             </button>
                             <a
-                              href={call.recording_url}
+                              href={`/api/calls/${call.id}/recording`}
                               download
                               className={`p-2 rounded-lg transition-colors ${
                                 isDark
@@ -469,9 +549,30 @@ export default function CallsPage() {
             </div>
 
             {/* Pagination */}
-            <div className={`mt-4 flex items-center justify-between ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-              <div>
-                Affichage de {(page - 1) * pageSize + 1} à {Math.min(page * pageSize, total)} sur {total} appels
+            <div className={`mt-4 flex flex-col sm:flex-row items-center justify-between gap-4 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+              <div className="flex items-center gap-4">
+                <div>
+                  Affichage de {(page - 1) * pageSize + 1} à {Math.min(page * pageSize, total)} sur {total} appels
+                </div>
+                <div className="flex items-center gap-2">
+                  <label className={`text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                    Lignes par page:
+                  </label>
+                  <CustomSelect
+                    options={[
+                      { value: '10', label: '10' },
+                      { value: '20', label: '20' },
+                      { value: '50', label: '50' },
+                      { value: '100', label: '100' },
+                    ]}
+                    value={String(pageSize)}
+                    onChange={(value) => {
+                      setPageSize(parseInt(value))
+                      setPage(1)
+                    }}
+                    isDark={isDark}
+                  />
+                </div>
               </div>
               <div className="flex gap-2">
                 <button
