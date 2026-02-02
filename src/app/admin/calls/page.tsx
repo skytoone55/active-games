@@ -38,6 +38,8 @@ export default function CallsPage() {
   const [dateFilter, setDateFilter] = useState<'today' | '1day' | '1week' | '1month' | 'custom'>('today')
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
+  const [timeFilter, setTimeFilter] = useState<'all' | 'morning' | 'afternoon' | 'evening' | 'night'>('all')
+  const [statusFilter, setStatusFilter] = useState<'all' | 'completed' | 'missed' | 'no-answer'>('all')
 
   // Thème (pour correspondre au pattern des autres pages)
   const [theme, setTheme] = useState<'light' | 'dark'>('dark')
@@ -113,33 +115,75 @@ export default function CallsPage() {
         const callDate = new Date(call.started_at)
         const now = new Date()
 
+        // Date filter
+        let dateMatch = true
         switch (dateFilter) {
           case 'today': {
             const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
             const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59)
-            return callDate >= todayStart && callDate <= todayEnd
+            dateMatch = callDate >= todayStart && callDate <= todayEnd
+            break
           }
           case '1day': {
             const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000)
-            return callDate >= oneDayAgo
+            dateMatch = callDate >= oneDayAgo
+            break
           }
           case '1week': {
             const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
-            return callDate >= oneWeekAgo
+            dateMatch = callDate >= oneWeekAgo
+            break
           }
           case '1month': {
             const oneMonthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
-            return callDate >= oneMonthAgo
+            dateMatch = callDate >= oneMonthAgo
+            break
           }
           case 'custom': {
-            if (!startDate && !endDate) return true
-            const start = startDate ? new Date(startDate) : new Date(0)
-            const end = endDate ? new Date(endDate + 'T23:59:59') : new Date()
-            return callDate >= start && callDate <= end
+            if (!startDate && !endDate) {
+              dateMatch = true
+            } else {
+              const start = startDate ? new Date(startDate) : new Date(0)
+              const end = endDate ? new Date(endDate + 'T23:59:59') : new Date()
+              dateMatch = callDate >= start && callDate <= end
+            }
+            break
           }
           default:
-            return true
+            dateMatch = true
         }
+
+        if (!dateMatch) return false
+
+        // Time filter
+        if (timeFilter !== 'all') {
+          const hour = callDate.getHours()
+          let timeMatch = false
+          switch (timeFilter) {
+            case 'morning': // 6h-12h
+              timeMatch = hour >= 6 && hour < 12
+              break
+            case 'afternoon': // 12h-18h
+              timeMatch = hour >= 12 && hour < 18
+              break
+            case 'evening': // 18h-23h
+              timeMatch = hour >= 18 && hour < 23
+              break
+            case 'night': // 23h-6h
+              timeMatch = hour >= 23 || hour < 6
+              break
+          }
+          if (!timeMatch) return false
+        }
+
+        // Status filter
+        if (statusFilter !== 'all') {
+          if (statusFilter === 'no-answer' && call.status !== 'no-answer') return false
+          if (statusFilter === 'completed' && call.status !== 'completed') return false
+          if (statusFilter === 'missed' && call.status !== 'missed') return false
+        }
+
+        return true
       })
 
       setCalls(filteredByDate)
@@ -150,7 +194,7 @@ export default function CallsPage() {
     } finally {
       setLoading(false)
     }
-  }, [selectedBranch, branches, searchCalls, searchQuery, page, pageSize, sortBy, sortOrder, dateFilter, startDate, endDate])
+  }, [selectedBranch, branches, searchCalls, searchQuery, page, pageSize, sortBy, sortOrder, dateFilter, startDate, endDate, timeFilter, statusFilter])
 
   useEffect(() => {
     if (effectiveSelectedBranch?.id) {
@@ -339,26 +383,69 @@ export default function CallsPage() {
             />
           </div>
 
-          {/* Filtre de période */}
-          <div>
-            <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-              Période
-            </label>
-            <CustomSelect
-              options={[
-                { value: 'today', label: "Aujourd'hui" },
-                { value: '1day', label: 'Dernières 24h' },
-                { value: '1week', label: 'Dernière semaine' },
-                { value: '1month', label: 'Dernier mois' },
-                { value: 'custom', label: 'Période personnalisée' },
-              ]}
-              value={dateFilter}
-              onChange={(value) => {
-                setDateFilter(value as 'today' | '1day' | '1week' | '1month' | 'custom')
-                setPage(1)
-              }}
-              isDark={isDark}
-            />
+          {/* Filtres: période, heure, statut */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                Période
+              </label>
+              <CustomSelect
+                options={[
+                  { value: 'today', label: "Aujourd'hui" },
+                  { value: '1day', label: 'Dernières 24h' },
+                  { value: '1week', label: 'Dernière semaine' },
+                  { value: '1month', label: 'Dernier mois' },
+                  { value: 'custom', label: 'Période personnalisée' },
+                ]}
+                value={dateFilter}
+                onChange={(value) => {
+                  setDateFilter(value as 'today' | '1day' | '1week' | '1month' | 'custom')
+                  setPage(1)
+                }}
+                isDark={isDark}
+              />
+            </div>
+
+            <div>
+              <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                Heure
+              </label>
+              <CustomSelect
+                options={[
+                  { value: 'all', label: 'Toute la journée' },
+                  { value: 'morning', label: 'Matin (6h-12h)' },
+                  { value: 'afternoon', label: 'Après-midi (12h-18h)' },
+                  { value: 'evening', label: 'Soirée (18h-23h)' },
+                  { value: 'night', label: 'Nuit (23h-6h)' },
+                ]}
+                value={timeFilter}
+                onChange={(value) => {
+                  setTimeFilter(value as 'all' | 'morning' | 'afternoon' | 'evening' | 'night')
+                  setPage(1)
+                }}
+                isDark={isDark}
+              />
+            </div>
+
+            <div>
+              <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                Statut
+              </label>
+              <CustomSelect
+                options={[
+                  { value: 'all', label: 'Tous' },
+                  { value: 'completed', label: 'Complété' },
+                  { value: 'missed', label: 'Manqué' },
+                  { value: 'no-answer', label: 'Sans réponse' },
+                ]}
+                value={statusFilter}
+                onChange={(value) => {
+                  setStatusFilter(value as 'all' | 'completed' | 'missed' | 'no-answer')
+                  setPage(1)
+                }}
+                isDark={isDark}
+              />
+            </div>
           </div>
 
           {/* Champs de dates personnalisées */}
@@ -419,10 +506,20 @@ export default function CallsPage() {
         ) : (
           <>
             <div className={`${isDark ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow overflow-hidden`}>
-              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700 table-fixed">
+                <colgroup>
+                  <col className="w-16" />
+                  <col className="w-40" />
+                  <col className="w-44" />
+                  <col className="w-28" />
+                  <col className="w-20" />
+                  <col className="w-28" />
+                  <col className="w-24" />
+                  <col className="w-64" />
+                </colgroup>
                 <thead className={isDark ? 'bg-gray-700' : 'bg-gray-50'}>
                   <tr>
-                    <th className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider ${
+                    <th className={`px-3 py-3 text-left text-xs font-medium uppercase tracking-wider ${
                       isDark ? 'text-gray-300' : 'text-gray-500'
                     }`}>
                       Direction
@@ -481,7 +578,7 @@ export default function CallsPage() {
                 }`}>
                   {calls.map((call: any) => (
                     <tr key={call.id} className={isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-50'}>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-3 py-4 whitespace-nowrap">
                         {call.direction === 'inbound' ? (
                           <PhoneIncoming className="w-5 h-5 text-green-500" />
                         ) : (
@@ -491,19 +588,21 @@ export default function CallsPage() {
                       <td className={`px-6 py-4 whitespace-nowrap ${isDark ? 'text-gray-300' : 'text-gray-900'}`}>
                         {call.direction === 'inbound' ? call.from_number : call.to_number}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-6 py-4">
                         {call.contact ? (
                           <button
                             onClick={() => {
                               setSelectedContactId(call.contact.id)
                               setContactModalOpen(true)
                             }}
-                            className={`flex items-center gap-2 hover:underline ${
+                            className={`flex items-center gap-2 hover:underline max-w-full ${
                               isDark ? 'text-blue-400' : 'text-blue-600'
                             }`}
                           >
-                            <User className="w-4 h-4" />
-                            {call.contact.first_name} {call.contact.last_name}
+                            <User className="w-4 h-4 flex-shrink-0" />
+                            <span className="truncate">
+                              {call.contact.first_name} {call.contact.last_name}
+                            </span>
                           </button>
                         ) : (
                           <span className={isDark ? 'text-gray-500' : 'text-gray-400'}>-</span>
@@ -531,11 +630,11 @@ export default function CallsPage() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         {call.recording_url ? (
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-nowrap min-w-0">
                             <audio
                               controls
                               preload="none"
-                              className="h-8 w-48"
+                              className="h-8 w-44 flex-shrink"
                               src={`/api/calls/${call.id}/recording`}
                             />
                             <a
