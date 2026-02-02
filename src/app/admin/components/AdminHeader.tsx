@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, memo } from 'react'
-import { LogOut, User, ChevronDown, Sun, Moon, Users, Calendar, Menu, X, ShoppingCart, Shield, Globe, FileText, Lock, Crown, Settings, Trash2, BarChart3 } from 'lucide-react'
+import { LogOut, User, ChevronDown, Sun, Moon, Users, Calendar, Menu, X, ShoppingCart, Shield, Globe, FileText, Lock, Crown, Settings, Trash2, BarChart3, Phone } from 'lucide-react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
@@ -200,6 +200,21 @@ function AdminHeaderComponent({
                   {pendingOrdersCount > 9 ? '9+' : pendingOrdersCount}
                 </span>
               )}
+            </Link>
+          )}
+          {hasPermission('calls', 'can_view') && (
+            <Link
+              href="/admin/calls"
+              className={`px-4 py-2 rounded-lg transition-colors flex items-center gap-2 ${
+                pathname === '/admin/calls'
+                  ? 'bg-blue-600 text-white'
+                  : theme === 'dark'
+                    ? 'bg-gray-800 hover:bg-gray-700 text-gray-300'
+                    : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+              }`}
+            >
+              <Phone className="w-4 h-4" />
+              <span>{t('admin.header.calls') || 'Appels'}</span>
             </Link>
           )}
         </div>
@@ -546,6 +561,22 @@ function AdminHeaderComponent({
                       {pendingOrdersCount}
                     </span>
                   )}
+                </Link>
+              )}
+              {hasPermission('calls', 'can_view') && (
+                <Link
+                  href="/admin/calls"
+                  onClick={() => setShowMobileMenu(false)}
+                  className={`flex items-center gap-3 px-4 py-2 rounded-lg transition-colors ${
+                    pathname === '/admin/calls'
+                      ? 'bg-blue-600 text-white'
+                      : theme === 'dark'
+                        ? 'bg-gray-800 hover:bg-gray-700 text-gray-300'
+                        : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                  }`}
+                >
+                  <Phone className="w-4 h-4" />
+                  <span>{t('admin.header.calls') || 'Appels'}</span>
                 </Link>
               )}
             </div>
