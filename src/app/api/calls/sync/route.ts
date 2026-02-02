@@ -23,24 +23,16 @@ export async function POST(request: NextRequest) {
   try {
     const TELNYX_API_KEY = process.env.TELNYX_API_KEY || 'KEY019C1F348A06708E3B0DDC047C124F63_O5PjwekPrQmV5Vj1jWuOAd'
 
-    // Créer une requête CDR pour les dernières 48h
-    const twoDaysAgo = new Date(Date.now() - 48 * 60 * 60 * 1000)
-    const now = new Date()
+    // Récupérer les enregistrements des dernières 48h depuis Telnyx
+    const twoDaysAgo = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString()
 
-    // Utiliser l'API synchrone pour récupérer les CDR directement
     const response = await fetch(
-      'https://api.telnyx.com/v2/reports/cdr_usage_reports/sync',
+      `https://api.telnyx.com/v2/recordings?filter[created_at][gte]=${twoDaysAgo}&page[size]=250`,
       {
-        method: 'POST',
         headers: {
           'Authorization': `Bearer ${TELNYX_API_KEY}`,
           'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          start_date: twoDaysAgo.toISOString().split('T')[0],
-          end_date: now.toISOString().split('T')[0],
-          aggregation_type: 'NO_AGGREGATION'
-        })
+        }
       }
     )
 
@@ -50,20 +42,20 @@ export async function POST(request: NextRequest) {
     }
 
     const data = await response.json()
-    const cdrs = data.data || []
+    const recordings = data.data || []
 
     const supabase = createServiceRoleClient()
     let imported = 0
     let skipped = 0
     let errors = 0
 
-    for (const cdr of cdrs) {
+    for (const recording of recordings) {
       try {
-        // Vérifier si l'appel existe déjà
+        // Vérifier si l'appel existe déjà (par call_session_id)
         const { data: existing } = await (supabase as any)
           .from('calls')
           .select('id')
-          .eq('telnyx_call_control_id', cdr.call_control_id)
+          .eq('telnyx_call_session_id', recording.call_session_id)
           .single()
 
         if (existing) {
@@ -71,19 +63,16 @@ export async function POST(request: NextRequest) {
           continue
         }
 
-        const direction: CallDirection = cdr.direction === 'incoming' ? 'inbound' : 'outbound'
-        const fromNumber = cdr.from || ''
-        const toNumber = cdr.to || ''
+        // Déterminer la direction (si to = notre numéro, c'est inbound)
+        const ourNumber = '+97233821918'
+        const direction: CallDirection = recording.to === ourNumber ? 'inbound' : 'outbound'
+        const fromNumber = recording.from || ''
+        const toNumber = recording.to || ''
         const fromNormalized = normalizePhone(fromNumber)
         const toNormalized = normalizePhone(toNumber)
 
-        // Déterminer le statut
-        let status: CallStatus = 'completed'
-        if (cdr.hangup_cause === 'NO_ANSWER' || cdr.hangup_cause === 'USER_BUSY') {
-          status = 'no-answer'
-        } else if (cdr.hangup_cause === 'CALL_REJECTED') {
-          status = 'missed'
-        }
+        // Tous les enregistrements sont considérés comme completed
+        const status: CallStatus = 'completed'
 
         // Auto-détection du contact pour les appels entrants
         let contactId: string | null = null
@@ -115,26 +104,26 @@ export async function POST(request: NextRequest) {
           }
         }
 
-        // Calculer la durée
-        const durationSeconds = cdr.duration || 0
+        // Calculer la durée en secondes
+        const durationSeconds = Math.floor((recording.duration_millis || 0) / 1000)
 
         // Créer l'appel
         const { error } = await (supabase as any)
           .from('calls')
           .insert({
-            telnyx_call_control_id: cdr.call_control_id,
-            telnyx_call_session_id: cdr.call_session_id || null,
+            telnyx_call_control_id: recording.call_control_id || recording.id,
+            telnyx_call_session_id: recording.call_session_id,
             direction,
             status,
             from_number: fromNumber,
             to_number: toNumber,
             from_number_normalized: fromNormalized,
             to_number_normalized: toNormalized,
-            started_at: cdr.start_time,
-            answered_at: cdr.answer_time || null,
-            ended_at: cdr.end_time || null,
+            started_at: recording.recording_started_at,
+            answered_at: recording.recording_started_at,
+            ended_at: recording.recording_ended_at,
             duration_seconds: durationSeconds,
-            recording_url: cdr.recording_urls?.[0] || null,
+            recording_url: recording.download_urls?.wav || null,
             contact_id: contactId,
             branch_id: branchId,
             contact_linked_at: contactId ? new Date().toISOString() : null,
@@ -158,7 +147,7 @@ export async function POST(request: NextRequest) {
       imported,
       skipped,
       errors,
-      total: cdrs.length,
+      total: recordings.length,
     })
 
   } catch (error) {
