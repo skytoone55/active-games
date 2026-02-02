@@ -661,6 +661,9 @@
       "theme_light": "Mode clair",
       "theme_dark": "Mode sombre",
       "language": "Langue",
+      "language_french": "Français",
+      "language_english": "English",
+      "language_hebrew": "עברית",
       "pending_orders": "commandes en attente",
       "statistics": "Statistiques"
     },

@@ -604,6 +604,9 @@
       "theme_light": "Light mode",
       "theme_dark": "Dark mode",
       "language": "Language",
+      "language_french": "Français",
+      "language_english": "English",
+      "language_hebrew": "עברית",
       "pending_orders": "pending orders",
       "statistics": "Statistics"
     },
