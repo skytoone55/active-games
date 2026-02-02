@@ -23,21 +23,30 @@ export async function POST(request: NextRequest) {
   try {
     const TELNYX_API_KEY = process.env.TELNYX_API_KEY || 'KEY019C1F348A06708E3B0DDC047C124F63_O5PjwekPrQmV5Vj1jWuOAd'
 
-    // Récupérer les appels des dernières 48h depuis Telnyx CDR
-    const twoDaysAgo = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString()
+    // Créer une requête CDR pour les dernières 48h
+    const twoDaysAgo = new Date(Date.now() - 48 * 60 * 60 * 1000)
+    const now = new Date()
 
+    // Utiliser l'API synchrone pour récupérer les CDR directement
     const response = await fetch(
-      `https://api.telnyx.com/v2/call_detail_records?filter[created_at][gte]=${twoDaysAgo}&page[size]=250`,
+      'https://api.telnyx.com/v2/reports/cdr_usage_reports/sync',
       {
+        method: 'POST',
         headers: {
           'Authorization': `Bearer ${TELNYX_API_KEY}`,
           'Content-Type': 'application/json'
-        }
+        },
+        body: JSON.stringify({
+          start_date: twoDaysAgo.toISOString().split('T')[0],
+          end_date: now.toISOString().split('T')[0],
+          aggregation_type: 'NO_AGGREGATION'
+        })
       }
     )
 
     if (!response.ok) {
-      throw new Error(`Telnyx API error: ${response.status}`)
+      const errorText = await response.text()
+      throw new Error(`Telnyx API error: ${response.status} - ${errorText}`)
     }
 
     const data = await response.json()
