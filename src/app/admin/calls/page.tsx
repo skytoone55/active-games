@@ -505,33 +505,33 @@ export default function CallsPage() {
           </div>
         ) : (
           <>
-            <div className={`${isDark ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow overflow-x-auto`}>
-              <table className="w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <div className={`${isDark ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow overflow-hidden`}>
+              <table className="w-full table-fixed divide-y divide-gray-200 dark:divide-gray-700">
                 <thead className={isDark ? 'bg-gray-700' : 'bg-gray-50'}>
                   <tr>
-                    <th className={`px-3 py-3 text-left text-xs font-medium uppercase tracking-wider ${
+                    <th className={`w-[5%] px-3 py-3 text-left text-xs font-medium uppercase tracking-wider ${
                       isDark ? 'text-gray-300' : 'text-gray-500'
                     }`}>
                       Direction
                     </th>
-                    <th className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider ${
+                    <th className={`w-[12%] px-6 py-3 text-left text-xs font-medium uppercase tracking-wider ${
                       isDark ? 'text-gray-300' : 'text-gray-500'
                     }`}>
                       Numéro
                     </th>
-                    <th className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider ${
+                    <th className={`w-[15%] px-6 py-3 text-left text-xs font-medium uppercase tracking-wider ${
                       isDark ? 'text-gray-300' : 'text-gray-500'
                     }`}>
                       Contact
                     </th>
-                    <th className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider ${
+                    <th className={`w-[10%] px-6 py-3 text-left text-xs font-medium uppercase tracking-wider ${
                       isDark ? 'text-gray-300' : 'text-gray-500'
                     }`}>
                       Statut
                     </th>
                     <th
                       onClick={() => handleSort('duration_seconds')}
-                      className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-gray-600 ${
+                      className={`w-[8%] px-6 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-gray-600 ${
                         isDark ? 'text-gray-300' : 'text-gray-500'
                       }`}
                     >
@@ -542,7 +542,7 @@ export default function CallsPage() {
                     </th>
                     <th
                       onClick={() => handleSort('started_at')}
-                      className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-gray-600 ${
+                      className={`w-[12%] px-6 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-gray-600 ${
                         isDark ? 'text-gray-300' : 'text-gray-500'
                       }`}
                     >
@@ -551,12 +551,12 @@ export default function CallsPage() {
                         {sortBy === 'started_at' && <ArrowUpDown className="w-3 h-3" />}
                       </div>
                     </th>
-                    <th className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider ${
+                    <th className={`w-[10%] px-6 py-3 text-left text-xs font-medium uppercase tracking-wider ${
                       isDark ? 'text-gray-300' : 'text-gray-500'
                     }`}>
                       Heure
                     </th>
-                    <th className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider ${
+                    <th className={`w-[28%] px-6 py-3 text-left text-xs font-medium uppercase tracking-wider ${
                       isDark ? 'text-gray-300' : 'text-gray-500'
                     }`}>
                       Audio
