@@ -505,18 +505,8 @@ export default function CallsPage() {
           </div>
         ) : (
           <>
-            <div className={`${isDark ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow overflow-hidden`}>
-              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700 table-fixed">
-                <colgroup>
-                  <col className="w-16" />
-                  <col className="w-40" />
-                  <col className="w-44" />
-                  <col className="w-28" />
-                  <col className="w-20" />
-                  <col className="w-28" />
-                  <col className="w-24" />
-                  <col className="w-64" />
-                </colgroup>
+            <div className={`${isDark ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow overflow-x-auto`}>
+              <table className="w-full divide-y divide-gray-200 dark:divide-gray-700">
                 <thead className={isDark ? 'bg-gray-700' : 'bg-gray-50'}>
                   <tr>
                     <th className={`px-3 py-3 text-left text-xs font-medium uppercase tracking-wider ${
@@ -588,14 +578,14 @@ export default function CallsPage() {
                       <td className={`px-6 py-4 whitespace-nowrap ${isDark ? 'text-gray-300' : 'text-gray-900'}`}>
                         {call.direction === 'inbound' ? call.from_number : call.to_number}
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="px-6 py-4 max-w-xs">
                         {call.contact ? (
                           <button
                             onClick={() => {
                               setSelectedContactId(call.contact.id)
                               setContactModalOpen(true)
                             }}
-                            className={`flex items-center gap-2 hover:underline max-w-full ${
+                            className={`flex items-center gap-2 hover:underline w-full ${
                               isDark ? 'text-blue-400' : 'text-blue-600'
                             }`}
                           >
@@ -628,13 +618,13 @@ export default function CallsPage() {
                       <td className={`px-6 py-4 whitespace-nowrap ${isDark ? 'text-gray-300' : 'text-gray-900'}`}>
                         {formatTime(call.started_at)}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-6 py-4 whitespace-nowrap min-w-fit">
                         {call.recording_url ? (
-                          <div className="flex items-center gap-2 flex-nowrap min-w-0">
+                          <div className="flex items-center gap-2">
                             <audio
                               controls
                               preload="none"
-                              className="h-8 w-44 flex-shrink"
+                              className="h-8 min-w-[180px]"
                               src={`/api/calls/${call.id}/recording`}
                             />
                             <a
