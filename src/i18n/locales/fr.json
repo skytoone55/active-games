@@ -1402,7 +1402,13 @@
       "common": {
         "branch": "Branche",
         "duration_min": "Durée (min)",
-        "placeholder_phone": "05XXXXXXXX"
+        "placeholder_phone": "05XXXXXXXX",
+        "people_short": "pers.",
+        "source_site": "Site web",
+        "source_phone": "Téléphone",
+        "source_walkin": "Sur place",
+        "source_agenda": "Agenda",
+        "na": "N/A"
       },
       "actions": {
         "delete": "Supprimer",

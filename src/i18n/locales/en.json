@@ -1396,7 +1396,13 @@
       "common": {
         "branch": "Branch",
         "duration_min": "Duration (min)",
-        "placeholder_phone": "05XXXXXXXX"
+        "placeholder_phone": "05XXXXXXXX",
+        "people_short": "ppl",
+        "source_site": "Website",
+        "source_phone": "Phone",
+        "source_walkin": "Walk-in",
+        "source_agenda": "Agenda",
+        "na": "N/A"
       },
       "calendar": {
         "previous_year": "Previous year",

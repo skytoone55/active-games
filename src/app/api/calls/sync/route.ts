@@ -12,8 +12,8 @@ function normalizePhone(phone: string): string | null {
   if (!phone) return null
   const cleaned = phone.replace(/[\s\-\(\)]/g, '')
   // Chercher le pattern "5" suivi de 8 chiffres, peu importe le préfixe
-  const match = cleaned.match(/5(\d{8})/)
-  if (match) return '05' + match[1]
+  const match = cleaned.match(/(5\d{8})/)
+  if (match) return '0' + match[1]
   return null
 }
 
@@ -79,13 +79,13 @@ export async function POST(request: NextRequest) {
         if (direction === 'inbound' && fromNormalized) {
           const { data: contacts } = await (supabase as any)
             .from('contacts')
-            .select('id, branch_id')
+            .select('id')
             .eq('phone', fromNormalized)
-            .limit(2)
+            .is('archived_at', null)
+            .limit(1)
 
-          if (contacts && contacts.length === 1) {
+          if (contacts && contacts.length > 0) {
             contactId = contacts[0].id
-            branchId = contacts[0].branch_id
           }
         }
 

@@ -1475,7 +1475,13 @@
       "common": {
         "branch": "סניף",
         "duration_min": "משך (דקות)",
-        "placeholder_phone": "05XXXXXXXX"
+        "placeholder_phone": "05XXXXXXXX",
+        "people_short": "איש",
+        "source_site": "אתר",
+        "source_phone": "טלפון",
+        "source_walkin": "בסניף",
+        "source_agenda": "יומן",
+        "na": "לא זמין"
       },
       "errors": {
         "no_laser_room": "אין חדר לייזר זמין ל-{{participants}} משתתפים ב-{{time}}{{mode}}. קיבולת לא מספקת. אנא בחר זמן אחר, הפחת משתתפים{{modeHint}}.",

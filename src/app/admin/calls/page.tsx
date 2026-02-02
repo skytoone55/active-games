@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { Search, Phone, PhoneIncoming, PhoneOutgoing, Loader2, ChevronLeft, ChevronRight, RefreshCw, Play, Download, User, ArrowUpDown } from 'lucide-react'
+import { Search, Phone, PhoneIncoming, PhoneOutgoing, Loader2, ChevronLeft, ChevronRight, RefreshCw, Download, User, ArrowUpDown } from 'lucide-react'
 import { useCalls, type SearchCallsResult } from '@/hooks/useCalls'
 import { useBranches } from '@/hooks/useBranches'
 import { useAuth } from '@/hooks/useAuth'
@@ -74,6 +74,26 @@ export default function CallsPage() {
         page,
         pageSize,
       })
+
+      // Debug: Log contact detection
+      console.log('=== Contact Detection Debug ===')
+      console.log('Total calls returned:', result.calls.length)
+      result.calls.forEach((call: any, index: number) => {
+        console.log(`Call ${index + 1}:`, {
+          id: call.id,
+          from_number: call.from_number,
+          from_number_normalized: call.from_number_normalized,
+          to_number: call.to_number,
+          direction: call.direction,
+          contact_found: !!call.contact,
+          contact_data: call.contact ? {
+            id: call.contact.id,
+            name: `${call.contact.first_name} ${call.contact.last_name}`,
+            phone: call.contact.phone
+          } : null
+        })
+      })
+      console.log('=== End Contact Detection Debug ===')
 
       // Tri local des résultats
       const sortedCalls = [...result.calls].sort((a: any, b: any) => {
@@ -295,52 +315,50 @@ export default function CallsPage() {
 
         {/* Barre de recherche et filtre de date */}
         <div className={`${isDark ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow p-4 mb-6`}>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Recherche */}
-            <div className="relative">
-              <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 ${
-                isDark ? 'text-gray-400' : 'text-gray-500'
-              }`} />
-              <input
-                type="text"
-                placeholder="Rechercher par numéro..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyPress={(e) => {
-                  if (e.key === 'Enter') {
-                    setPage(1)
-                    performSearch()
-                  }
-                }}
-                className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                  isDark
-                    ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400'
-                    : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
-                }`}
-              />
-            </div>
-
-            {/* Filtre de période */}
-            <div>
-              <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                Période
-              </label>
-              <CustomSelect
-                options={[
-                  { value: 'today', label: "Aujourd'hui" },
-                  { value: '1day', label: 'Dernières 24h' },
-                  { value: '1week', label: 'Dernière semaine' },
-                  { value: '1month', label: 'Dernier mois' },
-                  { value: 'custom', label: 'Période personnalisée' },
-                ]}
-                value={dateFilter}
-                onChange={(value) => {
-                  setDateFilter(value as 'today' | '1day' | '1week' | '1month' | 'custom')
+          {/* Recherche */}
+          <div className="relative mb-4">
+            <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 ${
+              isDark ? 'text-gray-400' : 'text-gray-500'
+            }`} />
+            <input
+              type="text"
+              placeholder="Rechercher par numéro..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyPress={(e) => {
+                if (e.key === 'Enter') {
                   setPage(1)
-                }}
-                isDark={isDark}
-              />
-            </div>
+                  performSearch()
+                }
+              }}
+              className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                isDark
+                  ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400'
+                  : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
+              }`}
+            />
+          </div>
+
+          {/* Filtre de période */}
+          <div>
+            <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+              Période
+            </label>
+            <CustomSelect
+              options={[
+                { value: 'today', label: "Aujourd'hui" },
+                { value: '1day', label: 'Dernières 24h' },
+                { value: '1week', label: 'Dernière semaine' },
+                { value: '1month', label: 'Dernier mois' },
+                { value: 'custom', label: 'Période personnalisée' },
+              ]}
+              value={dateFilter}
+              onChange={(value) => {
+                setDateFilter(value as 'today' | '1day' | '1week' | '1month' | 'custom')
+                setPage(1)
+              }}
+              isDark={isDark}
+            />
           </div>
 
           {/* Champs de dates personnalisées */}
@@ -514,21 +532,16 @@ export default function CallsPage() {
                       <td className="px-6 py-4 whitespace-nowrap">
                         {call.recording_url ? (
                           <div className="flex items-center gap-2">
-                            <button
-                              onClick={() => window.open(`/api/calls/${call.id}/recording`, '_blank')}
-                              className={`p-2 rounded-lg transition-colors ${
-                                isDark
-                                  ? 'bg-green-900/50 hover:bg-green-800 text-green-400'
-                                  : 'bg-green-100 hover:bg-green-200 text-green-700'
-                              }`}
-                              title="Écouter"
-                            >
-                              <Play className="w-4 h-4" />
-                            </button>
+                            <audio
+                              controls
+                              preload="none"
+                              className="h-8 w-48"
+                              src={`/api/calls/${call.id}/recording`}
+                            />
                             <a
                               href={`/api/calls/${call.id}/recording`}
                               download
-                              className={`p-2 rounded-lg transition-colors ${
+                              className={`p-2 rounded-lg transition-colors flex-shrink-0 ${
                                 isDark
                                   ? 'bg-blue-900/50 hover:bg-blue-800 text-blue-400'
                                   : 'bg-blue-100 hover:bg-blue-200 text-blue-700'
