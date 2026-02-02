@@ -156,38 +156,38 @@ export default function CallsPage() {
           </p>
         </div>
 
-        {/* Barre de recherche et filtres */}
-        <div className={`${isDark ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow p-4 mb-6`}>
-          <div className="flex flex-col md:flex-row gap-4">
-            {/* Recherche */}
-            <div className="flex-1">
-              <div className="relative">
-                <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 ${
-                  isDark ? 'text-gray-400' : 'text-gray-500'
-                }`} />
-                <input
-                  type="text"
-                  placeholder="Rechercher par numéro..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  onKeyPress={(e) => {
-                    if (e.key === 'Enter') {
-                      setPage(1)
-                      performSearch()
-                    }
-                  }}
-                  className={`w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                    isDark
-                      ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400'
-                      : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
-                  }`}
-                />
-              </div>
-            </div>
+        {/* Barre de recherche */}
+        <div className={`${isDark ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow p-4 mb-4`}>
+          <div className="relative">
+            <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 ${
+              isDark ? 'text-gray-400' : 'text-gray-500'
+            }`} />
+            <input
+              type="text"
+              placeholder="Rechercher par numéro..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyPress={(e) => {
+                if (e.key === 'Enter') {
+                  setPage(1)
+                  performSearch()
+                }
+              }}
+              className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                isDark
+                  ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400'
+                  : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
+              }`}
+            />
+          </div>
+        </div>
 
+        {/* Filtres */}
+        <div className={`${isDark ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow p-4 mb-6`}>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Filtre statut */}
-            <div className="flex flex-col gap-1">
-              <label className={`text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+            <div>
+              <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
                 Statut
               </label>
               <CustomSelect
@@ -198,14 +198,17 @@ export default function CallsPage() {
                   { value: 'no-answer', label: 'Sans réponse' },
                 ]}
                 value={filterStatus}
-                onChange={(value) => setFilterStatus(value as 'all' | CallStatus)}
+                onChange={(value) => {
+                  setFilterStatus(value as 'all' | CallStatus)
+                  setPage(1)
+                }}
                 isDark={isDark}
               />
             </div>
 
             {/* Filtre direction */}
-            <div className="flex flex-col gap-1">
-              <label className={`text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+            <div>
+              <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
                 Direction
               </label>
               <CustomSelect
@@ -215,7 +218,10 @@ export default function CallsPage() {
                   { value: 'outbound', label: 'Sortants' },
                 ]}
                 value={filterDirection}
-                onChange={(value) => setFilterDirection(value as 'all' | CallDirection)}
+                onChange={(value) => {
+                  setFilterDirection(value as 'all' | CallDirection)
+                  setPage(1)
+                }}
                 isDark={isDark}
               />
             </div>
