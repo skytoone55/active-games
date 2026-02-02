@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { Search, Phone, PhoneIncoming, PhoneOutgoing, Loader2, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Search, Phone, PhoneIncoming, PhoneOutgoing, Loader2, ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react'
 import { useCalls, type SearchCallsResult } from '@/hooks/useCalls'
 import { useBranches } from '@/hooks/useBranches'
 import { useAuth } from '@/hooks/useAuth'
@@ -29,6 +29,8 @@ export default function CallsPage() {
   const [total, setTotal] = useState(0)
   const [filterStatus, setFilterStatus] = useState<'all' | CallStatus>('all')
   const [filterDirection, setFilterDirection] = useState<'all' | CallDirection>('all')
+  const [syncing, setSyncing] = useState(false)
+  const [syncMessage, setSyncMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
 
   const pageSize = 20
 
@@ -132,6 +134,39 @@ export default function CallsPage() {
     }).format(date)
   }
 
+  // Synchroniser les appels depuis Telnyx CDR
+  const handleSync = async () => {
+    setSyncing(true)
+    setSyncMessage(null)
+    try {
+      const response = await fetch('/api/calls/sync', { method: 'POST' })
+      const data = await response.json()
+
+      if (data.success) {
+        setSyncMessage({
+          type: 'success',
+          text: `✅ ${data.imported} appels importés, ${data.skipped} ignorés (déjà présents)`
+        })
+        // Rafraîchir la liste
+        await performSearch()
+      } else {
+        setSyncMessage({
+          type: 'error',
+          text: `❌ Erreur: ${data.error}`
+        })
+      }
+    } catch (error) {
+      setSyncMessage({
+        type: 'error',
+        text: `❌ Erreur de synchronisation`
+      })
+    } finally {
+      setSyncing(false)
+      // Effacer le message après 5 secondes
+      setTimeout(() => setSyncMessage(null), 5000)
+    }
+  }
+
   return (
     <div className={`min-h-screen ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`}>
       <AdminHeader
@@ -146,15 +181,48 @@ export default function CallsPage() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
-        <div className="mb-6">
-          <h1 className={`text-3xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-            <Phone className="inline-block w-8 h-8 mr-2 mb-1" />
-            {t('admin.header.calls') || 'Appels'}
-          </h1>
-          <p className={`mt-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-            Gestion des appels téléphoniques
-          </p>
+        <div className="mb-6 flex items-center justify-between">
+          <div>
+            <h1 className={`text-3xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+              <Phone className="inline-block w-8 h-8 mr-2 mb-1" />
+              {t('admin.header.calls') || 'Appels'}
+            </h1>
+            <p className={`mt-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+              Gestion des appels téléphoniques
+            </p>
+          </div>
+          <button
+            onClick={handleSync}
+            disabled={syncing}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
+              syncing
+                ? 'bg-gray-400 cursor-not-allowed'
+                : isDark
+                  ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                  : 'bg-blue-500 hover:bg-blue-600 text-white'
+            }`}
+          >
+            <RefreshCw className={`w-5 h-5 ${syncing ? 'animate-spin' : ''}`} />
+            {syncing ? 'Synchronisation...' : 'Synchroniser'}
+          </button>
         </div>
+
+        {/* Message de sync */}
+        {syncMessage && (
+          <div
+            className={`mb-4 p-4 rounded-lg ${
+              syncMessage.type === 'success'
+                ? isDark
+                  ? 'bg-green-900/50 text-green-200'
+                  : 'bg-green-100 text-green-800'
+                : isDark
+                  ? 'bg-red-900/50 text-red-200'
+                  : 'bg-red-100 text-red-800'
+            }`}
+          >
+            {syncMessage.text}
+          </div>
+        )}
 
         {/* Barre de recherche */}
         <div className={`${isDark ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow p-4 mb-4`}>
