@@ -22,6 +22,7 @@ interface ContactDetailsModalProps {
   onClose: () => void
   isDark: boolean
   branchId?: string // Optionnel - pour filtrer par branche si fourni
+  onContactUpdated?: () => void
 }
 
 interface ContactStats {
@@ -37,6 +38,7 @@ export function ContactDetailsModal({
   contactId,
   onClose,
   isDark,
+  onContactUpdated,
 }: ContactDetailsModalProps) {
   const router = useRouter()
   const { t, locale } = useTranslation()

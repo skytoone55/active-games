@@ -1481,6 +1481,7 @@
         "source_phone": "טלפון",
         "source_walkin": "בסניף",
         "source_agenda": "יומן",
+        "source_admin": "מנהל",
         "na": "לא זמין"
       },
       "errors": {

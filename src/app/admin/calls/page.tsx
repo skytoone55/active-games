@@ -635,6 +635,7 @@ export default function CallsPage() {
             setSelectedContactId(null)
           }}
           isDark={isDark}
+          onContactUpdated={() => performSearch()}
         />
       )}
     </div>
