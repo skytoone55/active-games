@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { Search, Phone, PhoneIncoming, PhoneOutgoing, Loader2, ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react'
+import { Search, Phone, PhoneIncoming, PhoneOutgoing, Loader2, ChevronLeft, ChevronRight, RefreshCw, Play, Download, User } from 'lucide-react'
 import { useCalls, type SearchCallsResult } from '@/hooks/useCalls'
 import { useBranches } from '@/hooks/useBranches'
 import { useAuth } from '@/hooks/useAuth'
@@ -10,7 +10,8 @@ import { useUserPermissions } from '@/hooks/useUserPermissions'
 import { useTranslation } from '@/contexts/LanguageContext'
 import { AdminHeader } from '../components/AdminHeader'
 import { CustomSelect } from '../components/CustomSelect'
-import type { Call, CallStatus, CallDirection } from '@/lib/supabase/types'
+import { ContactDetailsModal } from '../components/ContactDetailsModal'
+import type { Call, CallStatus, CallDirection, Contact } from '@/lib/supabase/types'
 
 export default function CallsPage() {
   const router = useRouter()
@@ -31,8 +32,9 @@ export default function CallsPage() {
   const [filterDirection, setFilterDirection] = useState<'all' | CallDirection>('all')
   const [syncing, setSyncing] = useState(false)
   const [syncMessage, setSyncMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
-
-  const pageSize = 20
+  const [pageSize, setPageSize] = useState(20)
+  const [selectedContactId, setSelectedContactId] = useState<string | null>(null)
+  const [contactModalOpen, setContactModalOpen] = useState(false)
 
   // Thème (pour correspondre au pattern des autres pages)
   const [theme, setTheme] = useState<'light' | 'dark'>('dark')
@@ -252,7 +254,7 @@ export default function CallsPage() {
 
         {/* Filtres */}
         <div className={`${isDark ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow p-4 mb-6`}>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Filtre statut */}
             <div>
               <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
@@ -293,6 +295,27 @@ export default function CallsPage() {
                 isDark={isDark}
               />
             </div>
+
+            {/* Lignes par page */}
+            <div>
+              <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                Lignes par page
+              </label>
+              <CustomSelect
+                options={[
+                  { value: '10', label: '10' },
+                  { value: '20', label: '20' },
+                  { value: '50', label: '50' },
+                  { value: '100', label: '100' },
+                ]}
+                value={String(pageSize)}
+                onChange={(value) => {
+                  setPageSize(parseInt(value))
+                  setPage(1)
+                }}
+                isDark={isDark}
+              />
+            </div>
           </div>
         </div>
 
@@ -327,6 +350,11 @@ export default function CallsPage() {
                     <th className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider ${
                       isDark ? 'text-gray-300' : 'text-gray-500'
                     }`}>
+                      Contact
+                    </th>
+                    <th className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider ${
+                      isDark ? 'text-gray-300' : 'text-gray-500'
+                    }`}>
                       Statut
                     </th>
                     <th className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider ${
@@ -339,12 +367,17 @@ export default function CallsPage() {
                     }`}>
                       Date
                     </th>
+                    <th className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider ${
+                      isDark ? 'text-gray-300' : 'text-gray-500'
+                    }`}>
+                      Audio
+                    </th>
                   </tr>
                 </thead>
                 <tbody className={`${isDark ? 'bg-gray-800' : 'bg-white'} divide-y ${
                   isDark ? 'divide-gray-700' : 'divide-gray-200'
                 }`}>
-                  {calls.map((call) => (
+                  {calls.map((call: any) => (
                     <tr key={call.id} className={isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-50'}>
                       <td className="px-6 py-4 whitespace-nowrap">
                         {call.direction === 'inbound' ? (
@@ -355,6 +388,24 @@ export default function CallsPage() {
                       </td>
                       <td className={`px-6 py-4 whitespace-nowrap ${isDark ? 'text-gray-300' : 'text-gray-900'}`}>
                         {call.direction === 'inbound' ? call.from_number : call.to_number}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {call.contact ? (
+                          <button
+                            onClick={() => {
+                              setSelectedContactId(call.contact.id)
+                              setContactModalOpen(true)
+                            }}
+                            className={`flex items-center gap-2 hover:underline ${
+                              isDark ? 'text-blue-400' : 'text-blue-600'
+                            }`}
+                          >
+                            <User className="w-4 h-4" />
+                            {call.contact.first_name} {call.contact.last_name}
+                          </button>
+                        ) : (
+                          <span className={isDark ? 'text-gray-500' : 'text-gray-400'}>-</span>
+                        )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
@@ -372,6 +423,37 @@ export default function CallsPage() {
                       </td>
                       <td className={`px-6 py-4 whitespace-nowrap ${isDark ? 'text-gray-300' : 'text-gray-900'}`}>
                         {formatDate(call.started_at)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {call.recording_url ? (
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => window.open(call.recording_url, '_blank')}
+                              className={`p-2 rounded-lg transition-colors ${
+                                isDark
+                                  ? 'bg-green-900/50 hover:bg-green-800 text-green-400'
+                                  : 'bg-green-100 hover:bg-green-200 text-green-700'
+                              }`}
+                              title="Écouter"
+                            >
+                              <Play className="w-4 h-4" />
+                            </button>
+                            <a
+                              href={call.recording_url}
+                              download
+                              className={`p-2 rounded-lg transition-colors ${
+                                isDark
+                                  ? 'bg-blue-900/50 hover:bg-blue-800 text-blue-400'
+                                  : 'bg-blue-100 hover:bg-blue-200 text-blue-700'
+                              }`}
+                              title="Télécharger"
+                            >
+                              <Download className="w-4 h-4" />
+                            </a>
+                          </div>
+                        ) : (
+                          <span className={isDark ? 'text-gray-500' : 'text-gray-400'}>-</span>
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -422,6 +504,18 @@ export default function CallsPage() {
           </>
         )}
       </div>
+
+      {/* Modal de détails du contact */}
+      {contactModalOpen && selectedContactId && (
+        <ContactDetailsModal
+          contactId={selectedContactId}
+          onClose={() => {
+            setContactModalOpen(false)
+            setSelectedContactId(null)
+          }}
+          isDark={isDark}
+        />
+      )}
     </div>
   )
 }

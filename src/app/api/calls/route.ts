@@ -43,10 +43,19 @@ export async function GET(request: NextRequest) {
 
     const supabase = createServiceRoleClient()
 
-    // Construction de la requête
+    // Construction de la requête avec jointure contact
     let queryBuilder = supabase
       .from('calls')
-      .select('*', { count: 'exact' })
+      .select(`
+        *,
+        contact:contacts(
+          id,
+          first_name,
+          last_name,
+          phone,
+          email
+        )
+      `, { count: 'exact' })
       .eq('branch_id', branchId)
       .order('started_at', { ascending: false })
 
