@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { Search, Phone, PhoneIncoming, PhoneOutgoing, Loader2, ChevronLeft, ChevronRight, RefreshCw, Play, Download, User } from 'lucide-react'
+import { Search, Phone, PhoneIncoming, PhoneOutgoing, Loader2, ChevronLeft, ChevronRight, RefreshCw, Play, Download, User, ArrowUpDown } from 'lucide-react'
 import { useCalls, type SearchCallsResult } from '@/hooks/useCalls'
 import { useBranches } from '@/hooks/useBranches'
 import { useAuth } from '@/hooks/useAuth'
@@ -28,13 +28,13 @@ export default function CallsPage() {
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
   const [total, setTotal] = useState(0)
-  const [filterStatus, setFilterStatus] = useState<'all' | CallStatus>('all')
-  const [filterDirection, setFilterDirection] = useState<'all' | CallDirection>('all')
   const [syncing, setSyncing] = useState(false)
   const [syncMessage, setSyncMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
   const [pageSize, setPageSize] = useState(20)
   const [selectedContactId, setSelectedContactId] = useState<string | null>(null)
   const [contactModalOpen, setContactModalOpen] = useState(false)
+  const [sortBy, setSortBy] = useState<'started_at' | 'duration_seconds'>('started_at')
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
 
   // Thème (pour correspondre au pattern des autres pages)
   const [theme, setTheme] = useState<'light' | 'dark'>('dark')
@@ -66,13 +66,26 @@ export default function CallsPage() {
       const result: SearchCallsResult = await searchCalls({
         query: searchQuery.trim() || undefined,
         branchId: branchToUse.id,
-        status: filterStatus,
-        direction: filterDirection,
+        status: 'all',
+        direction: 'all',
         page,
         pageSize,
       })
 
-      setCalls(result.calls)
+      // Tri local des résultats
+      const sortedCalls = [...result.calls].sort((a: any, b: any) => {
+        if (sortBy === 'started_at') {
+          const dateA = new Date(a.started_at).getTime()
+          const dateB = new Date(b.started_at).getTime()
+          return sortOrder === 'desc' ? dateB - dateA : dateA - dateB
+        } else {
+          return sortOrder === 'desc'
+            ? b.duration_seconds - a.duration_seconds
+            : a.duration_seconds - b.duration_seconds
+        }
+      })
+
+      setCalls(sortedCalls)
       setTotal(result.total)
       setTotalPages(result.totalPages)
     } catch (err) {
@@ -80,7 +93,7 @@ export default function CallsPage() {
     } finally {
       setLoading(false)
     }
-  }, [selectedBranch, branches, searchCalls, searchQuery, filterStatus, filterDirection, page, pageSize])
+  }, [selectedBranch, branches, searchCalls, searchQuery, page, pageSize, sortBy, sortOrder])
 
   useEffect(() => {
     if (effectiveSelectedBranch?.id) {
@@ -124,16 +137,33 @@ export default function CallsPage() {
     return `${minutes}m ${secs}s`
   }
 
-  // Format date
+  // Format date only
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
     return new Intl.DateTimeFormat(locale === 'he' ? 'he-IL' : locale === 'en' ? 'en-US' : 'fr-FR', {
       year: 'numeric',
       month: '2-digit',
       day: '2-digit',
+    }).format(date)
+  }
+
+  // Format time only
+  const formatTime = (dateString: string) => {
+    const date = new Date(dateString)
+    return new Intl.DateTimeFormat(locale === 'he' ? 'he-IL' : locale === 'en' ? 'en-US' : 'fr-FR', {
       hour: '2-digit',
       minute: '2-digit',
     }).format(date)
+  }
+
+  // Gérer le tri
+  const handleSort = (column: 'started_at' | 'duration_seconds') => {
+    if (sortBy === column) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortBy(column)
+      setSortOrder('desc')
+    }
   }
 
   // Synchroniser les appels depuis Telnyx CDR
@@ -226,73 +256,30 @@ export default function CallsPage() {
           </div>
         )}
 
-        {/* Barre de recherche */}
-        <div className={`${isDark ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow p-4 mb-4`}>
-          <div className="relative">
-            <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 ${
-              isDark ? 'text-gray-400' : 'text-gray-500'
-            }`} />
-            <input
-              type="text"
-              placeholder="Rechercher par numéro..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyPress={(e) => {
-                if (e.key === 'Enter') {
-                  setPage(1)
-                  performSearch()
-                }
-              }}
-              className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                isDark
-                  ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400'
-                  : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
-              }`}
-            />
-          </div>
-        </div>
-
-        {/* Filtres */}
+        {/* Barre de recherche et lignes par page */}
         <div className={`${isDark ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow p-4 mb-6`}>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Filtre statut */}
-            <div>
-              <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                Statut
-              </label>
-              <CustomSelect
-                options={[
-                  { value: 'all', label: 'Tous' },
-                  { value: 'completed', label: 'Terminés' },
-                  { value: 'missed', label: 'Manqués' },
-                  { value: 'no-answer', label: 'Sans réponse' },
-                ]}
-                value={filterStatus}
-                onChange={(value) => {
-                  setFilterStatus(value as 'all' | CallStatus)
-                  setPage(1)
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Recherche */}
+            <div className="relative">
+              <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 ${
+                isDark ? 'text-gray-400' : 'text-gray-500'
+              }`} />
+              <input
+                type="text"
+                placeholder="Rechercher par numéro..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter') {
+                    setPage(1)
+                    performSearch()
+                  }
                 }}
-                isDark={isDark}
-              />
-            </div>
-
-            {/* Filtre direction */}
-            <div>
-              <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                Direction
-              </label>
-              <CustomSelect
-                options={[
-                  { value: 'all', label: 'Tous' },
-                  { value: 'inbound', label: 'Entrants' },
-                  { value: 'outbound', label: 'Sortants' },
-                ]}
-                value={filterDirection}
-                onChange={(value) => {
-                  setFilterDirection(value as 'all' | CallDirection)
-                  setPage(1)
-                }}
-                isDark={isDark}
+                className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                  isDark
+                    ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400'
+                    : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
+                }`}
               />
             </div>
 
@@ -357,15 +344,32 @@ export default function CallsPage() {
                     }`}>
                       Statut
                     </th>
-                    <th className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider ${
-                      isDark ? 'text-gray-300' : 'text-gray-500'
-                    }`}>
-                      Durée
+                    <th
+                      onClick={() => handleSort('duration_seconds')}
+                      className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-gray-600 ${
+                        isDark ? 'text-gray-300' : 'text-gray-500'
+                      }`}
+                    >
+                      <div className="flex items-center gap-1">
+                        Durée
+                        {sortBy === 'duration_seconds' && <ArrowUpDown className="w-3 h-3" />}
+                      </div>
+                    </th>
+                    <th
+                      onClick={() => handleSort('started_at')}
+                      className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-gray-600 ${
+                        isDark ? 'text-gray-300' : 'text-gray-500'
+                      }`}
+                    >
+                      <div className="flex items-center gap-1">
+                        Date
+                        {sortBy === 'started_at' && <ArrowUpDown className="w-3 h-3" />}
+                      </div>
                     </th>
                     <th className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider ${
                       isDark ? 'text-gray-300' : 'text-gray-500'
                     }`}>
-                      Date
+                      Heure
                     </th>
                     <th className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider ${
                       isDark ? 'text-gray-300' : 'text-gray-500'
@@ -423,6 +427,9 @@ export default function CallsPage() {
                       </td>
                       <td className={`px-6 py-4 whitespace-nowrap ${isDark ? 'text-gray-300' : 'text-gray-900'}`}>
                         {formatDate(call.started_at)}
+                      </td>
+                      <td className={`px-6 py-4 whitespace-nowrap ${isDark ? 'text-gray-300' : 'text-gray-900'}`}>
+                        {formatTime(call.started_at)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         {call.recording_url ? (
