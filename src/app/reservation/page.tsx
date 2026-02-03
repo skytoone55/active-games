@@ -405,13 +405,15 @@ function ReservationContent() {
 
   // Sélection du type (Game ou Event) - reste sur étape 2 pour saisir participants
   const handleTypeSelect = (type: 'game' | 'event') => {
-    setBookingData({ 
-      ...bookingData, 
-      type, 
-      gameArea: null,
-      numberOfGames: type === 'game' ? 2 : 2, // 2 jeux par défaut
+    // Pour Glilot: forcer gameArea='LASER'
+    const isGlilot = bookingData.branchSlug === 'glilot'
+    setBookingData({
+      ...bookingData,
+      type,
+      gameArea: isGlilot ? 'LASER' : null,
+      numberOfGames: type === 'game' ? (isGlilot ? 1 : 2) : 2, // Glilot: 1 partie laser par défaut, autres: 2 jeux
       players: null,
-      eventType: type === 'event' ? null : null,
+      eventType: type === 'event' ? (isGlilot ? 'event_laser' : null) : null,
       eventAge: null,
     })
     // Ne pas changer d'étape - on attend que l'utilisateur saisisse le nombre de participants
@@ -1063,24 +1065,26 @@ function ReservationContent() {
                     <p className="text-gray-400">{t('booking.step3_game.subtitle')}</p>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                    {/* Active Games - Zap bleu comme dans l'admin */}
-                    <motion.button
-                      onClick={() => handleGameAreaSelect('ACTIVE')}
-                      className={`border-2 rounded-xl p-6 text-center transition-all duration-300 ${
-                        bookingData.gameArea === 'ACTIVE'
-                          ? 'bg-dark-200 border-blue-500/70 shadow-[0_0_20px_rgba(59,130,246,0.3)]'
-                          : 'bg-dark-200/50 border-primary/30 hover:border-blue-500/70 hover:shadow-[0_0_20px_rgba(59,130,246,0.3)]'
-                      }`}
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                    >
-                      <Zap className="w-12 h-12 mx-auto mb-3 text-blue-500" />
-                      <h3 className="text-xl font-bold mb-2">Active Games</h3>
-                      <p className="text-gray-400 text-sm">{t('booking.game_area.active.description')}</p>
-                    </motion.button>
+                  <div className={`grid grid-cols-1 ${bookingData.branchSlug === 'glilot' ? 'md:grid-cols-1' : 'md:grid-cols-3'} gap-6 mb-8`}>
+                    {/* Active Games - Zap bleu comme dans l'admin - Caché pour Glilot */}
+                    {bookingData.branchSlug !== 'glilot' && (
+                      <motion.button
+                        onClick={() => handleGameAreaSelect('ACTIVE')}
+                        className={`border-2 rounded-xl p-6 text-center transition-all duration-300 ${
+                          bookingData.gameArea === 'ACTIVE'
+                            ? 'bg-dark-200 border-blue-500/70 shadow-[0_0_20px_rgba(59,130,246,0.3)]'
+                            : 'bg-dark-200/50 border-primary/30 hover:border-blue-500/70 hover:shadow-[0_0_20px_rgba(59,130,246,0.3)]'
+                        }`}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                      >
+                        <Zap className="w-12 h-12 mx-auto mb-3 text-blue-500" />
+                        <h3 className="text-xl font-bold mb-2">Active Games</h3>
+                        <p className="text-gray-400 text-sm">{t('booking.game_area.active.description')}</p>
+                      </motion.button>
+                    )}
 
-                    {/* Laser - Target violet comme dans l'admin */}
+                    {/* Laser - Target violet comme dans l'admin - Toujours affiché */}
                     <motion.button
                       onClick={() => handleGameAreaSelect('LASER')}
                       className={`border-2 rounded-xl p-6 text-center transition-all duration-300 ${
@@ -1096,21 +1100,23 @@ function ReservationContent() {
                       <p className="text-gray-400 text-sm">{t('booking.game_area.laser.description')}</p>
                     </motion.button>
 
-                    {/* Mix/Sur mesure - Gamepad2 cyan */}
-                    <motion.button
-                      onClick={() => handleGameAreaSelect('MIX')}
-                      className={`border-2 rounded-xl p-6 text-center transition-all duration-300 ${
-                        bookingData.gameArea === 'MIX'
-                          ? 'bg-dark-200 border-cyan-500/70 shadow-[0_0_20px_rgba(6,182,212,0.3)]'
-                          : 'bg-dark-200/50 border-primary/30 hover:border-cyan-500/70 hover:shadow-[0_0_20px_rgba(6,182,212,0.3)]'
-                      }`}
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                    >
-                      <Gamepad2 className="w-12 h-12 mx-auto mb-3 text-cyan-500" />
-                      <h3 className="text-xl font-bold mb-2">{t('booking.game_area.mix.title')}</h3>
-                      <p className="text-gray-400 text-sm">{t('booking.game_area.mix.description')}</p>
-                    </motion.button>
+                    {/* Mix/Sur mesure - Gamepad2 cyan - Caché pour Glilot */}
+                    {bookingData.branchSlug !== 'glilot' && (
+                      <motion.button
+                        onClick={() => handleGameAreaSelect('MIX')}
+                        className={`border-2 rounded-xl p-6 text-center transition-all duration-300 ${
+                          bookingData.gameArea === 'MIX'
+                            ? 'bg-dark-200 border-cyan-500/70 shadow-[0_0_20px_rgba(6,182,212,0.3)]'
+                            : 'bg-dark-200/50 border-primary/30 hover:border-cyan-500/70 hover:shadow-[0_0_20px_rgba(6,182,212,0.3)]'
+                        }`}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                      >
+                        <Gamepad2 className="w-12 h-12 mx-auto mb-3 text-cyan-500" />
+                        <h3 className="text-xl font-bold mb-2">{t('booking.game_area.mix.title')}</h3>
+                        <p className="text-gray-400 text-sm">{t('booking.game_area.mix.description')}</p>
+                      </motion.button>
+                    )}
                   </div>
 
                   {/* Durée/Parties - apparaît après sélection du type */}
@@ -1209,26 +1215,28 @@ function ReservationContent() {
                     <p className="text-gray-400">{t('booking.step3_event.subtitle')}</p>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                    {/* Active Games 1h - Zap bleu comme dans l'admin */}
-                    <motion.button
-                      onClick={() => {
-                        setBookingData({ ...bookingData, gameArea: 'ACTIVE', numberOfGames: 2, eventType: 'event_active' })
-                      }}
-                      className={`border-2 rounded-xl p-6 text-center transition-all duration-300 ${
-                        bookingData.gameArea === 'ACTIVE'
-                          ? 'bg-dark-200 border-blue-500/70 shadow-[0_0_20px_rgba(59,130,246,0.3)]'
-                          : 'bg-dark-200/50 border-primary/30 hover:border-blue-500/70 hover:shadow-[0_0_20px_rgba(59,130,246,0.3)]'
-                      }`}
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                    >
-                      <Zap className="w-12 h-12 mx-auto mb-3 text-blue-500" />
-                      <h3 className="text-xl font-bold mb-2">Active Games</h3>
-                      <p className="text-gray-400 text-sm">{t('booking.event_game.active_1h')}</p>
-                    </motion.button>
+                  <div className={`grid grid-cols-1 ${bookingData.branchSlug === 'glilot' ? 'md:grid-cols-1' : 'md:grid-cols-3'} gap-6 mb-6`}>
+                    {/* Active Games 1h - Zap bleu comme dans l'admin - Caché pour Glilot */}
+                    {bookingData.branchSlug !== 'glilot' && (
+                      <motion.button
+                        onClick={() => {
+                          setBookingData({ ...bookingData, gameArea: 'ACTIVE', numberOfGames: 2, eventType: 'event_active' })
+                        }}
+                        className={`border-2 rounded-xl p-6 text-center transition-all duration-300 ${
+                          bookingData.gameArea === 'ACTIVE'
+                            ? 'bg-dark-200 border-blue-500/70 shadow-[0_0_20px_rgba(59,130,246,0.3)]'
+                            : 'bg-dark-200/50 border-primary/30 hover:border-blue-500/70 hover:shadow-[0_0_20px_rgba(59,130,246,0.3)]'
+                        }`}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                      >
+                        <Zap className="w-12 h-12 mx-auto mb-3 text-blue-500" />
+                        <h3 className="text-xl font-bold mb-2">Active Games</h3>
+                        <p className="text-gray-400 text-sm">{t('booking.event_game.active_1h')}</p>
+                      </motion.button>
+                    )}
 
-                    {/* Laser 2 parties - Target violet comme dans l'admin */}
+                    {/* Laser 2 parties - Target violet comme dans l'admin - Toujours affiché */}
                     <motion.button
                       onClick={() => {
                         setBookingData({ ...bookingData, gameArea: 'LASER', numberOfGames: 2, eventType: 'event_laser' })
@@ -1246,23 +1254,25 @@ function ReservationContent() {
                       <p className="text-gray-400 text-sm">{t('booking.event_game.laser_2games')}</p>
                     </motion.button>
 
-                    {/* Mix - Gamepad2 cyan */}
-                    <motion.button
-                      onClick={() => {
-                        setBookingData({ ...bookingData, gameArea: 'MIX', numberOfGames: 2, eventType: 'event_mix' })
-                      }}
-                      className={`border-2 rounded-xl p-6 text-center transition-all duration-300 ${
-                        bookingData.gameArea === 'MIX'
-                          ? 'bg-dark-200 border-cyan-500/70 shadow-[0_0_20px_rgba(6,182,212,0.3)]'
-                          : 'bg-dark-200/50 border-primary/30 hover:border-cyan-500/70 hover:shadow-[0_0_20px_rgba(6,182,212,0.3)]'
-                      }`}
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                    >
-                      <Gamepad2 className="w-12 h-12 mx-auto mb-3 text-cyan-500" />
-                      <h3 className="text-xl font-bold mb-2">Mix</h3>
-                      <p className="text-gray-400 text-sm">{t('booking.event_game.mix')}</p>
-                    </motion.button>
+                    {/* Mix - Gamepad2 cyan - Caché pour Glilot */}
+                    {bookingData.branchSlug !== 'glilot' && (
+                      <motion.button
+                        onClick={() => {
+                          setBookingData({ ...bookingData, gameArea: 'MIX', numberOfGames: 2, eventType: 'event_mix' })
+                        }}
+                        className={`border-2 rounded-xl p-6 text-center transition-all duration-300 ${
+                          bookingData.gameArea === 'MIX'
+                            ? 'bg-dark-200 border-cyan-500/70 shadow-[0_0_20px_rgba(6,182,212,0.3)]'
+                            : 'bg-dark-200/50 border-primary/30 hover:border-cyan-500/70 hover:shadow-[0_0_20px_rgba(6,182,212,0.3)]'
+                        }`}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                      >
+                        <Gamepad2 className="w-12 h-12 mx-auto mb-3 text-cyan-500" />
+                        <h3 className="text-xl font-bold mb-2">Mix</h3>
+                        <p className="text-gray-400 text-sm">{t('booking.event_game.mix')}</p>
+                      </motion.button>
+                    )}
                   </div>
 
                   {/* Bouton Continuer */}
