@@ -681,7 +681,8 @@
       "language_english": "English",
       "language_hebrew": "עברית",
       "pending_orders": "commandes en attente",
-      "statistics": "Statistiques"
+      "statistics": "Statistiques",
+      "user": "Utilisateur"
     },
     "data_management": {
       "title": "Gestion des donnees",
@@ -1143,6 +1144,25 @@
         "delete": "Supprimer",
         "reset_password": "Reinitialiser le mot de passe"
       },
+      "fields": {
+        "email": "Email",
+        "email_placeholder": "exemple@email.com",
+        "first_name": "Prénom",
+        "first_name_placeholder": "Prénom",
+        "last_name": "Nom",
+        "last_name_placeholder": "Nom",
+        "phone": "Téléphone",
+        "phone_placeholder": "05XXXXXXXX",
+        "role": "Rôle",
+        "branches": "Agences",
+        "select_branch_hint": "Sélectionnez au moins une agence",
+        "no_roles_available": "Aucun rôle disponible"
+      },
+      "errors": {
+        "select_branch": "Veuillez sélectionner au moins une agence",
+        "select_role": "Veuillez sélectionner un rôle",
+        "create_failed": "Échec de la création de l'utilisateur"
+      },
       "modal": {
         "create_title": "Creer un utilisateur",
         "edit_title": "Modifier l'utilisateur",
@@ -1160,7 +1180,16 @@
         "branches": "Agences",
         "select_branches": "Selectionnez les agences",
         "temp_password": "Mot de passe temporaire",
-        "copy_password": "Copier"
+        "copy_password": "Copier",
+        "user_created": "Utilisateur créé avec succès",
+        "temp_password_generated": "Mot de passe temporaire généré",
+        "temp_password_instruction": "Veuillez partager ce mot de passe avec l'utilisateur. Il devra le changer lors de sa première connexion.",
+        "hide_password": "Masquer le mot de passe",
+        "show_password": "Afficher le mot de passe",
+        "copied": "Copié",
+        "copy": "Copier",
+        "creating": "Création en cours...",
+        "create_button": "Créer l'utilisateur"
       },
       "no_users": "Aucun utilisateur trouve",
       "loading_error": "Erreur lors du chargement des utilisateurs"

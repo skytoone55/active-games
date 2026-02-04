@@ -658,7 +658,8 @@
       "language_hebrew": "עברית",
       "pending_orders": "הזמנות ממתינות",
       "notifications": "התראות",
-      "statistics": "סטטיסטיקות"
+      "statistics": "סטטיסטיקות",
+      "user": "משתמש"
     },
     "data_management": {
       "title": "ניהול נתונים",
@@ -1166,6 +1167,30 @@
         "branch": "סניף",
         "all_branches": "כל הסניפים"
       },
+      "actions": {
+        "edit": "ערוך",
+        "delete": "מחק",
+        "reset_password": "אפס סיסמה"
+      },
+      "fields": {
+        "email": "אימייל",
+        "email_placeholder": "example@email.com",
+        "first_name": "שם פרטי",
+        "first_name_placeholder": "שם פרטי",
+        "last_name": "שם משפחה",
+        "last_name_placeholder": "שם משפחה",
+        "phone": "טלפון",
+        "phone_placeholder": "05XXXXXXXX",
+        "role": "תפקיד",
+        "branches": "סניפים",
+        "select_branch_hint": "בחר לפחות סניף אחד",
+        "no_roles_available": "אין תפקידים זמינים"
+      },
+      "errors": {
+        "select_branch": "אנא בחר לפחות סניף אחד",
+        "select_role": "אנא בחר תפקיד",
+        "create_failed": "יצירת המשתמש נכשלה"
+      },
       "modal": {
         "create_title": "צור משתמש",
         "edit_title": "ערוך משתמש",
@@ -1183,7 +1208,16 @@
         "branches": "סניפים",
         "select_branches": "בחר סניפים",
         "temp_password": "סיסמה זמנית",
-        "copy_password": "העתק סיסמה"
+        "copy_password": "העתק סיסמה",
+        "user_created": "המשתמש נוצר בהצלחה",
+        "temp_password_generated": "סיסמה זמנית נוצרה",
+        "temp_password_instruction": "אנא שתף סיסמה זו עם המשתמש. הוא יצטרך לשנות אותה בהתחברות הראשונה.",
+        "hide_password": "הסתר סיסמה",
+        "show_password": "הצג סיסמה",
+        "copied": "הועתק",
+        "copy": "העתק",
+        "creating": "יוצר...",
+        "create_button": "צור משתמש"
       },
       "delete_confirm": "האם אתה בטוח שברצונך למחוק את המשתמש {{name}}?",
       "no_users": "לא נמצאו משתמשים"

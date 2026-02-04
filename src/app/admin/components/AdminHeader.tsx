@@ -80,6 +80,22 @@ function AdminHeaderComponent({
   const pendingOrdersCount = usePendingOrdersCount(selectedBranch?.id || null)
   const hasPendingOrders = pendingOrdersCount > 0
 
+  // Construire le nom complet à partir du profil
+  const getUserDisplayName = () => {
+    if (!user.profile) return user.email
+
+    // Utiliser full_name si disponible, sinon construire à partir de first_name et last_name
+    if (user.profile.full_name) {
+      return user.profile.full_name
+    }
+
+    const firstName = user.profile.first_name || ''
+    const lastName = user.profile.last_name || ''
+    const fullName = `${firstName} ${lastName}`.trim()
+
+    return fullName || user.email
+  }
+
   const getRoleBadge = () => {
     const baseClasses = "px-2 py-0.5 text-xs rounded-full"
     switch (user.role) {
@@ -312,7 +328,7 @@ function AdminHeaderComponent({
                 <div className={`text-sm font-medium ${
                   theme === 'dark' ? 'text-white' : 'text-gray-900'
                 }`}>
-                  {user.profile?.full_name || user.email}
+                  {getUserDisplayName()}
                 </div>
                 {getRoleBadge()}
               </div>
@@ -333,7 +349,7 @@ function AdminHeaderComponent({
                   <div className={`text-sm font-medium ${
                     theme === 'dark' ? 'text-white' : 'text-gray-900'
                   }`}>
-                    {user.profile?.full_name || t('admin.header.user')}
+                    {getUserDisplayName()}
                   </div>
                   <div className={`text-xs ${
                     theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
@@ -616,7 +632,7 @@ function AdminHeaderComponent({
             }`}>
               <div className={`px-4 py-2 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
                 <div className="text-sm font-medium">
-                  {user.profile?.full_name || user.email}
+                  {getUserDisplayName()}
                 </div>
                 <div className={`text-xs mt-1 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
                   {user.email}

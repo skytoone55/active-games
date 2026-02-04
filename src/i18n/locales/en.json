@@ -624,7 +624,8 @@
       "language_english": "English",
       "language_hebrew": "עברית",
       "pending_orders": "pending orders",
-      "statistics": "Statistics"
+      "statistics": "Statistics",
+      "user": "User"
     },
     "data_management": {
       "title": "Data Management",
@@ -1086,6 +1087,25 @@
         "delete": "Delete",
         "reset_password": "Reset password"
       },
+      "fields": {
+        "email": "Email",
+        "email_placeholder": "example@email.com",
+        "first_name": "First name",
+        "first_name_placeholder": "First name",
+        "last_name": "Last name",
+        "last_name_placeholder": "Last name",
+        "phone": "Phone",
+        "phone_placeholder": "05XXXXXXXX",
+        "role": "Role",
+        "branches": "Branches",
+        "select_branch_hint": "Select at least one branch",
+        "no_roles_available": "No roles available"
+      },
+      "errors": {
+        "select_branch": "Please select at least one branch",
+        "select_role": "Please select a role",
+        "create_failed": "Failed to create user"
+      },
       "modal": {
         "create_title": "Create user",
         "edit_title": "Edit user",
@@ -1103,7 +1123,16 @@
         "branches": "Branches",
         "select_branches": "Select branches",
         "temp_password": "Temporary password",
-        "copy_password": "Copy"
+        "copy_password": "Copy",
+        "user_created": "User created successfully",
+        "temp_password_generated": "Temporary password generated",
+        "temp_password_instruction": "Please share this password with the user. They will need to change it on first login.",
+        "hide_password": "Hide password",
+        "show_password": "Show password",
+        "copied": "Copied",
+        "copy": "Copy",
+        "creating": "Creating...",
+        "create_button": "Create user"
       },
       "no_users": "No users found",
       "loading_error": "Error loading users"
