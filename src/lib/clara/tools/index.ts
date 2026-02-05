@@ -222,10 +222,12 @@ This tool will tell you if the slot is really available or not, and suggest alte
     const gameDuration = settings.game_duration_minutes || 30
     const pauseDuration = 30
 
-    // Construire la date/heure - valeurs absolues
-    // IMPORTANT: Le 'Z' force l'interprétation comme valeur absolue (pas de conversion timezone locale)
-    // Clara envoie "10:00" → on vérifie 10:00Z, la BD stocke "10:00" (sans Z mais interprété comme absolu)
-    const startDateTime = new Date(`${date}T${time}:00Z`)
+    // Clara envoie l'heure ISRAEL (ce que le client voit)
+    // La BD stocke en UTC, donc convertir Israel → UTC
+    const { createIsraelDateTime } = await import('@/lib/dates')
+    const startDateTime = createIsraelDateTime(date, time)
+
+    console.log('[simulateBooking] Checking:', date, time, '→ UTC:', startDateTime.toISOString())
 
     // ========== SIMULATION GAME ==========
     if (type === 'GAME') {
