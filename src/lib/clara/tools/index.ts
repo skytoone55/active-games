@@ -222,9 +222,11 @@ This tool will tell you if the slot is really available or not, and suggest alte
     const gameDuration = settings.game_duration_minutes || 30
     const pauseDuration = 30
 
-    // Construire la date/heure - IMPORTANT: Utiliser UTC pour éviter les problèmes de timezone
-    // Les dates en BD sont en UTC, on doit comparer en UTC pour que les overlaps soient corrects
-    const startDateTime = new Date(`${date}T${time}:00Z`)
+    // Construire la date/heure
+    // IMPORTANT: Clara envoie l'heure en timezone ISRAEL (ce que le client voit)
+    // La BD stocke en UTC, donc on doit convertir Israel → UTC
+    // Israel = UTC+2 (ou UTC+3 en été DST, mais simplifions avec +02:00)
+    const startDateTime = new Date(`${date}T${time}:00+02:00`)
 
     // ========== SIMULATION GAME ==========
     if (type === 'GAME') {
