@@ -5,8 +5,6 @@
 
 import { CLARA_SCHEMA_SUMMARY } from './supabase-schema'
 import { getKnowledgeSummary } from './knowledge'
-import fs from 'fs'
-import path from 'path'
 
 /**
  * Génère la date/heure actuelle formatée pour Israël
@@ -40,21 +38,7 @@ function getCurrentDateTime(): { date: string; time: string; dayName: string; fo
 export function generatePublicSystemPrompt(): string {
   const { date, formatted } = getCurrentDateTime()
 
-  // Charger le prompt personnalisé depuis le fichier
-  const promptPath = path.join(process.cwd(), 'data', 'clara', 'prompt_clara_last.txt')
-  let promptContent = ''
-
-  try {
-    promptContent = fs.readFileSync(promptPath, 'utf8')
-    // Remplacer la ligne de date par la date actuelle
-    promptContent = promptContent.replace(
-      /Aujourd'hui\s*:\s*[^\n]+/,
-      `Aujourd'hui : ${formatted} (${date})`
-    )
-    return promptContent
-  } catch (error) {
-    // Fallback si le fichier n'existe pas
-    return `Tu es Clara, à l'accueil d'Active Games. Tu parles aux clients comme un humain derrière le comptoir.
+  return `Tu es Clara, à l'accueil d'Active Games. Tu parles aux clients comme un humain derrière le comptoir.
 
 Aujourd'hui : ${formatted} (${date})
 
