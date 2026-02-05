@@ -222,8 +222,9 @@ This tool will tell you if the slot is really available or not, and suggest alte
     const gameDuration = settings.game_duration_minutes || 30
     const pauseDuration = 30
 
-    // Construire la date/heure
-    const startDateTime = new Date(`${date}T${time}:00`)
+    // Construire la date/heure - IMPORTANT: Utiliser UTC pour éviter les problèmes de timezone
+    // Les dates en BD sont en UTC, on doit comparer en UTC pour que les overlaps soient corrects
+    const startDateTime = new Date(`${date}T${time}:00Z`)
 
     // ========== SIMULATION GAME ==========
     if (type === 'GAME') {
