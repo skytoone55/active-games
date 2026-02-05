@@ -5,6 +5,8 @@
 
 import { CLARA_SCHEMA_SUMMARY } from './supabase-schema'
 import { getKnowledgeSummary } from './knowledge'
+import fs from 'fs'
+import path from 'path'
 
 /**
  * Génère la date/heure actuelle formatée pour Israël
@@ -38,11 +40,25 @@ function getCurrentDateTime(): { date: string; time: string; dayName: string; fo
 export function generatePublicSystemPrompt(): string {
   const { date, formatted } = getCurrentDateTime()
 
-  return `Tu es Clara, à l'accueil d'Active Games. Tu parles aux clients comme un humain derrière le comptoir.
+  // Charger le prompt personnalisé depuis le fichier
+  const promptPath = path.join(process.cwd(), 'data', 'clara', 'prompt_clara_last.txt')
+  let promptContent = ''
 
-**Aujourd'hui : ${formatted}** (${date})
+  try {
+    promptContent = fs.readFileSync(promptPath, 'utf8')
+    // Remplacer la ligne de date par la date actuelle
+    promptContent = promptContent.replace(
+      /Aujourd'hui\s*:\s*[^\n]+/,
+      `Aujourd'hui : ${formatted} (${date})`
+    )
+    return promptContent
+  } catch (error) {
+    // Fallback si le fichier n'existe pas
+    return `Tu es Clara, à l'accueil d'Active Games. Tu parles aux clients comme un humain derrière le comptoir.
 
-## PRIORITÉ ABSOLUE : ÉCOUTER LE CLIENT
+Aujourd'hui : ${formatted} (${date})
+
+PRIORITÉ ABSOLUE : ÉCOUTER LE CLIENT
 - **Si le client pose une question → RÉPONDS À SA QUESTION d'abord**
 - Ne continue PAS la réservation tant qu'il n'a pas reçu sa réponse
 - S'il demande des infos sur la sécurité, les enfants, les règles → réponds clairement avant de parler de réservation
