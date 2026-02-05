@@ -222,9 +222,10 @@ This tool will tell you if the slot is really available or not, and suggest alte
     const gameDuration = settings.game_duration_minutes || 30
     const pauseDuration = 30
 
-    // Construire la date/heure - valeurs absolues sans timezone
-    // Clara envoie "10:00" → on vérifie 10:00, la BD stocke 10:00, pas de conversion
-    const startDateTime = new Date(`${date}T${time}:00`)
+    // Construire la date/heure - valeurs absolues
+    // IMPORTANT: Le 'Z' force l'interprétation comme valeur absolue (pas de conversion timezone locale)
+    // Clara envoie "10:00" → on vérifie 10:00Z, la BD stocke "10:00" (sans Z mais interprété comme absolu)
+    const startDateTime = new Date(`${date}T${time}:00Z`)
 
     // ========== SIMULATION GAME ==========
     if (type === 'GAME') {
@@ -265,6 +266,16 @@ This tool will tell you if the slot is really available or not, and suggest alte
           `)
           .eq('branch_id', branchId)
           .neq('status', 'CANCELLED')
+
+        console.log('[simulateBooking] Total bookings found:', existingBookings?.length || 0)
+        if (existingBookings) {
+          existingBookings.forEach(b => {
+            console.log('  Booking:', b.id, 'participants:', b.participants_count, 'sessions:', b.game_sessions?.length || 0)
+            b.game_sessions?.forEach(s => {
+              console.log('    Session:', s.game_area, 'from', s.start_datetime, 'to', s.end_datetime)
+            })
+          })
+        }
 
         // Vérifier chaque tranche de 15 min
         const SLOT_DURATION = 15
