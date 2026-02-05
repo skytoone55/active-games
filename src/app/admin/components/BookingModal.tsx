@@ -1779,10 +1779,10 @@ export function BookingModal({
         // Pour GAME : un seul slot continu
         const slotStart = new Date(localDate)
         slotStart.setHours(hour, minute, 0, 0)
-        
-        const slotEnd = new Date(localDate)
-        slotEnd.setHours(hour, minute, parsedDuration, 0)
-        
+
+        const slotEnd = new Date(slotStart)
+        slotEnd.setMinutes(slotEnd.getMinutes() + parsedDuration)
+
         slots.push({
           slot_start: slotStart.toISOString(),
           slot_end: slotEnd.toISOString(),

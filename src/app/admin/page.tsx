@@ -468,8 +468,9 @@ export default function AdminPage() {
   const TOTAL_ROOMS = branchForSettings?.rooms?.filter(r => r.is_active).length || 0
 
   // Générer toutes les tranches de 15 minutes pour la journée (pour les calculs de segments)
+  // IMPORTANT: Utiliser effectiveHours pour inclure les bookings matinaux (avant 10h)
   const timeSlotDates: Date[] = []
-  for (let h = 10; h <= 22; h++) {
+  for (let h = effectiveHours.minHour; h <= effectiveHours.maxHour; h++) {
     for (const m of [0, 15, 30, 45]) {
       const slotDate = new Date(selectedDate)
       slotDate.setHours(h, m, 0, 0)
