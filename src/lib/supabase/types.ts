@@ -421,6 +421,297 @@ export interface Database {
         Insert: Omit<Database['public']['Tables']['icount_formulas']['Row'], 'id' | 'created_at' | 'updated_at'>
         Update: Partial<Database['public']['Tables']['icount_formulas']['Insert']>
       }
+      messenger_settings: {
+        Row: {
+          id: string
+          is_active: boolean
+          welcome_delay_seconds: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          is_active?: boolean
+          welcome_delay_seconds?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          is_active?: boolean
+          welcome_delay_seconds?: number
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      messenger_faq: {
+        Row: {
+          id: string
+          category: string
+          question: Json
+          answer: Json
+          order_index: number
+          is_active: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          category: string
+          question: Json
+          answer: Json
+          order_index?: number
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          category?: string
+          question?: Json
+          answer?: Json
+          order_index?: number
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      messenger_validation_formats: {
+        Row: {
+          id: string
+          format_code: string
+          format_name: string
+          validation_regex: string | null
+          error_message: Json
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          format_code: string
+          format_name: string
+          validation_regex?: string | null
+          error_message: Json
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          format_code?: string
+          format_name?: string
+          validation_regex?: string | null
+          error_message?: Json
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      messenger_modules: {
+        Row: {
+          id: string
+          ref_code: string
+          name: string
+          module_type: string
+          content: Json
+          validation_format_code: string | null
+          choices: Json | null
+          llm_config: Json | null
+          category: string
+          is_active: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          ref_code: string
+          name: string
+          module_type: string
+          content: Json
+          validation_format_code?: string | null
+          choices?: Json | null
+          llm_config?: Json | null
+          category?: string
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          ref_code?: string
+          name?: string
+          module_type?: string
+          content?: Json
+          validation_format_code?: string | null
+          choices?: Json | null
+          llm_config?: Json | null
+          category?: string
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      messenger_workflows: {
+        Row: {
+          id: string
+          name: string
+          description: string | null
+          is_active: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          description?: string | null
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          description?: string | null
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      messenger_workflow_steps: {
+        Row: {
+          id: string
+          workflow_id: string
+          step_ref: string
+          step_name: string
+          module_ref: string
+          is_entry_point: boolean
+          order_index: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          workflow_id: string
+          step_ref: string
+          step_name: string
+          module_ref: string
+          is_entry_point?: boolean
+          order_index?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          workflow_id?: string
+          step_ref?: string
+          step_name?: string
+          module_ref?: string
+          is_entry_point?: boolean
+          order_index?: number
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      messenger_workflow_outputs: {
+        Row: {
+          id: string
+          workflow_id: string
+          from_step_ref: string
+          output_type: string
+          output_label: string | null
+          destination_type: string
+          destination_ref: string | null
+          priority: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          workflow_id: string
+          from_step_ref: string
+          output_type: string
+          output_label?: string | null
+          destination_type: string
+          destination_ref?: string | null
+          priority?: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          workflow_id?: string
+          from_step_ref?: string
+          output_type?: string
+          output_label?: string | null
+          destination_type?: string
+          destination_ref?: string | null
+          priority?: number
+          created_at?: string
+        }
+      }
+      messenger_conversations: {
+        Row: {
+          id: string
+          session_id: string
+          branch_id: string | null
+          contact_id: string | null
+          current_workflow_id: string
+          current_step_ref: string | null
+          collected_data: Json
+          status: string
+          completed_at: string | null
+          last_activity_at: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          session_id: string
+          branch_id?: string | null
+          contact_id?: string | null
+          current_workflow_id: string
+          current_step_ref?: string | null
+          collected_data?: Json
+          status?: string
+          completed_at?: string | null
+          last_activity_at?: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          session_id?: string
+          branch_id?: string | null
+          contact_id?: string | null
+          current_workflow_id?: string
+          current_step_ref?: string | null
+          collected_data?: Json
+          status?: string
+          completed_at?: string | null
+          last_activity_at?: string
+          created_at?: string
+        }
+      }
+      messenger_messages: {
+        Row: {
+          id: string
+          conversation_id: string
+          role: string
+          content: string
+          step_ref: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          conversation_id: string
+          role: string
+          content: string
+          step_ref?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          conversation_id?: string
+          role?: string
+          content?: string
+          step_ref?: string | null
+          created_at?: string
+        }
+      }
     }
     Views: {}
     Functions: {}

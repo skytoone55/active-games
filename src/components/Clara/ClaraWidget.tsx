@@ -3,7 +3,14 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { X, Send, Loader2, ChevronDown, Plus, Minus, RefreshCw, ExternalLink } from 'lucide-react'
-import { useClaraChat, ChatMessage } from '@/hooks/useClaraChat'
+
+interface ChatMessage {
+  id: string
+  role: 'user' | 'assistant'
+  content: string
+  isStreaming?: boolean
+  choices?: Array<{ id: string; label: string; value: string }>
+}
 
 interface ClaraWidgetProps {
   branchId?: string
@@ -274,6 +281,9 @@ export function ClaraWidget({
   const [input, setInput] = useState('')
   const [sessionId, setSessionId] = useState('')
   const [fontSize, setFontSize] = useState<FontSize>(DEFAULT_FONT_SIZE)
+  const [messages, setMessages] = useState<ChatMessage[]>([])
+  const [isLoading, setIsLoading] = useState(false)
+  const [conversationId, setConversationId] = useState<string | null>(null)
 
   const chatContainerRef = useRef<HTMLDivElement>(null)
   const chatEndRef = useRef<HTMLDivElement>(null)
@@ -301,12 +311,110 @@ export function ClaraWidget({
     })
   }, [])
 
-  const { messages, isLoading, sendMessage, resetChat } = useClaraChat({
-    context: 'public',
-    sessionId,
-    branchId,
-    locale,
-  })
+  // Démarrer la conversation avec le workflow
+  const startConversation = useCallback(async () => {
+    console.log('[Clara] startConversation called', { conversationId, sessionId })
+    if (conversationId) {
+      console.log('[Clara] Conversation already exists, skipping')
+      return
+    }
+
+    setIsLoading(true)
+    try {
+      console.log('[Clara] Fetching /api/messenger/start...')
+      const res = await fetch('/api/messenger/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionId,
+          branchId,
+          contactId: null,
+          locale
+        })
+      })
+
+      const data = await res.json()
+      console.log('[Clara] API response:', data)
+      if (data.success) {
+        setConversationId(data.conversationId)
+        setMessages([
+          {
+            id: '1',
+            role: 'assistant',
+            content: data.firstMessage,
+            isStreaming: false,
+            choices: data.choices
+          }
+        ])
+        console.log('[Clara] First message set:', data.firstMessage)
+      } else {
+        console.error('[Clara] API returned error:', data.error)
+      }
+    } catch (error) {
+      console.error('[Clara] Error starting conversation:', error)
+    } finally {
+      setIsLoading(false)
+    }
+  }, [sessionId, branchId, conversationId])
+
+  // Envoyer un message
+  const sendMessage = useCallback(async (userMessage: string) => {
+    if (!conversationId || isLoading) return
+
+    // Ajouter le message utilisateur
+    const userMsg: ChatMessage = {
+      id: `user_${Date.now()}`,
+      role: 'user',
+      content: userMessage,
+      isStreaming: false
+    }
+    setMessages((prev) => [...prev, userMsg])
+
+    setIsLoading(true)
+    try {
+      const res = await fetch('/api/messenger/message', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          conversationId,
+          message: userMessage
+        })
+      })
+
+      const data = await res.json()
+      // Afficher le message ou les choix (au moins l'un des deux doit exister)
+      if (data.message || data.choices) {
+        const assistantMsg: ChatMessage = {
+          id: `assistant_${Date.now()}`,
+          role: 'assistant',
+          content: data.message || '',
+          isStreaming: false,
+          choices: data.choices
+        }
+        setMessages((prev) => [...prev, assistantMsg])
+      }
+    } catch (error) {
+      console.error('Error sending message:', error)
+    } finally {
+      setIsLoading(false)
+    }
+  }, [conversationId, isLoading])
+
+  // Réinitialiser la conversation
+  const resetChat = useCallback(() => {
+    setMessages([])
+    setConversationId(null)
+    setShowQuickReplies(true)
+  }, [])
+
+  // Démarrer la conversation quand le widget s'ouvre
+  useEffect(() => {
+    console.log('[Clara] useEffect triggered', { isOpen, sessionId, conversationId })
+    if (isOpen && sessionId && !conversationId) {
+      console.log('[Clara] Starting conversation...')
+      startConversation()
+    }
+  }, [isOpen, sessionId, conversationId, startConversation])
 
   // Direction RTL pour l'hébreu
   const isRTL = locale === 'he'
@@ -476,19 +584,11 @@ export function ClaraWidget({
 
           {/* Zone de chat */}
           <div ref={chatContainerRef} className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
-            {/* Message de bienvenue */}
-            {messages.length === 0 && (
-              <div className={`flex ${isRTL ? 'justify-end' : 'justify-start'}`}>
-                <div className="max-w-[85%] rounded-2xl px-4 py-3 bg-white shadow-sm border border-gray-100">
-                  <p className="text-gray-800" style={{ fontSize: `${fontSize}px`, lineHeight: 1.5 }}>{WELCOME_MESSAGES[locale]}</p>
-                </div>
-              </div>
-            )}
-
             {/* Messages */}
             {messages.map((msg) => {
               // Ne pas afficher les messages assistant vides (sauf si en streaming)
-              if (msg.role === 'assistant' && !msg.content && !msg.isStreaming) {
+              // Ne pas afficher si c'est un assistant sans contenu, sans choix et qui ne stream pas
+              if (msg.role === 'assistant' && !msg.content && !msg.isStreaming && (!msg.choices || msg.choices.length === 0)) {
                 return null
               }
               return (
@@ -504,16 +604,39 @@ export function ClaraWidget({
                     }`}
                     style={msg.role === 'user' ? { backgroundColor: primaryColor } : undefined}
                   >
-                    <p className="whitespace-pre-wrap" style={{ fontSize: `${fontSize}px`, lineHeight: 1.5 }}>
-                      <MessageContent
-                        content={msg.content}
-                        isStreaming={msg.isStreaming}
-                        fontSize={fontSize}
-                        primaryColor={primaryColor}
-                        locale={locale}
-                        onBookingLinkClick={() => setIsOpen(false)}
-                      />
-                    </p>
+                    {msg.content && (
+                      <p className="whitespace-pre-wrap" style={{ fontSize: `${fontSize}px`, lineHeight: 1.5 }}>
+                        <MessageContent
+                          content={msg.content}
+                          isStreaming={msg.isStreaming}
+                          fontSize={fontSize}
+                          primaryColor={primaryColor}
+                          locale={locale}
+                          onBookingLinkClick={() => setIsOpen(false)}
+                        />
+                      </p>
+                    )}
+                    {/* Choix multiples sous forme de boutons */}
+                    {msg.choices && msg.choices.length > 0 && (
+                      <div className="flex flex-col gap-2 mt-3">
+                        {msg.choices.map((choice) => (
+                          <button
+                            key={choice.id}
+                            onClick={() => {
+                              sendMessage(choice.label)
+                            }}
+                            className="w-full px-4 py-2 rounded-lg text-left transition-colors hover:opacity-90"
+                            style={{
+                              backgroundColor: primaryColor,
+                              color: 'white',
+                              fontSize: `${fontSize}px`
+                            }}
+                          >
+                            {choice.label}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               )

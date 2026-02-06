@@ -12,6 +12,7 @@
     "@ai-sdk/anthropic": "^3.0.23",
     "@ai-sdk/google": "^3.0.13",
     "@ai-sdk/openai": "^3.0.18",
+    "@anthropic-ai/sdk": "^0.73.0",
     "@getbrevo/brevo": "^3.0.1",
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.90.1",

@@ -11,7 +11,8 @@ import {
   CreditCard,
   Package,
   Wrench,
-  Sparkles
+  Sparkles,
+  MessageSquare
 } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { useBranches } from '@/hooks/useBranches'
@@ -22,9 +23,10 @@ import { CredentialsSection } from './components/CredentialsSection'
 import { ICountCatalogSection } from './components/ICountCatalogSection'
 import { MaintenanceSection } from './components/MaintenanceSection'
 import { ClaraSection } from './components/ClaraSection'
+import { MessengerSection } from './components/MessengerSection'
 import { createClient } from '@/lib/supabase/client'
 
-type SettingsSection = 'templates' | 'credentials' | 'catalog' | 'maintenance' | 'clara'
+type SettingsSection = 'templates' | 'credentials' | 'catalog' | 'maintenance' | 'messenger' | 'clara'
 
 export default function SettingsPage() {
   const router = useRouter()
@@ -111,10 +113,16 @@ export default function SettingsPage() {
       description: 'Outils de maintenance'
     },
     {
+      id: 'messenger',
+      icon: MessageSquare,
+      label: 'Messenger',
+      description: 'Messagerie automatisée'
+    },
+    {
       id: 'clara',
       icon: Sparkles,
       label: 'Clara AI',
-      description: 'Assistant virtuel'
+      description: 'Assistant virtuel (désactivé)'
     }
   ]
 
@@ -208,6 +216,9 @@ export default function SettingsPage() {
           )}
           {activeSection === 'maintenance' && (
             <MaintenanceSection isDark={isDark} />
+          )}
+          {activeSection === 'messenger' && (
+            <MessengerSection isDark={isDark} />
           )}
           {activeSection === 'clara' && (
             <ClaraSection isDark={isDark} />
