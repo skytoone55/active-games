@@ -159,14 +159,61 @@ export async function startConversation(
     })
   }
 
-  // Préparer les choix si c'est un module choix_multiples
-  const choices = module.module_type === 'choix_multiples' && module.choices
-    ? module.choices.map((choice: any, index: number) => ({
-        id: choice.id,
-        label: choice.label[locale] || choice.label.fr || choice.label.en,
-        value: `${index + 1}`
-      }))
-    : null
+  // Préparer les choix selon le type de module
+  let choices = null
+
+  if (module.module_type === 'choix_multiples' && module.choices) {
+    choices = module.choices.map((choice: any, index: number) => ({
+      id: choice.id,
+      label: choice.label[locale] || choice.label.fr || choice.label.en,
+      value: `${index + 1}`
+    }))
+  } else if (module.module_type === 'availability_suggestions') {
+    // Construire les choix dynamiquement à partir des alternatives
+    const collectedData = conversation.collected_data as Record<string, any>
+    const alternatives = collectedData?.alternatives || {}
+    const suggestionChoices = []
+
+    if (alternatives.beforeSlot) {
+      suggestionChoices.push({
+        id: `before_${alternatives.beforeSlot.replace(':', '')}`,
+        label: locale === 'fr' ? `${alternatives.beforeSlot} (plus tôt le même jour)` :
+               locale === 'en' ? `${alternatives.beforeSlot} (earlier same day)` :
+               `${alternatives.beforeSlot} (מוקדם יותר באותו היום)`
+      })
+    }
+
+    if (alternatives.afterSlot) {
+      suggestionChoices.push({
+        id: `after_${alternatives.afterSlot.replace(':', '')}`,
+        label: locale === 'fr' ? `${alternatives.afterSlot} (plus tard le même jour)` :
+               locale === 'en' ? `${alternatives.afterSlot} (later same day)` :
+               `${alternatives.afterSlot} (מאוחר יותר באותו היום)`
+      })
+    }
+
+    if (alternatives.sameTimeOtherDays && alternatives.sameTimeOtherDays.length > 0) {
+      for (const day of alternatives.sameTimeOtherDays.slice(0, 3)) {
+        suggestionChoices.push({
+          id: `day_${day.date.replace(/-/g, '')}`,
+          label: `${day.dayName} ${day.date}`
+        })
+      }
+    }
+
+    suggestionChoices.push({
+      id: 'other_week',
+      label: locale === 'fr' ? 'Choisir une autre semaine' :
+             locale === 'en' ? 'Choose another week' :
+             'לבחור שבוע אחר'
+    })
+
+    choices = suggestionChoices.map((choice, index) => ({
+      id: choice.id,
+      label: choice.label,
+      value: `${index + 1}`
+    }))
+  }
 
   return {
     conversationId: conversation.id,
@@ -339,6 +386,194 @@ export async function processUserMessage(
       }
       break
 
+    case 'availability_check':
+      // Vérifier la disponibilité via l'API
+      console.log('[Engine] availability_check - collected_data:', conversation.collected_data)
+
+      try {
+        const metadata = module.metadata || {}
+        const branchSlug = metadata.branch_slug || 'tel-aviv'
+
+        // Récupérer les données collectées
+        const collectedData = conversation.collected_data as Record<string, any>
+        const date = collectedData.date
+        const time = collectedData.time
+        const participants = parseInt(collectedData.participants || '1')
+        const gameType = collectedData.game_type || 'GAME'
+        const gameArea = collectedData.game_area || 'ACTIVE'
+        const numberOfGames = parseInt(collectedData.game_count || '1')
+
+        console.log('[Engine] Checking availability:', { branchSlug, date, time, participants, gameArea, numberOfGames })
+
+        // Appeler l'API de disponibilité
+        const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/public/clara/check-availability`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            branchSlug,
+            date,
+            time,
+            participants,
+            type: gameType,
+            gameArea,
+            numberOfGames
+          })
+        })
+
+        const result = await response.json()
+        console.log('[Engine] Availability result:', result)
+
+        if (result.available) {
+          // Disponible → output_available
+          outputType = 'available'
+
+          // Enregistrer le message de succès
+          const successMessage = module.success_message?.[locale] || module.content[locale] || ''
+          await supabase.from('messenger_messages').insert({
+            conversation_id: conversationId,
+            role: 'assistant',
+            content: successMessage,
+            step_ref: currentStep.step_ref
+          })
+        } else {
+          // Non disponible → output_unavailable
+          outputType = 'unavailable'
+
+          // Stocker les alternatives dans collected_data pour le module de suggestions
+          const updatedData = {
+            ...collectedData,
+            alternatives: result.alternatives
+          }
+          await supabase
+            .from('messenger_conversations')
+            .update({ collected_data: updatedData })
+            .eq('id', conversationId)
+
+          // Enregistrer le message d'échec
+          const failureMessage = module.failure_message?.[locale] || module.content[locale] || ''
+          await supabase.from('messenger_messages').insert({
+            conversation_id: conversationId,
+            role: 'assistant',
+            content: failureMessage,
+            step_ref: currentStep.step_ref
+          })
+        }
+      } catch (error) {
+        console.error('[Engine] availability_check error:', error)
+        isValid = false
+        errorMessage = locale === 'fr'
+          ? 'Erreur lors de la vérification de disponibilité'
+          : (locale === 'en' ? 'Error checking availability' : 'שגיאה בבדיקת זמינות')
+      }
+      break
+
+    case 'availability_suggestions':
+      // Présenter les alternatives sous forme de choix
+      console.log('[Engine] availability_suggestions - collected_data:', conversation.collected_data)
+
+      const collectedData = conversation.collected_data as Record<string, any>
+      const alternatives = collectedData.alternatives || {}
+
+      // Créer des choix dynamiques basés sur les alternatives disponibles
+      const suggestionChoices = []
+
+      if (alternatives.beforeSlot) {
+        suggestionChoices.push({
+          id: `before_${alternatives.beforeSlot.replace(':', '')}`,
+          label: {
+            fr: `${alternatives.beforeSlot} (plus tôt le même jour)`,
+            en: `${alternatives.beforeSlot} (earlier same day)`,
+            he: `${alternatives.beforeSlot} (מוקדם יותר באותו היום)`
+          }
+        })
+      }
+
+      if (alternatives.afterSlot) {
+        suggestionChoices.push({
+          id: `after_${alternatives.afterSlot.replace(':', '')}`,
+          label: {
+            fr: `${alternatives.afterSlot} (plus tard le même jour)`,
+            en: `${alternatives.afterSlot} (later same day)`,
+            he: `${alternatives.afterSlot} (מאוחר יותר באותו היום)`
+          }
+        })
+      }
+
+      if (alternatives.sameTimeOtherDays && alternatives.sameTimeOtherDays.length > 0) {
+        for (const day of alternatives.sameTimeOtherDays.slice(0, 3)) {
+          suggestionChoices.push({
+            id: `day_${day.date.replace(/-/g, '')}`,
+            label: {
+              fr: `${day.dayName} ${day.date}`,
+              en: `${day.dayName} ${day.date}`,
+              he: `${day.dayName} ${day.date}`
+            }
+          })
+        }
+      }
+
+      suggestionChoices.push({
+        id: 'other_week',
+        label: {
+          fr: 'Choisir une autre semaine',
+          en: 'Choose another week',
+          he: 'לבחור שבוע אחר'
+        }
+      })
+
+      // Trouver le choix sélectionné
+      let selectedSuggestion = null
+      const userInput = userMessage.toLowerCase().trim()
+
+      // Essayer de matcher par numéro d'abord
+      const suggestionIndex = parseInt(userMessage) - 1
+      if (suggestionIndex >= 0 && suggestionIndex < suggestionChoices.length) {
+        selectedSuggestion = suggestionChoices[suggestionIndex]
+      } else {
+        // Sinon chercher par texte
+        selectedSuggestion = suggestionChoices.find((choice: any) => {
+          const label = (choice.label[locale] || choice.label.fr || '').toLowerCase()
+          return label.includes(userInput) || userInput.includes(label)
+        })
+      }
+
+      if (selectedSuggestion) {
+        // Mettre à jour les données collectées selon le choix
+        const updatedData = { ...collectedData }
+
+        if (selectedSuggestion.id.startsWith('before_') || selectedSuggestion.id.startsWith('after_')) {
+          // Changer l'heure
+          const newTime = selectedSuggestion.id.startsWith('before_')
+            ? alternatives.beforeSlot
+            : alternatives.afterSlot
+          updatedData.time = newTime
+          outputType = 'time_changed'
+        } else if (selectedSuggestion.id.startsWith('day_')) {
+          // Changer la date
+          const selectedDay = alternatives.sameTimeOtherDays.find((d: any) =>
+            selectedSuggestion.id.includes(d.date.replace(/-/g, ''))
+          )
+          if (selectedDay) {
+            updatedData.date = selectedDay.date
+            outputType = 'date_changed'
+          }
+        } else if (selectedSuggestion.id === 'other_week') {
+          // Demander une autre semaine
+          outputType = 'other_week'
+        }
+
+        await supabase
+          .from('messenger_conversations')
+          .update({ collected_data: updatedData })
+          .eq('id', conversationId)
+
+        console.log('[Engine] Selected suggestion, outputType:', outputType)
+      } else {
+        isValid = false
+        errorMessage = locale === 'fr' ? 'Choix invalide' : (locale === 'en' ? 'Invalid choice' : 'בחירה לא חוקית')
+      }
+      break
+
     case 'clara_llm':
       // Traiter avec Clara LLM
       const claraResult = await processClaraLLM(
@@ -462,13 +697,67 @@ export async function processUserMessage(
     })
 
     // Préparer les choix si c'est un module choix_multiples
-    const nextChoices = nextModule.module_type === 'choix_multiples' && nextModule.choices
-      ? nextModule.choices.map((choice: any, index: number) => ({
-          id: choice.id,
-          label: choice.label[locale] || choice.label.fr || choice.label.en,
-          value: `${index + 1}`
-        }))
-      : null
+    // Préparer les choix selon le type de module
+    let nextChoices = null
+
+    if (nextModule.module_type === 'choix_multiples' && nextModule.choices) {
+      nextChoices = nextModule.choices.map((choice: any, index: number) => ({
+        id: choice.id,
+        label: choice.label[locale] || choice.label.fr || choice.label.en,
+        value: `${index + 1}`
+      }))
+    } else if (nextModule.module_type === 'availability_suggestions') {
+      // Construire les choix dynamiquement à partir des alternatives
+      const { data: updatedConversation } = await supabase
+        .from('messenger_conversations')
+        .select('collected_data')
+        .eq('id', conversationId)
+        .single()
+
+      const collectedData = updatedConversation?.collected_data as Record<string, any>
+      const alternatives = collectedData?.alternatives || {}
+      const suggestionChoices = []
+
+      if (alternatives.beforeSlot) {
+        suggestionChoices.push({
+          id: `before_${alternatives.beforeSlot.replace(':', '')}`,
+          label: locale === 'fr' ? `${alternatives.beforeSlot} (plus tôt le même jour)` :
+                 locale === 'en' ? `${alternatives.beforeSlot} (earlier same day)` :
+                 `${alternatives.beforeSlot} (מוקדם יותר באותו היום)`
+        })
+      }
+
+      if (alternatives.afterSlot) {
+        suggestionChoices.push({
+          id: `after_${alternatives.afterSlot.replace(':', '')}`,
+          label: locale === 'fr' ? `${alternatives.afterSlot} (plus tard le même jour)` :
+                 locale === 'en' ? `${alternatives.afterSlot} (later same day)` :
+                 `${alternatives.afterSlot} (מאוחר יותר באותו היום)`
+        })
+      }
+
+      if (alternatives.sameTimeOtherDays && alternatives.sameTimeOtherDays.length > 0) {
+        for (const day of alternatives.sameTimeOtherDays.slice(0, 3)) {
+          suggestionChoices.push({
+            id: `day_${day.date.replace(/-/g, '')}`,
+            label: `${day.dayName} ${day.date}`
+          })
+        }
+      }
+
+      suggestionChoices.push({
+        id: 'other_week',
+        label: locale === 'fr' ? 'Choisir une autre semaine' :
+               locale === 'en' ? 'Choose another week' :
+               'לבחור שבוע אחר'
+      })
+
+      nextChoices = suggestionChoices.map((choice, index) => ({
+        id: choice.id,
+        label: choice.label,
+        value: `${index + 1}`
+      }))
+    }
 
     return {
       success: true,
