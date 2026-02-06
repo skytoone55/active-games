@@ -589,7 +589,76 @@ export async function processUserMessage(
         isValid = false
         errorMessage = claraResult.error || 'Erreur Clara LLM'
       } else {
-        outputType = claraResult.outputType || 'clara_default'
+        // Si Clara a décidé de naviguer vers un workflow
+        if (claraResult.outputType === 'navigate_workflow' && claraResult.workflowToActivate) {
+          console.log('[Engine] Clara is navigating to workflow:', claraResult.workflowToActivate)
+
+          // Trouver le workflow cible
+          const { data: targetWorkflow } = await supabase
+            .from('messenger_workflows')
+            .select('*')
+            .eq('id', claraResult.workflowToActivate)
+            .single()
+
+          if (targetWorkflow) {
+            // Trouver le point d'entrée
+            const { data: targetEntryStep } = await supabase
+              .from('messenger_workflow_steps')
+              .select('*')
+              .eq('workflow_id', targetWorkflow.id)
+              .eq('is_entry_point', true)
+              .single()
+
+            if (targetEntryStep) {
+              // Récupérer le module du point d'entrée
+              const { data: targetModule } = await supabase
+                .from('messenger_modules')
+                .select('*')
+                .eq('ref_code', targetEntryStep.module_ref)
+                .single()
+
+              if (targetModule) {
+                // Mettre à jour la conversation
+                await supabase
+                  .from('messenger_conversations')
+                  .update({
+                    current_workflow_id: targetWorkflow.id,
+                    current_step_ref: targetEntryStep.step_ref,
+                    last_activity_at: new Date().toISOString()
+                  })
+                  .eq('id', conversationId)
+
+                // Enregistrer le message du nouveau workflow
+                const targetMessage = targetModule.content[locale] || ''
+                await supabase.from('messenger_messages').insert({
+                  conversation_id: conversationId,
+                  role: 'assistant',
+                  content: targetMessage,
+                  step_ref: targetEntryStep.step_ref
+                })
+
+                // Préparer les choix si nécessaire
+                const targetChoices = targetModule.module_type === 'choix_multiples' && targetModule.choices
+                  ? targetModule.choices.map((choice: any, index: number) => ({
+                      id: choice.id,
+                      label: choice.label[locale] || choice.label.fr || choice.label.en,
+                      value: `${index + 1}`
+                    }))
+                  : null
+
+                return {
+                  success: true,
+                  message: targetMessage,
+                  nextStepRef: targetEntryStep.step_ref,
+                  moduleType: targetModule.module_type,
+                  choices: targetChoices
+                }
+              }
+            }
+          }
+        }
+
+        outputType = claraResult.outputType || 'clara_continue'
 
         // Si Clara a généré une réponse, l'enregistrer
         if (claraResult.response) {
@@ -870,6 +939,7 @@ async function processClaraLLM(
   outputType?: string
   response?: string
   error?: string
+  workflowToActivate?: string // ID du workflow à activer si Clara décide de rediriger
 }> {
   try {
     // Récupérer l'historique de conversation pour le contexte
@@ -900,14 +970,57 @@ async function processClaraLLM(
       }
     }
 
+    // Construire le contexte des workflows disponibles
+    let workflowsContext = ''
+    let tools: Anthropic.Tool[] = []
+
+    if (module.llm_config?.enable_workflow_navigation && module.llm_config?.available_workflows) {
+      const { data: workflows } = await supabase
+        .from('messenger_workflows')
+        .select('*')
+        .in('id', module.llm_config.available_workflows)
+        .eq('is_active', true)
+
+      if (workflows && workflows.length > 0) {
+        workflowsContext = '\n\n## Workflows disponibles\n\n'
+        workflowsContext += 'Tu peux rediriger le client vers ces workflows quand c\'est pertinent:\n\n'
+
+        workflows.forEach((wf: any) => {
+          workflowsContext += `- **${wf.name}** (ID: ${wf.id}): ${wf.description || 'Pas de description'}\n`
+        })
+
+        // Ajouter le tool pour changer de workflow
+        tools.push({
+          name: 'navigate_to_workflow',
+          description: 'Redirige le client vers un workflow spécifique. Utilise ceci quand le client exprime une intention claire (réserver, obtenir des infos, etc.)',
+          input_schema: {
+            type: 'object',
+            properties: {
+              workflow_id: {
+                type: 'string',
+                description: 'L\'ID du workflow vers lequel rediriger',
+                enum: workflows.map((wf: any) => wf.id)
+              },
+              reason: {
+                type: 'string',
+                description: 'Courte explication de pourquoi tu rediriges (pour les logs)'
+              }
+            },
+            required: ['workflow_id', 'reason']
+          }
+        })
+      }
+    }
+
     // Construire le prompt système
     const systemPrompt = `${module.llm_config?.system_prompt || 'Tu es Clara, un assistant virtuel serviable et amical.'}
 
 ## Données collectées jusqu'ici
 ${JSON.stringify(collectedData, null, 2)}
 ${faqContext}
+${workflowsContext}
 
-Réponds au message de l'utilisateur de manière naturelle et pertinente. Si tu as besoin de collecter plus d'informations, pose des questions claires.`
+Réponds au message de l'utilisateur de manière naturelle et pertinente. Si tu détectes une intention claire du client qui correspond à un workflow disponible, utilise le tool navigate_to_workflow pour le rediriger.`
 
     // Construire les messages pour l'API
     const apiMessages: Anthropic.MessageParam[] = []
@@ -932,18 +1045,34 @@ Réponds au message de l'utilisateur de manière naturelle et pertinente. Si tu 
       max_tokens: module.llm_config?.max_tokens || 1024,
       temperature: module.llm_config?.temperature || 0.7,
       system: systemPrompt,
-      messages: apiMessages
+      messages: apiMessages,
+      tools: tools.length > 0 ? tools : undefined
     })
 
-    // Extraire la réponse
-    const claraResponse = response.content[0].type === 'text'
-      ? response.content[0].text
+    // Vérifier si Clara a décidé de changer de workflow
+    const toolUse = response.content.find(block => block.type === 'tool_use')
+    if (toolUse && toolUse.type === 'tool_use' && toolUse.name === 'navigate_to_workflow') {
+      const input = toolUse.input as { workflow_id: string; reason: string }
+      console.log('[Clara LLM] Redirecting to workflow:', input.workflow_id, '- Reason:', input.reason)
+
+      return {
+        success: true,
+        response: '', // Pas de réponse textuelle, on redirige directement
+        outputType: 'navigate_workflow',
+        workflowToActivate: input.workflow_id
+      }
+    }
+
+    // Extraire la réponse textuelle
+    const textBlocks = response.content.filter(block => block.type === 'text')
+    const claraResponse = textBlocks.length > 0
+      ? textBlocks.map(block => block.type === 'text' ? block.text : '').join('\n')
       : ''
 
     return {
       success: true,
       response: claraResponse,
-      outputType: 'clara_default'
+      outputType: 'clara_continue' // Continue dans le même workflow
     }
   } catch (error) {
     console.error('[Clara LLM] Error:', error)

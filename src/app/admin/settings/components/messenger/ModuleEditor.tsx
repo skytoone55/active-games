@@ -17,6 +17,7 @@ export function ModuleEditor({ module, isDark, onSave, onCancel }: ModuleEditorP
   const [saving, setSaving] = useState(false)
   const [activeLocale, setActiveLocale] = useState<'fr' | 'en' | 'he'>(locale as any)
   const [formats, setFormats] = useState<ValidationFormat[]>([])
+  const [workflows, setWorkflows] = useState<Array<{ id: string; name: string }>>([])
   const [form, setForm] = useState<ModuleFormData>({
     ref_code: module?.ref_code || '',
     name: module?.name || '',
@@ -32,12 +33,19 @@ export function ModuleEditor({ module, isDark, onSave, onCancel }: ModuleEditorP
 
   useEffect(() => {
     loadFormats()
+    loadWorkflows()
   }, [])
 
   async function loadFormats() {
     const res = await fetch('/api/admin/messenger/validation-formats')
     const data = await res.json()
     if (data.success) setFormats(data.data)
+  }
+
+  async function loadWorkflows() {
+    const res = await fetch('/api/admin/messenger/workflows')
+    const data = await res.json()
+    if (data.success) setWorkflows(data.data)
   }
 
   async function handleSave() {
@@ -504,6 +512,89 @@ export function ModuleEditor({ module, isDark, onSave, onCancel }: ModuleEditorP
                   }}
                 />
               </div>
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                    Température (0-1)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="1"
+                    step="0.1"
+                    value={form.llm_config?.temperature ?? 0.7}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        llm_config: {
+                          ...form.llm_config,
+                          temperature: parseFloat(e.target.value)
+                        }
+                      })
+                    }
+                    className="w-full px-3 py-2 rounded-lg border"
+                    style={{
+                      backgroundColor: isDark ? '#111827' : 'white',
+                      borderColor: isDark ? '#374151' : '#D1D5DB',
+                      color: isDark ? 'white' : 'black'
+                    }}
+                  />
+                </div>
+                <div>
+                  <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                    Max Tokens
+                  </label>
+                  <input
+                    type="number"
+                    min="100"
+                    max="4096"
+                    step="100"
+                    value={form.llm_config?.max_tokens ?? 1024}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        llm_config: {
+                          ...form.llm_config,
+                          max_tokens: parseInt(e.target.value)
+                        }
+                      })
+                    }
+                    className="w-full px-3 py-2 rounded-lg border"
+                    style={{
+                      backgroundColor: isDark ? '#111827' : 'white',
+                      borderColor: isDark ? '#374151' : '#D1D5DB',
+                      color: isDark ? 'white' : 'black'
+                    }}
+                  />
+                </div>
+                <div>
+                  <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                    Modèle
+                  </label>
+                  <select
+                    value={form.llm_config?.model || 'claude-3-5-sonnet-20241022'}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        llm_config: {
+                          ...form.llm_config,
+                          model: e.target.value
+                        }
+                      })
+                    }
+                    className="w-full px-3 py-2 rounded-lg border"
+                    style={{
+                      backgroundColor: isDark ? '#111827' : 'white',
+                      borderColor: isDark ? '#374151' : '#D1D5DB',
+                      color: isDark ? 'white' : 'black'
+                    }}
+                  >
+                    <option value="claude-3-5-sonnet-20241022">Claude 3.5 Sonnet</option>
+                    <option value="claude-3-5-haiku-20241022">Claude 3.5 Haiku (rapide)</option>
+                  </select>
+                </div>
+              </div>
+
               <label className="flex items-center space-x-2">
                 <input
                   type="checkbox"
@@ -523,6 +614,61 @@ export function ModuleEditor({ module, isDark, onSave, onCancel }: ModuleEditorP
                   Utiliser le contexte FAQ
                 </span>
               </label>
+
+              <label className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  checked={form.llm_config?.enable_workflow_navigation || false}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      llm_config: {
+                        ...form.llm_config,
+                        enable_workflow_navigation: e.target.checked
+                      }
+                    })
+                  }
+                  className="rounded"
+                />
+                <span className={`text-sm ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                  Permettre à Clara de changer de workflow
+                </span>
+              </label>
+
+              {form.llm_config?.enable_workflow_navigation && (
+                <div>
+                  <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                    Workflows disponibles pour Clara
+                  </label>
+                  <div className="space-y-2">
+                    {workflows.map((workflow) => (
+                      <label key={workflow.id} className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          checked={form.llm_config?.available_workflows?.includes(workflow.id) || false}
+                          onChange={(e) => {
+                            const currentWorkflows = form.llm_config?.available_workflows || []
+                            const newWorkflows = e.target.checked
+                              ? [...currentWorkflows, workflow.id]
+                              : currentWorkflows.filter(id => id !== workflow.id)
+                            setForm({
+                              ...form,
+                              llm_config: {
+                                ...form.llm_config,
+                                available_workflows: newWorkflows
+                              }
+                            })
+                          }}
+                          className="rounded"
+                        />
+                        <span className={`text-sm ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                          {workflow.name}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>

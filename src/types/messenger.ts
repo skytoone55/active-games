@@ -77,6 +77,8 @@ export interface ClaraLLMConfig {
   max_tokens?: number
   temperature?: number
   use_faq_context?: boolean
+  enable_workflow_navigation?: boolean // Permettre à Clara de changer de workflow
+  available_workflows?: string[] // IDs des workflows que Clara peut activer
 }
 
 export interface Module {
