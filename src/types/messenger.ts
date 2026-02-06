@@ -64,7 +64,7 @@ export interface ValidationFormat {
 // Modules
 // ============================================================================
 
-export type ModuleType = 'message_text' | 'collect' | 'choix_multiples' | 'clara_llm'
+export type ModuleType = 'message_text' | 'collect' | 'choix_multiples' | 'clara_llm' | 'availability_check' | 'availability_suggestions'
 
 export interface ModuleChoice {
   id: string
@@ -96,6 +96,11 @@ export interface Module {
 
   // Spécifique à "clara_llm"
   llm_config?: ClaraLLMConfig | null
+
+  // Spécifique à "availability_check"
+  success_message?: MultilingualText | null
+  failure_message?: MultilingualText | null
+  metadata?: Record<string, any> | null
 
   category: string
   is_active: boolean
@@ -206,6 +211,9 @@ export interface ModuleFormData {
   custom_error_message?: MultilingualText
   choices?: ModuleChoice[]
   llm_config?: ClaraLLMConfig
+  success_message?: MultilingualText
+  failure_message?: MultilingualText
+  metadata?: Record<string, any>
   category: string
   is_active: boolean
 }

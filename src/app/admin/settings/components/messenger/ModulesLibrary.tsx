@@ -42,6 +42,8 @@ export function ModulesLibrary({ isDark }: ModulesLibraryProps) {
       case 'collect': return '📝'
       case 'choix_multiples': return '🔘'
       case 'clara_llm': return '🤖'
+      case 'availability_check': return '✅'
+      case 'availability_suggestions': return '📅'
       default: return '📄'
     }
   }

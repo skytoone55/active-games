@@ -168,6 +168,8 @@ export function ModuleEditor({ module, isDark, onSave, onCancel }: ModuleEditorP
               <option value="collect">📝 {t('messenger.modules.types.collect')}</option>
               <option value="choix_multiples">🔘 {t('messenger.modules.types.choix_multiples')}</option>
               <option value="clara_llm">🤖 {t('messenger.modules.types.clara_llm')}</option>
+              <option value="availability_check">✅ Vérification disponibilité</option>
+              <option value="availability_suggestions">📅 Suggestions alternatives</option>
             </select>
           </div>
 
@@ -389,6 +391,87 @@ export function ModuleEditor({ module, isDark, onSave, onCancel }: ModuleEditorP
                     </div>
                   </div>
                 ))}
+              </div>
+            </div>
+          )}
+
+          {/* Availability Check Config */}
+          {form.module_type === 'availability_check' && (
+            <div className="space-y-4">
+              <div>
+                <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                  Message de succès (disponible)
+                </label>
+                <textarea
+                  value={form.success_message?.[activeLocale] || ''}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      success_message: {
+                        ...form.success_message,
+                        [activeLocale]: e.target.value
+                      }
+                    })
+                  }
+                  rows={2}
+                  placeholder="Parfait ! Ce créneau est disponible."
+                  className="w-full px-3 py-2 rounded-lg border"
+                  style={{
+                    backgroundColor: isDark ? '#111827' : 'white',
+                    borderColor: isDark ? '#374151' : '#D1D5DB',
+                    color: isDark ? 'white' : 'black'
+                  }}
+                />
+              </div>
+              <div>
+                <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                  Message d'échec (non disponible)
+                </label>
+                <textarea
+                  value={form.failure_message?.[activeLocale] || ''}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      failure_message: {
+                        ...form.failure_message,
+                        [activeLocale]: e.target.value
+                      }
+                    })
+                  }
+                  rows={2}
+                  placeholder="Désolé, ce créneau n'est pas disponible."
+                  className="w-full px-3 py-2 rounded-lg border"
+                  style={{
+                    backgroundColor: isDark ? '#111827' : 'white',
+                    borderColor: isDark ? '#374151' : '#D1D5DB',
+                    color: isDark ? 'white' : 'black'
+                  }}
+                />
+              </div>
+              <div>
+                <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                  Branch Slug
+                </label>
+                <input
+                  type="text"
+                  value={form.metadata?.branch_slug || ''}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      metadata: {
+                        ...form.metadata,
+                        branch_slug: e.target.value
+                      }
+                    })
+                  }
+                  placeholder="tel-aviv"
+                  className="w-full px-3 py-2 rounded-lg border"
+                  style={{
+                    backgroundColor: isDark ? '#111827' : 'white',
+                    borderColor: isDark ? '#374151' : '#D1D5DB',
+                    color: isDark ? 'white' : 'black'
+                  }}
+                />
               </div>
             </div>
           )}
