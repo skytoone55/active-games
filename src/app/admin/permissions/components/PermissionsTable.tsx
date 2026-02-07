@@ -400,7 +400,8 @@ function getResourceColor(resource: ResourceType): string {
     users: 'bg-purple-500',
     logs: 'bg-yellow-500',
     settings: 'bg-pink-500',
-    permissions: 'bg-red-500'
+    permissions: 'bg-red-500',
+    messenger: 'bg-indigo-500'
   }
   return colors[resource] || 'bg-gray-500'
 }
