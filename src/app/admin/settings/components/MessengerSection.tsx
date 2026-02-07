@@ -6,6 +6,7 @@ import { SettingsPanel } from './messenger/SettingsPanel'
 import { FAQSection } from './messenger/FAQSection'
 import { ModulesLibrary } from './messenger/ModulesLibrary'
 import { WorkflowsList } from './messenger/WorkflowsList'
+import { AIModelSection } from './messenger/AIModelSection'
 
 interface MessengerSectionProps {
   isDark: boolean
@@ -13,7 +14,7 @@ interface MessengerSectionProps {
 
 export function MessengerSection({ isDark }: MessengerSectionProps) {
   const { t } = useTranslation()
-  const [activeTab, setActiveTab] = useState<'settings' | 'faq' | 'modules' | 'workflows'>('settings')
+  const [activeTab, setActiveTab] = useState<'settings' | 'ai' | 'faq' | 'modules' | 'workflows'>('settings')
 
   return (
     <div className="space-y-6">
@@ -30,10 +31,11 @@ export function MessengerSection({ isDark }: MessengerSectionProps) {
       {/* Tabs */}
       <div className="flex space-x-1 border-b" style={{ borderColor: isDark ? '#374151' : '#E5E7EB' }}>
         {[
-          { key: 'settings', label: t('messenger.settings.title') },
-          { key: 'faq', label: t('messenger.faq.title') },
-          { key: 'modules', label: t('messenger.modules.title') },
-          { key: 'workflows', label: t('messenger.workflows.title') }
+          { key: 'settings', label: t('messenger.tabs.settings') },
+          { key: 'ai', label: t('messenger.tabs.ai') },
+          { key: 'faq', label: t('messenger.tabs.faq') },
+          { key: 'modules', label: t('messenger.tabs.modules') },
+          { key: 'workflows', label: t('messenger.tabs.workflows') }
         ].map((tab) => (
           <button
             key={tab.key}
@@ -56,6 +58,7 @@ export function MessengerSection({ isDark }: MessengerSectionProps) {
       {/* Content */}
       <div>
         {activeTab === 'settings' && <SettingsPanel isDark={isDark} />}
+        {activeTab === 'ai' && <AIModelSection isDark={isDark} />}
         {activeTab === 'faq' && <FAQSection isDark={isDark} />}
         {activeTab === 'modules' && <ModulesLibrary isDark={isDark} />}
         {activeTab === 'workflows' && <WorkflowsList isDark={isDark} />}

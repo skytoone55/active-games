@@ -2419,14 +2419,9 @@
       "error": "Erreur",
       "types": {
         "message_text": "Message texte",
-        "message_auto": "Message auto (timer)",
-        "message_text_auto": "Message texte auto (sans délai)",
         "collect": "Collecte d'information",
         "choix_multiples": "Choix multiples",
-        "clara_llm": "Clara IA",
-        "availability_check": "Vérification disponibilité",
-        "availability_suggestions": "Suggestions alternatives",
-        "order_generation": "Génération commande"
+        "clara_llm": "Clara IA"
       },
       "validation_format": "Format de validation",
       "choices": "Choix disponibles",
@@ -2437,27 +2432,9 @@
       "secondary_prompt": "Prompt secondaire",
       "use_faq": "Utiliser la FAQ",
       "available_steps": "Steps autorisées",
-      "llm_params": {
-        "temperature": "Température (0-1)",
-        "temperature_help": "0 = précis, 1 = créatif",
-        "max_tokens": "Tokens maximum",
-        "max_tokens_help": "Longueur maximale de la réponse",
-        "global_model_note": "Le provider et le modèle sont configurés globalement dans l'onglet Modèle IA"
-      },      "availability": {
+      "availability": {
         "success_message": "Message de succès (disponible)",
         "failure_message": "Message d'échec (non disponible)"
-      },
-      "variables": {
-        "branch": "Branche",
-        "name": "Nom",
-        "phone": "Téléphone",
-        "game_area": "Type de jeu",
-        "participants": "Participants",
-        "number_of_games": "Jeux",
-        "date": "Date",
-        "time": "Heure",
-        "email": "Email",
-        "order": "Lien commande"
       }
     },
     "workflows": {
@@ -2510,15 +2487,6 @@
         "select_step": "Sélectionner une étape",
         "select_workflow": "Sélectionner un workflow",
         "end_workflow": "Terminer le workflow",
-        "default_labels": {
-          "available": "Disponible",
-          "unavailable": "Non disponible",
-          "success": "Succès",
-          "error": "Erreur",
-          "time_changed": "Heure modifiée",
-          "date_changed": "Date modifiée",
-          "other_date": "Autre date"
-        },
         "save": "Enregistrer",
         "cancel": "Annuler",
         "saved": "Sorties enregistrées",

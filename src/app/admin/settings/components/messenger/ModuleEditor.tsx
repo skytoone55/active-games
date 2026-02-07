@@ -18,6 +18,7 @@ export function ModuleEditor({ module, isDark, onSave, onCancel }: ModuleEditorP
   const [activeLocale, setActiveLocale] = useState<'fr' | 'en' | 'he'>(locale as any)
   const [formats, setFormats] = useState<ValidationFormat[]>([])
   const [workflows, setWorkflows] = useState<Array<{ id: string; name: string }>>([])
+  const [contentTextareaRef, setContentTextareaRef] = useState<HTMLTextAreaElement | null>(null)
   const [form, setForm] = useState<ModuleFormData>({
     ref_code: module?.ref_code || '',
     name: module?.name || '',
@@ -27,9 +28,61 @@ export function ModuleEditor({ module, isDark, onSave, onCancel }: ModuleEditorP
     custom_error_message: module?.custom_error_message || undefined,
     choices: module?.choices || [],
     llm_config: module?.llm_config || undefined,
+    success_message: module?.success_message || undefined,
+    failure_message: module?.failure_message || undefined,
     category: module?.category || 'general',
     is_active: module?.is_active ?? true
   })
+
+  // Variables dynamiques disponibles
+  const availableVariables = [
+    { key: '@branch', label: t('messenger.modules.variables.branch') },
+    { key: '@name', label: t('messenger.modules.variables.name') },
+    { key: '@phone', label: t('messenger.modules.variables.phone') },
+    { key: '@game_area', label: t('messenger.modules.variables.game_area') },
+    { key: '@participants', label: t('messenger.modules.variables.participants') },
+    { key: '@number_of_games', label: t('messenger.modules.variables.number_of_games') },
+    { key: '@date', label: t('messenger.modules.variables.date') },
+    { key: '@time', label: t('messenger.modules.variables.time') },
+    { key: '@email', label: t('messenger.modules.variables.email') },
+    { key: '@order', label: t('messenger.modules.variables.order') }
+  ]
+
+  // Fonction pour insérer une variable à la position du curseur
+  function insertVariable(variable: string) {
+    if (!contentTextareaRef) return
+
+    const start = contentTextareaRef.selectionStart
+    const end = contentTextareaRef.selectionEnd
+    const text = form.content[activeLocale] || ''
+
+    // Si c'est @order, ajouter automatiquement les parenthèses
+    let insertedText = variable
+    let cursorOffset = variable.length
+    if (variable === '@order') {
+      insertedText = '@order()'
+      cursorOffset = '@order('.length // Positionner le curseur entre les parenthèses
+    }
+
+    const newText = text.substring(0, start) + insertedText + text.substring(end)
+
+    setForm({
+      ...form,
+      content: {
+        ...form.content,
+        [activeLocale]: newText
+      }
+    })
+
+    // Remettre le focus et repositionner le curseur après la variable insérée
+    setTimeout(() => {
+      if (contentTextareaRef) {
+        contentTextareaRef.focus()
+        const newPosition = start + cursorOffset
+        contentTextareaRef.setSelectionRange(newPosition, newPosition)
+      }
+    }, 0)
+  }
 
   useEffect(() => {
     loadFormats()
@@ -172,12 +225,15 @@ export function ModuleEditor({ module, isDark, onSave, onCancel }: ModuleEditorP
                 color: isDark ? 'white' : 'black'
               }}
             >
-              <option value="message_text">💬 {t('messenger.modules.types.message_text')}</option>
-              <option value="collect">📝 {t('messenger.modules.types.collect')}</option>
+              <option value="availability_check">✅ {t('messenger.modules.types.availability_check')}</option>
+              <option value="availability_suggestions">📅 {t('messenger.modules.types.availability_suggestions')}</option>
               <option value="choix_multiples">🔘 {t('messenger.modules.types.choix_multiples')}</option>
               <option value="clara_llm">🤖 {t('messenger.modules.types.clara_llm')}</option>
-              <option value="availability_check">✅ Vérification disponibilité</option>
-              <option value="availability_suggestions">📅 Suggestions alternatives</option>
+              <option value="collect">📝 {t('messenger.modules.types.collect')}</option>
+              <option value="message_auto">⏱️ {t('messenger.modules.types.message_auto')}</option>
+              <option value="message_text">💬 {t('messenger.modules.types.message_text')}</option>
+              <option value="message_text_auto">⚡ {t('messenger.modules.types.message_text_auto')}</option>
+              <option value="order_generation">🛒 {t('messenger.modules.types.order_generation')}</option>
             </select>
           </div>
 
@@ -205,7 +261,29 @@ export function ModuleEditor({ module, isDark, onSave, onCancel }: ModuleEditorP
                 ))}
               </div>
             </div>
+
+            {/* Boutons de variables dynamiques */}
+            <div className="mb-2 flex flex-wrap gap-1">
+              {availableVariables.map((variable) => (
+                <button
+                  key={variable.key}
+                  type="button"
+                  onClick={() => insertVariable(variable.key)}
+                  title={variable.description}
+                  className="px-2 py-1 text-xs rounded border transition-colors"
+                  style={{
+                    backgroundColor: isDark ? '#374151' : '#F3F4F6',
+                    borderColor: isDark ? '#4B5563' : '#D1D5DB',
+                    color: isDark ? '#9CA3AF' : '#6B7280'
+                  }}
+                >
+                  {variable.label}
+                </button>
+              ))}
+            </div>
+
             <textarea
+              ref={(el) => setContentTextareaRef(el)}
               value={form.content[activeLocale]}
               onChange={(e) =>
                 setForm({
@@ -405,82 +483,10 @@ export function ModuleEditor({ module, isDark, onSave, onCancel }: ModuleEditorP
 
           {/* Availability Check Config */}
           {form.module_type === 'availability_check' && (
-            <div className="space-y-4">
-              <div>
-                <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                  Message de succès (disponible)
-                </label>
-                <textarea
-                  value={form.success_message?.[activeLocale] || ''}
-                  onChange={(e) =>
-                    setForm({
-                      ...form,
-                      success_message: {
-                        ...form.success_message,
-                        [activeLocale]: e.target.value
-                      }
-                    })
-                  }
-                  rows={2}
-                  placeholder="Parfait ! Ce créneau est disponible."
-                  className="w-full px-3 py-2 rounded-lg border"
-                  style={{
-                    backgroundColor: isDark ? '#111827' : 'white',
-                    borderColor: isDark ? '#374151' : '#D1D5DB',
-                    color: isDark ? 'white' : 'black'
-                  }}
-                />
-              </div>
-              <div>
-                <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                  Message d'échec (non disponible)
-                </label>
-                <textarea
-                  value={form.failure_message?.[activeLocale] || ''}
-                  onChange={(e) =>
-                    setForm({
-                      ...form,
-                      failure_message: {
-                        ...form.failure_message,
-                        [activeLocale]: e.target.value
-                      }
-                    })
-                  }
-                  rows={2}
-                  placeholder="Désolé, ce créneau n'est pas disponible."
-                  className="w-full px-3 py-2 rounded-lg border"
-                  style={{
-                    backgroundColor: isDark ? '#111827' : 'white',
-                    borderColor: isDark ? '#374151' : '#D1D5DB',
-                    color: isDark ? 'white' : 'black'
-                  }}
-                />
-              </div>
-              <div>
-                <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                  Branch Slug
-                </label>
-                <input
-                  type="text"
-                  value={form.metadata?.branch_slug || ''}
-                  onChange={(e) =>
-                    setForm({
-                      ...form,
-                      metadata: {
-                        ...form.metadata,
-                        branch_slug: e.target.value
-                      }
-                    })
-                  }
-                  placeholder="tel-aviv"
-                  className="w-full px-3 py-2 rounded-lg border"
-                  style={{
-                    backgroundColor: isDark ? '#111827' : 'white',
-                    borderColor: isDark ? '#374151' : '#D1D5DB',
-                    color: isDark ? 'white' : 'black'
-                  }}
-                />
-              </div>
+            <div className="p-4 rounded-lg bg-blue-500/10 border border-blue-500/20">
+              <p className={`text-sm ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                ℹ️ Ce module vérifie la disponibilité de manière silencieuse. Les messages seront affichés par les étapes suivantes configurées dans les outputs (disponible / non disponible).
+              </p>
             </div>
           )}
 
@@ -512,10 +518,10 @@ export function ModuleEditor({ module, isDark, onSave, onCancel }: ModuleEditorP
                   }}
                 />
               </div>
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                    Température (0-1)
+                    {t('messenger.modules.llm_params.temperature')}
                   </label>
                   <input
                     type="number"
@@ -539,10 +545,13 @@ export function ModuleEditor({ module, isDark, onSave, onCancel }: ModuleEditorP
                       color: isDark ? 'white' : 'black'
                     }}
                   />
+                  <p className={`mt-1 text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                    {t('messenger.modules.llm_params.temperature_help')}
+                  </p>
                 </div>
                 <div>
                   <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                    Max Tokens
+                    {t('messenger.modules.llm_params.max_tokens')}
                   </label>
                   <input
                     type="number"
@@ -566,33 +575,15 @@ export function ModuleEditor({ module, isDark, onSave, onCancel }: ModuleEditorP
                       color: isDark ? 'white' : 'black'
                     }}
                   />
+                  <p className={`mt-1 text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                    {t('messenger.modules.llm_params.max_tokens_help')}
+                  </p>
                 </div>
-                <div>
-                  <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                    Modèle
-                  </label>
-                  <select
-                    value={form.llm_config?.model || 'claude-3-5-sonnet-20241022'}
-                    onChange={(e) =>
-                      setForm({
-                        ...form,
-                        llm_config: {
-                          ...form.llm_config,
-                          model: e.target.value
-                        }
-                      })
-                    }
-                    className="w-full px-3 py-2 rounded-lg border"
-                    style={{
-                      backgroundColor: isDark ? '#111827' : 'white',
-                      borderColor: isDark ? '#374151' : '#D1D5DB',
-                      color: isDark ? 'white' : 'black'
-                    }}
-                  >
-                    <option value="claude-3-5-sonnet-20241022">Claude 3.5 Sonnet</option>
-                    <option value="claude-3-5-haiku-20241022">Claude 3.5 Haiku (rapide)</option>
-                  </select>
-                </div>
+              </div>
+              <div className={`p-3 rounded-lg ${isDark ? 'bg-blue-500/10 border border-blue-500/30' : 'bg-blue-50 border border-blue-200'}`}>
+                <p className={`text-sm ${isDark ? 'text-blue-300' : 'text-blue-700'}`}>
+                  ℹ️ {t('messenger.modules.llm_params.global_model_note')}
+                </p>
               </div>
 
               <label className="flex items-center space-x-2">

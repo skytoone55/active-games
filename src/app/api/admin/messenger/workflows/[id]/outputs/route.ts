@@ -37,6 +37,7 @@ export async function POST(
         output_label: output.output_label || null,
         destination_type: output.destination_type,
         destination_ref: output.destination_ref || null,
+        delay_seconds: output.delay_seconds || null,
         priority: index
       }))
 

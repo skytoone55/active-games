@@ -57,6 +57,36 @@ export async function POST(
       )
     }
 
+    // Récupérer le module pour connaître son type
+    const { data: module } = await supabase
+      .from('messenger_modules')
+      .select('module_type')
+      .eq('ref_code', body.module_ref)
+      .single()
+
+    // Créer un output par défaut pour les modules qui en ont besoin
+    // Tous les modules sauf order_generation, availability_check et clara_llm ont un output success par défaut
+    const modulesWithDefaultOutput = [
+      'message_text',
+      'message_text_auto',
+      'collect',
+      'choix_multiples'
+    ]
+
+    if (module && modulesWithDefaultOutput.includes(module.module_type)) {
+      await supabase
+        .from('messenger_workflow_outputs')
+        .insert({
+          workflow_id: id,
+          from_step_ref: body.step_ref,
+          output_type: module.module_type === 'message_text_auto' ? 'auto' : 'success',
+          destination_type: 'step',
+          destination_ref: null,
+          priority: 0,
+          delay_seconds: module.module_type === 'message_text_auto' ? 0 : null
+        })
+    }
+
     return NextResponse.json({ success: true, data: newStep })
   } catch (error) {
     console.error('[Workflow Steps API] POST error:', error)

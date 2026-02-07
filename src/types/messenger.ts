@@ -64,7 +64,7 @@ export interface ValidationFormat {
 // Modules
 // ============================================================================
 
-export type ModuleType = 'message_text' | 'collect' | 'choix_multiples' | 'clara_llm' | 'availability_check' | 'availability_suggestions'
+export type ModuleType = 'message_text' | 'collect' | 'choix_multiples' | 'clara_llm' | 'availability_check' | 'availability_suggestions' | 'order_generation' | 'message_auto'
 
 export interface ModuleChoice {
   id: string
@@ -146,6 +146,7 @@ export interface WorkflowOutput {
   destination_type: OutputDestinationType
   destination_ref: string | null // step_ref, workflow_id, ou NULL si "end"
   priority: number
+  delay_seconds?: number | null // Délai avant transition (pour message_auto)
   created_at: string
 }
 

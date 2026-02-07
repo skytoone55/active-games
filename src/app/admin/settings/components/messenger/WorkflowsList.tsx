@@ -5,6 +5,7 @@ import { useTranslation } from '@/contexts/LanguageContext'
 import { Plus, Edit2, Trash2, Loader2, X, Save, ArrowLeft } from 'lucide-react'
 import type { Workflow } from '@/types/messenger'
 import { WorkflowBuilder } from './WorkflowBuilder'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 
 interface WorkflowsListProps {
   isDark: boolean
@@ -19,6 +20,7 @@ export function WorkflowsList({ isDark }: WorkflowsListProps) {
   const [createForm, setCreateForm] = useState({ name: '', description: '' })
   const [editingWorkflow, setEditingWorkflow] = useState<{ id: string; name: string } | null>(null)
   const [activeWorkflowId, setActiveWorkflowId] = useState<string | null>(null)
+  const [confirmDelete, setConfirmDelete] = useState<{ workflow: Workflow } | null>(null)
 
   useEffect(() => {
     loadWorkflows()
@@ -68,9 +70,10 @@ export function WorkflowsList({ isDark }: WorkflowsListProps) {
     loadWorkflows()
   }
 
-  async function handleDelete(id: string) {
-    if (!confirm(t('messenger.workflows.delete') + '?')) return
-    await fetch(`/api/admin/messenger/workflows/${id}`, { method: 'DELETE' })
+  async function handleDelete() {
+    if (!confirmDelete) return
+    await fetch(`/api/admin/messenger/workflows/${confirmDelete.workflow.id}`, { method: 'DELETE' })
+    setConfirmDelete(null)
     loadWorkflows()
   }
 
@@ -219,7 +222,7 @@ export function WorkflowsList({ isDark }: WorkflowsListProps) {
                   <Edit2 className="w-4 h-4" />
                 </button>
                 <button
-                  onClick={() => handleDelete(workflow.id)}
+                  onClick={() => setConfirmDelete({ workflow })}
                   className="p-2 rounded hover:bg-red-500/10 text-red-500"
                   title="Supprimer"
                 >
@@ -309,6 +312,19 @@ export function WorkflowsList({ isDark }: WorkflowsListProps) {
           </div>
         </div>
       )}
+
+      {/* Confirm Delete Dialog */}
+      <ConfirmDialog
+        isOpen={!!confirmDelete}
+        title={t('messenger.workflows.delete')}
+        message={`Voulez-vous vraiment supprimer le workflow "${confirmDelete?.workflow.name}" ? Toutes les étapes et sorties associées seront également supprimées. Cette action est irréversible.`}
+        confirmLabel={t('messenger.workflows.delete')}
+        cancelLabel={t('messenger.workflows.cancel')}
+        isDark={isDark}
+        variant="danger"
+        onConfirm={handleDelete}
+        onCancel={() => setConfirmDelete(null)}
+      />
     </div>
   )
 }

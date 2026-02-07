@@ -59,6 +59,8 @@ export async function POST(request: NextRequest) {
         custom_error_message: body.custom_error_message || null,
         choices: body.choices || null,
         llm_config: body.llm_config || null,
+        success_message: body.success_message || null,
+        failure_message: body.failure_message || null,
         category: body.category || 'general',
         is_active: body.is_active ?? true
       })

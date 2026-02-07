@@ -5,6 +5,9 @@
 
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import Anthropic from '@anthropic-ai/sdk'
+import OpenAI from 'openai'
+import { GoogleGenerativeAI } from '@google/generative-ai'
+import { parseDate, parseTime, formatDateForDisplay, formatTimeForDisplay } from './date-time-parser'
 import type {
   Workflow,
   WorkflowStep,
@@ -16,10 +19,16 @@ import type {
   ValidationFormat
 } from '@/types/messenger'
 
-// Initialiser le client Anthropic
+// Initialiser les clients AI
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY || ''
 })
+
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY || ''
+})
+
+const gemini = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY || '')
 
 export interface ExecuteStepResult {
   success: boolean
@@ -29,6 +38,7 @@ export interface ExecuteStepResult {
   error?: string
   moduleType?: string
   choices?: Array<{ id: string; label: string; value: string }> | null
+  autoExecute?: boolean
 }
 
 /**
@@ -202,10 +212,10 @@ export async function startConversation(
     }
 
     suggestionChoices.push({
-      id: 'other_week',
-      label: locale === 'fr' ? 'Choisir une autre semaine' :
-             locale === 'en' ? 'Choose another week' :
-             'לבחור שבוע אחר'
+      id: 'other_date',
+      label: locale === 'fr' ? 'Choisir une autre date' :
+             locale === 'en' ? 'Choose another date' :
+             'לבחור תאריך אחר'
     })
 
     choices = suggestionChoices.map((choice, index) => ({
@@ -213,6 +223,12 @@ export async function startConversation(
       label: choice.label,
       value: `${index + 1}`
     }))
+  }
+
+  // Auto-exécuter availability_check ou order_generation si c'est le module
+  if (module.module_type === 'availability_check' || module.module_type === 'order_generation') {
+    const result = await processUserMessage(conversation.id, '')
+    return result
   }
 
   return {
@@ -278,37 +294,243 @@ export async function processUserMessage(
   // Utiliser la locale de la conversation
   const locale: Locale = (conversation.locale as Locale) || 'fr'
 
-  let outputType = 'success'
+  // Fonction pour remplacer les variables dynamiques dans un texte
+  function replaceDynamicVariables(text: string, collectedData: Record<string, any>): string {
+    // Formater date et heure pour affichage
+    let dateDisplay = collectedData.DATE || ''
+    if (dateDisplay && /^\d{4}-\d{2}-\d{2}$/.test(dateDisplay)) {
+      dateDisplay = formatDateForDisplay(dateDisplay, locale)
+    }
+
+    let timeDisplay = collectedData.TIME || ''
+    if (timeDisplay && /^\d{2}:\d{2}$/.test(timeDisplay)) {
+      timeDisplay = formatTimeForDisplay(timeDisplay, locale)
+    }
+
+    // Remplacer les variables
+    // Note: Les URLs seront détectées et converties en boutons par le frontend (ClaraWidget)
+    let result = text
+      .replace(/@branch/g, collectedData.WELCOME || '')
+      .replace(/@name/g, collectedData.NAME || '')
+      .replace(/@phone/g, collectedData.NUMBER || '')
+      .replace(/@game_area/g, collectedData.RESERVATION1 || '')
+      .replace(/@participants/g, collectedData.RESERVATION2 || '')
+      .replace(/@number_of_games/g, collectedData.LASER_GAME_NUMBER || collectedData.ACTIVE_TIME_GAME || '')
+      .replace(/@date/g, dateDisplay)
+      .replace(/@time/g, timeDisplay)
+      .replace(/@email/g, collectedData.EMAIL || '')
+
+    // Gérer @order(texte du bouton) ou @order simple
+    // Format: @order(Click here to pay) ou juste @order
+    const orderUrl = collectedData.ORDER_URL || ''
+    if (orderUrl) {
+      // Chercher @order(...) avec texte personnalisé
+      const orderWithTextMatch = result.match(/@order\(([^)]+)\)/)
+      if (orderWithTextMatch) {
+        const buttonText = orderWithTextMatch[1]
+        // Remplacer @order(texte) par [BTN:texte]URL
+        result = result.replace(/@order\([^)]+\)/, `[BTN:${buttonText}]${orderUrl}`)
+      } else {
+        // Remplacer @order simple par URL
+        result = result.replace(/@order/g, orderUrl)
+      }
+    }
+
+    return result
+  }
+
+  // Pour message_text_auto, utiliser output_type 'auto' au lieu de 'success'
+  let outputType = module.module_type === 'message_text_auto' ? 'auto' : 'success'
   let isValid = true
   let errorMessage = ''
 
   switch (module.module_type) {
     case 'message_text':
-      // Aucune validation, on continue
+    case 'message_text_auto':
+    case 'availability_check':
+      // Aucune validation, on continue (ces modules s'exécutent automatiquement)
       break
 
     case 'collect':
-      // Valider l'input
-      if (module.validation_format_code) {
-        const { data: format } = await supabase
-          .from('messenger_validation_formats')
-          .select('*')
-          .eq('format_code', module.validation_format_code)
-          .single()
+      // Parser intelligent pour dates et heures
+      let valueToStore = userMessage.trim()
+      let parsedDisplay = userMessage.trim()
+      let needsConfirmation = false
 
-        if (format && format.validation_regex) {
-          const regex = new RegExp(format.validation_regex)
-          isValid = regex.test(userMessage.trim())
-          if (!isValid) {
-            // Utiliser le message d'erreur personnalisé du module s'il existe, sinon celui du format
-            errorMessage = module.custom_error_message?.[locale] || format.error_message[locale]
+      // Détecter si c'est une date ou heure selon le step_ref
+      if (currentStep.step_ref === 'DATE' || currentStep.step_ref.includes('DATE')) {
+        const parsedDate = parseDate(userMessage, locale)
+        if (parsedDate) {
+          valueToStore = parsedDate.date // YYYY-MM-DD pour DB
+          parsedDisplay = formatDateForDisplay(parsedDate.date, locale)
+          needsConfirmation = parsedDate.confidence !== 'high' || !!parsedDate.ambiguous
+          
+          if (parsedDate.ambiguous) {
+            console.log('[Engine] Date ambiguous:', parsedDate.ambiguous)
+          }
+        } else {
+          isValid = false
+          errorMessage = locale === 'fr' 
+            ? 'Format de date non reconnu. Essayez: "5 février", "05/02/2025", "demain"...'
+            : locale === 'en'
+            ? 'Date format not recognized. Try: "February 5", "02/05/2025", "tomorrow"...'
+            : 'תאריך לא מזוהה'
+        }
+      } else if (currentStep.step_ref === 'TIME' || currentStep.step_ref.includes('TIME')) {
+        const parsedTime = parseTime(userMessage, locale)
+        if (parsedTime) {
+          valueToStore = parsedTime.time // HH:MM pour DB
+          parsedDisplay = formatTimeForDisplay(parsedTime.time, locale)
+          needsConfirmation = parsedTime.confidence !== 'high' || !!parsedTime.ambiguous
+          
+          if (parsedTime.ambiguous) {
+            console.log('[Engine] Time ambiguous:', parsedTime.ambiguous)
+          }
+        } else {
+          isValid = false
+          errorMessage = locale === 'fr'
+            ? 'Format d\'heure non reconnu. Essayez: "14h", "14h30", "2:30 PM"...'
+            : locale === 'en'
+            ? 'Time format not recognized. Try: "2pm", "14:30", "2:30 PM"...'
+            : 'שעה לא מזוהה'
+        }
+      } else {
+        // Validation classique pour autres champs
+        if (module.validation_format_code) {
+          const { data: format } = await supabase
+            .from('messenger_validation_formats')
+            .select('*')
+            .eq('format_code', module.validation_format_code)
+            .single()
+
+          if (format && format.validation_regex) {
+            const regex = new RegExp(format.validation_regex)
+            isValid = regex.test(userMessage.trim())
+            if (!isValid) {
+              errorMessage = module.custom_error_message?.[locale] || format.error_message[locale]
+            }
           }
         }
       }
 
-      // Stocker la donnée collectée si valide
-      if (isValid) {
-        const collectedData = { ...conversation.collected_data, [currentStep.step_ref]: userMessage }
+      // Si besoin de confirmation (date/heure ambiguë)
+      if (isValid && needsConfirmation) {
+        const confirmMessage = locale === 'fr'
+          ? `Vous voulez dire : ${parsedDisplay} ?`
+          : locale === 'en'
+          ? `You mean: ${parsedDisplay}?`
+          : `אתה מתכוון: ${parsedDisplay}?`
+
+        const yesLabel = locale === 'fr' ? 'Oui' : locale === 'en' ? 'Yes' : 'כן'
+        const noLabel = locale === 'fr' ? 'Non' : locale === 'en' ? 'No' : 'לא'
+
+        // Sauvegarder temporairement la valeur parsée
+        const tempData = {
+          ...conversation.collected_data,
+          [`${currentStep.step_ref}_PENDING`]: valueToStore,
+          [`${currentStep.step_ref}_DISPLAY`]: parsedDisplay
+        }
+        await supabase
+          .from('messenger_conversations')
+          .update({ collected_data: tempData })
+          .eq('id', conversationId)
+
+        // Envoyer le message de confirmation
+        await supabase.from('messenger_messages').insert({
+          conversation_id: conversationId,
+          role: 'assistant',
+          content: confirmMessage,
+          step_ref: currentStep.step_ref
+        })
+        
+        return {
+          success: false,
+          message: confirmMessage,
+          nextStepRef: currentStep.step_ref,
+          moduleType: module.module_type,
+          choices: [
+            { id: 'yes', label: yesLabel, value: yesLabel },
+            { id: 'no', label: noLabel, value: noLabel }
+          ]
+        }
+      }
+
+      // Gérer la confirmation (Oui/Non après parsing)
+      const pendingKey = `${currentStep.step_ref}_PENDING`
+      const displayKey = `${currentStep.step_ref}_DISPLAY`
+      if (conversation.collected_data[pendingKey]) {
+        const userResponse = userMessage.toLowerCase().trim()
+        const isYes = ['oui', 'yes', 'y', 'o', 'כן'].includes(userResponse)
+        const isNo = ['non', 'no', 'n', 'לא'].includes(userResponse)
+
+        if (isYes) {
+          // Confirmer la valeur
+          valueToStore = conversation.collected_data[pendingKey]
+          const { [pendingKey]: _, [displayKey]: __, ...cleanedData } = conversation.collected_data
+          const collectedData = { ...cleanedData, [currentStep.step_ref]: valueToStore }
+          await supabase
+            .from('messenger_conversations')
+            .update({ collected_data: collectedData })
+            .eq('id', conversationId)
+
+          // Marquer comme valide et ne pas continuer
+          // la validation - on a déjà confirmé la bonne valeur
+          isValid = true
+          // Skip le stockage ci-dessous car déjà fait
+        } else if (isNo) {
+          // Redemander
+          const retryMessage = locale === 'fr'
+            ? 'D\'accord, veuillez entrer à nouveau :'
+            : locale === 'en'
+            ? 'Okay, please enter again:'
+            : 'בסדר, אנא הזן שוב:'
+
+          // Nettoyer les données temporaires
+          const { [pendingKey]: _, [displayKey]: __, ...cleanedData } = conversation.collected_data
+          await supabase
+            .from('messenger_conversations')
+            .update({ collected_data: cleanedData })
+            .eq('id', conversationId)
+
+          await supabase.from('messenger_messages').insert({
+            conversation_id: conversationId,
+            role: 'assistant',
+            content: retryMessage,
+            step_ref: currentStep.step_ref
+          })
+
+          return {
+            success: false,
+            message: retryMessage,
+            nextStepRef: currentStep.step_ref
+          }
+        } else {
+          // Réponse invalide
+          errorMessage = locale === 'fr'
+            ? 'Veuillez répondre par Oui ou Non'
+            : locale === 'en'
+            ? 'Please answer Yes or No'
+            : 'אנא ענה כן או לא'
+          isValid = false
+
+          await supabase.from('messenger_messages').insert({
+            conversation_id: conversationId,
+            role: 'assistant',
+            content: errorMessage,
+            step_ref: currentStep.step_ref
+          })
+
+          return {
+            success: false,
+            message: errorMessage,
+            nextStepRef: currentStep.step_ref
+          }
+        }
+      }
+
+      // Stocker la donnée collectée si valide (seulement si pas déjà fait dans confirmation)
+      if (isValid && !conversation.collected_data[pendingKey]) {
+        const collectedData = { ...conversation.collected_data, [currentStep.step_ref]: valueToStore }
         await supabase
           .from('messenger_conversations')
           .update({ collected_data: collectedData })
@@ -325,22 +547,28 @@ export async function processUserMessage(
       console.log('[Engine] choix_multiples - locale:', locale)
       console.log('[Engine] choix_multiples - choices:', JSON.stringify(choices))
 
-      // D'abord essayer de matcher par numéro (1, 2, 3...)
-      const choiceIndex = parseInt(userMessage) - 1
-      if (choiceIndex >= 0 && choiceIndex < choices.length) {
-        selectedChoice = choices[choiceIndex]
-        console.log('[Engine] Matched by index:', selectedChoice.id)
-      } else {
-        // Sinon, chercher par texte avec fuzzy matching
-        const userInput = userMessage.toLowerCase().trim()
-        console.log('[Engine] Trying text match for:', userInput)
+      // D'abord chercher par texte avec fuzzy matching
+      const userInput = userMessage.toLowerCase().trim()
+      console.log('[Engine] Trying text match for:', userInput)
 
-        // Essayer d'abord une correspondance exacte
-        selectedChoice = choices.find((choice: any) => {
-          const label = (choice.label[locale] || choice.label.fr || choice.label.en || '').toLowerCase()
-          console.log('[Engine] Comparing with label:', label)
-          return label === userInput
-        })
+      // Essayer d'abord une correspondance exacte
+      selectedChoice = choices.find((choice: any) => {
+        const label = (choice.label[locale] || choice.label.fr || choice.label.en || '').toLowerCase()
+        console.log('[Engine] Comparing with label:', label)
+        return label === userInput
+      })
+
+      // Si pas de match texte ET userMessage est un pur nombre, essayer par index
+      if (!selectedChoice && /^\d+$/.test(userMessage)) {
+        const choiceIndex = parseInt(userMessage) - 1
+        if (choiceIndex >= 0 && choiceIndex < choices.length) {
+          selectedChoice = choices[choiceIndex]
+          console.log('[Engine] Matched by index:', selectedChoice.id)
+        }
+      }
+
+      // Si toujours pas trouvé, chercher correspondance partielle
+      if (!selectedChoice) {
 
         // Si pas de correspondance exacte, chercher une correspondance partielle
         if (!selectedChoice) {
@@ -379,91 +607,23 @@ export async function processUserMessage(
       if (selectedChoice) {
         outputType = `choice_${selectedChoice.id}`
         console.log('[Engine] Selected choice, outputType:', outputType)
+
+        // Sauvegarder le choix dans collected_data
+        const choiceLabel = selectedChoice.label[locale] || selectedChoice.label.fr || selectedChoice.label.en || ''
+        const updatedCollectedData = {
+          ...conversation.collected_data,
+          [currentStep.step_ref]: choiceLabel
+        }
+        await supabase
+          .from('messenger_conversations')
+          .update({ collected_data: updatedCollectedData })
+          .eq('id', conversationId)
+
+        console.log('[Engine] Saved choice to collected_data:', { [currentStep.step_ref]: choiceLabel })
       } else {
         console.log('[Engine] No choice matched!')
         isValid = false
         errorMessage = locale === 'fr' ? 'Choix invalide' : (locale === 'en' ? 'Invalid choice' : 'בחירה לא חוקית')
-      }
-      break
-
-    case 'availability_check':
-      // Vérifier la disponibilité via l'API
-      console.log('[Engine] availability_check - collected_data:', conversation.collected_data)
-
-      try {
-        const metadata = module.metadata || {}
-        const branchSlug = metadata.branch_slug || 'tel-aviv'
-
-        // Récupérer les données collectées
-        const collectedData = conversation.collected_data as Record<string, any>
-        const date = collectedData.date
-        const time = collectedData.time
-        const participants = parseInt(collectedData.participants || '1')
-        const gameType = collectedData.game_type || 'GAME'
-        const gameArea = collectedData.game_area || 'ACTIVE'
-        const numberOfGames = parseInt(collectedData.game_count || '1')
-
-        console.log('[Engine] Checking availability:', { branchSlug, date, time, participants, gameArea, numberOfGames })
-
-        // Appeler l'API de disponibilité
-        const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/public/clara/check-availability`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            branchSlug,
-            date,
-            time,
-            participants,
-            type: gameType,
-            gameArea,
-            numberOfGames
-          })
-        })
-
-        const result = await response.json()
-        console.log('[Engine] Availability result:', result)
-
-        if (result.available) {
-          // Disponible → output_available
-          outputType = 'available'
-
-          // Enregistrer le message de succès
-          const successMessage = module.success_message?.[locale] || module.content[locale] || ''
-          await supabase.from('messenger_messages').insert({
-            conversation_id: conversationId,
-            role: 'assistant',
-            content: successMessage,
-            step_ref: currentStep.step_ref
-          })
-        } else {
-          // Non disponible → output_unavailable
-          outputType = 'unavailable'
-
-          // Stocker les alternatives dans collected_data pour le module de suggestions
-          const updatedData = {
-            ...collectedData,
-            alternatives: result.alternatives
-          }
-          await supabase
-            .from('messenger_conversations')
-            .update({ collected_data: updatedData })
-            .eq('id', conversationId)
-
-          // Enregistrer le message d'échec
-          const failureMessage = module.failure_message?.[locale] || module.content[locale] || ''
-          await supabase.from('messenger_messages').insert({
-            conversation_id: conversationId,
-            role: 'assistant',
-            content: failureMessage,
-            step_ref: currentStep.step_ref
-          })
-        }
-      } catch (error) {
-        console.error('[Engine] availability_check error:', error)
-        isValid = false
-        errorMessage = locale === 'fr'
-          ? 'Erreur lors de la vérification de disponibilité'
-          : (locale === 'en' ? 'Error checking availability' : 'שגיאה בבדיקת זמינות')
       }
       break
 
@@ -513,17 +673,17 @@ export async function processUserMessage(
       }
 
       suggestionChoices.push({
-        id: 'other_week',
+        id: 'other_date',
         label: {
-          fr: 'Choisir une autre semaine',
-          en: 'Choose another week',
-          he: 'לבחור שבוע אחר'
+          fr: 'Choisir une autre date',
+          en: 'Choose another date',
+          he: 'לבחור תאריך אחר'
         }
       })
 
       // Trouver le choix sélectionné
       let selectedSuggestion = null
-      const userInput = userMessage.toLowerCase().trim()
+      const suggestionUserInput = userMessage.toLowerCase().trim()
 
       // Essayer de matcher par numéro d'abord
       const suggestionIndex = parseInt(userMessage) - 1
@@ -533,7 +693,7 @@ export async function processUserMessage(
         // Sinon chercher par texte
         selectedSuggestion = suggestionChoices.find((choice: any) => {
           const label = (choice.label[locale] || choice.label.fr || '').toLowerCase()
-          return label.includes(userInput) || userInput.includes(label)
+          return label.includes(suggestionUserInput) || suggestionUserInput.includes(label)
         })
       }
 
@@ -546,7 +706,7 @@ export async function processUserMessage(
           const newTime = selectedSuggestion.id.startsWith('before_')
             ? alternatives.beforeSlot
             : alternatives.afterSlot
-          updatedData.time = newTime
+          updatedData.TIME = newTime
           outputType = 'time_changed'
         } else if (selectedSuggestion.id.startsWith('day_')) {
           // Changer la date
@@ -554,12 +714,12 @@ export async function processUserMessage(
             selectedSuggestion.id.includes(d.date.replace(/-/g, ''))
           )
           if (selectedDay) {
-            updatedData.date = selectedDay.date
+            updatedData.DATE = selectedDay.date
             outputType = 'date_changed'
           }
-        } else if (selectedSuggestion.id === 'other_week') {
-          // Demander une autre semaine
-          outputType = 'other_week'
+        } else if (selectedSuggestion.id === 'other_date') {
+          // Demander une autre date
+          outputType = 'other_date'
         }
 
         await supabase
@@ -585,9 +745,12 @@ export async function processUserMessage(
         supabase
       )
 
+      console.log('[Engine] Clara result:', JSON.stringify(claraResult, null, 2))
+
       if (!claraResult.success) {
         isValid = false
         errorMessage = claraResult.error || 'Erreur Clara LLM'
+        console.log('[Engine] Clara failed, errorMessage:', errorMessage)
       } else {
         // Si Clara a décidé de naviguer vers un workflow
         if (claraResult.outputType === 'navigate_workflow' && claraResult.workflowToActivate) {
@@ -668,9 +831,231 @@ export async function processUserMessage(
             content: claraResult.response,
             step_ref: currentStep.step_ref
           })
+
+          // Si outputType est 'clara_continue', retourner immédiatement sans chercher d'output
+          if (outputType === 'clara_continue') {
+            console.log('[Engine] Clara continue - returning response without workflow transition')
+            return {
+              success: true,
+              message: claraResult.response,
+              nextStepRef: currentStep.step_ref
+            }
+          }
         }
       }
       break
+  }
+
+  // Traiter order_generation (exécution automatique sans user input)
+  if (module.module_type === 'order_generation') {
+    try {
+      console.log('[Engine] order_generation - collected_data:', conversation.collected_data)
+      const collectedData = conversation.collected_data as Record<string, any>
+
+      // Mapper branch name vers branch_id
+      const branchName = collectedData.WELCOME || 'Rishon Lezion'
+      const { data: branch } = await supabase
+        .from('branches')
+        .select('id')
+        .ilike('name', branchName)
+        .single()
+
+      if (!branch) {
+        console.error('[Engine] Branch not found:', branchName)
+        outputType = 'error'
+        throw new Error('Branch not found')
+      }
+
+      // Générer référence commande
+      const generateShortReference = () => Math.random().toString(36).substring(2, 8).toUpperCase()
+      const requestReference = generateShortReference()
+
+      // Convertir date DD/MM/YYYY → YYYY-MM-DD
+      let orderDate = collectedData.DATE || ''
+      if (orderDate) {
+        const ddmmyyyyMatch = orderDate.match(/(\d{2})\/(\d{2})\/(\d{4})/)
+        if (ddmmyyyyMatch) {
+          orderDate = `${ddmmyyyyMatch[3]}-${ddmmyyyyMatch[2]}-${ddmmyyyyMatch[1]}`
+        }
+      }
+
+      // Formater TIME en HH:MM
+      let orderTime = collectedData.TIME || ''
+      if (orderTime && typeof orderTime === 'string') {
+        orderTime = orderTime.toLowerCase().replace(/h/gi, ':').replace(/\s/g, '')
+        const timeMatch = orderTime.match(/(\d{1,2}):?(\d{2})?/)
+        if (timeMatch) {
+          const hour = parseInt(timeMatch[1])
+          const minute = timeMatch[2] || '00'
+          orderTime = `${hour.toString().padStart(2, '0')}:${minute}`
+        }
+      }
+
+      // Insérer commande aborted directement en DB (comme Clara)
+      const { data: newOrder, error: orderError } = await supabase
+        .from('orders')
+        .insert({
+          branch_id: branch.id,
+          order_type: 'GAME',
+          participants_count: parseInt(collectedData.RESERVATION2 || '1'),
+          game_area: collectedData.RESERVATION1?.includes('Active') ? 'ACTIVE' : collectedData.RESERVATION1?.includes('Laser') ? 'LASER' : 'MIX',
+          number_of_games: parseInt(collectedData.LASER_GAME_NUMBER?.match(/\d+/)?.[0] || collectedData.ACTIVE_TIME_GAME?.includes('2H') ? '4' : collectedData.ACTIVE_TIME_GAME?.includes('1H30') ? '3' : '2'),
+          requested_date: orderDate,
+          requested_time: orderTime,
+          customer_first_name: collectedData.NAME?.split(' ')[0] || '',
+          customer_last_name: collectedData.NAME?.split(' ').slice(1).join(' ') || '',
+          customer_phone: collectedData.NUMBER || '',
+          customer_email: collectedData.MAIL || collectedData.EMAIL || '',
+          status: 'aborted',
+          source: 'messenger_chatbot',
+          request_reference: requestReference,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .select()
+        .single()
+
+      if (orderError || !newOrder) {
+        console.error('[Engine] Order creation error:', orderError)
+        outputType = 'error'
+      } else {
+        console.log('[Engine] Order created:', newOrder.id, requestReference)
+
+        // Sauvegarder le lien de la commande (URL production)
+        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || process.env.VERCEL_URL || 'https://activelaser.vercel.app'
+        const orderUrl = `${baseUrl}/order/${requestReference}`
+        const updatedData = {
+          ...collectedData,
+          ORDER_URL: orderUrl,
+          ORDER_REFERENCE: requestReference
+        }
+        await supabase
+          .from('messenger_conversations')
+          .update({ collected_data: updatedData })
+          .eq('id', conversationId)
+
+        outputType = 'success'
+      }
+    } catch (error) {
+      console.error('[Engine] order_generation error:', error)
+      outputType = 'error'
+    }
+  }
+
+  // Traiter availability_check (exécution automatique sans user input)
+  if (module.module_type === 'availability_check') {
+    try {
+      console.log('[Engine] availability_check - collected_data:', conversation.collected_data)
+      const metadata = module.metadata || {}
+      const collectedData = conversation.collected_data as Record<string, any>
+
+      // Branch
+      let branchSlug = metadata.branch_slug || 'rishon-lezion'
+      const welcomeChoice = collectedData.WELCOME
+      if (welcomeChoice) {
+        branchSlug = welcomeChoice.toLowerCase().replace(/\s+/g, '-')
+      }
+
+      // Date: convertir DD/MM/YYYY → YYYY-MM-DD
+      let date = collectedData.DATE || collectedData.date
+      if (date && typeof date === 'string') {
+        const ddmmyyyyMatch = date.match(/(\d{2})\/(\d{2})\/(\d{4})/)
+        if (ddmmyyyyMatch) {
+          date = `${ddmmyyyyMatch[3]}-${ddmmyyyyMatch[2]}-${ddmmyyyyMatch[1]}`
+        } else {
+          const yyyymmddMatch = date.match(/(\d{4})-(\d{2})-(\d{2})/)
+          if (yyyymmddMatch) {
+            date = `${yyyymmddMatch[1]}-${yyyymmddMatch[2]}-${yyyymmddMatch[3]}`
+          }
+        }
+      }
+
+      // Time
+      let time = collectedData.TIME || collectedData.time
+      if (time && typeof time === 'string') {
+        time = time.toLowerCase().replace(/h/gi, ':').replace(/\s/g, '')
+        const timeMatch = time.match(/(\d{1,2}):?(\d{2})?/)
+        if (timeMatch) {
+          const hour = parseInt(timeMatch[1])
+          const minute = timeMatch[2] || '00'
+          time = `${hour.toString().padStart(2, '0')}:${minute}`
+        }
+      }
+
+      // Participants
+      let participantsStr = collectedData.RESERVATION2 || collectedData.participants || '1'
+      if (typeof participantsStr === 'string') {
+        const numMatch = participantsStr.match(/\d+/)
+        participantsStr = numMatch ? numMatch[0] : '1'
+      }
+      const participants = parseInt(participantsStr)
+
+      // Game type
+      const gameType = 'GAME'
+
+      // Game area
+      let gameArea = 'ACTIVE'
+      const reservation1Choice = collectedData.RESERVATION1
+      if (reservation1Choice) {
+        if (reservation1Choice.includes('Active')) gameArea = 'ACTIVE'
+        else if (reservation1Choice.includes('Laser')) gameArea = 'LASER'
+        else if (reservation1Choice.includes('Mix')) gameArea = 'MIX'
+      }
+
+      // Number of games
+      let numberOfGames = 1
+      const laserGameChoice = collectedData.LASER_GAME_NUMBER
+      const activeTimeChoice = collectedData.ACTIVE_TIME_GAME
+
+      if (laserGameChoice) {
+        const numMatch = laserGameChoice.match(/(\d+)/)
+        if (numMatch) numberOfGames = parseInt(numMatch[1])
+      } else if (activeTimeChoice) {
+        if (activeTimeChoice.includes('2H') || activeTimeChoice.includes('2h')) numberOfGames = 4
+        else if (activeTimeChoice.includes('1H30') || activeTimeChoice.includes('1h30')) numberOfGames = 3
+        else if (activeTimeChoice.includes('1H') || activeTimeChoice.includes('1h')) numberOfGames = 2
+      }
+
+      console.log('[Engine] Checking availability:', { branchSlug, date, time, participants, gameType, gameArea, numberOfGames })
+
+      // API call
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/public/clara/check-availability`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          branchSlug,
+          date,
+          time,
+          participants,
+          type: gameType,
+          gameArea,
+          numberOfGames
+        })
+      })
+
+      const result = await response.json()
+      console.log('[Engine] Availability result:', result)
+
+      if (result.available) {
+        outputType = 'available'
+      } else {
+        outputType = 'unavailable'
+        const updatedData = {
+          ...collectedData,
+          alternatives: result.alternatives
+        }
+        await supabase
+          .from('messenger_conversations')
+          .update({ collected_data: updatedData })
+          .eq('id', conversationId)
+      }
+    } catch (error) {
+      console.error('[Engine] availability_check error:', error)
+      isValid = false
+      errorMessage = locale === 'fr'
+        ? 'Erreur lors de la vérification de disponibilité'
+        : (locale === 'en' ? 'Error checking availability' : 'שגיאה בבדיקת זמינות')
+    }
   }
 
   // Si erreur de validation, rester sur la même step
@@ -752,8 +1137,21 @@ export async function processUserMessage(
       })
       .eq('id', conversationId)
 
+    // Recharger les collected_data depuis la DB pour avoir les dernières valeurs
+    // (importantes après order_generation qui ajoute ORDER_URL)
+    const { data: freshConversation } = await supabase
+      .from('messenger_conversations')
+      .select('collected_data')
+      .eq('id', conversationId)
+      .single()
+
+    const currentCollectedData = freshConversation?.collected_data || conversation.collected_data || {}
+
     // Formatter le message selon le type de module
     let nextMessage = nextModule.content[locale] || ''
+
+    // Remplacer les variables dynamiques (@branch, @name, etc.)
+    nextMessage = replaceDynamicVariables(nextMessage, currentCollectedData)
 
     // Note: On n'ajoute plus les options numérotées dans le texte car elles sont affichées comme boutons dans l'UI
 
@@ -815,10 +1213,10 @@ export async function processUserMessage(
       }
 
       suggestionChoices.push({
-        id: 'other_week',
-        label: locale === 'fr' ? 'Choisir une autre semaine' :
-               locale === 'en' ? 'Choose another week' :
-               'לבחור שבוע אחר'
+        id: 'other_date',
+        label: locale === 'fr' ? 'Choisir une autre date' :
+               locale === 'en' ? 'Choose another date' :
+               'לבחור תאריך אחר'
       })
 
       nextChoices = suggestionChoices.map((choice, index) => ({
@@ -826,6 +1224,27 @@ export async function processUserMessage(
         label: choice.label,
         value: `${index + 1}`
       }))
+    }
+
+    // Auto-exécuter availability_check et order_generation
+    // Ces modules s'exécutent automatiquement sans attendre l'utilisateur et sans afficher de message
+    if (nextModule.module_type === 'availability_check' ||
+        nextModule.module_type === 'order_generation') {
+      return await processUserMessage(conversationId, '')
+    }
+
+    // Pour message_text_auto : afficher le message puis traiter automatiquement l'output "auto"
+    if (nextModule.module_type === 'message_text_auto') {
+      // Retourner le message avec autoExecute pour que le frontend l'affiche
+      // puis appelle automatiquement l'API avec un message vide pour traiter l'output "auto"
+      return {
+        success: true,
+        message: nextMessage,
+        nextStepRef: nextStep.step_ref,
+        moduleType: nextModule.module_type,
+        choices: nextChoices,
+        autoExecute: true  // Signal pour le frontend de continuer automatiquement
+      }
     }
 
     return {
@@ -942,6 +1361,18 @@ async function processClaraLLM(
   workflowToActivate?: string // ID du workflow à activer si Clara décide de rediriger
 }> {
   try {
+    // Récupérer le provider et modèle globaux depuis system_settings
+    const { data: messengerAI } = await supabase
+      .from('system_settings')
+      .select('value')
+      .eq('key', 'messenger_ai')
+      .single()
+
+    const provider = messengerAI?.value?.provider || 'anthropic'
+    const model = messengerAI?.value?.model || 'claude-3-5-sonnet-20241022'
+
+    console.log('[Clara LLM] Using provider:', provider, 'model:', model)
+
     // Récupérer l'historique de conversation pour le contexte
     const { data: messages } = await supabase
       .from('messenger_messages')
@@ -974,12 +1405,18 @@ async function processClaraLLM(
     let workflowsContext = ''
     let tools: Anthropic.Tool[] = []
 
+    console.log('[Clara LLM] Checking workflow navigation:', {
+      enable_workflow_navigation: module.llm_config?.enable_workflow_navigation,
+      available_workflows: module.llm_config?.available_workflows
+    })
+
     if (module.llm_config?.enable_workflow_navigation && module.llm_config?.available_workflows) {
       const { data: workflows } = await supabase
         .from('messenger_workflows')
         .select('*')
         .in('id', module.llm_config.available_workflows)
-        .eq('is_active', true)
+
+      console.log('[Clara LLM] Found workflows:', workflows)
 
       if (workflows && workflows.length > 0) {
         workflowsContext = '\n\n## Workflows disponibles\n\n'
@@ -1009,6 +1446,8 @@ async function processClaraLLM(
             required: ['workflow_id', 'reason']
           }
         })
+
+        console.log('[Clara LLM] Tool created:', tools[0])
       }
     }
 
@@ -1039,46 +1478,142 @@ Réponds au message de l'utilisateur de manière naturelle et pertinente. Si tu 
       content: userMessage
     })
 
-    // Appeler l'API Anthropic
-    const response = await anthropic.messages.create({
-      model: module.llm_config?.model || 'claude-3-5-sonnet-20241022',
-      max_tokens: module.llm_config?.max_tokens || 1024,
-      temperature: module.llm_config?.temperature || 0.7,
-      system: systemPrompt,
-      messages: apiMessages,
-      tools: tools.length > 0 ? tools : undefined
-    })
+    // Appeler le LLM approprié selon le provider
+    let claraResponse = ''
+    let workflowToActivate: string | undefined
 
-    // Vérifier si Clara a décidé de changer de workflow
-    const toolUse = response.content.find(block => block.type === 'tool_use')
-    if (toolUse && toolUse.type === 'tool_use' && toolUse.name === 'navigate_to_workflow') {
-      const input = toolUse.input as { workflow_id: string; reason: string }
-      console.log('[Clara LLM] Redirecting to workflow:', input.workflow_id, '- Reason:', input.reason)
+    if (provider === 'anthropic') {
+      // Anthropic (Claude)
+      console.log('[Clara LLM] Calling Anthropic API...')
+      const response = await anthropic.messages.create({
+        model,
+        max_tokens: module.llm_config?.max_tokens || 1024,
+        temperature: module.llm_config?.temperature || 0.7,
+        system: systemPrompt,
+        messages: apiMessages,
+        tools: tools.length > 0 ? tools : undefined
+      })
 
-      return {
-        success: true,
-        response: '', // Pas de réponse textuelle, on redirige directement
-        outputType: 'navigate_workflow',
-        workflowToActivate: input.workflow_id
+      // Vérifier si Clara a décidé de changer de workflow
+      const toolUse = response.content.find(block => block.type === 'tool_use')
+      if (toolUse && toolUse.type === 'tool_use' && toolUse.name === 'navigate_to_workflow') {
+        const input = toolUse.input as { workflow_id: string; reason: string }
+        console.log('[Clara LLM] Redirecting to workflow:', input.workflow_id, '- Reason:', input.reason)
+        workflowToActivate = input.workflow_id
+      } else {
+        // Extraire la réponse textuelle
+        const textBlocks = response.content.filter(block => block.type === 'text')
+        claraResponse = textBlocks.length > 0
+          ? textBlocks.map(block => block.type === 'text' ? block.text : '').join('\n')
+          : ''
       }
+
+    } else if (provider === 'openai') {
+      // OpenAI (ChatGPT)
+      console.log('[Clara LLM] Calling OpenAI API...')
+      const openaiMessages: OpenAI.Chat.ChatCompletionMessageParam[] = [
+        { role: 'system', content: systemPrompt },
+        ...apiMessages.map(msg => ({
+          role: msg.role as 'user' | 'assistant',
+          content: typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content)
+        }))
+      ]
+
+      // Tools pour OpenAI (si workflow navigation activé)
+      const openaiTools = tools.length > 0 ? tools.map(tool => ({
+        type: 'function' as const,
+        function: {
+          name: tool.name,
+          description: tool.description,
+          parameters: tool.input_schema
+        }
+      })) : undefined
+
+      console.log('[Clara LLM] Tools array length:', tools.length)
+      console.log('[Clara LLM] OpenAI tools:', JSON.stringify(openaiTools, null, 2))
+      console.log('[Clara LLM] OpenAI request:', { model, messages: openaiMessages.length, hasTools: !!openaiTools })
+
+      const response = await openai.chat.completions.create({
+        model,
+        max_tokens: module.llm_config?.max_tokens || 1024,
+        temperature: module.llm_config?.temperature || 0.7,
+        messages: openaiMessages,
+        tools: openaiTools
+      })
+
+      console.log('[Clara LLM] OpenAI response:', JSON.stringify(response, null, 2))
+
+      const choice = response.choices[0]
+      if (!choice) {
+        throw new Error('No choice in OpenAI response')
+      }
+
+      console.log('[Clara LLM] Choice message:', choice.message)
+
+      if (choice.message.tool_calls && choice.message.tool_calls.length > 0) {
+        const toolCall = choice.message.tool_calls[0]
+        if (toolCall.type === 'function' && toolCall.function.name === 'navigate_to_workflow') {
+          const args = JSON.parse(toolCall.function.arguments) as { workflow_id: string; reason: string }
+          console.log('[Clara LLM] Redirecting to workflow:', args.workflow_id, '- Reason:', args.reason)
+          workflowToActivate = args.workflow_id
+        }
+      } else {
+        claraResponse = choice.message.content || ''
+        console.log('[Clara LLM] OpenAI response text:', claraResponse)
+      }
+
+    } else if (provider === 'gemini') {
+      // Google Gemini
+      console.log('[Clara LLM] Calling Gemini API...')
+      const geminiModel = gemini.getGenerativeModel({ model })
+
+      // Construire l'historique pour Gemini
+      const geminiHistory = apiMessages.slice(0, -1).map(msg => ({
+        role: msg.role === 'user' ? 'user' as const : 'model' as const,
+        parts: [{ text: typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content) }]
+      }))
+
+      // Démarrer le chat
+      const chat = geminiModel.startChat({
+        history: geminiHistory,
+        generationConfig: {
+          maxOutputTokens: module.llm_config?.max_tokens || 1024,
+          temperature: module.llm_config?.temperature || 0.7,
+        }
+      })
+
+      // Envoyer le message avec le system prompt préfixé
+      const fullPrompt = `${systemPrompt}\n\nUser: ${userMessage}`
+      const result = await chat.sendMessage(fullPrompt)
+      const response = result.response
+      claraResponse = response.text()
+
+      // Note: Gemini ne supporte pas les tools de la même manière,
+      // donc on ne gère pas la navigation de workflow pour l'instant
     }
 
-    // Extraire la réponse textuelle
-    const textBlocks = response.content.filter(block => block.type === 'text')
-    const claraResponse = textBlocks.length > 0
-      ? textBlocks.map(block => block.type === 'text' ? block.text : '').join('\n')
-      : ''
+    // Retourner le résultat
+    if (workflowToActivate) {
+      return {
+        success: true,
+        response: '',
+        outputType: 'navigate_workflow',
+        workflowToActivate
+      }
+    }
 
     return {
       success: true,
       response: claraResponse,
-      outputType: 'clara_continue' // Continue dans le même workflow
+      outputType: 'clara_continue'
     }
   } catch (error) {
     console.error('[Clara LLM] Error:', error)
+    console.error('[Clara LLM] Error details:', error instanceof Error ? error.message : String(error))
+    console.error('[Clara LLM] Error stack:', error instanceof Error ? error.stack : 'No stack')
     return {
       success: false,
-      error: 'Une erreur est survenue lors du traitement de votre message.'
+      error: `Clara LLM error: ${error instanceof Error ? error.message : 'Unknown error'}`
     }
   }
 }

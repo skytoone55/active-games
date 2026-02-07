@@ -149,10 +149,10 @@ function MessageContent({ content, isStreaming, fontSize, primaryColor, locale, 
     ' '
   )
 
-  // Détecter les liens de réservation (format: /reservation?...)
-  const bookingLinkRegex = /(\/reservation\?[^\s\n\)]+)/g
+  // Détecter les liens de réservation (format: /reservation?...) ET les liens d'ordre (format: https://...order/... OU [BTN:texte]URL)
+  const bookingLinkRegex = /(\/reservation\?[^\s\n\)]+|\[BTN:[^\]]+\]https?:\/\/[^\s]+|https?:\/\/[^\s]+\/order\/[^\s<>]+)/g
 
-  // Si pas de lien de réservation, afficher le contenu normalement
+  // Si pas de lien de réservation ou d'ordre, afficher le contenu normalement
   if (!bookingLinkRegex.test(normalizedContent)) {
     return (
       <>
@@ -190,7 +190,7 @@ function MessageContent({ content, isStreaming, fontSize, primaryColor, locale, 
   }
 
   // Réinitialiser le regex car .test() a avancé le curseur
-  const splitRegex = /(\/reservation\?[^\s\n\)]+)/g
+  const splitRegex = /(\/reservation\?[^\s\n\)]+|\[BTN:[^\]]+\]https?:\/\/[^\s]+|https?:\/\/[^\s]+\/order\/[^\s<>]+)/g
 
   // Séparer le texte et les liens
   const parts = normalizedContent.split(splitRegex)
@@ -201,6 +201,12 @@ function MessageContent({ content, isStreaming, fontSize, primaryColor, locale, 
     fr: 'Cliquez ici pour finaliser',
     en: 'Click here to complete booking'
   }[locale] || 'Click here to complete booking'
+
+  const orderButtonText = {
+    he: 'לחץ כאן להשלמת התשלום',
+    fr: 'Cliquer ici pour payer',
+    en: 'Click here to complete payment'
+  }[locale] || 'Click here to complete payment'
 
   return (
     <>
@@ -229,6 +235,54 @@ function MessageContent({ content, isStreaming, fontSize, primaryColor, locale, 
               <span className="flex items-center justify-center gap-2">
                 <ExternalLink className="w-4 h-4" />
                 {buttonText}
+              </span>
+            </button>
+          )
+        }
+
+        // Vérifier si cette partie est un lien d'ordre avec texte personnalisé [BTN:texte]URL
+        const btnMatch = part.match(/^\[BTN:([^\]]+)\](https?:\/\/.+)$/)
+        if (btnMatch) {
+          const [, customText, url] = btnMatch
+          return (
+            <button
+              key={index}
+              onClick={() => {
+                // Ouvrir dans un nouvel onglet
+                window.open(url, '_blank')
+              }}
+              className="block w-full mt-3 mb-2 px-4 py-3 rounded-xl font-semibold text-white transition-all hover:opacity-90 hover:scale-[1.02] active:scale-[0.98] shadow-lg"
+              style={{
+                backgroundColor: primaryColor,
+                fontSize: `${fontSize}px`
+              }}
+            >
+              <span className="flex items-center justify-center gap-2">
+                <ExternalLink className="w-4 h-4" />
+                {customText}
+              </span>
+            </button>
+          )
+        }
+
+        // Vérifier si cette partie est un lien d'ordre simple
+        if (part.match(/https?:\/\/[^\s]+\/order\/[^\s<>]+/)) {
+          return (
+            <button
+              key={index}
+              onClick={() => {
+                // Ouvrir dans un nouvel onglet
+                window.open(part, '_blank')
+              }}
+              className="block w-full mt-3 mb-2 px-4 py-3 rounded-xl font-semibold text-white transition-all hover:opacity-90 hover:scale-[1.02] active:scale-[0.98] shadow-lg"
+              style={{
+                backgroundColor: primaryColor,
+                fontSize: `${fontSize}px`
+              }}
+            >
+              <span className="flex items-center justify-center gap-2">
+                <ExternalLink className="w-4 h-4" />
+                {orderButtonText}
               </span>
             </button>
           )
@@ -392,6 +446,43 @@ export function ClaraWidget({
           choices: data.choices
         }
         setMessages((prev) => [...prev, assistantMsg])
+
+        // Si autoExecute est true (message_text_auto), continuer automatiquement
+        if (data.autoExecute) {
+          // Capturer conversationId dans une variable locale
+          const currentConversationId = conversationId
+          const delay = data.moduleType === 'message_text_auto' ? 0 : 500
+          setTimeout(async () => {
+            try {
+              const nextRes = await fetch('/api/messenger/message', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  conversationId: currentConversationId,
+                  message: ''
+                })
+              })
+
+              const nextData = await nextRes.json()
+              console.log('[Clara] Next step response:', nextData)
+              if (nextData.message || nextData.choices) {
+                const nextMsg: ChatMessage = {
+                  id: `assistant_${Date.now()}`,
+                  role: 'assistant',
+                  content: nextData.message || '',
+                  isStreaming: false,
+                  choices: nextData.choices
+                }
+                setMessages((prev) => [...prev, nextMsg])
+              }
+            } catch (error) {
+              console.error('[Clara] Error auto-executing next step:', error)
+            } finally {
+              setIsLoading(false)
+            }
+          }, delay) // Utiliser la variable delay calculée
+          return // Ne pas mettre isLoading à false tout de suite
+        }
       }
     } catch (error) {
       console.error('Error sending message:', error)
@@ -618,14 +709,14 @@ export function ClaraWidget({
                     )}
                     {/* Choix multiples sous forme de boutons */}
                     {msg.choices && msg.choices.length > 0 && (
-                      <div className="flex flex-col gap-2 mt-3">
+                      <div className="flex flex-wrap gap-2 mt-3">
                         {msg.choices.map((choice) => (
                           <button
                             key={choice.id}
                             onClick={() => {
                               sendMessage(choice.label)
                             }}
-                            className="w-full px-4 py-2 rounded-lg text-left transition-colors hover:opacity-90"
+                            className="px-4 py-2 rounded-lg transition-colors hover:opacity-90 flex-shrink-0"
                             style={{
                               backgroundColor: primaryColor,
                               color: 'white',

@@ -20,6 +20,13 @@ export async function PUT(
     const body = await request.json()
     const supabase = createServiceRoleClient() as any
 
+    // Récupérer l'ancien module_ref pour détecter changement
+    const { data: oldStep } = await supabase
+      .from('messenger_workflow_steps')
+      .select('module_ref, step_ref')
+      .eq('id', stepId)
+      .single()
+
     // Si on marque cette step comme entry_point, retirer le flag des autres
     if (body.is_entry_point === true) {
       await supabase
@@ -41,6 +48,15 @@ export async function PUT(
       .eq('id', stepId)
       .select()
       .single()
+
+    // Si module_ref a changé, supprimer tous les outputs de ce step
+    if (oldStep && oldStep.module_ref !== body.module_ref) {
+      await supabase
+        .from('messenger_workflow_outputs')
+        .delete()
+        .eq('workflow_id', id)
+        .eq('from_step_ref', oldStep.step_ref)
+    }
 
     if (error) {
       return NextResponse.json(

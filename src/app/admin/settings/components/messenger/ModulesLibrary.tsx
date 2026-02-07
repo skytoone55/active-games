@@ -6,6 +6,7 @@ import { Plus, Edit2, Trash2, Loader2, Settings } from 'lucide-react'
 import type { Module } from '@/types/messenger'
 import { ModuleEditor } from './ModuleEditor'
 import { ValidationFormatsModal } from './ValidationFormatsModal'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 
 interface ModulesLibraryProps {
   isDark: boolean
@@ -18,6 +19,7 @@ export function ModulesLibrary({ isDark }: ModulesLibraryProps) {
   const [editingModule, setEditingModule] = useState<Module | null>(null)
   const [showEditor, setShowEditor] = useState(false)
   const [showValidationFormats, setShowValidationFormats] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState<{ module: Module } | null>(null)
 
   useEffect(() => {
     loadModules()
@@ -30,9 +32,10 @@ export function ModulesLibrary({ isDark }: ModulesLibraryProps) {
     setLoading(false)
   }
 
-  async function handleDelete(id: string) {
-    if (!confirm(t('messenger.modules.delete') + '?')) return
-    await fetch(`/api/admin/messenger/modules/${id}`, { method: 'DELETE' })
+  async function handleDelete() {
+    if (!confirmDelete) return
+    await fetch(`/api/admin/messenger/modules/${confirmDelete.module.id}`, { method: 'DELETE' })
+    setConfirmDelete(null)
     loadModules()
   }
 
@@ -138,7 +141,7 @@ export function ModulesLibrary({ isDark }: ModulesLibraryProps) {
                   <Edit2 className="w-4 h-4" />
                 </button>
                 <button
-                  onClick={() => handleDelete(module.id)}
+                  onClick={() => setConfirmDelete({ module })}
                   className="p-2 rounded hover:bg-red-500/10 text-red-500"
                 >
                   <Trash2 className="w-4 h-4" />
@@ -148,6 +151,19 @@ export function ModulesLibrary({ isDark }: ModulesLibraryProps) {
           </div>
         ))}
       </div>
+
+      {/* Confirm Delete Dialog */}
+      <ConfirmDialog
+        isOpen={!!confirmDelete}
+        title={t('messenger.modules.delete')}
+        message={`Voulez-vous vraiment supprimer le module "${confirmDelete?.module.name}" (${confirmDelete?.module.ref_code}) ? Cette action est irréversible.`}
+        confirmLabel={t('messenger.modules.delete')}
+        cancelLabel={t('messenger.workflows.cancel')}
+        isDark={isDark}
+        variant="danger"
+        onConfirm={handleDelete}
+        onCancel={() => setConfirmDelete(null)}
+      />
     </div>
     </>
   )

@@ -35,53 +35,131 @@ async function findAlternativeSlots(
   let afterSlot: string | null = null
 
   if (dayHours) {
-    const [openHour, openMin] = dayHours.open.split(':').map(Number)
-    const [closeHour, closeMin] = dayHours.close.split(':').map(Number)
-    const [reqHour, reqMin] = requestedTime.split(':').map(Number)
+    const [openHour] = dayHours.open.split(':').map(Number)
+    const [closeHour] = dayHours.close.split(':').map(Number)
 
-    // Chercher un créneau AVANT (par intervalles de 30 min)
-    for (let h = reqHour - 1; h >= openHour; h--) {
-      for (let m of [30, 0]) {
-        if (h === reqHour - 1 && m >= reqMin) continue
-        if (h === openHour && m < openMin) continue
-
-        const testTime = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`
-        const isAvailable = await checkTimeAvailability(branchId, requestedDate, testTime, participants, gameArea, numberOfGames, settings)
-        if (isAvailable) {
-          beforeSlot = testTime
-          break
-        }
-      }
-      if (beforeSlot) break
+    // Calculer durée nécessaire
+    const gameDuration = settings.game_duration_minutes || 30
+    const pauseDuration = 30
+    let totalDuration: number
+    if ((gameArea === 'LASER' || gameArea === 'laser') && numberOfGames > 1) {
+      totalDuration = (numberOfGames * gameDuration) + ((numberOfGames - 1) * pauseDuration)
+    } else {
+      totalDuration = numberOfGames * gameDuration
     }
 
-    // Chercher un créneau APRÈS (par intervalles de 30 min)
-    for (let h = reqHour + 1; h < closeHour || (h === closeHour && 0 < closeMin); h++) {
-      for (let m of [0, 30]) {
-        if (h === reqHour + 1 && m <= reqMin) continue
-        if (h === closeHour && m >= closeMin) continue
+    // Récupérer tous les bookings ACTIVE pour construire timeline
+    const { data: allBookings } = await supabase
+      .from('bookings')
+      .select(`
+        id,
+        participants_count,
+        game_sessions (
+          id,
+          game_area,
+          start_datetime,
+          end_datetime
+        )
+      `)
+      .eq('branch_id', branchId)
+      .neq('status', 'CANCELLED')
 
-        const testTime = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`
-        const isAvailable = await checkTimeAvailability(branchId, requestedDate, testTime, participants, gameArea, numberOfGames, settings)
-        if (isAvailable) {
-          afterSlot = testTime
+    // Construire timeline par slots de 15min
+    const maxPlayers = settings.max_concurrent_players || 84
+    const timeline: Array<{ time: number; available: number }> = []
+
+    for (let min = openHour * 60; min < closeHour * 60; min += 15) {
+      const slotStart = new Date(`${requestedDate}T${Math.floor(min/60).toString().padStart(2,'0')}:${(min%60).toString().padStart(2,'0')}:00`)
+      const slotEnd = new Date(slotStart.getTime() + 15 * 60000)
+
+      let occupied = 0
+      for (const booking of (allBookings || [])) {
+        if (!booking.game_sessions) continue
+        const hasOverlap = booking.game_sessions.some((session: any) => {
+          if (session.game_area !== 'ACTIVE') return false
+          const sessionStart = new Date(session.start_datetime)
+          const sessionEnd = new Date(session.end_datetime)
+          return sessionStart < slotEnd && sessionEnd > slotStart &&
+                 !(sessionStart.getTime() === slotEnd.getTime() || sessionEnd.getTime() === slotStart.getTime())
+        })
+        if (hasOverlap) occupied += booking.participants_count
+      }
+
+      timeline.push({ time: min, available: maxPlayers - occupied })
+    }
+
+    // Trouver slots libres pour la durée demandée
+    const reqSlots = Math.ceil(totalDuration / 15)
+
+    // Chercher AVANT l'heure demandée (slot qui FINIT avant ou à l'heure demandée)
+    const reqMin = new Date(`${requestedDate}T${requestedTime}:00`).getHours() * 60 + new Date(`${requestedDate}T${requestedTime}:00`).getMinutes()
+    for (let i = timeline.length - reqSlots; i >= 0; i--) {
+      const startMin = timeline[i].time
+      const endMin = startMin + (reqSlots * 15)
+
+      // Le slot doit finir avant ou à l'heure demandée
+      if (endMin > reqMin) continue
+
+      // Vérifier si tous les slots nécessaires sont libres
+      let allFree = true
+      for (let j = 0; j < reqSlots; j++) {
+        if (timeline[i + j].available < participants) {
+          allFree = false
           break
         }
       }
-      if (afterSlot) break
+
+      if (allFree) {
+        const h = Math.floor(startMin / 60)
+        const m = startMin % 60
+        beforeSlot = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`
+        break
+      }
+    }
+
+    // Chercher APRÈS l'heure demandée
+    for (let i = 0; i <= timeline.length - reqSlots; i++) {
+      const startMin = timeline[i].time
+      if (startMin <= reqMin) continue
+
+      let allFree = true
+      for (let j = 0; j < reqSlots; j++) {
+        if (timeline[i + j].available < participants) {
+          allFree = false
+          break
+        }
+      }
+
+      if (allFree) {
+        const h = Math.floor(startMin / 60)
+        const m = startMin % 60
+        afterSlot = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`
+        break
+      }
     }
   }
 
-  // Chercher la même heure sur les autres jours de la semaine (dimanche à samedi)
+  // Chercher 2 jours avant et 2 jours après la date demandée
   const sameTimeOtherDays: Array<{ date: string; dayName: string }> = []
   const currentDate = new Date(requestedDate)
-  const currentDayIndex = currentDate.getDay() // 0 = dimanche, 6 = samedi
 
-  for (let i = 0; i < 7; i++) {
-    if (i === currentDayIndex) continue // Skip le jour demandé
-
+  // 2 jours avant
+  for (let offset = -2; offset <= -1; offset++) {
     const testDate = new Date(currentDate)
-    testDate.setDate(currentDate.getDate() + (i - currentDayIndex))
+    testDate.setDate(currentDate.getDate() + offset)
+    const testDateStr = testDate.toISOString().split('T')[0]
+    const dayName = testDate.toLocaleDateString('fr-FR', { weekday: 'long' })
+
+    const isAvailable = await checkTimeAvailability(branchId, testDateStr, requestedTime, participants, gameArea, numberOfGames, settings)
+    if (isAvailable) {
+      sameTimeOtherDays.push({ date: testDateStr, dayName })
+    }
+  }
+
+  // 2 jours après
+  for (let offset = 1; offset <= 2; offset++) {
+    const testDate = new Date(currentDate)
+    testDate.setDate(currentDate.getDate() + offset)
     const testDateStr = testDate.toISOString().split('T')[0]
     const dayName = testDate.toLocaleDateString('fr-FR', { weekday: 'long' })
 
@@ -163,7 +241,7 @@ async function checkTimeAvailability(
           if (session.game_area !== 'ACTIVE') return false
           const sessionStart = new Date(session.start_datetime)
           const sessionEnd = new Date(session.end_datetime)
-          return sessionStart < slotEnd && sessionEnd > slotStart
+          return sessionStart < slotEnd && sessionEnd > slotStart && !(sessionStart.getTime() === slotEnd.getTime() || sessionEnd.getTime() === slotStart.getTime())
         })
 
         if (hasOverlap) {

@@ -6,6 +6,7 @@ import { Plus, Edit2, Trash2, Loader2, ArrowRight, Play } from 'lucide-react'
 import type { Workflow, WorkflowStep, WorkflowOutput, Module } from '@/types/messenger'
 import { StepEditor } from './StepEditor'
 import { OutputsEditor } from './OutputsEditor'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 
 interface WorkflowBuilderProps {
   workflow: Workflow
@@ -22,6 +23,7 @@ export function WorkflowBuilder({ workflow, isDark, onClose }: WorkflowBuilderPr
   const [editingStep, setEditingStep] = useState<WorkflowStep | null>(null)
   const [showStepModal, setShowStepModal] = useState(false)
   const [editingOutputs, setEditingOutputs] = useState<{ step: WorkflowStep; outputs: WorkflowOutput[] } | null>(null)
+  const [confirmDelete, setConfirmDelete] = useState<{ step: WorkflowStep } | null>(null)
 
   useEffect(() => {
     loadData()
@@ -35,8 +37,22 @@ export function WorkflowBuilder({ workflow, isDark, onClose }: WorkflowBuilderPr
       const workflowData = await workflowRes.json()
 
       if (workflowData.success) {
-        setSteps(workflowData.data.steps || [])
-        setOutputs(workflowData.data.outputs || [])
+        const newSteps = workflowData.data.steps || []
+        const newOutputs = workflowData.data.outputs || []
+        setSteps(newSteps)
+        setOutputs(newOutputs)
+
+        // Si OutputsEditor est ouvert, fermer puis réouvrir pour forcer rechargement
+        if (editingOutputs) {
+          const stepOutputs = newOutputs.filter((o: WorkflowOutput) => o.from_step_ref === editingOutputs.step.step_ref)
+          const updatedStep = newSteps.find((s: WorkflowStep) => s.step_ref === editingOutputs.step.step_ref)
+          if (updatedStep) {
+            setEditingOutputs(null)
+            setTimeout(() => {
+              setEditingOutputs({ step: updatedStep, outputs: stepOutputs })
+            }, 0)
+          }
+        }
       }
 
       // Charger tous les modules disponibles
@@ -50,13 +66,14 @@ export function WorkflowBuilder({ workflow, isDark, onClose }: WorkflowBuilderPr
     }
   }
 
-  async function handleDeleteStep(step: WorkflowStep) {
-    if (!confirm(t('messenger.workflows.confirm_delete_step'))) return
+  async function handleDeleteStep() {
+    if (!confirmDelete) return
 
-    await fetch(`/api/admin/messenger/workflows/${workflow.id}/steps/${step.id}`, {
+    await fetch(`/api/admin/messenger/workflows/${workflow.id}/steps/${confirmDelete.step.id}`, {
       method: 'DELETE'
     })
 
+    setConfirmDelete(null)
     loadData()
   }
 
@@ -113,7 +130,7 @@ export function WorkflowBuilder({ workflow, isDark, onClose }: WorkflowBuilderPr
         </div>
       ) : (
         <div className="space-y-4">
-          {steps.map((step, index) => {
+          {[...steps].sort((a, b) => a.step_name.localeCompare(b.step_name)).map((step, index) => {
             const stepOutputs = getStepOutputs(step.step_ref)
 
             return (
@@ -191,7 +208,7 @@ export function WorkflowBuilder({ workflow, isDark, onClose }: WorkflowBuilderPr
                       <Edit2 className="w-4 h-4" />
                     </button>
                     <button
-                      onClick={() => handleDeleteStep(step)}
+                      onClick={() => setConfirmDelete({ step })}
                       className="p-2 rounded hover:bg-red-500/10 text-red-500"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -239,6 +256,19 @@ export function WorkflowBuilder({ workflow, isDark, onClose }: WorkflowBuilderPr
           }}
         />
       )}
+
+      {/* Confirm Delete Dialog */}
+      <ConfirmDialog
+        isOpen={!!confirmDelete}
+        title={t('messenger.workflows.confirm_delete_step')}
+        message={`Voulez-vous vraiment supprimer l'étape "${confirmDelete?.step.step_name}" ? Cette action est irréversible.`}
+        confirmLabel={t('messenger.workflows.delete')}
+        cancelLabel={t('messenger.workflows.cancel')}
+        isDark={isDark}
+        variant="danger"
+        onConfirm={handleDeleteStep}
+        onCancel={() => setConfirmDelete(null)}
+      />
     </div>
   )
 }

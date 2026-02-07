@@ -2355,14 +2355,9 @@
       "error": "Error",
       "types": {
         "message_text": "Text message",
-        "message_auto": "Auto message (timer)",
-        "message_text_auto": "Auto text message (no delay)",
         "collect": "Collect information",
         "choix_multiples": "Multiple choices",
-        "clara_llm": "Clara AI",
-        "availability_check": "Availability check",
-        "availability_suggestions": "Alternative suggestions",
-        "order_generation": "Order generation"
+        "clara_llm": "Clara AI"
       },
       "validation_format": "Validation format",
       "choices": "Available choices",
@@ -2373,27 +2368,9 @@
       "secondary_prompt": "Secondary prompt",
       "use_faq": "Use FAQ",
       "available_steps": "Allowed steps",
-      "llm_params": {
-        "temperature": "Temperature (0-1)",
-        "temperature_help": "0 = precise, 1 = creative",
-        "max_tokens": "Maximum tokens",
-        "max_tokens_help": "Maximum response length",
-        "global_model_note": "Provider and model are configured globally in the AI Model tab"
-      },      "availability": {
+      "availability": {
         "success_message": "Success message (available)",
         "failure_message": "Failure message (unavailable)"
-      },
-      "variables": {
-        "branch": "Branch",
-        "name": "Name",
-        "phone": "Phone",
-        "game_area": "Game type",
-        "participants": "Participants",
-        "number_of_games": "Games",
-        "date": "Date",
-        "time": "Time",
-        "email": "Email",
-        "order": "Order link"
       }
     },
     "workflows": {
@@ -2446,15 +2423,6 @@
         "select_step": "Select a step",
         "select_workflow": "Select a workflow",
         "end_workflow": "End workflow",
-        "default_labels": {
-          "available": "Available",
-          "unavailable": "Unavailable",
-          "success": "Success",
-          "error": "Error",
-          "time_changed": "Time changed",
-          "date_changed": "Date changed",
-          "other_date": "Other date"
-        },
         "save": "Save",
         "cancel": "Cancel",
         "saved": "Outputs saved",

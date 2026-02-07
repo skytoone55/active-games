@@ -2420,14 +2420,9 @@
       "error": "שגיאה",
       "types": {
         "message_text": "הודעת טקסט",
-        "message_auto": "הודעה אוטומטית (טיימר)",
-        "message_text_auto": "הודעת טקסט אוטומטית (ללא עיכוב)",
         "collect": "איסוף מידע",
         "choix_multiples": "בחירה מרובה",
-        "clara_llm": "Clara AI",
-        "availability_check": "בדיקת זמינות",
-        "availability_suggestions": "הצעות חלופיות",
-        "order_generation": "יצירת הזמנה"
+        "clara_llm": "Clara AI"
       },
       "validation_format": "פורמט אימות",
       "choices": "אפשרויות זמינות",
@@ -2437,30 +2432,7 @@
       "main_prompt": "פרומפט ראשי",
       "secondary_prompt": "פרומפט משני",
       "use_faq": "השתמש בשאלות נפוצות",
-      "available_steps": "שלבים מורשים",
-      "llm_params": {
-        "temperature": "טמפרטורה (0-1)",
-        "temperature_help": "0 = מדויק, 1 = יצירתי",
-        "max_tokens": "טוקנים מקסימליים",
-        "max_tokens_help": "אורך תגובה מקסימלי",
-        "global_model_note": "הספק והמודל מוגדרים גלובלית בלשונית מודל AI"
-      },
-      "availability": {
-        "success_message": "הודעת הצלחה (זמין)",
-        "failure_message": "הודעת כישלון (לא זמין)"
-      },
-      "variables": {
-        "branch": "סניף",
-        "name": "שם",
-        "phone": "טלפון",
-        "game_area": "סוג משחק",
-        "participants": "משתתפים",
-        "number_of_games": "משחקים",
-        "date": "תאריך",
-        "time": "שעה",
-        "email": "אימייל",
-        "order": "קישור הזמנה"
-      }
+      "available_steps": "שלבים מורשים"
     },
     "workflows": {
       "title": "זרימות עבודה",
@@ -2512,15 +2484,6 @@
         "select_step": "בחר שלב",
         "select_workflow": "בחר זרימה",
         "end_workflow": "סיים זרימה",
-        "default_labels": {
-          "available": "זמין",
-          "unavailable": "לא זמין",
-          "success": "הצלחה",
-          "error": "שגיאה",
-          "time_changed": "שעה שונתה",
-          "date_changed": "תאריך שונה",
-          "other_date": "תאריך אחר"
-        },
         "save": "שמור",
         "cancel": "בטל",
         "saved": "יציאות נשמרו",

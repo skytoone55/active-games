@@ -38,6 +38,38 @@ export function OutputsEditor({
     loadModule()
   }, [step.module_ref])
 
+  useEffect(() => {
+    setOutputs(existingOutputs)
+  }, [existingOutputs])
+
+  function outputsMatchModule(outputs: WorkflowOutput[], mod: Module): boolean {
+    if (mod.module_type === 'choix_multiples') {
+      return outputs.some(o => o.output_type.startsWith('choice_'))
+    }
+    if (mod.module_type === 'availability_check') {
+      return outputs.some(o => o.output_type === 'available' || o.output_type === 'unavailable')
+    }
+    if (mod.module_type === 'availability_suggestions') {
+      return outputs.some(o => o.output_type === 'time_changed' || o.output_type === 'date_changed' || o.output_type === 'other_date')
+    }
+    if (mod.module_type === 'order_generation') {
+      return outputs.some(o => o.output_type === 'success' || o.output_type === 'error')
+    }
+    // Pour message_text et collect: vérifier output_type = 'success'
+    if (mod.module_type === 'message_text' || mod.module_type === 'collect') {
+      return outputs.length === 1 && outputs[0].output_type === 'success'
+    }
+    // Pour message_text_auto: vérifier output_type = 'auto'
+    if (mod.module_type === 'message_text_auto') {
+      return outputs.length === 1 && outputs[0].output_type === 'auto'
+    }
+    // Pour clara_llm: output_type = 'response'
+    if (mod.module_type === 'clara_llm') {
+      return outputs.length === 1 && outputs[0].output_type === 'response'
+    }
+    return false
+  }
+
   async function loadWorkflows() {
     const res = await fetch('/api/admin/messenger/workflows')
     const data = await res.json()
@@ -53,21 +85,39 @@ export function OutputsEditor({
       const found = data.data.find((m: Module) => m.ref_code === step.module_ref)
       setModule(found || null)
 
-      // Si pas d'outputs existants, créer la structure par défaut basée sur le module
-      if (existingOutputs.length === 0 && found) {
+      // Vérifier si outputs incompatibles
+      const incompatible = found && existingOutputs.length > 0 && !outputsMatchModule(existingOutputs, found)
+
+      // Si outputs incompatibles, les supprimer IMMÉDIATEMENT en DB
+      if (incompatible) {
+        await fetch(`/api/admin/messenger/workflows/${workflowId}/outputs`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            stepRef: step.step_ref,
+            outputs: []
+          })
+        })
+      }
+
+      // Réinitialiser outputs si pas d'outputs OU outputs incompatibles
+      const shouldReset = existingOutputs.length === 0 || incompatible
+
+      if (shouldReset && found) {
         const defaultOutputs: WorkflowOutput[] = []
 
-        if (found.module_type === 'message_text' || found.module_type === 'collect') {
-          // Une seule sortie "success"
+        if (found.module_type === 'message_text' || found.module_type === 'message_text_auto' || found.module_type === 'collect') {
+          // Une seule sortie ("success" ou "auto")
           defaultOutputs.push({
             id: '',
             workflow_id: workflowId,
             from_step_ref: step.step_ref,
-            output_type: 'success',
+            output_type: found.module_type === 'message_text_auto' ? 'auto' : 'success',
             output_label: null,
             destination_type: 'end',
             destination_ref: null,
             priority: 0,
+            delay_seconds: found.module_type === 'message_text_auto' ? 0 : null,
             created_at: ''
           })
         } else if (found.module_type === 'choix_multiples' && found.choices) {
@@ -98,6 +148,89 @@ export function OutputsEditor({
             priority: 0,
             created_at: ''
           })
+        } else if (found.module_type === 'availability_check') {
+          // Deux sorties : disponible / non disponible
+          defaultOutputs.push({
+            id: '',
+            workflow_id: workflowId,
+            from_step_ref: step.step_ref,
+            output_type: 'available',
+            output_label: t('messenger.workflows.outputs.default_labels.available'),
+            destination_type: 'end',
+            destination_ref: null,
+            priority: 0,
+            created_at: ''
+          })
+          defaultOutputs.push({
+            id: '',
+            workflow_id: workflowId,
+            from_step_ref: step.step_ref,
+            output_type: 'unavailable',
+            output_label: t('messenger.workflows.outputs.default_labels.unavailable'),
+            destination_type: 'end',
+            destination_ref: null,
+            priority: 1,
+            created_at: ''
+          })
+        } else if (found.module_type === 'order_generation') {
+          // Deux sorties : success / error
+          defaultOutputs.push({
+            id: '',
+            workflow_id: workflowId,
+            from_step_ref: step.step_ref,
+            output_type: 'success',
+            output_label: t('messenger.workflows.outputs.default_labels.success'),
+            destination_type: 'end',
+            destination_ref: null,
+            priority: 0,
+            created_at: ''
+          })
+          defaultOutputs.push({
+            id: '',
+            workflow_id: workflowId,
+            from_step_ref: step.step_ref,
+            output_type: 'error',
+            output_label: t('messenger.workflows.outputs.default_labels.error'),
+            destination_type: 'end',
+            destination_ref: null,
+            priority: 1,
+            created_at: ''
+          })
+        } else if (found.module_type === 'availability_suggestions') {
+          // Trois sorties pour les suggestions alternatives
+          defaultOutputs.push({
+            id: '',
+            workflow_id: workflowId,
+            from_step_ref: step.step_ref,
+            output_type: 'time_changed',
+            output_label: t('messenger.workflows.outputs.default_labels.time_changed'),
+            destination_type: 'end',
+            destination_ref: null,
+            priority: 0,
+            created_at: ''
+          })
+          defaultOutputs.push({
+            id: '',
+            workflow_id: workflowId,
+            from_step_ref: step.step_ref,
+            output_type: 'date_changed',
+            output_label: t('messenger.workflows.outputs.default_labels.date_changed'),
+            destination_type: 'end',
+            destination_ref: null,
+            priority: 1,
+            created_at: ''
+          })
+          defaultOutputs.push({
+            id: '',
+            workflow_id: workflowId,
+            from_step_ref: step.step_ref,
+            output_type: 'other_date',
+            output_label: t('messenger.workflows.outputs.default_labels.other_date'),
+            destination_type: 'end',
+            destination_ref: null,
+            priority: 2,
+            created_at: ''
+          })
         }
 
         setOutputs(defaultOutputs)
@@ -118,6 +251,7 @@ export function OutputsEditor({
             output_label: output.output_label,
             destination_type: output.destination_type,
             destination_ref: output.destination_ref,
+            delay_seconds: output.delay_seconds || null,
             priority: index
           }))
         })
@@ -126,6 +260,7 @@ export function OutputsEditor({
       const data = await res.json()
       if (data.success) {
         onSave()
+        onCancel() // Fermer le modal après succès
       } else {
         alert(data.error)
       }
@@ -205,6 +340,7 @@ export function OutputsEditor({
               </p>
               <p className={`text-xs mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
                 {module.module_type === 'message_text' && 'Message simple → 1 sortie "success"'}
+                {module.module_type === 'message_text_auto' && 'Message auto (sans délai) → 1 sortie "auto"'}
                 {module.module_type === 'collect' && 'Collecte d\'info → 1 sortie "success" après validation'}
                 {module.module_type === 'choix_multiples' && 'Choix multiples → 1 sortie par choix'}
                 {module.module_type === 'clara_llm' && 'Clara LLM → Sorties définies par l\'IA'}
@@ -231,17 +367,16 @@ export function OutputsEditor({
                     <input
                       type="text"
                       value={output.output_type}
-                      onChange={(e) => updateOutput(index, 'output_type', e.target.value)}
-                      disabled={module?.module_type === 'choix_multiples'}
+                      readOnly
                       className="w-full px-3 py-2 rounded-lg border text-sm font-mono"
                       style={{
                         backgroundColor: isDark ? '#1F2937' : '#F9FAFB',
                         borderColor: isDark ? '#374151' : '#D1D5DB',
-                        color: isDark ? 'white' : 'black'
+                        color: isDark ? '#9CA3AF' : '#6B7280'
                       }}
                     />
                   </div>
-                  {module?.module_type !== 'message_text' && module?.module_type !== 'collect' && (
+                  {module?.module_type !== 'message_text' && module?.module_type !== 'message_text_auto' && module?.module_type !== 'collect' && (
                     <button
                       onClick={() => deleteOutput(index)}
                       className="ml-3 p-2 rounded-lg hover:bg-red-500/10"

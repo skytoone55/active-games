@@ -11,7 +11,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { conversationId, message } = body
 
-    if (!conversationId || !message) {
+    if (!conversationId || message === undefined) {
       return NextResponse.json(
         { success: false, error: 'conversationId and message are required' },
         { status: 400 }
@@ -25,7 +25,8 @@ export async function POST(request: NextRequest) {
       message: result.message,
       moduleType: result.moduleType,
       choicesCount: result.choices?.length || 0,
-      choices: result.choices
+      choices: result.choices,
+      autoExecute: result.autoExecute
     })
 
     return NextResponse.json({
@@ -35,6 +36,7 @@ export async function POST(request: NextRequest) {
       conversationStatus: result.conversationStatus,
       moduleType: result.moduleType,
       choices: result.choices,
+      autoExecute: result.autoExecute,
       error: result.error
     })
   } catch (error: any) {
