@@ -1024,8 +1024,12 @@ export async function processUserMessage(
 
       console.log('[Engine] Checking availability:', { branchSlug, date, time, participants, gameType, gameArea, numberOfGames })
 
-      // API call
-      const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/public/clara/check-availability`, {
+      // API call - utiliser VERCEL_URL en production, localhost en dev
+      const baseUrl = process.env.VERCEL_URL
+        ? `https://${process.env.VERCEL_URL}`
+        : (process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000')
+
+      const response = await fetch(`${baseUrl}/api/public/clara/check-availability`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
