@@ -3,12 +3,11 @@
 import { useState, useEffect } from 'react'
 import { usePathname } from 'next/navigation'
 import { ClaraWidget } from './Clara/ClaraWidget'
-import { MessengerWidget } from './Messenger/MessengerWidget'
 import WhatsAppButton from './WhatsAppButton'
 import { Locale, defaultLocale } from '@/i18n'
 
 /**
- * GlobalWidgets - Composant qui affiche Messenger, Clara et WhatsApp sur les pages publiques uniquement
+ * GlobalWidgets - Composant qui affiche Clara et WhatsApp sur les pages publiques uniquement
  * Ce composant gère la locale de manière autonome via localStorage
  * Ne s'affiche PAS sur les pages admin
  */
@@ -54,7 +53,6 @@ export function GlobalWidgets() {
   return (
     <>
       <WhatsAppButton />
-      <MessengerWidget locale={claraLocale} />
       <ClaraWidget locale={claraLocale} />
     </>
   )

@@ -219,11 +219,11 @@ function MessageContent({ content, isStreaming, fontSize, primaryColor, locale, 
               onClick={() => {
                 // Naviguer vers la page de réservation dans le même onglet
                 router.push(part)
-                // Fermer le chat après 3 secondes pour laisser place à la page de réservation
+                // Fermer le chat après 2 secondes pour laisser place à la page de réservation
                 if (onBookingLinkClick) {
                   setTimeout(() => {
                     onBookingLinkClick()
-                  }, 3000)
+                  }, 2000)
                 }
               }}
               className="block w-full mt-3 mb-2 px-4 py-3 rounded-xl font-semibold text-white transition-all hover:opacity-90 hover:scale-[1.02] active:scale-[0.98] shadow-lg"

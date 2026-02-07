@@ -877,6 +877,7 @@ export async function processUserMessage(
       const firstName = collectedData.NAME?.split(' ')[0] || 'Client'
       const lastName = collectedData.NAME?.split(' ').slice(1).join(' ') || ''
       const email = collectedData.MAIL || collectedData.EMAIL || null
+      console.log('[Engine] Contact creation check - phone:', phone, 'type:', typeof phone, 'exists:', !!phone, 'NUMBER:', collectedData.NUMBER)
 
       // Find or create contact (like Clara AI does)
       let contactId: string | null = null
@@ -986,10 +987,7 @@ export async function processUserMessage(
         params.set('branch', branchSlug)
         params.set('type', 'game')
         params.set('players', String(participantsCount))
-
-        if (gameArea !== 'MIX') {
-          params.set('gameArea', gameArea.toLowerCase())
-        }
+        params.set('gameArea', gameArea.toLowerCase()) // ✅ Toujours inclure pour calcul prix
         if (numberOfGames) {
           params.set('games', String(numberOfGames))
         }

@@ -1,1 +1,0 @@
-export { MessengerWidget } from './MessengerWidget'
