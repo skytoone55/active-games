@@ -1,11 +1,10 @@
 /**
  * Logique partagée de vérification de disponibilité
- * Basée sur simulateBooking de l'ancienne Clara
- * Peut être utilisée par le messenger et d'autres modules
+ * Basée sur l'ancienne API check-availability qui fonctionnait
+ * Utilisée par le messenger et d'autres modules
  */
 
 import { createClient } from '@supabase/supabase-js'
-import { createIsraelDateTime } from '@/lib/dates'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -28,11 +27,249 @@ interface CheckAvailabilityResult {
   reason?: string
   message?: string
   error?: string
-  alternatives?: any
+  alternatives?: {
+    beforeSlot: string | null
+    afterSlot: string | null
+    sameTimeOtherDays: Array<{ date: string; dayName: string }>
+  }
+}
+
+/**
+ * Vérifie si un créneau spécifique est disponible (version simplifiée, sans alternatives)
+ */
+async function checkTimeAvailability(
+  branchId: string,
+  date: string,
+  time: string,
+  participants: number,
+  gameArea: string,
+  numberOfGames: number,
+  settings: any
+): Promise<boolean> {
+  // Vérifier horaires d'ouverture
+  const openingHours = settings.opening_hours as Record<string, { open: string; close: string }> | null
+  const dayOfWeek = new Date(date).toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase()
+  const dayHours = openingHours?.[dayOfWeek]
+
+  if (!dayHours || time < dayHours.open || time >= dayHours.close) {
+    return false
+  }
+
+  const gameDuration = settings.game_duration_minutes || 30
+  const pauseDuration = 30
+  const startDateTime = new Date(`${date}T${time}:00`)
+  const numGames = numberOfGames || 1
+
+  let totalDuration: number
+  if ((gameArea === 'LASER' || gameArea === 'laser') && numGames > 1) {
+    totalDuration = (numGames * gameDuration) + ((numGames - 1) * pauseDuration)
+  } else {
+    totalDuration = numGames * gameDuration
+  }
+
+  const endDateTime = new Date(startDateTime.getTime() + (totalDuration * 60000))
+
+  // Vérifier capacité ACTIVE
+  if (gameArea === 'ACTIVE' || gameArea === 'active' || gameArea === 'MIX' || gameArea === 'mix') {
+    const maxPlayers = settings.max_concurrent_players || 84
+
+    const { data: existingBookings } = await supabase
+      .from('bookings')
+      .select(`
+        id,
+        participants_count,
+        game_sessions (
+          id,
+          game_area,
+          start_datetime,
+          end_datetime
+        )
+      `)
+      .eq('branch_id', branchId)
+      .neq('status', 'CANCELLED')
+
+    const SLOT_DURATION = 15
+    let checkTime = new Date(startDateTime)
+
+    while (checkTime < endDateTime) {
+      const slotStart = new Date(checkTime)
+      const slotEnd = new Date(slotStart.getTime() + SLOT_DURATION * 60000)
+      let existingParticipants = 0
+
+      for (const booking of (existingBookings || [])) {
+        if (!booking.game_sessions || booking.game_sessions.length === 0) continue
+
+        const hasOverlap = booking.game_sessions.some((session: any) => {
+          if (session.game_area !== 'ACTIVE') return false
+          const sessionStart = new Date(session.start_datetime)
+          const sessionEnd = new Date(session.end_datetime)
+          return sessionStart < slotEnd && sessionEnd > slotStart &&
+                 !(sessionStart.getTime() === slotEnd.getTime() || sessionEnd.getTime() === slotStart.getTime())
+        })
+
+        if (hasOverlap) {
+          existingParticipants += booking.participants_count
+        }
+      }
+
+      if (existingParticipants + participants > maxPlayers) {
+        return false
+      }
+
+      checkTime = slotEnd
+    }
+  }
+
+  // Vérifier disponibilité LASER
+  if (gameArea === 'LASER' || gameArea === 'laser' || gameArea === 'MIX' || gameArea === 'mix') {
+    const { findBestLaserRoomsForBooking } = await import('@/lib/laser-allocation')
+
+    const { data: laserRooms } = await supabase
+      .from('laser_rooms')
+      .select('*')
+      .eq('branch_id', branchId)
+      .eq('is_active', true)
+      .order('sort_order')
+
+    const { data: allBookings } = await supabase
+      .from('bookings')
+      .select(`
+        id,
+        branch_id,
+        participants_count,
+        status,
+        game_sessions (
+          id,
+          game_area,
+          laser_room_id,
+          start_datetime,
+          end_datetime
+        )
+      `)
+      .eq('branch_id', branchId)
+      .neq('status', 'CANCELLED')
+
+    let currentStart = new Date(startDateTime)
+    const numGamesForLaser = numberOfGames || 1
+    const isLaserOnly = gameArea === 'LASER' || gameArea === 'laser'
+
+    for (let i = 0; i < numGamesForLaser; i++) {
+      const shouldCheckLaser = isLaserOnly || ((gameArea === 'MIX' || gameArea === 'mix') && i % 2 === 1)
+
+      if (shouldCheckLaser) {
+        const sessionStart = new Date(currentStart)
+        const sessionEnd = new Date(sessionStart.getTime() + gameDuration * 60000)
+
+        const result = await findBestLaserRoomsForBooking({
+          participants,
+          startDateTime: sessionStart,
+          endDateTime: sessionEnd,
+          branchId,
+          laserRooms: laserRooms || [],
+          settings: {
+            laser_exclusive_threshold: settings.laser_exclusive_threshold || 10,
+            laser_total_vests: settings.laser_total_vests || 40,
+            laser_spare_vests: settings.laser_spare_vests || 5
+          },
+          allBookings: allBookings || []
+        })
+
+        if (!result || result.roomIds.length === 0) {
+          return false
+        }
+      }
+
+      if (i < numGamesForLaser - 1) {
+        currentStart = new Date(currentStart.getTime() + ((gameDuration + pauseDuration) * 60000))
+      }
+    }
+  }
+
+  return true
+}
+
+/**
+ * Trouve les créneaux alternatifs (avant/après même jour + autres jours de la semaine)
+ */
+async function findAlternativeSlots(
+  branchId: string,
+  requestedDate: string,
+  requestedTime: string,
+  participants: number,
+  gameArea: string,
+  numberOfGames: number,
+  settings: any
+): Promise<{ beforeSlot: string | null; afterSlot: string | null; sameTimeOtherDays: Array<{ date: string; dayName: string }> }> {
+  const openingHours = settings.opening_hours as Record<string, { open: string; close: string }> | null
+  const requestedDateTime = new Date(`${requestedDate}T${requestedTime}:00`)
+  const dayOfWeek = requestedDateTime.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase()
+  const dayHours = openingHours?.[dayOfWeek]
+
+  let beforeSlot: string | null = null
+  let afterSlot: string | null = null
+
+  if (dayHours) {
+    const [openHour, openMin] = dayHours.open.split(':').map(Number)
+    const [closeHour, closeMin] = dayHours.close.split(':').map(Number)
+    const [reqHour, reqMin] = requestedTime.split(':').map(Number)
+
+    // Chercher un créneau AVANT (par intervalles de 30 min)
+    for (let h = reqHour - 1; h >= openHour; h--) {
+      for (let m of [30, 0]) {
+        if (h === reqHour - 1 && m >= reqMin) continue
+        if (h === openHour && m < openMin) continue
+
+        const testTime = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`
+        const isAvailable = await checkTimeAvailability(branchId, requestedDate, testTime, participants, gameArea, numberOfGames, settings)
+        if (isAvailable) {
+          beforeSlot = testTime
+          break
+        }
+      }
+      if (beforeSlot) break
+    }
+
+    // Chercher un créneau APRÈS (par intervalles de 30 min)
+    for (let h = reqHour + 1; h < closeHour || (h === closeHour && 0 < closeMin); h++) {
+      for (let m of [0, 30]) {
+        if (h === reqHour + 1 && m <= reqMin) continue
+        if (h === closeHour && m >= closeMin) continue
+
+        const testTime = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`
+        const isAvailable = await checkTimeAvailability(branchId, requestedDate, testTime, participants, gameArea, numberOfGames, settings)
+        if (isAvailable) {
+          afterSlot = testTime
+          break
+        }
+      }
+      if (afterSlot) break
+    }
+  }
+
+  // Chercher la même heure sur les autres jours de la semaine (dimanche à samedi)
+  const sameTimeOtherDays: Array<{ date: string; dayName: string }> = []
+  const currentDate = new Date(requestedDate)
+  const currentDayIndex = currentDate.getDay() // 0 = dimanche, 6 = samedi
+
+  for (let i = 0; i < 7; i++) {
+    if (i === currentDayIndex) continue // Skip le jour demandé
+
+    const testDate = new Date(currentDate)
+    testDate.setDate(currentDate.getDate() + (i - currentDayIndex))
+    const testDateStr = testDate.toISOString().split('T')[0]
+    const dayName = testDate.toLocaleDateString('fr-FR', { weekday: 'long' })
+
+    const isAvailable = await checkTimeAvailability(branchId, testDateStr, requestedTime, participants, gameArea, numberOfGames, settings)
+    if (isAvailable) {
+      sameTimeOtherDays.push({ date: testDateStr, dayName })
+    }
+  }
+
+  return { beforeSlot, afterSlot, sameTimeOtherDays }
 }
 
 export async function checkAvailability(params: CheckAvailabilityParams): Promise<CheckAvailabilityResult> {
-  const { branchId, date, time, participants, type, gameArea, numberOfGames, eventType } = params
+  const { branchId, date, time, participants, type, gameArea, numberOfGames } = params
 
   console.log('[Availability Checker] Checking:', params)
 
@@ -70,10 +307,7 @@ export async function checkAvailability(params: CheckAvailabilityParams): Promis
 
   const gameDuration = settings.game_duration_minutes || 30
   const pauseDuration = 30
-
-  // Créer datetime simple (comme l'ancienne API)
   const startDateTime = new Date(`${date}T${time}:00`)
-  console.log('[Availability Checker] Checking:', date, time, '→', startDateTime.toISOString())
 
   // ========== VÉRIFICATION GAME ==========
   if (type === 'GAME') {
@@ -137,10 +371,13 @@ export async function checkAvailability(params: CheckAvailabilityParams): Promis
 
         if (existingParticipants + participants > maxPlayers) {
           console.log('[Availability Checker] ACTIVE capacity exceeded at', slotStart)
+          // Trouver alternatives
+          const alternatives = await findAlternativeSlots(branchId, date, time, participants, gameArea || 'ACTIVE', numGames, settings)
           return {
             available: false,
             reason: 'capacity_exceeded',
-            message: 'Not enough capacity for Active Games at this time'
+            message: 'Not enough capacity for Active Games at this time',
+            alternatives
           }
         }
 
@@ -204,10 +441,13 @@ export async function checkAvailability(params: CheckAvailabilityParams): Promis
 
           if (!result || result.roomIds.length === 0) {
             console.log('[Availability Checker] No laser rooms available for session', i + 1)
+            // Trouver alternatives
+            const alternatives = await findAlternativeSlots(branchId, date, time, participants, gameArea || 'LASER', numGamesForLaser, settings)
             return {
               available: false,
               reason: 'no_laser_rooms',
-              message: 'No laser rooms available at this time'
+              message: 'No laser rooms available at this time',
+              alternatives
             }
           }
         }
@@ -220,52 +460,6 @@ export async function checkAvailability(params: CheckAvailabilityParams): Promis
 
     // Si on arrive ici, c'est disponible
     return { available: true }
-  }
-
-  // ========== VÉRIFICATION EVENT ==========
-  if (type === 'EVENT') {
-    // Pour les événements, vérifier les salles d'événements
-    const { data: eventRooms } = await supabase
-      .from('event_rooms')
-      .select('*')
-      .eq('branch_id', branchId)
-      .eq('is_active', true)
-      .gte('max_capacity', participants)
-      .order('sort_order')
-
-    if (!eventRooms || eventRooms.length === 0) {
-      return {
-        available: false,
-        reason: 'no_event_room',
-        message: 'No event room available for this capacity'
-      }
-    }
-
-    // Calculer la durée totale de l'événement (15 min setup + 2 jeux avec pause)
-    const eventSetupPause = 15
-    const eventNumberOfGames = 2
-    const roomDuration = eventSetupPause + (eventNumberOfGames * gameDuration) + ((eventNumberOfGames - 1) * pauseDuration)
-    const roomEndDateTime = new Date(startDateTime.getTime() + roomDuration * 60000)
-
-    // Trouver une salle disponible
-    for (const room of eventRooms) {
-      const { data: conflictingBookings } = await supabase
-        .from('bookings')
-        .select('id')
-        .eq('event_room_id', room.id)
-        .neq('status', 'CANCELLED')
-        .or(`start_datetime.lt.${roomEndDateTime.toISOString()},end_datetime.gt.${startDateTime.toISOString()}`)
-
-      if (!conflictingBookings || conflictingBookings.length === 0) {
-        return { available: true }
-      }
-    }
-
-    return {
-      available: false,
-      reason: 'event_room_busy',
-      message: 'All event rooms are busy at this time'
-    }
   }
 
   return { available: false, error: 'Invalid booking type' }
