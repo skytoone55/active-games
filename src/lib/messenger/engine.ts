@@ -928,7 +928,7 @@ export async function processUserMessage(
         console.log('[Engine] Order created:', newOrder.id, requestReference)
 
         // Sauvegarder le lien de la commande (URL production)
-        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.activegames.co.il'
+        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://activegames.co.il'
         const orderUrl = `${baseUrl}/order/${requestReference}`
         const updatedData = {
           ...collectedData,
