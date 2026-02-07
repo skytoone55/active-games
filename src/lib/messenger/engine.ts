@@ -862,7 +862,7 @@ export async function processUserMessage(
       const branchName = collectedData.WELCOME || 'Rishon Lezion'
       const { data: branch } = await supabase
         .from('branches')
-        .select('id')
+        .select('id, slug')
         .ilike('name', branchName)
         .single()
 
@@ -882,18 +882,22 @@ export async function processUserMessage(
       // Find or create contact (like Clara AI does)
       let contactId: string | null = null
       if (phone) {
-        const { data: existingContact } = await supabase
+        const { data: existingContact, error: contactError } = await supabase
           .from('contacts')
           .select('id')
           .eq('branch_id_main', branch.id)
           .eq('phone', phone)
           .single()
 
+        if (contactError && contactError.code !== 'PGRST116') {
+          console.error('[Engine] Error checking existing contact:', contactError)
+        }
+
         if (existingContact) {
           contactId = existingContact.id
           console.log('[Engine] Contact found:', contactId)
         } else {
-          const { data: newContact } = await supabase
+          const { data: newContact, error: insertError } = await supabase
             .from('contacts')
             .insert({
               branch_id_main: branch.id,
@@ -902,11 +906,14 @@ export async function processUserMessage(
               phone,
               email,
               notes_client: 'Contact créé depuis messenger chatbot (order aborted)',
-              source: 'messenger_chatbot',
-              preferred_locale: 'he'
+              source: 'website'
             })
             .select('id')
             .single()
+
+          if (insertError) {
+            console.error('[Engine] Error creating contact:', insertError)
+          }
 
           if (newContact) {
             contactId = newContact.id
@@ -980,14 +987,11 @@ export async function processUserMessage(
         const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://activegames.co.il'
         const params = new URLSearchParams()
 
-        // Map branch to slug
-        const branchSlug = branchName.toLowerCase().includes('rishon') ? 'rishon' :
-                          branchName.toLowerCase().includes('raanana') ? 'raanana' : 'rishon'
-
-        params.set('branch', branchSlug)
+        // Use actual branch slug from database
+        params.set('branch', branch.slug)
         params.set('type', 'game')
         params.set('players', String(participantsCount))
-        params.set('gameArea', gameArea.toLowerCase()) // ✅ Toujours inclure pour calcul prix
+        params.set('gameArea', gameArea) // Keep UPPERCASE (ACTIVE, LASER, MIX)
         if (numberOfGames) {
           params.set('games', String(numberOfGames))
         }

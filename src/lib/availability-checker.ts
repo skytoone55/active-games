@@ -229,10 +229,10 @@ async function findAlternativeSlots(
       if (beforeSlot) break
     }
 
-    // Chercher un créneau APRÈS (par intervalles de 30 min)
+    // Chercher un créneau APRÈS (par intervalles de 15 min)
     for (let h = reqHour + 1; h < closeHour || (h === closeHour && 0 < closeMin); h++) {
-      for (let m of [0, 30]) {
-        if (h === reqHour + 1 && m <= reqMin) continue
+      for (let m of [0, 15, 30, 45]) {
+        if (h === reqHour && m <= reqMin) continue
         if (h === closeHour && m >= closeMin) continue
 
         const testTime = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`
