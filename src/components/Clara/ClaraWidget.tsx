@@ -150,7 +150,7 @@ function MessageContent({ content, isStreaming, fontSize, primaryColor, locale, 
   )
 
   // Détecter les liens de réservation (format: /reservation?...) ET les liens d'ordre (format: https://...order/... OU [BTN:texte]URL)
-  const bookingLinkRegex = /(\/reservation\?[^\s\n\)]+|\[BTN:[^\]]+\]https?:\/\/[^\s]+|https?:\/\/[^\s]+\/order\/[^\s<>]+)/g
+  const bookingLinkRegex = /(\/reservation\?[^\s\n\)]+|\[BTN:[^\]]+\](?:https?:\/\/)?[^\s]+|https?:\/\/[^\s]+\/order\/[^\s<>]+)/g
 
   // Si pas de lien de réservation ou d'ordre, afficher le contenu normalement
   if (!bookingLinkRegex.test(normalizedContent)) {
@@ -190,7 +190,7 @@ function MessageContent({ content, isStreaming, fontSize, primaryColor, locale, 
   }
 
   // Réinitialiser le regex car .test() a avancé le curseur
-  const splitRegex = /(\/reservation\?[^\s\n\)]+|\[BTN:[^\]]+\]https?:\/\/[^\s]+|https?:\/\/[^\s]+\/order\/[^\s<>]+)/g
+  const splitRegex = /(\/reservation\?[^\s\n\)]+|\[BTN:[^\]]+\](?:https?:\/\/)?[^\s]+|https?:\/\/[^\s]+\/order\/[^\s<>]+)/g
 
   // Séparer le texte et les liens
   const parts = normalizedContent.split(splitRegex)
@@ -241,15 +241,25 @@ function MessageContent({ content, isStreaming, fontSize, primaryColor, locale, 
         }
 
         // Vérifier si cette partie est un lien d'ordre avec texte personnalisé [BTN:texte]URL
-        const btnMatch = part.match(/^\[BTN:([^\]]+)\](https?:\/\/.+)$/)
+        const btnMatch = part.match(/^\[BTN:([^\]]+)\](.+)$/)
         if (btnMatch) {
           const [, customText, url] = btnMatch
           return (
             <button
               key={index}
               onClick={() => {
-                // Ouvrir dans un nouvel onglet
-                window.open(url, '_blank')
+                // Si URL relative (/reservation), naviguer dans même onglet + fermer après 2s
+                if (url.startsWith('/reservation')) {
+                  router.push(url)
+                  if (onBookingLinkClick) {
+                    setTimeout(() => {
+                      onBookingLinkClick()
+                    }, 2000)
+                  }
+                } else {
+                  // Sinon ouvrir dans nouvel onglet
+                  window.open(url, '_blank')
+                }
               }}
               className="block w-full mt-3 mb-2 px-4 py-3 rounded-xl font-semibold text-white transition-all hover:opacity-90 hover:scale-[1.02] active:scale-[0.98] shadow-lg"
               style={{
