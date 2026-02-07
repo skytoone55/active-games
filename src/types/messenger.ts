@@ -64,7 +64,7 @@ export interface ValidationFormat {
 // Modules
 // ============================================================================
 
-export type ModuleType = 'message_text' | 'collect' | 'choix_multiples' | 'clara_llm' | 'availability_check' | 'availability_suggestions' | 'order_generation' | 'message_auto'
+export type ModuleType = 'message_text' | 'collect' | 'choix_multiples' | 'clara_llm' | 'availability_check' | 'availability_suggestions' | 'order_generation' | 'message_text_auto'
 
 export interface ModuleChoice {
   id: string

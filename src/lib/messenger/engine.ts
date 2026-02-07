@@ -228,7 +228,13 @@ export async function startConversation(
   // Auto-exécuter availability_check ou order_generation si c'est le module
   if (module.module_type === 'availability_check' || module.module_type === 'order_generation') {
     const result = await processUserMessage(conversation.id, '')
-    return result
+    return {
+      conversationId: conversation.id,
+      firstMessage: result.message || '',
+      locale,
+      moduleType: result.moduleType || module.module_type,
+      choices: result.choices || null
+    }
   }
 
   return {
