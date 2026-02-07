@@ -1024,37 +1024,29 @@ export async function processUserMessage(
 
       console.log('[Engine] Checking availability:', { branchSlug, date, time, participants, gameType, gameArea, numberOfGames })
 
-      // API call - utiliser VERCEL_URL en production, localhost en dev
-      const baseUrl = process.env.VERCEL_URL
-        ? `https://${process.env.VERCEL_URL}`
-        : (process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000')
+      // Convertir branchSlug en branchId
+      const { data: branch } = await supabase
+        .from('branches')
+        .select('id')
+        .ilike('slug', `%${branchSlug.replace(/\s+/g, '-')}%`)
+        .single()
 
-      const apiUrl = `${baseUrl}/api/public/clara/check-availability`
-      console.log('[Engine] API URL:', apiUrl)
-
-      const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          branchSlug,
-          date,
-          time,
-          participants,
-          type: gameType,
-          gameArea,
-          numberOfGames
-        })
-      })
-
-      console.log('[Engine] API response status:', response.status)
-
-      if (!response.ok) {
-        const text = await response.text()
-        console.error('[Engine] API error response:', text.substring(0, 500))
-        throw new Error(`API returned ${response.status}: ${text.substring(0, 200)}`)
+      if (!branch) {
+        throw new Error('Branch not found')
       }
 
-      const result = await response.json()
+      // Appel direct de la fonction partagée (pas de HTTP)
+      const { checkAvailability } = await import('@/lib/availability-checker')
+      const result = await checkAvailability({
+        branchId: branch.id,
+        date,
+        time,
+        participants,
+        type: gameType,
+        gameArea: gameArea as 'ACTIVE' | 'LASER' | 'MIX' | undefined,
+        numberOfGames
+      })
+
       console.log('[Engine] Availability result:', result)
 
       if (result.available) {
