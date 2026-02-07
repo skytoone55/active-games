@@ -950,7 +950,22 @@ export async function processUserMessage(
       // Determine game parameters
       const participantsCount = parseInt(collectedData.RESERVATION2 || '1')
       const gameArea = collectedData.RESERVATION1?.includes('Active') ? 'ACTIVE' : collectedData.RESERVATION1?.includes('Laser') ? 'LASER' : 'MIX'
-      const numberOfGames = parseInt(collectedData.LASER_GAME_NUMBER?.match(/\d+/)?.[0] || collectedData.ACTIVE_TIME_GAME?.includes('2H') ? '4' : collectedData.ACTIVE_TIME_GAME?.includes('1H30') ? '3' : '2')
+
+      // Calculate numberOfGames based on game type
+      let numberOfGames = 2 // default
+      if (gameArea === 'LASER') {
+        // For LASER: use number of parties directly from LASER_GAME_NUMBER
+        numberOfGames = parseInt(collectedData.LASER_GAME_NUMBER?.match(/\d+/)?.[0] || '2')
+      } else if (gameArea === 'ACTIVE') {
+        // For ACTIVE: convert time duration to number of games
+        if (collectedData.ACTIVE_TIME_GAME?.includes('2H') || collectedData.ACTIVE_TIME_GAME?.includes('2h')) {
+          numberOfGames = 4
+        } else if (collectedData.ACTIVE_TIME_GAME?.includes('1H30') || collectedData.ACTIVE_TIME_GAME?.includes('1h30')) {
+          numberOfGames = 3
+        } else {
+          numberOfGames = 2 // 1H default
+        }
+      }
 
       // Insérer commande aborted avec contact_id (comme Clara)
       const { data: newOrder, error: orderError } = await supabase

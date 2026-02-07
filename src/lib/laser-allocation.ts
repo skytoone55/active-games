@@ -74,12 +74,25 @@ export async function findBestLaserRoomsForBooking(params: {
     if (b.branch_id !== branchId) return false
     if (excludeBookingId && b.id === excludeBookingId) return false
     if (!b.game_sessions || b.game_sessions.length === 0) return false
-    
+
     return b.game_sessions.some(s => {
       if (s.game_area !== 'LASER') return false
       const sessionStart = new Date(s.start_datetime)
       const sessionEnd = new Date(s.end_datetime)
-      return sessionStart < endDateTime && sessionEnd > startDateTime
+      const overlaps = sessionStart < endDateTime && sessionEnd > startDateTime
+
+      // Debug log
+      if (overlaps) {
+        console.log('[laser-allocation] Found overlapping booking:', {
+          sessionStart: sessionStart.toISOString(),
+          sessionEnd: sessionEnd.toISOString(),
+          checkStart: startDateTime.toISOString(),
+          checkEnd: endDateTime.toISOString(),
+          bookingId: b.id
+        })
+      }
+
+      return overlaps
     })
   })
 
