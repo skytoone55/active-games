@@ -2397,7 +2397,16 @@
       "code": "קוד",
       "name": "שם",
       "regex": "ביטוי רגולרי",
-      "error_message": "הודעת שגיאה"
+      "error_message": "הודעת שגיאה",
+      "names": {
+        "full_name": "שם מלא (פרטי + משפחה)",
+        "prenom_simple": "שם פרטי בלבד (ללא שם משפחה)",
+        "phone": "מספר טלפון",
+        "email": "כתובת אימייל",
+        "date": "תאריך DD/MM/YYYY",
+        "number": "מספר",
+        "text_free": "טקסט חופשי"
+      }
     },
     "modules": {
       "title": "ספריית מודולים",

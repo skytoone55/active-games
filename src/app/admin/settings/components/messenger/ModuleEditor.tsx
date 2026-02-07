@@ -322,7 +322,7 @@ export function ModuleEditor({ module, isDark, onSave, onCancel }: ModuleEditorP
                   <option value="">-- Sélectionner --</option>
                   {formats.map((fmt) => (
                     <option key={fmt.format_code} value={fmt.format_code}>
-                      {fmt.format_name}
+                      {t(`messenger.formats.names.${fmt.format_name}`) || fmt.format_name}
                     </option>
                   ))}
                 </select>

@@ -2332,7 +2332,16 @@
       "code": "Code",
       "name": "Name",
       "regex": "Regular expression",
-      "error_message": "Error message"
+      "error_message": "Error message",
+      "names": {
+        "full_name": "Full name (first + last)",
+        "prenom_simple": "First name only (no last name required)",
+        "phone": "Phone number",
+        "email": "Email address",
+        "date": "Date DD/MM/YYYY",
+        "number": "Number",
+        "text_free": "Free text"
+      }
     },
     "modules": {
       "title": "Modules Library",

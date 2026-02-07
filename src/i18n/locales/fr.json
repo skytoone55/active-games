@@ -2396,7 +2396,16 @@
       "code": "Code",
       "name": "Nom",
       "regex": "Expression régulière",
-      "error_message": "Message d'erreur"
+      "error_message": "Message d'erreur",
+      "names": {
+        "full_name": "Nom complet (prénom + nom)",
+        "prenom_simple": "Prénom simple (sans nom obligatoire)",
+        "phone": "Numéro de téléphone",
+        "email": "Adresse email",
+        "date": "Date JJ/MM/AAAA",
+        "number": "Nombre",
+        "text_free": "Texte libre"
+      }
     },
     "modules": {
       "title": "Bibliothèque de modules",

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { X, Plus, Edit2, Trash2, Save, Loader2 } from 'lucide-react'
+import { useTranslation } from '@/contexts/LanguageContext'
 import type { ValidationFormat } from '@/types/messenger'
 
 interface ValidationFormatsModalProps {
@@ -10,6 +11,7 @@ interface ValidationFormatsModalProps {
 }
 
 export function ValidationFormatsModal({ isDark, onClose }: ValidationFormatsModalProps) {
+  const { t } = useTranslation()
   const [formats, setFormats] = useState<ValidationFormat[]>([])
   const [loading, setLoading] = useState(true)
   const [editingFormat, setEditingFormat] = useState<ValidationFormat | null>(null)
@@ -107,7 +109,7 @@ export function ValidationFormatsModal({ isDark, onClose }: ValidationFormatsMod
                         <div>
                           <div className="flex items-center space-x-2">
                             <h3 className={`font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                              {format.format_name}
+                              {t(`messenger.formats.names.${format.format_name}`) || format.format_name}
                             </h3>
                             <span
                               className="text-xs px-2 py-1 rounded"
@@ -199,6 +201,7 @@ interface FormatEditorProps {
 }
 
 function FormatEditor({ format, isDark, onSave, onCancel }: FormatEditorProps) {
+  const { t } = useTranslation()
   const [saving, setSaving] = useState(false)
   const [form, setForm] = useState({
     format_code: format?.format_code || '',
@@ -257,13 +260,13 @@ function FormatEditor({ format, isDark, onSave, onCancel }: FormatEditorProps) {
 
       <div>
         <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-          Nom du format
+          Clé i18n du nom (Ex: full_name, prenom_simple)
         </label>
         <input
           type="text"
           value={form.format_name}
           onChange={(e) => setForm({ ...form, format_name: e.target.value })}
-          placeholder="Ex: Email, Téléphone français"
+          placeholder="Ex: full_name, phone, email"
           className="w-full px-3 py-2 rounded-lg border"
           style={{
             backgroundColor: isDark ? '#111827' : 'white',
