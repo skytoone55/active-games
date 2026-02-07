@@ -5,6 +5,7 @@
  */
 
 import { createClient } from '@supabase/supabase-js'
+import { createIsraelDateTime } from '@/lib/dates'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -57,7 +58,7 @@ async function checkTimeAvailability(
 
   const gameDuration = settings.game_duration_minutes || 30
   const pauseDuration = 30
-  const startDateTime = new Date(`${date}T${time}:00`)
+  const startDateTime = createIsraelDateTime(date, time)
   const numGames = numberOfGames || 1
 
   let totalDuration: number
@@ -307,7 +308,7 @@ export async function checkAvailability(params: CheckAvailabilityParams): Promis
 
   const gameDuration = settings.game_duration_minutes || 30
   const pauseDuration = 30
-  const startDateTime = new Date(`${date}T${time}:00`)
+  const startDateTime = createIsraelDateTime(date, time)
 
   // ========== VÉRIFICATION GAME ==========
   if (type === 'GAME') {
