@@ -16,6 +16,7 @@ import {
 } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { useBranches } from '@/hooks/useBranches'
+import { useUserPermissions } from '@/hooks/useUserPermissions'
 import { useTranslation } from '@/contexts/LanguageContext'
 import { AdminHeader } from '../components/AdminHeader'
 import { TemplatesSection } from './components/TemplatesSection'
@@ -33,6 +34,7 @@ export default function SettingsPage() {
   const { t } = useTranslation()
   const { user, loading: authLoading } = useAuth()
   const { branches, selectedBranch, selectBranch, loading: branchesLoading } = useBranches()
+  const { hasPermission, loading: permissionsLoading } = useUserPermissions(user?.role || 'agent')
 
   // Theme state
   const [theme, setTheme] = useState<'light' | 'dark'>('dark')
@@ -61,8 +63,10 @@ export default function SettingsPage() {
     router.push('/admin/login')
   }
 
-  // Only super_admin can access settings
-  if (user && user.role !== 'super_admin') {
+  // Check permissions for settings access
+  const canViewSettings = user && hasPermission('settings', 'can_view')
+
+  if (user && !permissionsLoading && !canViewSettings) {
     return (
       <div className={`min-h-screen flex items-center justify-center ${isDark ? 'bg-gray-900' : 'bg-gray-100'}`}>
         <div className="text-center">
@@ -79,7 +83,7 @@ export default function SettingsPage() {
   }
 
   // Loading state
-  if (authLoading || branchesLoading || !user || !selectedBranch) {
+  if (authLoading || branchesLoading || permissionsLoading || !user || !selectedBranch) {
     return (
       <div className={`min-h-screen flex items-center justify-center ${isDark ? 'bg-gray-900' : 'bg-gray-100'}`}>
         <Loader2 className={`w-8 h-8 animate-spin ${isDark ? 'text-blue-400' : 'text-blue-600'}`} />
@@ -87,44 +91,56 @@ export default function SettingsPage() {
     )
   }
 
-  const sections: { id: SettingsSection; icon: typeof FileText; label: string; description: string }[] = [
+  const allSections: { id: SettingsSection; icon: typeof FileText; label: string; description: string; requiredPermission?: 'settings' | 'messenger' }[] = [
     {
       id: 'templates',
       icon: FileText,
       label: t('admin.settings.sections.templates'),
-      description: t('admin.settings.sections.templates_desc')
+      description: t('admin.settings.sections.templates_desc'),
+      requiredPermission: 'settings'
     },
     {
       id: 'credentials',
       icon: CreditCard,
       label: t('admin.settings.sections.credentials'),
-      description: t('admin.settings.sections.credentials_desc')
+      description: t('admin.settings.sections.credentials_desc'),
+      requiredPermission: 'settings'
     },
     {
       id: 'catalog',
       icon: Package,
       label: 'Catalogue iCount',
-      description: 'Produits et formules'
+      description: 'Produits et formules',
+      requiredPermission: 'settings'
     },
     {
       id: 'maintenance',
       icon: Wrench,
       label: 'Maintenance',
-      description: 'Outils de maintenance'
+      description: 'Outils de maintenance',
+      requiredPermission: 'settings'
     },
     {
       id: 'messenger',
       icon: MessageSquare,
       label: 'Messenger',
-      description: 'Messagerie automatisée'
+      description: 'Messagerie automatisée',
+      requiredPermission: 'messenger'
     },
     {
       id: 'clara',
       icon: Sparkles,
       label: 'Clara AI',
-      description: 'Assistant virtuel (désactivé)'
+      description: 'Assistant virtuel (désactivé)',
+      requiredPermission: 'settings'
     }
   ]
+
+  // Filter sections based on permissions
+  const sections = allSections.filter(section => {
+    if (!section.requiredPermission) return true
+    return hasPermission(section.requiredPermission, 'can_view')
+  })
 
   return (
     <div className={`min-h-screen ${isDark ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-900'}`}>
