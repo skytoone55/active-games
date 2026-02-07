@@ -872,6 +872,48 @@ export async function processUserMessage(
         throw new Error('Branch not found')
       }
 
+      // Extract contact info from collected data
+      const phone = collectedData.NUMBER || ''
+      const firstName = collectedData.NAME?.split(' ')[0] || 'Client'
+      const lastName = collectedData.NAME?.split(' ').slice(1).join(' ') || ''
+      const email = collectedData.MAIL || collectedData.EMAIL || null
+
+      // Find or create contact (like Clara AI does)
+      let contactId: string | null = null
+      if (phone) {
+        const { data: existingContact } = await supabase
+          .from('contacts')
+          .select('id')
+          .eq('branch_id_main', branch.id)
+          .eq('phone', phone)
+          .single()
+
+        if (existingContact) {
+          contactId = existingContact.id
+          console.log('[Engine] Contact found:', contactId)
+        } else {
+          const { data: newContact } = await supabase
+            .from('contacts')
+            .insert({
+              branch_id_main: branch.id,
+              first_name: firstName,
+              last_name: lastName,
+              phone,
+              email,
+              notes_client: 'Contact créé depuis messenger chatbot (order aborted)',
+              source: 'messenger_chatbot',
+              preferred_locale: 'he'
+            })
+            .select('id')
+            .single()
+
+          if (newContact) {
+            contactId = newContact.id
+            console.log('[Engine] Contact created:', contactId)
+          }
+        }
+      }
+
       // Générer référence commande
       const generateShortReference = () => Math.random().toString(36).substring(2, 8).toUpperCase()
       const requestReference = generateShortReference()
@@ -897,21 +939,27 @@ export async function processUserMessage(
         }
       }
 
-      // Insérer commande aborted directement en DB (comme Clara)
+      // Determine game parameters
+      const participantsCount = parseInt(collectedData.RESERVATION2 || '1')
+      const gameArea = collectedData.RESERVATION1?.includes('Active') ? 'ACTIVE' : collectedData.RESERVATION1?.includes('Laser') ? 'LASER' : 'MIX'
+      const numberOfGames = parseInt(collectedData.LASER_GAME_NUMBER?.match(/\d+/)?.[0] || collectedData.ACTIVE_TIME_GAME?.includes('2H') ? '4' : collectedData.ACTIVE_TIME_GAME?.includes('1H30') ? '3' : '2')
+
+      // Insérer commande aborted avec contact_id (comme Clara)
       const { data: newOrder, error: orderError } = await supabase
         .from('orders')
         .insert({
           branch_id: branch.id,
+          contact_id: contactId,
           order_type: 'GAME',
-          participants_count: parseInt(collectedData.RESERVATION2 || '1'),
-          game_area: collectedData.RESERVATION1?.includes('Active') ? 'ACTIVE' : collectedData.RESERVATION1?.includes('Laser') ? 'LASER' : 'MIX',
-          number_of_games: parseInt(collectedData.LASER_GAME_NUMBER?.match(/\d+/)?.[0] || collectedData.ACTIVE_TIME_GAME?.includes('2H') ? '4' : collectedData.ACTIVE_TIME_GAME?.includes('1H30') ? '3' : '2'),
+          participants_count: participantsCount,
+          game_area: gameArea,
+          number_of_games: numberOfGames,
           requested_date: orderDate,
           requested_time: orderTime,
-          customer_first_name: collectedData.NAME?.split(' ')[0] || '',
-          customer_last_name: collectedData.NAME?.split(' ').slice(1).join(' ') || '',
-          customer_phone: collectedData.NUMBER || '',
-          customer_email: collectedData.MAIL || collectedData.EMAIL || '',
+          customer_first_name: firstName,
+          customer_last_name: lastName,
+          customer_phone: phone,
+          customer_email: email,
           status: 'aborted',
           source: 'messenger_chatbot',
           request_reference: requestReference,
@@ -927,9 +975,45 @@ export async function processUserMessage(
       } else {
         console.log('[Engine] Order created:', newOrder.id, requestReference)
 
-        // Sauvegarder le lien de la commande (URL production)
+        // Generate reservation URL with pre-filled parameters (like Clara AI)
         const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://activegames.co.il'
-        const orderUrl = `${baseUrl}/order/${requestReference}`
+        const params = new URLSearchParams()
+
+        // Map branch to slug
+        const branchSlug = branchName.toLowerCase().includes('rishon') ? 'rishon' :
+                          branchName.toLowerCase().includes('raanana') ? 'raanana' : 'rishon'
+
+        params.set('branch', branchSlug)
+        params.set('type', 'game')
+        params.set('players', String(participantsCount))
+
+        if (gameArea !== 'MIX') {
+          params.set('gameArea', gameArea.toLowerCase())
+        }
+        if (numberOfGames) {
+          params.set('games', String(numberOfGames))
+        }
+        if (orderDate) {
+          params.set('date', orderDate)
+        }
+        if (orderTime) {
+          params.set('time', orderTime)
+        }
+        if (firstName) {
+          params.set('firstName', firstName)
+        }
+        if (lastName) {
+          params.set('lastName', lastName)
+        }
+        if (phone) {
+          params.set('phone', phone)
+        }
+        if (email) {
+          params.set('email', email)
+        }
+
+        const orderUrl = `${baseUrl}/reservation?${params.toString()}`
+
         const updatedData = {
           ...collectedData,
           ORDER_URL: orderUrl,
