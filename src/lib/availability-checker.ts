@@ -71,9 +71,9 @@ export async function checkAvailability(params: CheckAvailabilityParams): Promis
   const gameDuration = settings.game_duration_minutes || 30
   const pauseDuration = 30
 
-  // Convertir l'heure Israel → UTC
-  const startDateTime = createIsraelDateTime(date, time)
-  console.log('[Availability Checker] Israel time:', date, time, '→ UTC:', startDateTime.toISOString())
+  // Créer datetime simple (comme l'ancienne API)
+  const startDateTime = new Date(`${date}T${time}:00`)
+  console.log('[Availability Checker] Checking:', date, time, '→', startDateTime.toISOString())
 
   // ========== VÉRIFICATION GAME ==========
   if (type === 'GAME') {
