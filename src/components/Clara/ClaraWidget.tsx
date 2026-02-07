@@ -64,6 +64,42 @@ function createNewSessionId(): string {
   return newSessionId
 }
 
+// Sauvegarder conversationId avec expiration de 72h
+function saveConversationId(conversationId: string): void {
+  if (typeof window === 'undefined') return
+
+  const expiresAt = Date.now() + (72 * 60 * 60 * 1000) // 72h en millisecondes
+  const data = { conversationId, expiresAt }
+  localStorage.setItem('messenger_conversation', JSON.stringify(data))
+}
+
+// Récupérer conversationId si pas expiré
+function getStoredConversationId(): string | null {
+  if (typeof window === 'undefined') return null
+
+  try {
+    const stored = localStorage.getItem('messenger_conversation')
+    if (!stored) return null
+
+    const data = JSON.parse(stored)
+    if (Date.now() > data.expiresAt) {
+      // Expiré, nettoyer
+      localStorage.removeItem('messenger_conversation')
+      return null
+    }
+
+    return data.conversationId
+  } catch {
+    return null
+  }
+}
+
+// Clear conversation (pour nouvelle conversation)
+function clearStoredConversation(): void {
+  if (typeof window === 'undefined') return
+  localStorage.removeItem('messenger_conversation')
+}
+
 // Messages de bienvenue par langue
 const WELCOME_MESSAGES: Record<string, string> = {
   he: 'שלום! 👋 אני קלרה, העוזרת הווירטואלית של Active Games. איך אני יכולה לעזור לך?',
@@ -356,11 +392,38 @@ export function ClaraWidget({
   const chatEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
 
+  // Charger l'historique d'une conversation restaurée
+  const loadConversationHistory = useCallback(async (convId: string) => {
+    try {
+      const res = await fetch(`/api/messenger/history?conversationId=${convId}`)
+      const data = await res.json()
+      if (data.success && data.messages) {
+        const loadedMessages: ChatMessage[] = data.messages.map((m: any) => ({
+          id: m.id,
+          role: m.role,
+          content: m.content,
+          choices: m.metadata?.choices
+        }))
+        setMessages(loadedMessages)
+        console.log('[Clara] Loaded conversation history:', loadedMessages.length, 'messages')
+      }
+    } catch (error) {
+      console.error('[Clara] Error loading conversation history:', error)
+    }
+  }, [])
+
   // Initialiser le session ID et la taille de police côté client
   useEffect(() => {
     setSessionId(getOrCreateSessionId())
     setFontSize(getSavedFontSize())
-  }, [])
+    // Restaurer conversationId si existe et pas expiré
+    const storedConvId = getStoredConversationId()
+    if (storedConvId) {
+      setConversationId(storedConvId)
+      loadConversationHistory(storedConvId)
+      console.log('[Clara] Restored conversation:', storedConvId)
+    }
+  }, [loadConversationHistory])
 
   // Fonction pour changer la taille de police
   const changeFontSize = useCallback((direction: 'increase' | 'decrease') => {
@@ -404,6 +467,7 @@ export function ClaraWidget({
       console.log('[Clara] API response:', data)
       if (data.success) {
         setConversationId(data.conversationId)
+        saveConversationId(data.conversationId) // Sauvegarder avec expiration 72h
         setMessages([
           {
             id: '1',
@@ -587,6 +651,7 @@ export function ClaraWidget({
   const handleNewConversation = useCallback(() => {
     const newSessionId = createNewSessionId()
     setSessionId(newSessionId)
+    clearStoredConversation() // Clear conversation persistée
     resetChat()
     setShowQuickReplies(true)
     setInput('')
