@@ -299,6 +299,9 @@ function MessageContent({ content, isStreaming, fontSize, primaryColor, locale, 
         }
 
         // Sinon, afficher le texte normalement (en nettoyant les 👉 et lignes vides)
+        // NE PAS afficher si c'est un pattern [BTN:...] qui n'a pas été matché (cas impossible normalement)
+        if (part.match(/^\[BTN:/)) return null
+
         const cleanedPart = part.replace(/👉\s*/g, '').trim()
         if (!cleanedPart) return null
         return <span key={index}>{cleanedPart}</span>
