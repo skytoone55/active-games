@@ -15,7 +15,7 @@ interface UsePermissionsReturn {
 }
 
 // Resource display order
-const RESOURCE_ORDER: ResourceType[] = ['agenda', 'orders', 'clients', 'calls', 'users', 'logs', 'settings', 'permissions']
+const RESOURCE_ORDER: ResourceType[] = ['agenda', 'orders', 'clients', 'calls', 'users', 'logs', 'settings', 'permissions', 'messenger']
 
 export function usePermissions(): UsePermissionsReturn {
   const [permissions, setPermissions] = useState<RolePermission[]>([])
