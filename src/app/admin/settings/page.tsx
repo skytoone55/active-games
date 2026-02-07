@@ -22,12 +22,11 @@ import { AdminHeader } from '../components/AdminHeader'
 import { TemplatesSection } from './components/TemplatesSection'
 import { CredentialsSection } from './components/CredentialsSection'
 import { ICountCatalogSection } from './components/ICountCatalogSection'
-import { MaintenanceSection } from './components/MaintenanceSection'
 import { ClaraSection } from './components/ClaraSection'
 import { MessengerSection } from './components/MessengerSection'
 import { createClient } from '@/lib/supabase/client'
 
-type SettingsSection = 'templates' | 'credentials' | 'catalog' | 'maintenance' | 'messenger' | 'clara'
+type SettingsSection = 'templates' | 'credentials' | 'catalog' | 'messenger' | 'clara'
 
 export default function SettingsPage() {
   const router = useRouter()
@@ -111,13 +110,6 @@ export default function SettingsPage() {
       icon: Package,
       label: 'Catalogue iCount',
       description: 'Produits et formules',
-      requiredPermission: 'settings'
-    },
-    {
-      id: 'maintenance',
-      icon: Wrench,
-      label: 'Maintenance',
-      description: 'Outils de maintenance',
       requiredPermission: 'settings'
     },
     {
@@ -229,9 +221,6 @@ export default function SettingsPage() {
           )}
           {activeSection === 'catalog' && (
             <ICountCatalogSection isDark={isDark} />
-          )}
-          {activeSection === 'maintenance' && (
-            <MaintenanceSection isDark={isDark} />
           )}
           {activeSection === 'messenger' && (
             <MessengerSection isDark={isDark} />
