@@ -59,7 +59,7 @@ export type CallDirection = 'inbound' | 'outbound'
 export type CallStatus = 'completed' | 'missed' | 'busy' | 'failed' | 'no-answer'
 
 // Types pour Permissions
-export type ResourceType = 'agenda' | 'orders' | 'clients' | 'users' | 'logs' | 'settings' | 'permissions' | 'calls'
+export type ResourceType = 'agenda' | 'orders' | 'clients' | 'users' | 'logs' | 'settings' | 'permissions' | 'calls' | 'messenger'
 
 // Type pour la table roles (rôles dynamiques avec hiérarchie)
 export interface Role {
