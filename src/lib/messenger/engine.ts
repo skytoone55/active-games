@@ -1029,7 +1029,10 @@ export async function processUserMessage(
         ? `https://${process.env.VERCEL_URL}`
         : (process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000')
 
-      const response = await fetch(`${baseUrl}/api/public/clara/check-availability`, {
+      const apiUrl = `${baseUrl}/api/public/clara/check-availability`
+      console.log('[Engine] API URL:', apiUrl)
+
+      const response = await fetch(apiUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1042,6 +1045,14 @@ export async function processUserMessage(
           numberOfGames
         })
       })
+
+      console.log('[Engine] API response status:', response.status)
+
+      if (!response.ok) {
+        const text = await response.text()
+        console.error('[Engine] API error response:', text.substring(0, 500))
+        throw new Error(`API returned ${response.status}: ${text.substring(0, 200)}`)
+      }
 
       const result = await response.json()
       console.log('[Engine] Availability result:', result)
