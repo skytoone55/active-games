@@ -412,8 +412,8 @@ function AdminHeaderComponent({
                   </div>
                 )}
 
-                {/* Liens super_admin uniquement */}
-                {user.role === 'super_admin' && (
+                {/* Liens admin (statistics, settings, permissions, roles) */}
+                {(hasPermission('settings', 'can_view') || user.role === 'super_admin') && (
                   <div className={`py-2 border-b ${
                     theme === 'dark' ? 'border-gray-700' : 'border-gray-200'
                   }`}>
@@ -688,8 +688,8 @@ function AdminHeaderComponent({
                   <span>{t('admin.header.permissions')}</span>
                 </Link>
               )}
-              {/* Liens super_admin mobile */}
-              {user.role === 'super_admin' && (
+              {/* Liens admin mobile (statistics, settings, permissions, roles) */}
+              {(hasPermission('settings', 'can_view') || user.role === 'super_admin') && (
                 <>
                   <Link
                     href="/admin/statistics"
