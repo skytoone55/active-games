@@ -269,7 +269,7 @@ export function ModuleEditor({ module, isDark, onSave, onCancel }: ModuleEditorP
                   key={variable.key}
                   type="button"
                   onClick={() => insertVariable(variable.key)}
-                  title={variable.description}
+                  title={variable.label}
                   className="px-2 py-1 text-xs rounded border transition-colors"
                   style={{
                     backgroundColor: isDark ? '#374151' : '#F3F4F6',
