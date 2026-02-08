@@ -317,6 +317,103 @@ export async function processWithClara(request: ClaraRequest): Promise<ClaraResp
 }
 
 /**
+ * Strict format validation for critical fields
+ * This runs AFTER Clara to ensure formats are EXACTLY correct
+ */
+export function validateCriticalFormats(collectedData: Record<string, any>): {
+  isValid: boolean
+  invalidFields: Array<{ field: string; issue: string }>
+} {
+  const invalidFields: Array<{ field: string; issue: string }> = []
+
+  // WELCOME (branch) - MUST be exact
+  if (collectedData.WELCOME || collectedData.branch) {
+    const branch = collectedData.WELCOME || collectedData.branch
+    if (branch !== 'Rishon Lezion' && branch !== 'Petach Tikva') {
+      invalidFields.push({
+        field: 'branch',
+        issue: `Must be exactly "Rishon Lezion" or "Petach Tikva", got: "${branch}"`
+      })
+    }
+  }
+
+  // NUMBER (phone) - MUST be exactly 10 digits starting with 0
+  if (collectedData.NUMBER || collectedData.phone) {
+    const phone = collectedData.NUMBER || collectedData.phone
+    const phoneRegex = /^0[0-9]{9}$/
+    if (!phoneRegex.test(phone)) {
+      invalidFields.push({
+        field: 'phone',
+        issue: `Must be 10 digits starting with 0, got: "${phone}"`
+      })
+    }
+  }
+
+  // DATE - MUST be YYYY-MM-DD format
+  if (collectedData.DATE || collectedData.date) {
+    const date = collectedData.DATE || collectedData.date
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/
+    if (!dateRegex.test(date)) {
+      invalidFields.push({
+        field: 'date',
+        issue: `Must be YYYY-MM-DD format, got: "${date}"`
+      })
+    }
+  }
+
+  // TIME - MUST be HH:MM format (24h)
+  if (collectedData.TIME || collectedData.time) {
+    const time = collectedData.TIME || collectedData.time
+    const timeRegex = /^([0-1][0-9]|2[0-3]):[0-5][0-9]$/
+    if (!timeRegex.test(time)) {
+      invalidFields.push({
+        field: 'time',
+        issue: `Must be HH:MM format (24h), got: "${time}"`
+      })
+    }
+  }
+
+  // RESERVATION1 (gameArea) - MUST be exact
+  if (collectedData.RESERVATION1 || collectedData.gameArea) {
+    const gameArea = collectedData.RESERVATION1 || collectedData.gameArea
+    if (gameArea !== 'LASER' && gameArea !== 'ACTIVE_TIME' && gameArea !== 'MIX') {
+      invalidFields.push({
+        field: 'gameArea',
+        issue: `Must be exactly "LASER", "ACTIVE_TIME", or "MIX", got: "${gameArea}"`
+      })
+    }
+  }
+
+  // RESERVATION2 (participants) - MUST be a number
+  if (collectedData.RESERVATION2 || collectedData.participants) {
+    const participants = collectedData.RESERVATION2 || collectedData.participants
+    const participantsNum = parseInt(participants)
+    if (isNaN(participantsNum) || participantsNum < 1 || participantsNum > 100) {
+      invalidFields.push({
+        field: 'participants',
+        issue: `Must be a number between 1-100, got: "${participants}"`
+      })
+    }
+  }
+
+  // NAME - Should have at least a first name
+  if (collectedData.NAME || collectedData.firstName) {
+    const name = collectedData.NAME || collectedData.firstName
+    if (typeof name !== 'string' || name.trim().length < 2) {
+      invalidFields.push({
+        field: 'name',
+        issue: `Must be at least 2 characters, got: "${name}"`
+      })
+    }
+  }
+
+  return {
+    isValid: invalidFields.length === 0,
+    invalidFields
+  }
+}
+
+/**
  * Validate that all required fields are collected before check_availability
  */
 export function validateRequiredFields(collectedData: Record<string, any>): {

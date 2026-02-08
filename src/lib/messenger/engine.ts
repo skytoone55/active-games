@@ -8,7 +8,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import OpenAI from 'openai'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { parseDate, parseTime, formatDateForDisplay, formatTimeForDisplay } from './date-time-parser'
-import { processWithClara } from './clara-service'
+import { processWithClara, validateCriticalFormats } from './clara-service'
 import type {
   Workflow,
   WorkflowStep,
@@ -411,9 +411,39 @@ export async function processUserMessage(
           }
         }
 
-        // Si Clara indique que la collecte est complète, passer à l'étape suivante
+        // Si Clara indique que la collecte est complète, VALIDER d'abord les formats
         if (claraResponse.is_complete) {
           console.log('[Engine] Clara marked step as complete')
+
+          // VALIDATION STRICTE des formats critiques
+          const validation = validateCriticalFormats(updatedData)
+
+          if (!validation.isValid) {
+            console.error('[Engine] Clara validation failed:', validation.invalidFields)
+
+            // Construire un message d'erreur en hébreu pour Clara
+            const errorFields = validation.invalidFields.map(f => `- ${f.field}: ${f.issue}`).join('\n')
+            const errorMessage = `סליחה, יש בעיה עם הנתונים:\n${errorFields}\n\nאנא תקן את הפרטים.`
+
+            // Enregistrer le message d'erreur
+            await supabase.from('messenger_messages').insert({
+              conversation_id: conversationId,
+              role: 'assistant',
+              content: errorMessage,
+              step_ref: currentStep.step_ref
+            })
+
+            // Retourner sans passer à l'étape suivante
+            return {
+              success: true,
+              message: errorMessage,
+              nextStepRef: currentStep.step_ref,
+              moduleType: module.module_type,
+              choices: null
+            }
+          }
+
+          console.log('[Engine] Clara validation passed ✓')
 
           // Chercher la transition
           const { data: outputs } = await supabase
