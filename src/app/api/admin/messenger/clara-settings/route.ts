@@ -76,12 +76,16 @@ export async function GET(request: NextRequest) {
 {
   "reply_to_user": "היי {{firstName}}! איזה סוג פעילות מעניין אותך?",
   "show_buttons": [
-    { "id": "LASER", "label": "🔫 לייזר טאג" },
-    { "id": "ACTIVE_TIME", "label": "🏃 אקטיב גיימס" }
+    { "id": "LASER", "label": { "he": "🔫 לייזר טאג", "fr": "🔫 Laser Tag", "en": "🔫 Laser Tag" } },
+    { "id": "ACTIVE_TIME", "label": { "he": "🏃 אקטיב גיימס", "fr": "🏃 Jeux Actifs", "en": "🏃 Active Games" } }
   ],
   "collected_data": {},
   "is_complete": false
 }
+
+**הערה חשובה:** label יכול להיות:
+- string פשוט: "לייזר טאג"
+- או object עם תרגומים: { "he": "לייזר טאג", "fr": "Laser Tag", "en": "Laser Tag" }
 
 ## פורמט תשובה JSON (חובה!):
 {

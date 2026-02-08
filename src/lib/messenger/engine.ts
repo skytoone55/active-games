@@ -894,16 +894,20 @@ export async function processUserMessage(
         }
       }
 
-      // Si toujours pas trouvé, chercher correspondance partielle
-      if (!selectedChoice) {
+      // VALIDATION STRICTE EN MODE MANUEL (sans Clara)
+      // Si Clara n'est pas activé pour ce module, on accepte SEULEMENT:
+      // 1. Correspondance exacte du label
+      // 2. Numéro de choix (1, 2, 3...)
+      // Pas de fuzzy matching, pas de correspondance partielle
+      const isManualMode = !module.clara_enabled
 
+      if (!selectedChoice && !isManualMode) {
+        // Si Clara activé, utiliser fuzzy matching (mode flexible)
         // Si pas de correspondance exacte, chercher une correspondance partielle
-        if (!selectedChoice) {
-          selectedChoice = choices.find((choice: any) => {
-            const label = (choice.label[locale] || choice.label.fr || choice.label.en || '').toLowerCase()
-            return label.includes(userInput) || userInput.includes(label)
-          })
-        }
+        selectedChoice = choices.find((choice: any) => {
+          const label = (choice.label[locale] || choice.label.fr || choice.label.en || '').toLowerCase()
+          return label.includes(userInput) || userInput.includes(label)
+        })
 
         // Si toujours pas trouvé, utiliser la distance de Levenshtein simplifiée
         if (!selectedChoice && userInput.length >= 3) {
@@ -950,7 +954,25 @@ export async function processUserMessage(
       } else {
         console.log('[Engine] No choice matched!')
         isValid = false
-        errorMessage = locale === 'fr' ? 'Choix invalide' : (locale === 'en' ? 'Invalid choice' : 'בחירה לא חוקית')
+
+        // Message d'erreur différent selon mode manuel ou Clara
+        if (isManualMode) {
+          // Mode manuel strict: liste les choix valides
+          const validChoices = choices.map((c: any, idx: number) =>
+            `${idx + 1}. ${c.label[locale] || c.label.fr || c.label.en}`
+          ).join('\n')
+
+          errorMessage = locale === 'fr'
+            ? `Veuillez choisir parmi les options suivantes:\n${validChoices}`
+            : locale === 'en'
+            ? `Please choose from the following options:\n${validChoices}`
+            : `אנא בחר מהאפשרויות הבאות:\n${validChoices}`
+        } else {
+          // Mode Clara flexible: message simple
+          errorMessage = locale === 'fr'
+            ? 'Choix invalide'
+            : (locale === 'en' ? 'Invalid choice' : 'בחירה לא חוקית')
+        }
       }
       break
 
