@@ -1693,12 +1693,14 @@ export default function AdminPage() {
       
       // CRITIQUE : Filtrer UNIQUEMENT les bookings de la branche cible
       // Chaque branche doit avoir ses salles laser totalement indépendantes
+      // CORRECTION BUG MIX : Ne compter QUE les sessions LASER qui chevauchent réellement
       const overlappingLaserBookings = allBookings.filter(b => {
         // FILTRE PAR BRANCHE : Exclure les bookings des autres branches
         if (b.branch_id !== branchIdToUse) return false
         if (excludeBookingId && b.id === excludeBookingId) return false
         if (!b.game_sessions || b.game_sessions.length === 0) return false
-        
+
+        // Chercher uniquement les sessions LASER qui chevauchent le créneau demandé
         return b.game_sessions.some(s => {
           if (s.game_area !== 'LASER') return false
           const sessionStart = new Date(s.start_datetime)

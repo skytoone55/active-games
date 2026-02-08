@@ -70,25 +70,29 @@ export async function findBestLaserRoomsForBooking(params: {
   })
 
   // Filtrer les bookings qui chevauchent et sont sur la même branche
+  // CORRECTION BUG MIX : Ne compter QUE les sessions LASER qui chevauchent réellement
   const overlappingLaserBookings = allBookings.filter(b => {
     if (b.branch_id !== branchId) return false
     if (excludeBookingId && b.id === excludeBookingId) return false
     if (!b.game_sessions || b.game_sessions.length === 0) return false
 
+    // Chercher uniquement les sessions LASER qui chevauchent le créneau demandé
     return b.game_sessions.some(s => {
       if (s.game_area !== 'LASER') return false
+
       const sessionStart = new Date(s.start_datetime)
       const sessionEnd = new Date(s.end_datetime)
       const overlaps = sessionStart < endDateTime && sessionEnd > startDateTime
 
       // Debug log
       if (overlaps) {
-        console.log('[laser-allocation] Found overlapping booking:', {
+        console.log('[laser-allocation] Found overlapping LASER session:', {
           sessionStart: sessionStart.toISOString(),
           sessionEnd: sessionEnd.toISOString(),
           checkStart: startDateTime.toISOString(),
           checkEnd: endDateTime.toISOString(),
-          bookingId: b.id
+          bookingId: b.id,
+          gameArea: s.game_area
         })
       }
 

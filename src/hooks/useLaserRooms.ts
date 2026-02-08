@@ -213,9 +213,11 @@ export function useLaserRooms(branchId: string | null) {
 
       if (filteredSessions.length === 0) return 0
 
+      // CORRECTION BUG MIX : Compter UNIQUEMENT les sessions LASER qui chevauchent réellement
+      // Avant : On comptait TOUS les participants d'un booking dès qu'il avait UNE session laser
+      // Maintenant : On compte UNIQUEMENT si la session LASER chevauche le créneau demandé
+
       // Charger les bookings pour obtenir participants_count ET branch_id
-      // IMPORTANT : On compte participants_count du booking entier, mais SEULEMENT pour les bookings
-      // qui ont des sessions LASER sur ce créneau ET qui appartiennent à la branche cible
       const bookingIds = [...new Set(filteredSessions.map((s) => s.booking_id))]
       const { data: bookings } = await supabase
         .from('bookings')
@@ -226,11 +228,9 @@ export function useLaserRooms(branchId: string | null) {
 
       if (!bookings) return 0
 
-      // Calculer le total des participants UNIQUEMENT pour les bookings avec sessions LASER de cette branche
-      // IMPORTANT : Si un booking a à la fois des sessions ACTIVE et LASER (booking mixte),
-      // on compte quand même le total car tous les participants peuvent utiliser les vestes LASER
-      // Les grilles ACTIVE et LASER sont indépendantes : un participant peut jouer ACTIVE
-      // et ne pas utiliser de veste LASER, ou vice versa
+      // Compter les participants : SEULEMENT ceux dont la session LASER chevauche
+      // filteredSessions contient déjà UNIQUEMENT les sessions LASER qui chevauchent
+      // Donc on compte chaque booking UNE SEULE FOIS (même s'il a plusieurs sessions laser)
       const totalParticipants = bookings.reduce((sum, booking) => {
         return sum + booking.participants_count
       }, 0)

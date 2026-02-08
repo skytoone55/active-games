@@ -1961,37 +1961,50 @@ export function BookingModal({
     }
 
     // Validation Laser : contrainte hard vests pour GAME en mode sur mesure avec sessions Laser
+    // CORRECTION BUG MIX : Vérifier CHAQUE SESSION LASER séparément, pas toute la durée du booking
     if (bookingType === 'GAME' && gameArea === 'CUSTOM' && checkLaserVestsConstraint) {
       const hasLaserSession = gameCustomGameArea.some(area => area === 'LASER')
       if (hasLaserSession) {
-        const gameStartDate = new Date(localDate)
-        gameStartDate.setHours(hour, minute, 0, 0)
-        // Calculer la date de fin en additionnant toutes les durées et pauses
-        let totalMinutes = 0
+        // Calculer les sessions LASER individuelles
+        const laserSessions: Array<{ start: Date; end: Date }> = []
+        let currentStart = new Date(localDate)
+        currentStart.setHours(hour, minute, 0, 0)
+
         for (let i = 0; i < gameCustomNumberOfGames; i++) {
-          totalMinutes += parseInt(gameCustomGameDurations[i] || '30', 10)
+          if (gameCustomGameArea[i] === 'LASER') {
+            const duration = parseInt(gameCustomGameDurations[i] || '30', 10)
+            const sessionStart = new Date(currentStart)
+            const sessionEnd = new Date(sessionStart)
+            sessionEnd.setMinutes(sessionEnd.getMinutes() + duration)
+            laserSessions.push({ start: sessionStart, end: sessionEnd })
+          }
+
+          // Préparer le début du prochain jeu
           if (i < gameCustomNumberOfGames - 1) {
-            totalMinutes += gameCustomGamePauses[i] || 0
+            const duration = parseInt(gameCustomGameDurations[i] || '30', 10)
+            currentStart = new Date(currentStart)
+            currentStart.setMinutes(currentStart.getMinutes() + duration + (gameCustomGamePauses[i] ?? 0))
           }
         }
-        const gameEndDate = new Date(gameStartDate)
-        gameEndDate.setMinutes(gameEndDate.getMinutes() + totalMinutes)
 
-        const vestsCheck = await checkLaserVestsConstraint(
-          parsedParticipants,
-          gameStartDate,
-          gameEndDate,
-          editingBooking?.id,
-          bookingBranchId
-        )
+        // Vérifier CHAQUE session LASER individuellement
+        for (const session of laserSessions) {
+          const vestsCheck = await checkLaserVestsConstraint(
+            parsedParticipants,
+            session.start,
+            session.end,
+            editingBooking?.id,
+            bookingBranchId
+          )
 
-        if (vestsCheck.isViolated) {
-          setError(t('admin.booking_modal.errors.vests_constraint_hard', {
-            current: vestsCheck.currentUsage + parsedParticipants,
-            max: vestsCheck.maxVests,
-            message: vestsCheck.message
-          }))
-          return
+          if (vestsCheck.isViolated) {
+            setError(t('admin.booking_modal.errors.vests_constraint_hard', {
+              current: vestsCheck.currentUsage + parsedParticipants,
+              max: vestsCheck.maxVests,
+              message: vestsCheck.message
+            }))
+            return
+          }
         }
       }
     }
