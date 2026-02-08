@@ -8,6 +8,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import OpenAI from 'openai'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { parseDate, parseTime, formatDateForDisplay, formatTimeForDisplay } from './date-time-parser'
+import { processWithClara } from './clara-service'
 import type {
   Workflow,
   WorkflowStep,
@@ -39,6 +40,7 @@ export interface ExecuteStepResult {
   moduleType?: string
   choices?: Array<{ id: string; label: string; value: string }> | null
   autoExecute?: boolean
+  isComplete?: boolean  // For Clara: indicates conversation is complete
 }
 
 /**
@@ -299,6 +301,225 @@ export async function processUserMessage(
 
   // Utiliser la locale de la conversation
   const locale: Locale = (conversation.locale as Locale) || 'fr'
+
+  // ============================================================================
+  // CLARA AI PROCESSING
+  // ============================================================================
+  // Si Clara est activé pour ce module, traiter avec l'IA
+  if (module.clara_enabled && module.clara_prompt) {
+    console.log('[Engine] Clara enabled for module:', module.ref_code)
+
+    try {
+      // Récupérer l'historique de conversation (derniers 10 messages)
+      const { data: messageHistory } = await supabase
+        .from('messenger_messages')
+        .select('role, content')
+        .eq('conversation_id', conversationId)
+        .order('created_at', { ascending: false })
+        .limit(10)
+
+      const conversationHistory = (messageHistory || []).reverse().map((msg: any) => ({
+        role: msg.role as 'user' | 'assistant',
+        content: msg.content
+      }))
+
+      // Appeler Clara
+      const claraResponse = await processWithClara({
+        userMessage,
+        conversationHistory,
+        collectedData: conversation.collected_data || {},
+        config: {
+          enabled: true,
+          prompt: module.clara_prompt,
+          model: module.clara_model || 'gpt-4o-mini',
+          temperature: module.clara_temperature ?? 0.7,
+          timeout_ms: module.clara_timeout_ms ?? 5000
+        }
+      })
+
+      // Si Clara réussit
+      if (claraResponse.success && claraResponse.reply) {
+        console.log('[Engine] Clara response:', claraResponse.reply)
+
+        // Mettre à jour les données collectées
+        const updatedData = {
+          ...conversation.collected_data,
+          ...claraResponse.collected_data
+        }
+
+        await supabase
+          .from('messenger_conversations')
+          .update({ collected_data: updatedData })
+          .eq('id', conversationId)
+
+        // Enregistrer la réponse de Clara
+        await supabase.from('messenger_messages').insert({
+          conversation_id: conversationId,
+          role: 'assistant',
+          content: claraResponse.reply,
+          step_ref: currentStep.step_ref
+        })
+
+        // Si Clara indique que la collecte est complète, passer à l'étape suivante
+        if (claraResponse.is_complete) {
+          console.log('[Engine] Clara marked step as complete')
+
+          // Chercher la transition
+          const { data: outputs } = await supabase
+            .from('messenger_workflow_outputs')
+            .select('*')
+            .eq('workflow_id', conversation.current_workflow_id)
+            .eq('from_step_ref', currentStep.step_ref)
+            .eq('output_type', 'success')
+            .order('priority', { ascending: true })
+
+          if (outputs && outputs.length > 0) {
+            const nextOutput = outputs[0]
+
+            if (nextOutput.destination_type === 'step' && nextOutput.destination_ref) {
+              // Transition vers step suivante
+              await supabase
+                .from('messenger_conversations')
+                .update({ current_step_ref: nextOutput.destination_ref })
+                .eq('id', conversationId)
+
+              // Récupérer le module suivant
+              const { data: nextStep } = await supabase
+                .from('messenger_workflow_steps')
+                .select('*')
+                .eq('workflow_id', conversation.current_workflow_id)
+                .eq('step_ref', nextOutput.destination_ref)
+                .single()
+
+              if (nextStep) {
+                const { data: nextModule } = await supabase
+                  .from('messenger_modules')
+                  .select('*')
+                  .eq('ref_code', nextStep.module_ref)
+                  .single()
+
+                if (nextModule) {
+                  const nextMessage = replaceDynamicVariables(nextModule.content[locale] || '', updatedData)
+
+                  await supabase.from('messenger_messages').insert({
+                    conversation_id: conversationId,
+                    role: 'assistant',
+                    content: nextMessage,
+                    step_ref: nextOutput.destination_ref
+                  })
+
+                  // Préparer choices si nécessaire
+                  const nextChoices = nextModule.module_type === 'choix_multiples' && nextModule.choices
+                    ? nextModule.choices.map((choice: any, index: number) => ({
+                        id: choice.id,
+                        label: choice.label[locale] || choice.label.fr || choice.label.en,
+                        value: `${index + 1}`
+                      }))
+                    : null
+
+                  return {
+                    success: true,
+                    message: nextMessage,
+                    nextStepRef: nextOutput.destination_ref,
+                    moduleType: nextModule.module_type,
+                    choices: nextChoices
+                  }
+                }
+              }
+            } else if (nextOutput.destination_type === 'end') {
+              // Fin du workflow
+              await supabase
+                .from('messenger_conversations')
+                .update({ status: 'completed' })
+                .eq('id', conversationId)
+
+              return {
+                success: true,
+                message: claraResponse.reply,
+                isComplete: true
+              }
+            }
+          }
+        }
+
+        // Retourner la réponse de Clara sans changer d'étape
+        return {
+          success: false, // false = reste sur la même étape
+          message: claraResponse.reply,
+          nextStepRef: currentStep.step_ref,
+          moduleType: module.module_type
+        }
+      }
+
+      // Si Clara échoue ou timeout, fallback au workflow manuel
+      if (claraResponse.timeout) {
+        console.log('[Engine] Clara timeout - falling back to manual workflow')
+      } else {
+        console.log('[Engine] Clara failed:', claraResponse.error)
+      }
+
+      // Charger le message de fallback depuis les paramètres globaux
+      const { data: workflow } = await supabase
+        .from('messenger_workflows')
+        .select('clara_fallback_message, clara_fallback_action')
+        .eq('id', conversation.current_workflow_id)
+        .single()
+
+      const fallbackMessage = workflow?.clara_fallback_message ||
+        'Je rencontre un problème technique. Un conseiller va vous rappeler. 📞'
+
+      await supabase.from('messenger_messages').insert({
+        conversation_id: conversationId,
+        role: 'assistant',
+        content: fallbackMessage,
+        step_ref: currentStep.step_ref
+      })
+
+      // Selon fallback_action
+      const fallbackAction = workflow?.clara_fallback_action || 'escalate'
+
+      if (fallbackAction === 'escalate') {
+        // Marquer pour rappel humain
+        await supabase
+          .from('messenger_conversations')
+          .update({ status: 'completed', collected_data: { ...conversation.collected_data, needs_callback: true } })
+          .eq('id', conversationId)
+
+        return {
+          success: true,
+          message: fallbackMessage,
+          isComplete: true
+        }
+      } else if (fallbackAction === 'retry') {
+        // Réessayer le même module (garde la même étape)
+        return {
+          success: false,
+          message: fallbackMessage,
+          nextStepRef: currentStep.step_ref,
+          moduleType: module.module_type
+        }
+      } else if (fallbackAction === 'abort') {
+        // Abandonner la conversation
+        await supabase
+          .from('messenger_conversations')
+          .update({ status: 'abandoned' })
+          .eq('id', conversationId)
+
+        return {
+          success: true,
+          message: fallbackMessage,
+          isComplete: true
+        }
+      }
+
+      // Continue avec workflow manuel (fallthrough)
+    } catch (error) {
+      console.error('[Engine] Clara processing error:', error)
+      // Continue avec workflow manuel en cas d'erreur
+    }
+  }
+  // Fin Clara AI Processing
+  // ============================================================================
 
   // Fonction pour remplacer les variables dynamiques dans un texte
   function replaceDynamicVariables(text: string, collectedData: Record<string, any>): string {
