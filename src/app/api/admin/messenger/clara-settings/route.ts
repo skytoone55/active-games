@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 
+// Type definition
+interface WorkflowClaraSettings {
+  clara_default_prompt: string | null
+  clara_fallback_action: 'escalate' | 'retry' | 'abort' | null
+  clara_fallback_message: string | null
+}
+
 // GET - Load global Clara settings (from first active workflow or defaults)
 export async function GET(request: NextRequest) {
   try {
@@ -11,14 +18,14 @@ export async function GET(request: NextRequest) {
       .from('messenger_workflows')
       .select('clara_default_prompt, clara_fallback_action, clara_fallback_message')
       .eq('is_active', true)
-      .single()
+      .single() as { data: WorkflowClaraSettings | null, error: any }
 
     if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
       throw error
     }
 
-    // Return settings or defaults
-    const settings = workflow || {
+    // Default settings
+    const defaults = {
       clara_default_prompt: `את Clara, עוזרת הזמנות חכמה של Active Games. תפקידך לאסוף מידע מהלקוח בשיחה טבעית ונעימה.
 
 ## תפקידך האוניברסלי:
@@ -64,8 +71,15 @@ export async function GET(request: NextRequest) {
 }
 
 הגדר is_complete: true רק כאשר כל המידע הנדרש **נכון ותקין**!`,
-      clara_fallback_action: 'escalate',
+      clara_fallback_action: 'escalate' as const,
       clara_fallback_message: 'אני נתקל בבעיה טכנית. אחד הנציגים שלנו יחזור אליך בהקדם לסיום ההזמנה. 📞'
+    }
+
+    // Merge workflow settings with defaults (defaults fill in missing values)
+    const settings = {
+      clara_default_prompt: workflow?.clara_default_prompt || defaults.clara_default_prompt,
+      clara_fallback_action: workflow?.clara_fallback_action || defaults.clara_fallback_action,
+      clara_fallback_message: workflow?.clara_fallback_message || defaults.clara_fallback_message
     }
 
     return NextResponse.json({
