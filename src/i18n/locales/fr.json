@@ -2467,6 +2467,21 @@
         "time": "Heure",
         "email": "Email",
         "order": "Lien commande"
+      },
+      "clara_settings": {
+        "title": "Paramètres Clara",
+        "subtitle": "Configuration globale pour Clara AI",
+        "default_prompt_label": "Prompt par défaut",
+        "default_prompt_placeholder": "Le prompt qui s'affichera par défaut lors de l'activation de Clara dans un module...",
+        "default_prompt_help": "Ce prompt sera automatiquement pré-rempli quand vous activerez Clara sur un nouveau module",
+        "fallback_action_label": "Action de secours",
+        "fallback_escalate": "Transférer à un agent (Recommandé)",
+        "fallback_retry": "Réessayer",
+        "fallback_abort": "Abandonner la conversation",
+        "fallback_action_help": "Que faire lorsque Clara échoue ou atteint le timeout",
+        "fallback_message_label": "Message de secours",
+        "fallback_message_placeholder": "Je rencontre un problème technique. Un conseiller va vous rappeler. 📞",
+        "fallback_message_help": "Le message affiché lorsque Clara échoue"
       }
     },
     "workflows": {

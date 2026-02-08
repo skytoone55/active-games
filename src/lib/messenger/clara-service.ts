@@ -21,6 +21,15 @@ export interface ClaraRequest {
   conversationHistory: Array<{ role: 'user' | 'assistant'; content: string }>
   collectedData: Record<string, any>
   config: ClaraConfig
+  moduleContext?: {
+    content: string  // The question/message of the current module
+    choices?: Array<{ id: string; label: any }>  // Available choices if choix_multiples
+    validationFormat?: string  // Expected format (email, phone, date, etc.)
+  }
+  systemContext?: {
+    branches?: string[]  // Available branches
+    faqItems?: Array<{ question: string; answer: string }>  // FAQ for off-topic questions
+  }
 }
 
 export interface ClaraResponse {
@@ -224,34 +233,55 @@ async function callGemini(
  * Main Clara processing function
  */
 export async function processWithClara(request: ClaraRequest): Promise<ClaraResponse> {
-  const { userMessage, conversationHistory, collectedData, config } = request
+  const { userMessage, conversationHistory, collectedData, config, moduleContext, systemContext } = request
 
   if (!config.enabled) {
     return { success: false, error: 'Clara not enabled for this module' }
   }
 
+  // Build enhanced system prompt with context
+  let enhancedPrompt = config.prompt
+
+  // Add module context if available
+  if (moduleContext) {
+    enhancedPrompt += `\n\n## המודול הנוכחי:\nשאלה ללקוח: "${moduleContext.content}"`
+
+    if (moduleContext.choices && moduleContext.choices.length > 0) {
+      enhancedPrompt += `\n\nאופציות זמינות (בחירה מרובה):\n`
+      moduleContext.choices.forEach((choice, idx) => {
+        const label = typeof choice.label === 'string' ? choice.label :
+                     choice.label.he || choice.label.fr || choice.label.en || ''
+        enhancedPrompt += `${idx + 1}. ${label}\n`
+      })
+      enhancedPrompt += `\nהלקוח יכול לבחור ממספר, או לכתוב בעצמו. אם הוא כותב - נסה להתאים למילים הנכונות.`
+    }
+
+    if (moduleContext.validationFormat) {
+      enhancedPrompt += `\n\nפורמט נדרש: ${moduleContext.validationFormat}`
+    }
+  }
+
+  // Add system context (branches, FAQ)
+  if (systemContext) {
+    if (systemContext.branches && systemContext.branches.length > 0) {
+      enhancedPrompt += `\n\n## סניפים זמינים (בדיוק!):\n${systemContext.branches.map(b => `- "${b}"`).join('\n')}`
+    }
+
+    if (systemContext.faqItems && systemContext.faqItems.length > 0) {
+      enhancedPrompt += `\n\n## בסיס ידע (לשאלות הלקוח):\n`
+      systemContext.faqItems.forEach(faq => {
+        enhancedPrompt += `\nשאלה: ${faq.question}\nתשובה: ${faq.answer}\n`
+      })
+    }
+  }
+
+  enhancedPrompt += `\n\n---\nנתונים שנאספו עד כה: ${JSON.stringify(collectedData, null, 2)}`
+
   // Build messages array
   const messages = [
     {
       role: 'system',
-      content: `${config.prompt}
-
-IMPORTANT: You must respond ONLY with valid JSON in this exact format:
-{
-  "reply_to_user": "Your natural response to the user",
-  "collected_data": {
-    "field_name": "extracted_value"
-  },
-  "is_complete": false
-}
-
-Current collected data: ${JSON.stringify(collectedData)}
-
-Rules:
-- Extract information from user messages and add to collected_data
-- Set is_complete to true only when ALL required fields are collected
-- Be conversational and natural in reply_to_user
-- If user asks off-topic questions, answer briefly then guide back to booking`
+      content: enhancedPrompt
     },
     ...conversationHistory.slice(-5), // Last 5 messages for context
     { role: 'user', content: userMessage }

@@ -323,7 +323,26 @@ export async function processUserMessage(
         content: msg.content
       }))
 
-      // Appeler Clara
+      // Charger les branches disponibles
+      const { data: branches } = await supabase
+        .from('branches')
+        .select('name')
+        .eq('is_active', true)
+      const branchNames = branches?.map((b: any) => b.name) || []
+
+      // Charger FAQ pour questions hors-sujet
+      const { data: faqs } = await supabase
+        .from('messenger_faq')
+        .select('question, answer')
+        .eq('is_active', true)
+        .order('order_index')
+        .limit(10)
+      const faqItems = faqs?.map((f: any) => ({
+        question: f.question[locale] || f.question.he || f.question.fr || f.question.en || '',
+        answer: f.answer[locale] || f.answer.he || f.answer.fr || f.answer.en || ''
+      })) || []
+
+      // Appeler Clara avec context enrichi
       const claraResponse = await processWithClara({
         userMessage,
         conversationHistory,
@@ -334,6 +353,15 @@ export async function processUserMessage(
           model: module.clara_model || 'gpt-4o-mini',
           temperature: module.clara_temperature ?? 0.7,
           timeout_ms: module.clara_timeout_ms ?? 5000
+        },
+        moduleContext: {
+          content: module.content[locale] || module.content.he || module.content.fr || '',
+          choices: module.choices || undefined,
+          validationFormat: module.validation_format_code || undefined
+        },
+        systemContext: {
+          branches: branchNames,
+          faqItems: faqItems
         }
       })
 

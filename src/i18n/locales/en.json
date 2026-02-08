@@ -2403,6 +2403,21 @@
         "time": "Time",
         "email": "Email",
         "order": "Order link"
+      },
+      "clara_settings": {
+        "title": "Clara Settings",
+        "subtitle": "Global configuration for Clara AI",
+        "default_prompt_label": "Default Prompt",
+        "default_prompt_placeholder": "The prompt that will be displayed by default when activating Clara in a module...",
+        "default_prompt_help": "This prompt will be automatically pre-filled when you enable Clara on a new module",
+        "fallback_action_label": "Fallback Action",
+        "fallback_escalate": "Escalate to Agent (Recommended)",
+        "fallback_retry": "Retry",
+        "fallback_abort": "Abort Conversation",
+        "fallback_action_help": "What to do when Clara fails or times out",
+        "fallback_message_label": "Fallback Message",
+        "fallback_message_placeholder": "I'm experiencing a technical issue. An agent will call you back. 📞",
+        "fallback_message_help": "The message displayed when Clara fails"
       }
     },
     "workflows": {
