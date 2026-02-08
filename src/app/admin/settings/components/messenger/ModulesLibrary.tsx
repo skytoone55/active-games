@@ -2,10 +2,11 @@
 
 import { useState, useEffect } from 'react'
 import { useTranslation } from '@/contexts/LanguageContext'
-import { Plus, Edit2, Trash2, Loader2, Settings } from 'lucide-react'
+import { Plus, Edit2, Trash2, Loader2, Settings, Sparkles } from 'lucide-react'
 import type { Module } from '@/types/messenger'
 import { ModuleEditor } from './ModuleEditor'
 import { ValidationFormatsModal } from './ValidationFormatsModal'
+import { ClaraSettingsModal } from './ClaraSettingsModal'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 
 interface ModulesLibraryProps {
@@ -19,6 +20,7 @@ export function ModulesLibrary({ isDark }: ModulesLibraryProps) {
   const [editingModule, setEditingModule] = useState<Module | null>(null)
   const [showEditor, setShowEditor] = useState(false)
   const [showValidationFormats, setShowValidationFormats] = useState(false)
+  const [showClaraSettings, setShowClaraSettings] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState<{ module: Module } | null>(null)
 
   useEffect(() => {
@@ -74,10 +76,28 @@ export function ModulesLibrary({ isDark }: ModulesLibraryProps) {
         />
       )}
 
+      {showClaraSettings && (
+        <ClaraSettingsModal
+          isDark={isDark}
+          onClose={() => setShowClaraSettings(false)}
+        />
+      )}
+
       <div className="space-y-4">
         <div className="flex justify-between items-center">
           <p className={isDark ? 'text-gray-400' : 'text-gray-600'}>{t('messenger.modules.subtitle')}</p>
           <div className="flex items-center space-x-2">
+            <button
+              onClick={() => setShowClaraSettings(true)}
+              className="flex items-center space-x-2 px-4 py-2 rounded-lg hover:bg-opacity-90"
+              style={{
+                backgroundColor: isDark ? '#4C1D95' : '#DDD6FE',
+                color: isDark ? '#A78BFA' : '#7C3AED'
+              }}
+            >
+              <Sparkles className="w-4 h-4" />
+              <span>Paramètres Clara</span>
+            </button>
             <button
               onClick={() => setShowValidationFormats(true)}
               className="flex items-center space-x-2 px-4 py-2 rounded-lg hover:bg-opacity-90"
