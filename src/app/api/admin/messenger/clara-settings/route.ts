@@ -62,8 +62,8 @@ export async function PUT(request: NextRequest) {
     const supabase = createServiceRoleClient()
 
     // Update all active workflows with these settings
-    const { error } = await supabase
-      .from('messenger_workflows')
+    const { error } = await (supabase
+      .from('messenger_workflows') as any)
       .update({
         clara_default_prompt,
         clara_fallback_action,

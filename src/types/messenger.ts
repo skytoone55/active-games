@@ -104,6 +104,13 @@ export interface Module {
   failure_message?: MultilingualText | null
   metadata?: Record<string, any> | null
 
+  // Clara AI integration (optional for all module types)
+  clara_enabled?: boolean
+  clara_prompt?: string | null
+  clara_model?: string | null
+  clara_temperature?: number | null
+  clara_timeout_ms?: number | null
+
   category: string
   is_active: boolean
   created_at: string
@@ -217,6 +224,12 @@ export interface ModuleFormData {
   success_message?: MultilingualText
   failure_message?: MultilingualText
   metadata?: Record<string, any>
+  // Clara AI integration
+  clara_enabled?: boolean
+  clara_prompt?: string
+  clara_model?: string
+  clara_temperature?: number
+  clara_timeout_ms?: number
   category: string
   is_active: boolean
 }

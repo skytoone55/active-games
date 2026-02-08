@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useTranslation } from '@/contexts/LanguageContext'
-import { X, Save, Loader2, Plus, Trash2 } from 'lucide-react'
+import { X, Save, Loader2, Plus, Trash2, Sparkles, ChevronDown, ChevronUp } from 'lucide-react'
 import type { Module, ModuleFormData, ModuleChoice, ValidationFormat } from '@/types/messenger'
 
 interface ModuleEditorProps {
@@ -19,6 +19,8 @@ export function ModuleEditor({ module, isDark, onSave, onCancel }: ModuleEditorP
   const [formats, setFormats] = useState<ValidationFormat[]>([])
   const [workflows, setWorkflows] = useState<Array<{ id: string; name: string }>>([])
   const [contentTextareaRef, setContentTextareaRef] = useState<HTMLTextAreaElement | null>(null)
+  const [defaultClaraPrompt, setDefaultClaraPrompt] = useState<string>('')
+  const [claraExpanded, setClaraExpanded] = useState(false)
   const [form, setForm] = useState<ModuleFormData>({
     ref_code: module?.ref_code || '',
     name: module?.name || '',
@@ -30,6 +32,12 @@ export function ModuleEditor({ module, isDark, onSave, onCancel }: ModuleEditorP
     llm_config: module?.llm_config || undefined,
     success_message: module?.success_message || undefined,
     failure_message: module?.failure_message || undefined,
+    // Clara AI fields
+    clara_enabled: module?.clara_enabled ?? false,
+    clara_prompt: module?.clara_prompt || '',
+    clara_model: module?.clara_model || 'gpt-4o-mini',
+    clara_temperature: module?.clara_temperature ?? 0.7,
+    clara_timeout_ms: module?.clara_timeout_ms ?? 5000,
     category: module?.category || 'general',
     is_active: module?.is_active ?? true
   })
@@ -87,7 +95,15 @@ export function ModuleEditor({ module, isDark, onSave, onCancel }: ModuleEditorP
   useEffect(() => {
     loadFormats()
     loadWorkflows()
+    loadDefaultClaraPrompt()
   }, [])
+
+  // Si création d'un nouveau module et Clara activé pour la première fois, pré-remplir avec le prompt par défaut
+  useEffect(() => {
+    if (!module && form.clara_enabled && !form.clara_prompt && defaultClaraPrompt) {
+      setForm(prev => ({ ...prev, clara_prompt: defaultClaraPrompt }))
+    }
+  }, [form.clara_enabled, defaultClaraPrompt, module])
 
   async function loadFormats() {
     const res = await fetch('/api/admin/messenger/validation-formats')
@@ -99,6 +115,18 @@ export function ModuleEditor({ module, isDark, onSave, onCancel }: ModuleEditorP
     const res = await fetch('/api/admin/messenger/workflows')
     const data = await res.json()
     if (data.success) setWorkflows(data.data)
+  }
+
+  async function loadDefaultClaraPrompt() {
+    try {
+      const res = await fetch('/api/admin/messenger/clara-settings')
+      const data = await res.json()
+      if (data.success && data.settings?.clara_default_prompt) {
+        setDefaultClaraPrompt(data.settings.clara_default_prompt)
+      }
+    } catch (err) {
+      console.error('Failed to load default Clara prompt:', err)
+    }
   }
 
   async function handleSave() {
@@ -662,6 +690,163 @@ export function ModuleEditor({ module, isDark, onSave, onCancel }: ModuleEditorP
               )}
             </div>
           )}
+
+          {/* Clara AI Integration */}
+          <div className={`rounded-lg border ${isDark ? 'border-indigo-500/30 bg-indigo-500/5' : 'border-indigo-200 bg-indigo-50/50'}`}>
+            <button
+              type="button"
+              onClick={() => setClaraExpanded(!claraExpanded)}
+              className={`w-full flex items-center justify-between p-4 text-left transition-colors ${
+                isDark ? 'hover:bg-indigo-500/10' : 'hover:bg-indigo-100/50'
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                  isDark ? 'bg-indigo-500/20' : 'bg-indigo-100'
+                }`}>
+                  <Sparkles className={`w-5 h-5 ${isDark ? 'text-indigo-400' : 'text-indigo-600'}`} />
+                </div>
+                <div>
+                  <h4 className={`font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                    Clara AI (Optional)
+                  </h4>
+                  <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                    Rendre ce module flexible avec traitement naturel du langage
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <label className="flex items-center space-x-2" onClick={(e) => e.stopPropagation()}>
+                  <input
+                    type="checkbox"
+                    checked={form.clara_enabled || false}
+                    onChange={(e) => {
+                      setForm({ ...form, clara_enabled: e.target.checked })
+                      if (e.target.checked) setClaraExpanded(true)
+                    }}
+                    className="rounded"
+                  />
+                  <span className={`text-sm ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                    Activé
+                  </span>
+                </label>
+                {claraExpanded ? (
+                  <ChevronUp className={`w-5 h-5 ${isDark ? 'text-gray-400' : 'text-gray-600'}`} />
+                ) : (
+                  <ChevronDown className={`w-5 h-5 ${isDark ? 'text-gray-400' : 'text-gray-600'}`} />
+                )}
+              </div>
+            </button>
+
+            {claraExpanded && (
+              <div className="p-4 pt-0 space-y-4">
+                {/* Clara Prompt */}
+                <div>
+                  <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                    Prompt Clara
+                  </label>
+                  <textarea
+                    value={form.clara_prompt || ''}
+                    onChange={(e) => setForm({ ...form, clara_prompt: e.target.value })}
+                    rows={6}
+                    placeholder={defaultClaraPrompt || "Instructions pour Clara sur comment traiter ce module..."}
+                    className={`w-full px-4 py-3 rounded-lg border font-mono text-sm ${
+                      isDark
+                        ? 'bg-gray-900 border-gray-700 text-white placeholder-gray-500'
+                        : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'
+                    } focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500`}
+                  />
+                  <p className={`mt-2 text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                    Laissez vide pour utiliser le prompt par défaut des paramètres globaux Clara
+                  </p>
+                </div>
+
+                {/* Clara Model */}
+                <div>
+                  <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                    Modèle IA
+                  </label>
+                  <select
+                    value={form.clara_model || 'gpt-4o-mini'}
+                    onChange={(e) => setForm({ ...form, clara_model: e.target.value })}
+                    className={`w-full px-4 py-3 rounded-lg border ${
+                      isDark
+                        ? 'bg-gray-900 border-gray-700 text-white'
+                        : 'bg-white border-gray-300 text-gray-900'
+                    } focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500`}
+                  >
+                    <optgroup label="OpenAI">
+                      <option value="gpt-4o">GPT-4o (Premium - Plus intelligent)</option>
+                      <option value="gpt-4o-mini">GPT-4o Mini (Recommandé - Bon rapport qualité/prix)</option>
+                      <option value="gpt-3.5-turbo">GPT-3.5 Turbo (Économique - Rapide)</option>
+                    </optgroup>
+                    <optgroup label="Anthropic Claude">
+                      <option value="claude-3-5-sonnet">Claude 3.5 Sonnet (Premium)</option>
+                      <option value="claude-3-haiku">Claude 3 Haiku (Économique)</option>
+                    </optgroup>
+                    <optgroup label="Google Gemini">
+                      <option value="gemini-1.5-pro">Gemini 1.5 Pro (Premium)</option>
+                      <option value="gemini-1.5-flash">Gemini 1.5 Flash (Économique)</option>
+                    </optgroup>
+                  </select>
+                  <p className={`mt-2 text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                    Modèles économiques recommandés pour réponses simples : gpt-4o-mini, claude-3-haiku, gemini-1.5-flash
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  {/* Clara Temperature */}
+                  <div>
+                    <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                      Température ({form.clara_temperature ?? 0.7})
+                    </label>
+                    <input
+                      type="range"
+                      min="0"
+                      max="2"
+                      step="0.1"
+                      value={form.clara_temperature ?? 0.7}
+                      onChange={(e) => setForm({ ...form, clara_temperature: parseFloat(e.target.value) })}
+                      className="w-full"
+                    />
+                    <div className="flex justify-between text-xs mt-1">
+                      <span className={isDark ? 'text-gray-500' : 'text-gray-400'}>Précis (0)</span>
+                      <span className={isDark ? 'text-gray-500' : 'text-gray-400'}>Créatif (2)</span>
+                    </div>
+                  </div>
+
+                  {/* Clara Timeout */}
+                  <div>
+                    <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                      Timeout (ms)
+                    </label>
+                    <input
+                      type="number"
+                      min="1000"
+                      max="30000"
+                      step="1000"
+                      value={form.clara_timeout_ms ?? 5000}
+                      onChange={(e) => setForm({ ...form, clara_timeout_ms: parseInt(e.target.value) })}
+                      className={`w-full px-4 py-2 rounded-lg border ${
+                        isDark
+                          ? 'bg-gray-900 border-gray-700 text-white'
+                          : 'bg-white border-gray-300 text-gray-900'
+                      } focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500`}
+                    />
+                    <p className={`mt-1 text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                      Fallback si Clara ne répond pas
+                    </p>
+                  </div>
+                </div>
+
+                <div className={`p-3 rounded-lg ${isDark ? 'bg-indigo-500/10 border border-indigo-500/30' : 'bg-indigo-100 border border-indigo-200'}`}>
+                  <p className={`text-sm ${isDark ? 'text-indigo-300' : 'text-indigo-800'}`}>
+                    💡 Clara permet un traitement flexible du langage naturel tout en suivant votre workflow. Si Clara échoue ou timeout, le module bascule automatiquement en mode guidé classique.
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Footer */}
