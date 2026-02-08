@@ -380,13 +380,36 @@ export async function processUserMessage(
           .update({ collected_data: updatedData })
           .eq('id', conversationId)
 
+        // Replace variables in Clara's reply ({{firstName}}, {{branch}}, etc.)
+        const personalizedReply = replaceDynamicVariables(claraResponse.reply, updatedData)
+
         // Enregistrer la réponse de Clara
         await supabase.from('messenger_messages').insert({
           conversation_id: conversationId,
           role: 'assistant',
-          content: claraResponse.reply,
+          content: personalizedReply,
           step_ref: currentStep.step_ref
         })
+
+        // If Clara wants to show buttons, prepare them
+        const claraChoices = claraResponse.show_buttons
+          ? claraResponse.show_buttons.map((btn: any, index: number) => ({
+              id: btn.id,
+              label: typeof btn.label === 'string' ? btn.label : btn.label[locale] || btn.label.he || btn.label.fr || btn.label.en,
+              value: `${index + 1}`
+            }))
+          : null
+
+        // If not complete, return Clara's message + buttons (if any)
+        if (!claraResponse.is_complete) {
+          return {
+            success: true,
+            message: personalizedReply,
+            nextStepRef: currentStep.step_ref,
+            moduleType: module.module_type,
+            choices: claraChoices
+          }
+        }
 
         // Si Clara indique que la collecte est complète, passer à l'étape suivante
         if (claraResponse.is_complete) {

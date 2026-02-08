@@ -35,6 +35,10 @@ export interface ClaraRequest {
 export interface ClaraResponse {
   success: boolean
   reply?: string
+  show_buttons?: Array<{
+    id: string
+    label: string | { he?: string; fr?: string; en?: string }
+  }>
   collected_data?: Record<string, any>
   is_complete?: boolean
   error?: string
@@ -104,6 +108,7 @@ async function callOpenAI(
     return {
       success: true,
       reply: parsed.reply_to_user || parsed.reply,
+      show_buttons: parsed.show_buttons || undefined,
       collected_data: parsed.collected_data,
       is_complete: parsed.is_complete ?? false
     }
@@ -157,6 +162,7 @@ async function callAnthropic(
     return {
       success: true,
       reply: parsed.reply_to_user || parsed.reply,
+      show_buttons: parsed.show_buttons || undefined,
       collected_data: parsed.collected_data,
       is_complete: parsed.is_complete ?? false
     }
@@ -217,6 +223,7 @@ async function callGemini(
     return {
       success: true,
       reply: parsed.reply_to_user || parsed.reply,
+      show_buttons: parsed.show_buttons || undefined,
       collected_data: parsed.collected_data,
       is_complete: parsed.is_complete ?? false
     }
@@ -247,13 +254,15 @@ export async function processWithClara(request: ClaraRequest): Promise<ClaraResp
     enhancedPrompt += `\n\n## המודול הנוכחי:\nשאלה ללקוח: "${moduleContext.content}"`
 
     if (moduleContext.choices && moduleContext.choices.length > 0) {
-      enhancedPrompt += `\n\nאופציות זמינות (בחירה מרובה):\n`
+      enhancedPrompt += `\n\n## אופציות זמינות (בחירה מרובה):\n`
       moduleContext.choices.forEach((choice, idx) => {
         const label = typeof choice.label === 'string' ? choice.label :
                      choice.label.he || choice.label.fr || choice.label.en || ''
-        enhancedPrompt += `${idx + 1}. ${label}\n`
+        enhancedPrompt += `${idx + 1}. ID: "${choice.id}" → Label: "${label}"\n`
       })
-      enhancedPrompt += `\nהלקוח יכול לבחור ממספר, או לכתוב בעצמו. אם הוא כותב - נסה להתאים למילים הנכונות.`
+      enhancedPrompt += `\n**אתה יכול להציג את הכפתורים האלו ללקוח!**`
+      enhancedPrompt += `\nאם הלקוח כותב בעצמו - התאם את התשובה לאחד מה-IDs הנכונים.`
+      enhancedPrompt += `\nאם אתה רוצה להציג כפתורים, השתמש בפורמט show_buttons.`
     }
 
     if (moduleContext.validationFormat) {
