@@ -306,54 +306,72 @@ export async function processUserMessage(
   // CLARA AI PROCESSING
   // ============================================================================
   // Si Clara est activé pour ce module, traiter avec l'IA
-  if (module.clara_enabled && module.clara_prompt) {
+  if (module.clara_enabled) {
     console.log('[Engine] Clara enabled for module:', module.ref_code)
 
-    try {
-      // Récupérer l'historique de conversation (derniers 10 messages)
-      const { data: messageHistory } = await supabase
-        .from('messenger_messages')
-        .select('role, content')
-        .eq('conversation_id', conversationId)
-        .order('created_at', { ascending: false })
-        .limit(10)
+    // Charger le prompt (module-specific ou global par défaut)
+    let claraPrompt = module.clara_prompt
 
-      const conversationHistory = (messageHistory || []).reverse().map((msg: any) => ({
-        role: msg.role as 'user' | 'assistant',
-        content: msg.content
-      }))
+    if (!claraPrompt) {
+      console.log('[Engine] No module prompt, loading global Clara prompt from workflow')
+      const { data: workflow } = await supabase
+        .from('messenger_workflows')
+        .select('clara_default_prompt')
+        .eq('id', conversation.current_workflow_id)
+        .single()
 
-      // Charger les branches disponibles
-      const { data: branches } = await supabase
-        .from('branches')
-        .select('name')
-        .eq('is_active', true)
-      const branchNames = branches?.map((b: any) => b.name) || []
+      claraPrompt = workflow?.clara_default_prompt
+    }
 
-      // Charger FAQ pour questions hors-sujet
-      const { data: faqs } = await supabase
-        .from('messenger_faq')
-        .select('question, answer')
-        .eq('is_active', true)
-        .order('order_index')
-        .limit(10)
-      const faqItems = faqs?.map((f: any) => ({
-        question: f.question[locale] || f.question.he || f.question.fr || f.question.en || '',
-        answer: f.answer[locale] || f.answer.he || f.answer.fr || f.answer.en || ''
-      })) || []
+    // Si toujours pas de prompt, skip Clara
+    if (!claraPrompt) {
+      console.warn('[Engine] Clara enabled but no prompt configured (module or global)')
+    } else {
+      try {
+        // Récupérer l'historique de conversation (derniers 10 messages)
+        const { data: messageHistory } = await supabase
+          .from('messenger_messages')
+          .select('role, content')
+          .eq('conversation_id', conversationId)
+          .order('created_at', { ascending: false })
+          .limit(10)
 
-      // Appeler Clara avec context enrichi
-      const claraResponse = await processWithClara({
-        userMessage,
-        conversationHistory,
-        collectedData: conversation.collected_data || {},
-        config: {
-          enabled: true,
-          prompt: module.clara_prompt,
-          model: module.clara_model || 'gpt-4o-mini',
-          temperature: module.clara_temperature ?? 0.7,
-          timeout_ms: module.clara_timeout_ms ?? 5000
-        },
+        const conversationHistory = (messageHistory || []).reverse().map((msg: any) => ({
+          role: msg.role as 'user' | 'assistant',
+          content: msg.content
+        }))
+
+        // Charger les branches disponibles
+        const { data: branches } = await supabase
+          .from('branches')
+          .select('name')
+          .eq('is_active', true)
+        const branchNames = branches?.map((b: any) => b.name) || []
+
+        // Charger FAQ pour questions hors-sujet
+        const { data: faqs } = await supabase
+          .from('messenger_faq')
+          .select('question, answer')
+          .eq('is_active', true)
+          .order('order_index')
+          .limit(10)
+        const faqItems = faqs?.map((f: any) => ({
+          question: f.question[locale] || f.question.he || f.question.fr || f.question.en || '',
+          answer: f.answer[locale] || f.answer.he || f.answer.fr || f.answer.en || ''
+        })) || []
+
+        // Appeler Clara avec context enrichi
+        const claraResponse = await processWithClara({
+          userMessage,
+          conversationHistory,
+          collectedData: conversation.collected_data || {},
+          config: {
+            enabled: true,
+            prompt: claraPrompt,
+            model: module.clara_model || 'gpt-4o-mini',
+            temperature: module.clara_temperature ?? 0.7,
+            timeout_ms: module.clara_timeout_ms ?? 5000
+          },
         moduleContext: {
           content: module.content[locale] || module.content.he || module.content.fr || '',
           choices: module.choices || undefined,
@@ -594,9 +612,10 @@ export async function processUserMessage(
       }
 
       // Continue avec workflow manuel (fallthrough)
-    } catch (error) {
-      console.error('[Engine] Clara processing error:', error)
-      // Continue avec workflow manuel en cas d'erreur
+      } catch (error) {
+        console.error('[Engine] Clara processing error:', error)
+        // Continue avec workflow manuel en cas d'erreur
+      }
     }
   }
   // Fin Clara AI Processing
