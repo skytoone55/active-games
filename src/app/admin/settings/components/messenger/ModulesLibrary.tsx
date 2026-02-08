@@ -142,6 +142,19 @@ export function ModulesLibrary({ isDark }: ModulesLibraryProps) {
                   <span className="text-xs px-2 py-1 rounded bg-gray-500/20 text-gray-500">
                     {t(`messenger.modules.types.${module.module_type}`)}
                   </span>
+                  {module.clara_enabled && (
+                    <span
+                      className="flex items-center gap-1 text-xs px-2 py-1 rounded"
+                      style={{
+                        backgroundColor: isDark ? '#4C1D95' : '#DDD6FE',
+                        color: isDark ? '#A78BFA' : '#7C3AED'
+                      }}
+                      title={`Clara activée avec ${module.clara_model || 'gpt-4o-mini'}`}
+                    >
+                      <Sparkles className="w-3 h-3" />
+                      Clara
+                    </span>
+                  )}
                 </div>
                 <h4 className={`font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>
                   {module.name}
