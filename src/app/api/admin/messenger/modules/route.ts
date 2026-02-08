@@ -61,6 +61,12 @@ export async function POST(request: NextRequest) {
         llm_config: body.llm_config || null,
         success_message: body.success_message || null,
         failure_message: body.failure_message || null,
+        // Clara AI fields
+        clara_enabled: body.clara_enabled ?? false,
+        clara_prompt: body.clara_prompt || null,
+        clara_model: body.clara_model || 'gpt-4o-mini',
+        clara_temperature: body.clara_temperature ?? 0.7,
+        clara_timeout_ms: body.clara_timeout_ms ?? 5000,
         category: body.category || 'general',
         is_active: body.is_active ?? true
       })
