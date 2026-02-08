@@ -2469,22 +2469,23 @@
         "time": "שעה",
         "email": "אימייל",
         "order": "קישור הזמנה"
-      },
-      "clara_settings": {
-        "title": "הגדרות Clara",
-        "subtitle": "הגדרות גלובליות עבור Clara AI",
-        "default_prompt_label": "פרומפט ברירת מחדל",
-        "default_prompt_placeholder": "הפרומפט שיוצג כברירת מחדל בעת הפעלת Clara במודול...",
-        "default_prompt_help": "פרומפט זה ימלא אוטומטית כאשר תפעיל Clara במודול חדש",
-        "fallback_action_label": "פעולת גיבוי",
-        "fallback_escalate": "העברה לנציג (המלצה)",
-        "fallback_retry": "נסה שוב",
-        "fallback_abort": "בטל שיחה",
-        "fallback_action_help": "מה לעשות כאשר Clara נכשלת או תם הזמן",
-        "fallback_message_label": "הודעת גיבוי",
-        "fallback_message_placeholder": "אני נתקל בבעיה טכנית. נציג יחזור אליך. 📞",
-        "fallback_message_help": "ההודעה שתוצג כאשר Clara נכשלת"
       }
+    },
+    "clara_settings": {
+      "title": "הגדרות Clara",
+      "subtitle": "הגדרות גלובליות עבור Clara AI",
+      "default_prompt_label": "פרומפט ברירת מחדל",
+      "default_prompt_placeholder": "הפרומפט שיוצג כברירת מחדל בעת הפעלת Clara במודול...",
+      "default_prompt_help": "פרומפט זה ימלא אוטומטית כאשר תפעיל Clara במודול חדש",
+      "fallback_action_label": "פעולת גיבוי",
+      "fallback_escalate": "העברה לנציג (המלצה)",
+      "fallback_retry": "נסה שוב",
+      "fallback_abort": "בטל שיחה",
+      "fallback_action_help": "מה לעשות כאשר Clara נכשלת או תם הזמן",
+      "fallback_message_label": "הודעת גיבוי",
+      "fallback_message_placeholder": "אני נתקל בבעיה טכנית. נציג יחזור אליך. 📞",
+      "fallback_message_help": "ההודעה שתוצג כאשר Clara נכשלת",
+      "save_success": "הגדרות Clara נשמרו בהצלחה"
     },
     "workflows": {
       "title": "זרימות עבודה",
