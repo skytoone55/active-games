@@ -145,7 +145,7 @@
     "title": "מחירים",
     "subtitle": "בחרו את האפשרות המתאימה לכם",
     "active": {
-      "title": "Active Games",
+      "title": "אקטיב גיימס",
       "price": "100",
       "currency": "₪",
       "duration": "שעה אחת למשתתף",
@@ -156,19 +156,19 @@
       ]
     },
     "mix": {
-      "title": "Mix Active + Laser",
+      "title": "מיקס אקטיב + לייזר",
       "price": "130",
       "currency": "₪",
-      "description": "30 דקות Active + מערכה אחת Laser",
+      "description": "30 דקות אקטיב + מערכה אחת לייזר",
       "features": [
-        "30 דקות Active Games",
-        "מערכה אחת של Laser Tag",
+        "30 דקות אקטיב גיימס",
+        "מערכה אחת של לייזר טאג",
         "צמיד חכם: 10₪ (לשימוש חוזר)"
       ]
     },
     "event": {
       "title": "חבילות אירוע",
-      "description": "אירוע Active Games",
+      "description": "אירוע אקטיב גיימס",
       "tiers": [
         { "label": "15 משתתפים מינימום", "price": "110", "currency": "₪" },
         { "label": "30 משתתפים מינימום", "price": "100", "currency": "₪" }
@@ -188,7 +188,7 @@
     },
     "mixEvent": {
       "title": "חבילות אירוע",
-      "description": "אירוע Active + Laser",
+      "description": "אירוע אקטיב + לייזר",
       "tiers": [
         { "label": "15 משתתפים מינימום", "price": "130", "currency": "₪" },
         { "label": "30 משתתפים מינימום", "price": "120", "currency": "₪" }
@@ -196,7 +196,7 @@
       "roomPrice": "500₪",
       "roomLabel": "חדר אירוע פרטי",
       "features": [
-        "משחקי Active + Laser ללא הגבלה",
+        "משחקי אקטיב + לייזר ללא הגבלה",
         "חדר אירוע פרטי לשעתיים",
         "הגברה ותאורה",
         "שולחנות משחק",
