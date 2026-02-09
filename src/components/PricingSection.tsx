@@ -22,6 +22,7 @@ interface PricingSectionProps {
         priceLabel: string
         description: string
         features: string[]
+        option: string
       }
     }
     booking?: {
@@ -120,6 +121,10 @@ export default function PricingSection({ translations, isRTL }: PricingSectionPr
                   </li>
                 ))}
               </ul>
+
+              <p className="text-white/70 text-xs mt-4 italic" style={{ fontFamily: 'Poppins, sans-serif' }}>
+                {translations.pricing.packages.option}
+              </p>
             </div>
           </div>
         </div>
