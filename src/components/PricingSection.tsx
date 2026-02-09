@@ -219,7 +219,7 @@ export default function PricingSection({ translations, isRTL }: PricingSectionPr
 
         {/* Event footnote */}
         {t.eventNote && (
-          <p className="text-white/80 text-sm italic text-center max-w-3xl mx-auto" style={{ fontFamily: 'Poppins, sans-serif' }}>
+          <p className="text-white/90 text-base italic text-center max-w-3xl mx-auto" style={{ fontFamily: 'Poppins, sans-serif' }}>
             {t.eventNote}
           </p>
         )}
