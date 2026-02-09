@@ -165,32 +165,20 @@
       ]
     },
     "packages": {
-      "title": "Forfaits Evenements",
-      "items": [
-        {
-          "name": "Forfait 15+",
-          "minParticipants": "A partir de 15 participants",
-          "price": "130",
-          "currency": "NIS / personne",
-          "features": [
-            "Jeux illimites pendant une heure",
-            "Salle privee pour 2 heures",
-            "Systeme son et eclairage",
-            "Bracelet intelligent inclus"
-          ]
-        },
-        {
-          "name": "Forfait 30+",
-          "minParticipants": "A partir de 30 participants",
-          "price": "120",
-          "currency": "NIS / personne",
-          "features": [
-            "Jeux illimites pendant une heure",
-            "Salle privee pour 2 heures",
-            "Systeme son et eclairage",
-            "Bracelet intelligent inclus"
-          ]
-        }
+      "title": "Forfait Evenement",
+      "price": "500",
+      "currency": "NIS",
+      "priceLabel": "Prix du jeu + 500 NIS",
+      "description": "Paiement unique",
+      "features": [
+        "Jeux illimites pendant une heure",
+        "Salle privee pour 2 heures",
+        "Systeme son et eclairage",
+        "Tables de jeux",
+        "Snacks et boissons a volonte",
+        "Deux parts de pizza par participant",
+        "Bracelet intelligent inclus",
+        "Bracelet collecteur dore pour le fete"
       ]
     }
   },
@@ -289,14 +277,6 @@
         "city": "Petah Tikva",
         "phone": "03-5512277 (Ext. 3)",
         "venue": "Au complexe Laser City"
-      },
-      {
-        "name": "Cinema City Glilot",
-        "slug": "glilot",
-        "address": "Cinema City Glilot",
-        "city": "Glilot",
-        "phone": "03-5512277",
-        "venue": "Au complexe Cinema City"
       }
     ]
   },
