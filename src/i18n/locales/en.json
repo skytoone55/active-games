@@ -168,8 +168,8 @@
       "title": "Event Package",
       "price": "500",
       "currency": "NIS",
-      "priceLabel": "Game price + 500 NIS",
-      "description": "Add the event package to any booking",
+      "priceLabel": "Game price + 500 NIS one-time fee",
+      "description": "One-time fee for the entire event — not per person",
       "features": [
         "Unlimited games for one hour",
         "Private event room for 2 hours",
