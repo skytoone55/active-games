@@ -433,6 +433,7 @@ input[type="number"] {
 @media (max-width: 768px) {
   .whatsapp-float {
     bottom: 100px;
+    z-index: 10; /* Passe derrière le chat Clara (z-index 9999) sur mobile */
   }
 }
 
