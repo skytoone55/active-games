@@ -445,42 +445,55 @@ input[type="number"] {
 /* WhatsApp toujours à gauche, quelle que soit la direction */
 
 /* Accessibility Styles */
-/* Taille de police */
+/* Taille de police - appliqué au root pour affecter tout le site */
 .a11y-font-large {
-  font-size: 112.5% !important;
+  font-size: 112.5%;
 }
 
 .a11y-font-larger {
-  font-size: 125% !important;
+  font-size: 125%;
 }
 
-/* Contraste élevé */
+/* Contraste élevé - augmente le contraste sans casser le design */
 .a11y-high-contrast {
-  filter: contrast(1.5) !important;
-}
-
-.a11y-high-contrast * {
-  background: none !important;
+  filter: contrast(1.8) saturate(1.3);
 }
 
 .a11y-high-contrast body {
   background: #000 !important;
+}
+
+.a11y-high-contrast .text-gray-400,
+.a11y-high-contrast .text-gray-300 {
   color: #fff !important;
 }
 
-/* Souligner les liens */
-.a11y-underline-links a {
+/* Souligner les liens - tous les liens */
+.a11y-underline-links a,
+.a11y-underline-links button[role="link"] {
   text-decoration: underline !important;
+  text-underline-offset: 3px;
 }
 
-/* Espacement des lettres */
+/* Espacement des lettres - améliore la lisibilité */
+.a11y-letter-spacing {
+  letter-spacing: 0.12em;
+  word-spacing: 0.16em;
+}
+
 .a11y-letter-spacing * {
-  letter-spacing: 0.1em !important;
-  word-spacing: 0.16em !important;
+  letter-spacing: inherit;
+  word-spacing: inherit;
 }
 
-/* Pause animations */
-.a11y-pause-animations *,
+/* Pause animations - arrête toutes les animations et transitions */
+.a11y-pause-animations,
+.a11y-pause-animations * {
+  animation-play-state: paused !important;
+  animation: none !important;
+  transition: none !important;
+}
+
 .a11y-pause-animations *::before,
 .a11y-pause-animations *::after {
   animation: none !important;
