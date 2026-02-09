@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Settings, X, Type, Eye, Link as LinkIcon, Space, Pause } from 'lucide-react'
+import { X, Type, Eye, Link as LinkIcon, Space, Pause, User } from 'lucide-react'
 import { getTranslations, type Locale } from '@/i18n'
 
 interface A11ySettings {
@@ -35,13 +35,19 @@ export function AccessibilityWidget() {
 
   const isRTL = locale === 'he'
   const translations = getTranslations(locale)
-  const t = (key: string) => {
+
+  // Helper pour récupérer les traductions imbriquées
+  const t = (key: string): string => {
     const keys = key.split('.')
     let value: any = translations
     for (const k of keys) {
       value = value?.[k]
+      if (value === undefined) {
+        console.warn(`Translation missing for key: ${key}`)
+        return key
+      }
     }
-    return value || key
+    return typeof value === 'string' ? value : key
   }
 
   // Charger depuis localStorage
@@ -104,7 +110,7 @@ export function AccessibilityWidget() {
         aria-expanded={isOpen}
         className={`fixed ${isRTL ? 'right-0' : 'left-0'} top-1/2 -translate-y-1/2 z-50 bg-primary text-dark p-3 ${isRTL ? 'rounded-l-lg' : 'rounded-r-lg'} shadow-lg hover:bg-primary/90 transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2`}
       >
-        {isOpen ? <X className="w-5 h-5" /> : <Settings className="w-5 h-5" />}
+        {isOpen ? <X className="w-5 h-5" /> : <User className="w-5 h-5" />}
       </button>
 
       {/* Panel */}
@@ -117,7 +123,7 @@ export function AccessibilityWidget() {
           style={{ backdropFilter: 'blur(10px)' }}
         >
           <h2 id="a11y-title" className="text-xl font-bold mb-6 text-primary flex items-center gap-2">
-            <Settings className="w-6 h-6" />
+            <User className="w-6 h-6" />
             {t('accessibility.title')}
           </h2>
 
