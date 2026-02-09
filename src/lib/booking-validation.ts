@@ -197,25 +197,21 @@ async function validateEventPrice(
       .single()
 
     if (room && room.price > 0) {
-      const roomProductCode = `room_event_${room.price}`
-      const roomProduct = products.find((p: ICountProduct) => p.code === roomProductCode)
-
-      if (!roomProduct) {
-        return {
-          valid: false,
-          error: `Produit salle non trouvé (${room.name_he || room.name}). Créez le produit "${roomProductCode}" dans iCount.`,
-          errorKey: 'errors.priceValidation.roomProductNotFound'
-        }
-      }
-      roomPrice = roomProduct.unit_price
+      // SOURCE: icount_rooms.price (pas le produit)
+      roomPrice = room.price
     }
   }
 
-  // Validation réussie
+  // Alerte si formula.price_per_person ≠ product.unit_price
+  if (eventProduct.unit_price !== matchingFormula.price_per_person) {
+    console.warn('[VALIDATION] ⚠️ PRICE MISMATCH: formula.price_per_person=', matchingFormula.price_per_person, 'vs product.unit_price=', eventProduct.unit_price, '- Using formula price')
+  }
+
+  // Validation réussie - SOURCE UNIQUE: formula.price_per_person
   return {
     valid: true,
     formula: matchingFormula,
-    unitPrice: eventProduct.unit_price,
+    unitPrice: matchingFormula.price_per_person,
     roomPrice,
     productCode: eventProduct.code
   }

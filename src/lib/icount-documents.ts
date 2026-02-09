@@ -425,14 +425,23 @@ async function calculateBookingItems(
       }
 
       if (eventProduct) {
-        console.log('[ICOUNT DOCS] Found EVENT product:', eventProduct.code)
-        const lineTotal = eventProduct.unit_price * booking.participants_count
+        // SOURCE UNIQUE DE VÉRITÉ: formula.price_per_person
+        // Le produit sert de lien iCount (SKU), mais le prix vient de la formule
+        const unitPrice = formula.price_per_person
+        console.log('[ICOUNT DOCS] Found EVENT product:', eventProduct.code, 'formula price:', unitPrice, 'product price:', eventProduct.unit_price)
+
+        // Alerte si les prix divergent (ne devrait plus arriver grâce au sync auto)
+        if (eventProduct.unit_price !== unitPrice) {
+          console.warn('[ICOUNT DOCS] ⚠️ PRICE MISMATCH: formula.price_per_person=', unitPrice, 'vs product.unit_price=', eventProduct.unit_price, '- Using formula price')
+        }
+
+        const lineTotal = unitPrice * booking.participants_count
         subtotal += lineTotal
 
         items.push({
           sku: eventProduct.code, // Lien vers le produit iCount
           description: eventProduct.name_he || eventProduct.name,
-          unitprice_incvat: eventProduct.unit_price, // Prix TTC
+          unitprice_incvat: unitPrice, // Prix TTC - SOURCE: formula.price_per_person
           quantity: booking.participants_count,
         })
       } else {
@@ -451,23 +460,33 @@ async function calculateBookingItems(
         const room = rooms.find(r => r.id === formula.room_id)
         if (room && room.price > 0) {
           // Find the matching room product
+          // Chercher d'abord par code exact room_event_${price}, puis par prefix room_event_ avec même prix
           const roomProductCode = `room_event_${room.price}`
-          const roomProduct = products.find(p => p.code === roomProductCode)
+          let roomProduct = products.find(p => p.code === roomProductCode)
+
+          // Fallback: chercher n'importe quel produit room_event_* avec le bon prix
+          if (!roomProduct) {
+            roomProduct = products.find(p => p.code.startsWith('room_event_') && p.unit_price === room.price)
+          }
 
           if (roomProduct) {
-            console.log('[ICOUNT DOCS] Found ROOM product:', roomProduct.code)
-            subtotal += roomProduct.unit_price
+            console.log('[ICOUNT DOCS] Found ROOM product:', roomProduct.code, 'price:', room.price)
+            subtotal += room.price // SOURCE: room.price de icount_rooms
             items.push({
               sku: roomProduct.code, // Lien vers le produit iCount
-              description: roomProduct.name_he || roomProduct.name,
-              unitprice_incvat: roomProduct.unit_price, // Prix TTC
+              description: room.name_he || room.name, // Nom de la salle
+              unitprice_incvat: room.price, // Prix TTC - SOURCE: icount_rooms.price
               quantity: 1,
             })
           } else {
-            // NO FALLBACK - report error for missing room product
-            const errorMsg = `Produit salle non trouvé pour "${room.name_he || room.name}". Code attendu: ${roomProductCode}. Créez le produit salle dans la configuration.`
-            console.error('[ICOUNT DOCS] CRITICAL:', errorMsg)
-            errors.push(errorMsg)
+            // Pas de produit iCount trouvé - on ajoute quand même la salle avec son prix
+            console.warn('[ICOUNT DOCS] ⚠️ No room product found for price', room.price, '- adding room line without SKU')
+            subtotal += room.price
+            items.push({
+              description: room.name_he || room.name,
+              unitprice_incvat: room.price,
+              quantity: 1,
+            })
           }
         }
       }
