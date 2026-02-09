@@ -2563,6 +2563,17 @@
       "back_to_list": "Retour à la liste"
     },
     "type_message": "Tapez votre message...",
-    "conversation_ended": "Conversation terminée. Merci !"
+    "conversation_ended": "Conversation terminée. Merci !",
+    "accessibility": {
+      "toggle": "Ouvrir/Fermer le menu d'accessibilité",
+      "title": "Accessibilité",
+      "font_size": "Taille du texte",
+      "high_contrast": "Contraste élevé",
+      "underline_links": "Souligner les liens",
+      "letter_spacing": "Espacement des lettres",
+      "pause_animations": "Suspendre les animations",
+      "reset": "Réinitialiser",
+      "statement": "Déclaration d'accessibilité"
+    }
   }
 }

@@ -442,3 +442,46 @@ input[type="number"] {
 }
 
 /* WhatsApp toujours à gauche, quelle que soit la direction */
+
+/* Accessibility Styles */
+/* Taille de police */
+.a11y-font-large {
+  font-size: 112.5% !important;
+}
+
+.a11y-font-larger {
+  font-size: 125% !important;
+}
+
+/* Contraste élevé */
+.a11y-high-contrast {
+  filter: contrast(1.5) !important;
+}
+
+.a11y-high-contrast * {
+  background: none !important;
+}
+
+.a11y-high-contrast body {
+  background: #000 !important;
+  color: #fff !important;
+}
+
+/* Souligner les liens */
+.a11y-underline-links a {
+  text-decoration: underline !important;
+}
+
+/* Espacement des lettres */
+.a11y-letter-spacing * {
+  letter-spacing: 0.1em !important;
+  word-spacing: 0.16em !important;
+}
+
+/* Pause animations */
+.a11y-pause-animations *,
+.a11y-pause-animations *::before,
+.a11y-pause-animations *::after {
+  animation: none !important;
+  transition: none !important;
+}

@@ -2565,6 +2565,17 @@
       "back_to_list": "חזרה לרשימה"
     },
     "type_message": "הקלד את ההודעה שלך...",
-    "conversation_ended": "השיחה הסתיימה. תודה!"
+    "conversation_ended": "השיחה הסתיימה. תודה!",
+    "accessibility": {
+      "toggle": "פתח/סגור תפריט נגישות",
+      "title": "נגישות",
+      "font_size": "גודל טקסט",
+      "high_contrast": "ניגודיות גבוהה",
+      "underline_links": "הדגש קישורים",
+      "letter_spacing": "ריווח בין אותיות",
+      "pause_animations": "השהה אנימציות",
+      "reset": "איפוס הגדרות",
+      "statement": "הצהרת נגישות"
+    }
   }
 }

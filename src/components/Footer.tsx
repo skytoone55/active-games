@@ -27,6 +27,9 @@ interface FooterProps {
         email: string
       }
     }
+    accessibility?: {
+      statement?: string
+    }
   }
 }
 
@@ -158,11 +161,19 @@ export default function Footer({ translations }: FooterProps) {
           </div>
         </div>
 
-        {/* Copyright */}
+        {/* Copyright + Accessibility */}
         <div className="border-t border-dark-200 mt-8 pt-8 text-center">
           <p className="text-gray-500 text-sm">
             © {new Date().getFullYear()} Active Games Rishon LeZion. All rights reserved.
           </p>
+          <div className="mt-3">
+            <Link
+              href="/accessibility-statement"
+              className="text-gray-400 hover:text-primary transition-colors text-sm underline"
+            >
+              {translations?.accessibility?.statement || 'Accessibility Statement'}
+            </Link>
+          </div>
         </div>
       </div>
     </footer>

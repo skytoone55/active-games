@@ -958,12 +958,13 @@ function ReservationContent() {
                   animate={{ opacity: 1, y: 0 }}
                   className="mb-6"
                 >
-                  <label className="block text-white mb-3 text-sm font-medium" style={{ fontFamily: 'Poppins, sans-serif' }}>
+                  <label htmlFor="players-input" className="block text-white mb-3 text-sm font-medium" style={{ fontFamily: 'Poppins, sans-serif' }}>
                     {translations.booking?.type?.players?.label || 'Number of players'}
                   </label>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="relative">
                       <input
+                        id="players-input"
                         type="number"
                         min={bookingData.type === 'event' ? 15 : 1}
                         max="100"
@@ -1517,11 +1518,12 @@ function ReservationContent() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {/* First Name */}
                   <div>
-                    <label className="block text-white mb-2 text-sm font-medium" style={{ fontFamily: 'Poppins, sans-serif' }}>
+                    <label htmlFor="first-name-input" className="block text-white mb-2 text-sm font-medium" style={{ fontFamily: 'Poppins, sans-serif' }}>
                       {translations.booking?.contact?.first_name || 'First Name'}
                       <span className="text-primary ml-1">*</span>
                     </label>
                     <input
+                      id="first-name-input"
                       type="text"
                       value={bookingData.firstName || ''}
                       onChange={(e) => handleContactInfoChange('firstName', e.target.value)}
@@ -1539,11 +1541,12 @@ function ReservationContent() {
 
                   {/* Last Name */}
                   <div>
-                    <label className="block text-white mb-2 text-sm font-medium" style={{ fontFamily: 'Poppins, sans-serif' }}>
+                    <label htmlFor="last-name-input" className="block text-white mb-2 text-sm font-medium" style={{ fontFamily: 'Poppins, sans-serif' }}>
                       {translations.booking?.contact?.last_name || 'Last Name'}
                       <span className="text-primary ml-1">*</span>
                     </label>
                     <input
+                      id="last-name-input"
                       type="text"
                       value={bookingData.lastName || ''}
                       onChange={(e) => handleContactInfoChange('lastName', e.target.value)}
@@ -1562,13 +1565,14 @@ function ReservationContent() {
 
                 {/* Phone */}
                 <div>
-                  <label className="block text-white mb-2 text-sm font-medium" style={{ fontFamily: 'Poppins, sans-serif' }}>
+                  <label htmlFor="phone-input" className="block text-white mb-2 text-sm font-medium" style={{ fontFamily: 'Poppins, sans-serif' }}>
                     {translations.booking?.contact?.phone || 'Phone Number'}
                     <span className="text-primary ml-1">*</span>
                   </label>
                   <div className="relative">
                     <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-primary" />
                     <input
+                      id="phone-input"
                       type="tel"
                       value={bookingData.phone || ''}
                       onChange={(e) => handleContactInfoChange('phone', e.target.value)}
@@ -1593,13 +1597,14 @@ function ReservationContent() {
 
                 {/* Email - Optional */}
                 <div>
-                  <label className="block text-white mb-2 text-sm font-medium" style={{ fontFamily: 'Poppins, sans-serif' }}>
+                  <label htmlFor="email-input" className="block text-white mb-2 text-sm font-medium" style={{ fontFamily: 'Poppins, sans-serif' }}>
                     {translations.booking?.contact?.email || 'Email'}
                     {bookingData.type === 'event' && <span className="text-red-500 ml-1">*</span>}
                   </label>
                   <div className="relative">
                     <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-primary" />
                     <input
+                      id="email-input"
                       type="email"
                       value={bookingData.email || ''}
                       onChange={(e) => handleContactInfoChange('email', e.target.value)}

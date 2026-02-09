@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { usePathname } from 'next/navigation'
 import { ClaraWidget } from './Clara/ClaraWidget'
 import WhatsAppButton from './WhatsAppButton'
+import { AccessibilityWidget } from './AccessibilityWidget'
 import { Locale, defaultLocale } from '@/i18n'
 
 /**
@@ -54,6 +55,7 @@ export function GlobalWidgets() {
     <>
       <WhatsAppButton />
       <ClaraWidget locale={claraLocale} />
+      <AccessibilityWidget />
     </>
   )
 }
