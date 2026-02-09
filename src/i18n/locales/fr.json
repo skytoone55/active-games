@@ -168,8 +168,8 @@
       "title": "Forfait Evenement",
       "price": "500",
       "currency": "NIS",
-      "priceLabel": "Prix du jeu + 500 NIS (paiement unique)",
-      "description": "Paiement unique pour tout l'evenement — pas par personne",
+      "priceLabel": "Prix du jeu + 500 NIS",
+      "description": "Paiement unique",
       "features": [
         "Jeux illimites pendant une heure",
         "Salle privee pour 2 heures",
