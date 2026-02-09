@@ -277,14 +277,6 @@
         "city": "Petah Tikva",
         "phone": "03-5512277 (Ext. 3)",
         "venue": "Au complexe Laser City"
-      },
-      {
-        "name": "Cinema City Glilot",
-        "slug": "glilot",
-        "address": "Cinema City Glilot",
-        "city": "Glilot",
-        "phone": "03-5512277",
-        "venue": "Au complexe Cinema City"
       }
     ]
   },
