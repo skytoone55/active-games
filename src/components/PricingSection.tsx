@@ -46,6 +46,7 @@ interface PricingSectionProps {
         roomLabel: string
         features: string[]
       }
+      eventNote?: string
     }
     booking?: {
       order_now: string
@@ -102,9 +103,9 @@ export default function PricingSection({ translations, isRTL }: PricingSectionPr
               <span className="text-xl text-white" style={{ fontFamily: 'Poppins, sans-serif' }}>{t.active.currency}</span>
             </div>
 
-            <ul className="space-y-2">
+            <ul className="space-y-2 w-fit mx-auto text-left">
               {t.active.features.map((feature, i) => (
-                <li key={i} className="flex items-center gap-2 text-white text-sm justify-center" style={{ fontFamily: 'Poppins, sans-serif' }}>
+                <li key={i} className="flex items-center gap-2 text-white text-sm" style={{ fontFamily: 'Poppins, sans-serif' }}>
                   <Check size={16} className="text-secondary flex-shrink-0" />
                   {feature}
                 </li>
@@ -123,9 +124,9 @@ export default function PricingSection({ translations, isRTL }: PricingSectionPr
               <span className="text-xl text-white" style={{ fontFamily: 'Poppins, sans-serif' }}>{t.mix.currency}</span>
             </div>
 
-            <ul className="space-y-2">
+            <ul className="space-y-2 w-fit mx-auto text-left">
               {t.mix.features.map((feature, i) => (
-                <li key={i} className="flex items-center gap-2 text-white text-sm justify-center" style={{ fontFamily: 'Poppins, sans-serif' }}>
+                <li key={i} className="flex items-center gap-2 text-white text-sm" style={{ fontFamily: 'Poppins, sans-serif' }}>
                   <Check size={16} className="text-secondary flex-shrink-0" />
                   {feature}
                 </li>
@@ -215,6 +216,13 @@ export default function PricingSection({ translations, isRTL }: PricingSectionPr
             </ul>
           </div>
         </div>
+
+        {/* Event footnote */}
+        {t.eventNote && (
+          <p className="text-white/70 text-xs italic text-center max-w-3xl mx-auto" style={{ fontFamily: 'Poppins, sans-serif' }}>
+            {t.eventNote}
+          </p>
+        )}
 
         {/* Order Now Button */}
         <div className="text-center mt-10">
