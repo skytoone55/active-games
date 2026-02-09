@@ -47,6 +47,13 @@ export function AccessibilityWidget() {
     }
   }, [])
 
+  // Forcer le re-render quand locale change
+  const [, forceUpdate] = useState({})
+
+  useEffect(() => {
+    forceUpdate({})
+  }, [locale])
+
   const isRTL = locale === 'he'
   const translations = getTranslations(locale)
 
