@@ -27,9 +27,23 @@ export function AccessibilityWidget() {
 
   // Charger la locale depuis localStorage
   useEffect(() => {
-    const savedLocale = localStorage.getItem('locale') as Locale
-    if (savedLocale && ['en', 'he', 'fr'].includes(savedLocale)) {
-      setLocale(savedLocale)
+    const updateLocale = () => {
+      const savedLocale = localStorage.getItem('locale') as Locale
+      if (savedLocale && ['en', 'he', 'fr'].includes(savedLocale)) {
+        setLocale(savedLocale)
+      }
+    }
+
+    // Charger la locale initiale
+    updateLocale()
+
+    // Écouter les changements de locale
+    window.addEventListener('storage', updateLocale)
+    window.addEventListener('localeChange', updateLocale)
+
+    return () => {
+      window.removeEventListener('storage', updateLocale)
+      window.removeEventListener('localeChange', updateLocale)
     }
   }, [])
 
