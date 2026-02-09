@@ -85,8 +85,36 @@ export function AccessibilityWidget() {
     // Espacement des lettres
     root.classList.toggle('a11y-letter-spacing', s.letterSpacing)
 
-    // Pause animations
+    // Pause animations + vidéos
     root.classList.toggle('a11y-pause-animations', s.pauseAnimations)
+
+    // Pause/Resume vidéos HTML5
+    const videos = document.querySelectorAll('video')
+    videos.forEach(video => {
+      if (s.pauseAnimations) {
+        video.pause()
+        video.dataset.a11yPaused = 'true'
+      } else if (video.dataset.a11yPaused === 'true') {
+        // Ne pas auto-play si c'était déjà en pause avant
+        delete video.dataset.a11yPaused
+      }
+    })
+
+    // Pause iframes (YouTube, Vimeo, etc.)
+    const iframes = document.querySelectorAll('iframe')
+    iframes.forEach(iframe => {
+      if (s.pauseAnimations) {
+        // Stocker l'iframe src et le remplacer par about:blank pour arrêter la lecture
+        if (iframe.src && iframe.src !== 'about:blank') {
+          iframe.dataset.a11yOriginalSrc = iframe.src
+          iframe.src = 'about:blank'
+        }
+      } else if (iframe.dataset.a11yOriginalSrc) {
+        // Restaurer l'iframe src
+        iframe.src = iframe.dataset.a11yOriginalSrc
+        delete iframe.dataset.a11yOriginalSrc
+      }
+    })
   }
 
   const resetSettings = () => {
