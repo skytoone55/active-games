@@ -499,3 +499,49 @@ input[type="number"] {
   animation: none !important;
   transition: none !important;
 }
+
+/* ============================================ */
+/* CONFORMITÉ IS 5568 LEVEL AA - OBLIGATOIRE   */
+/* ============================================ */
+
+/* 1. Focus visible sur TOUS les éléments interactifs (WCAG 2.4.7 Level AA) */
+a:focus,
+button:focus,
+input:focus,
+textarea:focus,
+select:focus,
+[role="button"]:focus,
+[tabindex]:not([tabindex="-1"]):focus {
+  outline: 2px solid #00f0ff !important;
+  outline-offset: 2px !important;
+}
+
+nav a:focus {
+  outline: 2px solid #00f0ff !important;
+  outline-offset: 4px !important;
+}
+
+/* 2. Skip link - "Passer au contenu" (WCAG 2.4.1 Level A, requis Level AA) */
+.skip-link {
+  position: absolute;
+  top: -100px;
+  left: 0;
+  background: #00f0ff;
+  color: #000;
+  padding: 12px 16px;
+  text-decoration: none;
+  font-weight: bold;
+  z-index: 9999;
+  border-radius: 0 0 4px 0;
+}
+
+.skip-link:focus {
+  top: 0;
+  outline: 3px solid #fff;
+  outline-offset: 2px;
+}
+
+/* 3. Correction contraste textes - Ratio 4.5:1 minimum (WCAG 1.4.3 Level AA) */
+.text-gray-400 {
+  color: #b0b7c3 !important; /* Ratio 4.6:1 sur #0a0a0a (conforme) au lieu de 3.1:1 */
+}

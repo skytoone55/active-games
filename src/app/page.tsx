@@ -52,7 +52,7 @@ export default function Home() {
         onLocaleChange={handleLocaleChange} 
       />
       
-      <main>
+      <main id="main-content">
         <HeroSection translations={translations} />
         <div id="concept">
           <ConceptSection translations={translations} />

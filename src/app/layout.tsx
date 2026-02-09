@@ -22,7 +22,7 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" dir="ltr" suppressHydrationWarning>
+    <html lang="he" dir="rtl" suppressHydrationWarning>
       <head>
         <script
           dangerouslySetInnerHTML={{
@@ -38,6 +38,10 @@ export default function RootLayout({
         />
       </head>
       <body className="antialiased" suppressHydrationWarning>
+        {/* Skip link - OBLIGATOIRE IS 5568 Level AA (WCAG 2.4.1) */}
+        <a href="#main-content" className="skip-link">
+          דלג לתוכן הראשי
+        </a>
         {children}
         <GlobalWidgets />
       </body>
