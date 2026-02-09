@@ -153,23 +153,37 @@
   "pricing": {
     "title": "TARIFS",
     "subtitle": "Choisissez l'option qui vous convient",
-    "single": {
-      "title": "Jeux Illimites",
+    "active": {
+      "title": "Active Games",
       "price": "100",
       "currency": "NIS",
       "duration": "Une heure par participant",
       "features": [
         "Acces aux 8 salles",
         "Jeux illimites",
-        "Bracelet intelligent : 10 NIS la premiere fois (reutilisable)"
+        "Bracelet intelligent : 10 NIS (reutilisable)"
       ]
     },
-    "packages": {
-      "title": "Forfait Evenement",
-      "price": "500",
+    "mix": {
+      "title": "Mix Active + Laser",
+      "price": "130",
       "currency": "NIS",
-      "priceLabel": "Prix du jeu + 500 NIS",
-      "description": "Paiement unique",
+      "description": "30 min Active + 1 partie Laser",
+      "features": [
+        "30 minutes d'Active Games",
+        "1 partie de Laser Tag",
+        "Bracelet intelligent : 10 NIS (reutilisable)"
+      ]
+    },
+    "event": {
+      "title": "Forfaits Evenement",
+      "description": "Evenement Active Games",
+      "tiers": [
+        { "label": "15 participants minimum", "price": "110", "currency": "NIS" },
+        { "label": "30 participants minimum", "price": "100", "currency": "NIS" }
+      ],
+      "roomPrice": "500 NIS",
+      "roomLabel": "Salle privee",
       "features": [
         "Jeux illimites pendant une heure",
         "Salle privee pour 2 heures",
@@ -178,8 +192,26 @@
         "Snacks et boissons a volonte",
         "Deux parts de pizza par participant",
         "Bracelet VIP special pour le fete"
+      ]
+    },
+    "mixEvent": {
+      "title": "Forfaits Evenement",
+      "description": "Evenement Active + Laser",
+      "tiers": [
+        { "label": "15 participants minimum", "price": "130", "currency": "NIS" },
+        { "label": "30 participants minimum", "price": "120", "currency": "NIS" }
       ],
-      "option": "* Pack bracelets pour tous les participants — 100 NIS paiement unique"
+      "roomPrice": "500 NIS",
+      "roomLabel": "Salle privee",
+      "features": [
+        "Jeux Active + Laser illimites",
+        "Salle privee pour 2 heures",
+        "Systeme son et eclairage",
+        "Tables de jeux",
+        "Snacks et boissons a volonte",
+        "Deux parts de pizza par participant",
+        "Bracelet VIP special pour le fete"
+      ]
     }
   },
   "whyChooseUs": {

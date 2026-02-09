@@ -153,23 +153,37 @@
   "pricing": {
     "title": "PRICING",
     "subtitle": "Choose the option that suits you best",
-    "single": {
-      "title": "Unlimited Games",
+    "active": {
+      "title": "Active Games",
       "price": "100",
       "currency": "NIS",
       "duration": "One hour per participant",
       "features": [
         "Access to all 8 rooms",
         "Unlimited games",
-        "Smart bracelet: 10 NIS first-time fee (reusable)"
+        "Smart bracelet: 10 NIS (reusable)"
       ]
     },
-    "packages": {
-      "title": "Event Package",
-      "price": "500",
+    "mix": {
+      "title": "Mix Active + Laser",
+      "price": "130",
       "currency": "NIS",
-      "priceLabel": "Game price + 500 NIS",
-      "description": "One-time payment",
+      "description": "30 min Active + 1 Laser game",
+      "features": [
+        "30 minutes of Active Games",
+        "1 round of Laser Tag",
+        "Smart bracelet: 10 NIS (reusable)"
+      ]
+    },
+    "event": {
+      "title": "Event Packages",
+      "description": "Active Games Event",
+      "tiers": [
+        { "label": "15 participants minimum", "price": "110", "currency": "NIS" },
+        { "label": "30 participants minimum", "price": "100", "currency": "NIS" }
+      ],
+      "roomPrice": "500 NIS",
+      "roomLabel": "Private event room",
       "features": [
         "Unlimited games for one hour",
         "Private event room for 2 hours",
@@ -178,8 +192,26 @@
         "Unlimited snacks and drinks",
         "Two pizza slices per participant",
         "Special VIP bracelet for the celebrant"
+      ]
+    },
+    "mixEvent": {
+      "title": "Event Packages",
+      "description": "Active + Laser Event",
+      "tiers": [
+        { "label": "15 participants minimum", "price": "130", "currency": "NIS" },
+        { "label": "30 participants minimum", "price": "120", "currency": "NIS" }
       ],
-      "option": "* Bracelet package for all participants — 100 NIS one-time payment"
+      "roomPrice": "500 NIS",
+      "roomLabel": "Private event room",
+      "features": [
+        "Unlimited Active + Laser games",
+        "Private event room for 2 hours",
+        "Sound and lighting system",
+        "Game tables",
+        "Unlimited snacks and drinks",
+        "Two pizza slices per participant",
+        "Special VIP bracelet for the celebrant"
+      ]
     }
   },
   "branches": {
