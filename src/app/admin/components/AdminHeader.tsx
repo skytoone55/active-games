@@ -8,7 +8,8 @@ import { usePathname } from 'next/navigation'
 import type { AuthUser } from '@/hooks/useAuth'
 import type { Branch, UserRole } from '@/lib/supabase/types'
 import { BranchSelector } from './BranchSelector'
-import { usePendingOrdersCount } from '@/hooks/useOrders'
+import { usePendingOrdersCount, useUnseenAbortedOrdersCount } from '@/hooks/useOrders'
+import { useUnreadContactRequestsCount } from '@/hooks/useContactRequests'
 import { useUserPermissions } from '@/hooks/useUserPermissions'
 import { useTranslation } from '@/contexts/LanguageContext'
 import type { Locale } from '@/i18n'
@@ -79,6 +80,14 @@ function AdminHeaderComponent({
   // Compteur de commandes en attente pour le badge (visible partout)
   const pendingOrdersCount = usePendingOrdersCount(selectedBranch?.id || null)
   const hasPendingOrders = pendingOrdersCount > 0
+
+  // Compteur de commandes aborted non vues (badge orange sur Commandes)
+  const { count: unseenAbortedCount } = useUnseenAbortedOrdersCount(selectedBranch?.id || null)
+  const hasUnseenAborted = unseenAbortedCount > 0
+
+  // Compteur de demandes de contact non lues (badge sur Clients)
+  const unreadContactRequests = useUnreadContactRequestsCount(selectedBranch?.id || null)
+  const hasUnreadRequests = unreadContactRequests > 0
 
   // Construire le nom complet à partir du profil
   const getUserDisplayName = () => {
@@ -185,7 +194,7 @@ function AdminHeaderComponent({
           {hasPermission('clients', 'can_view') && (
             <Link
               href="/admin/clients"
-              className={`px-4 py-2 rounded-lg transition-colors flex items-center gap-2 ${
+              className={`px-4 py-2 rounded-lg transition-colors flex items-center gap-2 relative ${
                 pathname === '/admin/clients'
                   ? 'bg-blue-600 text-white'
                   : theme === 'dark'
@@ -195,6 +204,12 @@ function AdminHeaderComponent({
             >
               <Users className="w-4 h-4" />
               <span>{t('admin.header.clients')}</span>
+              {/* Pastille rouge pour demandes de contact non traitées */}
+              {hasUnreadRequests && (
+                <span className="absolute -top-1.5 -right-1.5 bg-red-600 text-white text-[10px] font-bold min-w-[20px] h-5 px-1 rounded-full flex items-center justify-center animate-pulse shadow-lg">
+                  {unreadContactRequests}
+                </span>
+              )}
             </Link>
           )}
           {hasPermission('orders', 'can_view') && (
@@ -214,6 +229,17 @@ function AdminHeaderComponent({
               {hasPendingOrders && (
                 <span className="absolute -top-1 -right-1 bg-red-600 text-white text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center animate-pulse shadow-lg">
                   {pendingOrdersCount > 9 ? '9+' : pendingOrdersCount}
+                </span>
+              )}
+              {/* Pastille orange pour commandes aborted non vues */}
+              {hasUnseenAborted && !hasPendingOrders && (
+                <span className="absolute -top-1 -right-1 bg-orange-500 text-white text-[10px] font-bold min-w-[20px] h-5 px-1 rounded-full flex items-center justify-center animate-pulse shadow-lg">
+                  {unseenAbortedCount > 9 ? '9+' : unseenAbortedCount}
+                </span>
+              )}
+              {hasUnseenAborted && hasPendingOrders && (
+                <span className="absolute -bottom-1 -right-1 bg-orange-500 text-white text-[10px] font-bold min-w-[20px] h-5 px-1 rounded-full flex items-center justify-center shadow-lg">
+                  {unseenAbortedCount > 9 ? '9+' : unseenAbortedCount}
                 </span>
               )}
             </Link>
@@ -556,6 +582,11 @@ function AdminHeaderComponent({
                 >
                   <Users className="w-4 h-4" />
                   <span>{t('admin.header.clients')}</span>
+                  {hasUnreadRequests && (
+                    <span className="bg-red-600 text-white text-xs font-bold px-1.5 py-0.5 rounded-full ml-auto animate-pulse">
+                      {unreadContactRequests}
+                    </span>
+                  )}
                 </Link>
               )}
               {hasPermission('orders', 'can_view') && (
@@ -572,11 +603,18 @@ function AdminHeaderComponent({
                 >
                   <ShoppingCart className="w-4 h-4" />
                   <span>{t('admin.header.orders')}</span>
-                  {hasPendingOrders && (
-                    <span className="bg-red-600 text-white text-xs font-bold px-2 py-0.5 rounded-full ml-auto animate-pulse">
-                      {pendingOrdersCount}
-                    </span>
-                  )}
+                  <span className="flex items-center gap-1 ml-auto">
+                    {hasPendingOrders && (
+                      <span className="bg-red-600 text-white text-xs font-bold px-2 py-0.5 rounded-full animate-pulse">
+                        {pendingOrdersCount}
+                      </span>
+                    )}
+                    {hasUnseenAborted && (
+                      <span className="bg-orange-500 text-white text-xs font-bold px-2 py-0.5 rounded-full animate-pulse">
+                        {unseenAbortedCount}
+                      </span>
+                    )}
+                  </span>
                 </Link>
               )}
               {hasPermission('calls', 'can_view') && (

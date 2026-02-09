@@ -1700,10 +1700,14 @@ export async function GET(request: NextRequest) {
     // Compter les pending
     const pendingCount = orders?.filter(o => o.status === 'pending').length || 0
 
+    // Compter les aborted non vus
+    const unseenAbortedCount = orders?.filter(o => o.status === 'aborted' && !o.aborted_seen_at).length || 0
+
     return NextResponse.json({
       success: true,
       orders,
-      pending_count: pendingCount
+      pending_count: pendingCount,
+      unseen_aborted_count: unseenAbortedCount
     })
   } catch (error) {
     console.error('Error in GET /api/orders:', error)

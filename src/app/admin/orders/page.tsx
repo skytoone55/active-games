@@ -319,6 +319,16 @@ export default function OrdersPage() {
 
   const handleViewOrder = (order: OrderWithRelations) => {
     setSelectedOrder(order)
+
+    // Auto-marquer comme vu si c'est une commande aborted non vue
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    if (order.status === 'aborted' && !(order as any).aborted_seen_at) {
+      fetch(`/api/orders/${order.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'mark_aborted_seen' }),
+      }).catch(() => {})
+    }
   }
 
   // Ouvrir la fiche client dans une modal (comme dans la section Clients)

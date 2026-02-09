@@ -896,6 +896,25 @@ export interface EmailLogWithRelations extends EmailLog {
   template?: EmailTemplate | null
 }
 
+// Types pour les demandes de contact (leads)
+export interface ContactRequest {
+  id: string
+  branch_id: string
+  name: string
+  email: string | null
+  phone: string
+  message: string
+  is_read: boolean
+  read_by: string | null
+  read_at: string | null
+  contact_id: string | null
+  created_at: string
+  updated_at: string
+}
+
+export type ContactRequestInsert = Omit<ContactRequest, 'id' | 'is_read' | 'read_by' | 'read_at' | 'contact_id' | 'created_at' | 'updated_at'>
+export type ContactRequestUpdate = Partial<Pick<ContactRequest, 'is_read' | 'read_by' | 'read_at' | 'contact_id'>>
+
 // Types pour le système de paiement
 export type PaymentStatus = 'pending' | 'deposit_paid' | 'fully_paid' | 'card_authorized' | 'refunded' | 'failed'
 export type PaymentType = 'full' | 'deposit' | 'balance' | 'refund'

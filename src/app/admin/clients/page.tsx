@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { Search, Edit2, Archive, User, Phone, Mail, Loader2, Eye, ChevronLeft, ChevronRight, Plus, Download, ArrowUpDown, ArrowUp, ArrowDown, Users as UsersIcon, GitMerge, Settings, X } from 'lucide-react'
+import { Search, Edit2, Archive, User, Phone, Mail, Loader2, Eye, ChevronLeft, ChevronRight, Plus, Download, ArrowUpDown, ArrowUp, ArrowDown, Users as UsersIcon, GitMerge, Settings, X, MessageSquare } from 'lucide-react'
 import { useContacts, type SearchContactsResult } from '@/hooks/useContacts'
 import { useBranches } from '@/hooks/useBranches'
 import { useAuth } from '@/hooks/useAuth'
@@ -16,6 +16,8 @@ import { ConfirmationModal } from '../components/ConfirmationModal'
 import { CustomSelect } from '../components/CustomSelect'
 import { createClient } from '@/lib/supabase/client'
 import type { Contact } from '@/lib/supabase/types'
+import { useContactRequests } from '@/hooks/useContactRequests'
+import { ContactRequestsPanel } from './components/ContactRequestsPanel'
 
 export default function ClientsPage() {
   const router = useRouter()
@@ -33,7 +35,9 @@ export default function ClientsPage() {
   }
   const { branches, selectedBranch, selectBranch, loading: branchesLoading } = useBranches()
   const { searchContacts, archiveContact, unarchiveContact } = useContacts(selectedBranch?.id || null)
+  const { unreadCount: unreadContactRequests } = useContactRequests(selectedBranch?.id || null)
 
+  const [showContactRequests, setShowContactRequests] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [includeArchived, setIncludeArchived] = useState(false)
   const [contacts, setContacts] = useState<Contact[]>([])
@@ -418,7 +422,42 @@ export default function ClientsPage() {
             <span className="hidden sm:inline">{t('admin.clients.advanced_filters')}</span>
           </button>
         </div>
+
+        {/* Bouton Demandes de contact */}
+        <div className="mt-3">
+          <button
+            onClick={() => setShowContactRequests(!showContactRequests)}
+            className={`px-4 py-2 rounded-lg transition-colors flex items-center gap-2 relative ${
+              showContactRequests
+                ? 'bg-blue-600 text-white'
+                : isDark
+                  ? 'bg-gray-700 hover:bg-gray-600 text-white'
+                  : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
+            }`}
+          >
+            <MessageSquare className="w-4 h-4" />
+            <span>{t('admin.contact_requests.button_label')}</span>
+            {unreadContactRequests > 0 && !showContactRequests && (
+              <span className="bg-red-600 text-white text-[10px] font-bold min-w-[18px] h-[18px] px-1 rounded-full flex items-center justify-center">
+                {unreadContactRequests}
+              </span>
+            )}
+          </button>
+        </div>
       </div>
+
+      {/* Panel Demandes de contact */}
+      {showContactRequests && effectiveSelectedBranch && (
+        <div className={`px-6 py-4 border-b ${
+          isDark ? 'bg-gray-800/30 border-gray-700' : 'bg-gray-50/50 border-gray-200'
+        }`}>
+          <ContactRequestsPanel
+            branchId={effectiveSelectedBranch.id}
+            isDark={isDark}
+            onContactCreated={() => performSearch()}
+          />
+        </div>
+      )}
 
       {/* Filtres avancés */}
       {showAdvancedFilters && (

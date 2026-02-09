@@ -582,6 +582,32 @@ export async function PATCH(
         booking_reference: originalReference
       })
 
+    } else if (action === 'mark_aborted_seen') {
+      // Marquer une commande aborted comme vue par l'admin
+      if (order.status !== 'aborted') {
+        return NextResponse.json(
+          { success: false, error: 'Order is not aborted' },
+          { status: 400 }
+        )
+      }
+
+      const { error: updateError } = await supabase
+        .from('orders')
+        .update({
+          aborted_seen_at: new Date().toISOString(),
+          aborted_seen_by: user.id,
+        })
+        .eq('id', id)
+
+      if (updateError) {
+        return NextResponse.json(
+          { success: false, error: 'Failed to mark as seen' },
+          { status: 500 }
+        )
+      }
+
+      return NextResponse.json({ success: true, message: 'Aborted order marked as seen' })
+
     } else {
       return NextResponse.json(
         { success: false, error: 'Invalid action', messageKey: 'errors.invalidAction' },

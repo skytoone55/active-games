@@ -244,9 +244,17 @@
     "subtitle": "Contactez-nous pour toute information complementaire.",
     "form": {
       "name": "Nom",
-      "email": "Email",
+      "email": "Email (optionnel)",
+      "phone": "Telephone",
+      "phone_placeholder": "Votre numero de telephone",
       "message": "Message",
-      "send": "Envoyer"
+      "branch": "Succursale",
+      "branch_placeholder": "Selectionnez une succursale",
+      "send": "Envoyer",
+      "sending": "Envoi en cours...",
+      "sent": "Envoye !",
+      "success_message": "Votre demande a ete envoyee avec succes. Nous vous recontacterons rapidement.",
+      "error_message": "Erreur reseau. Veuillez reessayer."
     },
     "info": {
       "phone": "+971 585 682 770",
@@ -1293,6 +1301,38 @@
           "generic_error": "Une erreur est survenue"
         }
       }
+    },
+    "contact_requests": {
+      "title": "Demandes de contact",
+      "button_label": "Demandes",
+      "empty": "Aucune demande de contact",
+      "unread_count": "{{count}} nouvelle(s) demande(s)",
+      "mark_as_read": "Marquer comme traite",
+      "marked_as_read": "Demande marquee comme traitee",
+      "create_contact": "Creer un contact",
+      "contact_created": "Contact cree a partir de la demande",
+      "status": {
+        "unread": "Non traite",
+        "read": "Traite"
+      },
+      "detail": {
+        "name": "Nom",
+        "email": "Email",
+        "phone": "Telephone",
+        "message": "Message",
+        "branch": "Succursale",
+        "received_at": "Recu le",
+        "treated_by": "Traite par",
+        "treated_at": "Traite le"
+      },
+      "filter": {
+        "all": "Toutes",
+        "unread": "Non traitees",
+        "read": "Traitees"
+      },
+      "back_to_list": "Retour a la liste",
+      "error_loading": "Erreur lors du chargement des demandes",
+      "error_updating": "Erreur lors de la mise a jour"
     },
     "booking_modal": {
       "title_new": "Nouvelle reservation",

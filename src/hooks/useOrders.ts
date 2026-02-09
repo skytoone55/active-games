@@ -184,3 +184,43 @@ export function usePendingOrdersCount(branchId: string | null) {
 
   return count
 }
+
+/**
+ * Hook pour obtenir le count des commandes aborted non vues (pour le badge header)
+ */
+export function useUnseenAbortedOrdersCount(branchId: string | null) {
+  const [count, setCount] = useState(0)
+  const lastBranchIdRef = useRef<string | null>(null)
+  const isFetchingRef = useRef(false)
+
+  const fetchCount = useCallback(async () => {
+    if (!branchId) {
+      setCount(0)
+      return
+    }
+
+    if (isFetchingRef.current) return
+    isFetchingRef.current = true
+
+    try {
+      const response = await fetch(`/api/orders?branch_id=${branchId}&status=aborted`)
+      const data = await response.json()
+      setCount(data.unseen_aborted_count || 0)
+    } catch (err) {
+      console.error('Error fetching unseen aborted count:', err)
+    } finally {
+      isFetchingRef.current = false
+    }
+  }, [branchId])
+
+  useEffect(() => {
+    if (branchId === lastBranchIdRef.current) return
+    lastBranchIdRef.current = branchId
+    fetchCount()
+  }, [branchId, fetchCount])
+
+  // Realtime: mise à jour instantanée du badge
+  useRealtimeRefresh('orders', branchId, fetchCount)
+
+  return { count, refetch: fetchCount }
+}

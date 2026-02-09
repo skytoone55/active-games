@@ -200,9 +200,17 @@
     "subtitle": "צרו איתנו קשר לקבלת מידע נוסף או לשאלות ספציפיות.",
     "form": {
       "name": "שם",
-      "email": "אימייל",
+      "email": "אימייל (אופציונלי)",
+      "phone": "טלפון",
+      "phone_placeholder": "מספר הטלפון שלך",
       "message": "הודעה",
-      "send": "שלח"
+      "branch": "סניף",
+      "branch_placeholder": "בחרו סניף",
+      "send": "שלח",
+      "sending": "שולח...",
+      "sent": "נשלח!",
+      "success_message": "הבקשה שלך נשלחה בהצלחה. ניצור איתך קשר בהקדם.",
+      "error_message": "שגיאת רשת. אנא נסה שוב."
     },
     "info": {
       "phone": "03 551-2277",
@@ -1312,6 +1320,38 @@
         "merging": "ממזג...",
         "archived_reason": "מוזג עם {{name}} (ID: {{id}})"
       }
+    },
+    "contact_requests": {
+      "title": "בקשות יצירת קשר",
+      "button_label": "בקשות",
+      "empty": "אין בקשות יצירת קשר",
+      "unread_count": "{{count}} בקשה/ות חדשה/ות",
+      "mark_as_read": "סמן כטופל",
+      "marked_as_read": "הבקשה סומנה כטופלה",
+      "create_contact": "צור איש קשר",
+      "contact_created": "איש קשר נוצר מהבקשה",
+      "status": {
+        "unread": "לא טופל",
+        "read": "טופל"
+      },
+      "detail": {
+        "name": "שם",
+        "email": "אימייל",
+        "phone": "טלפון",
+        "message": "הודעה",
+        "branch": "סניף",
+        "received_at": "התקבל בתאריך",
+        "treated_by": "טופל על ידי",
+        "treated_at": "טופל בתאריך"
+      },
+      "filter": {
+        "all": "הכל",
+        "unread": "לא טופלו",
+        "read": "טופלו"
+      },
+      "back_to_list": "חזרה לרשימה",
+      "error_loading": "שגיאה בטעינת הבקשות",
+      "error_updating": "שגיאה בעדכון הבקשה"
     },
     "booking_modal": {
       "title_new": "הזמנה חדשה",

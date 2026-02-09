@@ -209,9 +209,17 @@
     "subtitle": "Contact us for any further information or specific inquiries.",
     "form": {
       "name": "Name",
-      "email": "Email",
+      "email": "Email (optional)",
+      "phone": "Phone",
+      "phone_placeholder": "Your phone number",
       "message": "Message",
-      "send": "Send"
+      "branch": "Location",
+      "branch_placeholder": "Select a location",
+      "send": "Send",
+      "sending": "Sending...",
+      "sent": "Sent!",
+      "success_message": "Your request has been sent successfully. We will get back to you soon.",
+      "error_message": "Network error. Please try again."
     },
     "info": {
       "phone": "03 551-2277",
@@ -1236,6 +1244,38 @@
           "generic_error": "An error occurred"
         }
       }
+    },
+    "contact_requests": {
+      "title": "Contact Requests",
+      "button_label": "Requests",
+      "empty": "No contact requests",
+      "unread_count": "{{count}} new request(s)",
+      "mark_as_read": "Mark as processed",
+      "marked_as_read": "Request marked as processed",
+      "create_contact": "Create contact",
+      "contact_created": "Contact created from request",
+      "status": {
+        "unread": "Unprocessed",
+        "read": "Processed"
+      },
+      "detail": {
+        "name": "Name",
+        "email": "Email",
+        "phone": "Phone",
+        "message": "Message",
+        "branch": "Branch",
+        "received_at": "Received on",
+        "treated_by": "Processed by",
+        "treated_at": "Processed on"
+      },
+      "filter": {
+        "all": "All",
+        "unread": "Unprocessed",
+        "read": "Processed"
+      },
+      "back_to_list": "Back to list",
+      "error_loading": "Error loading requests",
+      "error_updating": "Error updating request"
     },
     "booking_modal": {
       "title_new": "New booking",
