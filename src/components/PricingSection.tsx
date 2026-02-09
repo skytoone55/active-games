@@ -1,6 +1,6 @@
 'use client'
 
-import { Check, Sparkles, Users, PartyPopper } from 'lucide-react'
+import { Check, Sparkles, PartyPopper } from 'lucide-react'
 import Link from 'next/link'
 
 interface PricingSectionProps {
@@ -17,13 +17,11 @@ interface PricingSectionProps {
       }
       packages: {
         title: string
-        items: {
-          name: string
-          minParticipants: string
-          price: string
-          currency: string
-          features: string[]
-        }[]
+        price: string
+        currency: string
+        priceLabel: string
+        description: string
+        features: string[]
       }
     }
     booking?: {
@@ -92,42 +90,37 @@ export default function PricingSection({ translations, isRTL }: PricingSectionPr
           </div>
         </div>
 
-        {/* Event Packages */}
+        {/* Event Package */}
         <div className="text-center mb-8">
           <div className="flex items-center justify-center gap-3 mb-8">
             <PartyPopper className="w-8 h-8 text-secondary" />
             <h3 className="text-3xl font-bold text-white" style={{ fontFamily: 'Poppins, sans-serif' }}>{translations.pricing.packages.title}</h3>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-6 max-w-3xl mx-auto">
-            {translations.pricing.packages.items.map((pkg, index) => (
-              <div
-                key={index}
-                className="backdrop-blur-sm rounded-2xl p-6 border border-primary/30 hover:border-primary/50 transition-all duration-300 hover:shadow-[0_0_30px_rgba(0,240,255,0.2)]"
-                style={{ backgroundColor: 'rgba(50, 50, 70, 0.7)' }}
-              >
-                <div className="flex items-center gap-2 justify-center mb-4">
-                  <Users className="w-5 h-5 text-secondary" />
-                  <span className="text-white" style={{ fontFamily: 'Poppins, sans-serif' }}>{pkg.minParticipants}</span>
-                </div>
-                
-                <div className="flex items-center justify-center gap-2 mb-4">
-                  <span className="text-4xl font-display font-bold text-white">
-                    {pkg.price}
-                  </span>
-                  <span className="text-xl text-white" style={{ fontFamily: 'Poppins, sans-serif' }}>{pkg.currency}</span>
-                </div>
+          <div className="max-w-md mx-auto">
+            <div
+              className="backdrop-blur-sm rounded-2xl p-6 border border-primary/30 hover:border-primary/50 transition-all duration-300 hover:shadow-[0_0_30px_rgba(0,240,255,0.2)] text-center"
+              style={{ backgroundColor: 'rgba(50, 50, 70, 0.7)' }}
+            >
+              <p className="text-white mb-4" style={{ fontFamily: 'Poppins, sans-serif' }}>{translations.pricing.packages.description}</p>
 
-                <ul className="space-y-2 text-start">
-                  {pkg.features.map((feature, i) => (
-                    <li key={i} className="flex items-start gap-2 text-white text-sm" style={{ fontFamily: 'Poppins, sans-serif' }}>
-                      <Check size={16} className="text-secondary flex-shrink-0 mt-0.5" />
-                      {feature}
-                    </li>
-                  ))}
-                </ul>
+              <div className="flex items-center justify-center gap-2 mb-2">
+                <span className="text-5xl font-display font-bold text-white">
+                  +{translations.pricing.packages.price}
+                </span>
+                <span className="text-2xl text-white" style={{ fontFamily: 'Poppins, sans-serif' }}>{translations.pricing.packages.currency}</span>
               </div>
-            ))}
+              <p className="text-secondary font-semibold mb-6" style={{ fontFamily: 'Poppins, sans-serif' }}>{translations.pricing.packages.priceLabel}</p>
+
+              <ul className="space-y-2 text-start">
+                {translations.pricing.packages.features.map((feature, i) => (
+                  <li key={i} className="flex items-start gap-2 text-white text-sm" style={{ fontFamily: 'Poppins, sans-serif' }}>
+                    <Check size={16} className="text-secondary flex-shrink-0 mt-0.5" />
+                    {feature}
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
         </div>
 

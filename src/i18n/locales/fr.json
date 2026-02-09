@@ -165,32 +165,20 @@
       ]
     },
     "packages": {
-      "title": "Forfaits Evenements",
-      "items": [
-        {
-          "name": "Forfait 15+",
-          "minParticipants": "A partir de 15 participants",
-          "price": "130",
-          "currency": "NIS / personne",
-          "features": [
-            "Jeux illimites pendant une heure",
-            "Salle privee pour 2 heures",
-            "Systeme son et eclairage",
-            "Bracelet intelligent inclus"
-          ]
-        },
-        {
-          "name": "Forfait 30+",
-          "minParticipants": "A partir de 30 participants",
-          "price": "120",
-          "currency": "NIS / personne",
-          "features": [
-            "Jeux illimites pendant une heure",
-            "Salle privee pour 2 heures",
-            "Systeme son et eclairage",
-            "Bracelet intelligent inclus"
-          ]
-        }
+      "title": "Forfait Evenement",
+      "price": "500",
+      "currency": "NIS",
+      "priceLabel": "Prix du jeu + 500 NIS",
+      "description": "Ajoutez le forfait evenement a toute reservation",
+      "features": [
+        "Jeux illimites pendant une heure",
+        "Salle privee pour 2 heures",
+        "Systeme son et eclairage",
+        "Tables de jeux",
+        "Snacks et boissons a volonte",
+        "Deux parts de pizza par participant",
+        "Bracelet intelligent inclus",
+        "Bracelet collecteur dore pour le fete"
       ]
     }
   },

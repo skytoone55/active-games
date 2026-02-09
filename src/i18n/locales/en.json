@@ -165,32 +165,20 @@
       ]
     },
     "packages": {
-      "title": "Event Packages",
-      "items": [
-        {
-          "name": "Package 15+",
-          "minParticipants": "From 15 participants",
-          "price": "130",
-          "currency": "NIS / person",
-          "features": [
-            "Unlimited games for one hour",
-            "Private event room for 2 hours",
-            "Sound and lighting system",
-            "Smart bracelet included"
-          ]
-        },
-        {
-          "name": "Package 30+",
-          "minParticipants": "From 30 participants",
-          "price": "120",
-          "currency": "NIS / person",
-          "features": [
-            "Unlimited games for one hour",
-            "Private event room for 2 hours",
-            "Sound and lighting system",
-            "Smart bracelet included"
-          ]
-        }
+      "title": "Event Package",
+      "price": "500",
+      "currency": "NIS",
+      "priceLabel": "Game price + 500 NIS",
+      "description": "Add the event package to any booking",
+      "features": [
+        "Unlimited games for one hour",
+        "Private event room for 2 hours",
+        "Sound and lighting system",
+        "Game tables",
+        "Unlimited snacks and drinks",
+        "Two pizza slices per participant",
+        "Smart bracelet included",
+        "Gold collector bracelet for the celebrant"
       ]
     }
   },
