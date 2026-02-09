@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Settings, X, Type, Eye, Link as LinkIcon, Space, Pause } from 'lucide-react'
-import { useTranslation } from '@/contexts/LanguageContext'
+import { getTranslations, type Locale } from '@/i18n'
 
 interface A11ySettings {
   fontSize: 'normal' | 'large' | 'larger'
@@ -21,9 +21,28 @@ const DEFAULT_SETTINGS: A11ySettings = {
 }
 
 export function AccessibilityWidget() {
-  const { t, isRTL } = useTranslation()
+  const [locale, setLocale] = useState<Locale>('he')
   const [isOpen, setIsOpen] = useState(false)
   const [settings, setSettings] = useState<A11ySettings>(DEFAULT_SETTINGS)
+
+  // Charger la locale depuis localStorage
+  useEffect(() => {
+    const savedLocale = localStorage.getItem('locale') as Locale
+    if (savedLocale && ['en', 'he', 'fr'].includes(savedLocale)) {
+      setLocale(savedLocale)
+    }
+  }, [])
+
+  const isRTL = locale === 'he'
+  const translations = getTranslations(locale)
+  const t = (key: string) => {
+    const keys = key.split('.')
+    let value: any = translations
+    for (const k of keys) {
+      value = value?.[k]
+    }
+    return value || key
+  }
 
   // Charger depuis localStorage
   useEffect(() => {
