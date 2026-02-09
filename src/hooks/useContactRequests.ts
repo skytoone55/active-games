@@ -201,9 +201,30 @@ export function useContactRequests(branchId: string | null): UseContactRequestsR
 
 /**
  * Hook léger uniquement pour le compteur de demandes non lues (pour le header)
+ * Écoute l'événement 'contact-requests-changed' pour mise à jour instantanée
  */
 export function useUnreadContactRequestsCount(branchId: string | null): number {
   const [count, setCount] = useState(0)
+  const branchIdRef = useRef(branchId)
+  branchIdRef.current = branchId
+
+  const fetchCount = useCallback(async () => {
+    if (!branchIdRef.current) {
+      setCount(0)
+      return
+    }
+    try {
+      const response = await fetch(
+        `/api/contact-requests?branchId=${branchIdRef.current}&countOnly=true`
+      )
+      const data = await response.json()
+      if (data.success) {
+        setCount(data.unreadCount)
+      }
+    } catch {
+      // Silently fail
+    }
+  }, [])
 
   useEffect(() => {
     if (!branchId) {
@@ -211,24 +232,25 @@ export function useUnreadContactRequestsCount(branchId: string | null): number {
       return
     }
 
-    const fetchCount = async () => {
-      try {
-        const response = await fetch(
-          `/api/contact-requests?branchId=${branchId}&countOnly=true`
-        )
-        const data = await response.json()
-        if (data.success) {
-          setCount(data.unreadCount)
-        }
-      } catch {
-        // Silently fail
-      }
-    }
-
     fetchCount()
     const interval = setInterval(fetchCount, 30000)
-    return () => clearInterval(interval)
-  }, [branchId])
+
+    // Écouter les événements de changement pour mise à jour instantanée
+    const handleChange = () => fetchCount()
+    window.addEventListener('contact-requests-changed', handleChange)
+
+    return () => {
+      clearInterval(interval)
+      window.removeEventListener('contact-requests-changed', handleChange)
+    }
+  }, [branchId, fetchCount])
 
   return count
+}
+
+/**
+ * Notifier que les demandes de contact ont changé (badge header se met à jour)
+ */
+export function notifyContactRequestsChanged() {
+  window.dispatchEvent(new Event('contact-requests-changed'))
 }

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { ArrowLeft, Mail, MailOpen, UserPlus, Clock, Loader2, Filter, Eye } from 'lucide-react'
-import { useContactRequests } from '@/hooks/useContactRequests'
+import { useContactRequests, notifyContactRequestsChanged } from '@/hooks/useContactRequests'
 import { useTranslation } from '@/contexts/LanguageContext'
 import type { ContactRequest } from '@/lib/supabase/types'
 
@@ -55,6 +55,8 @@ export function ContactRequestsPanel({ branchId, isDark, onContactCreated }: Con
       if (selectedRequest?.id === id) {
         setSelectedRequest(prev => prev ? { ...prev, is_read: true, read_at: new Date().toISOString() } : null)
       }
+      // Notifier le header pour mise à jour instantanée du badge
+      notifyContactRequestsChanged()
     }
     setActionLoading(null)
   }
@@ -71,6 +73,8 @@ export function ContactRequestsPanel({ branchId, isDark, onContactCreated }: Con
       if (selectedRequest?.id === requestId) {
         setSelectedRequest(prev => prev ? { ...prev, is_read: true, read_at: new Date().toISOString(), contact_id: 'created' } : null)
       }
+      // Notifier le header pour mise à jour instantanée du badge
+      notifyContactRequestsChanged()
       onContactCreated?.()
     }
     setActionLoading(null)

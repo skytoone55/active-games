@@ -16,7 +16,7 @@ import {
   Gamepad2,
   Mail
 } from 'lucide-react'
-import { useOrders } from '@/hooks/useOrders'
+import { useOrders, notifyAbortedOrdersChanged } from '@/hooks/useOrders'
 import { useBranches } from '@/hooks/useBranches'
 import { useAuth } from '@/hooks/useAuth'
 import { useUserPermissions } from '@/hooks/useUserPermissions'
@@ -327,7 +327,15 @@ export default function OrdersPage() {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'mark_aborted_seen' }),
-      }).catch(() => {})
+      })
+        .then(res => res.json())
+        .then(data => {
+          if (data.success) {
+            // Notifier le header pour mise à jour instantanée du badge orange
+            notifyAbortedOrdersChanged()
+          }
+        })
+        .catch(() => {})
     }
   }
 

@@ -187,14 +187,17 @@ export function usePendingOrdersCount(branchId: string | null) {
 
 /**
  * Hook pour obtenir le count des commandes aborted non vues (pour le badge header)
+ * Écoute l'événement 'aborted-orders-changed' pour mise à jour instantanée
  */
 export function useUnseenAbortedOrdersCount(branchId: string | null) {
   const [count, setCount] = useState(0)
   const lastBranchIdRef = useRef<string | null>(null)
   const isFetchingRef = useRef(false)
+  const branchIdRef = useRef(branchId)
+  branchIdRef.current = branchId
 
   const fetchCount = useCallback(async () => {
-    if (!branchId) {
+    if (!branchIdRef.current) {
       setCount(0)
       return
     }
@@ -203,7 +206,7 @@ export function useUnseenAbortedOrdersCount(branchId: string | null) {
     isFetchingRef.current = true
 
     try {
-      const response = await fetch(`/api/orders?branch_id=${branchId}&status=aborted`)
+      const response = await fetch(`/api/orders?branch_id=${branchIdRef.current}&status=aborted`)
       const data = await response.json()
       setCount(data.unseen_aborted_count || 0)
     } catch (err) {
@@ -211,7 +214,7 @@ export function useUnseenAbortedOrdersCount(branchId: string | null) {
     } finally {
       isFetchingRef.current = false
     }
-  }, [branchId])
+  }, [])
 
   useEffect(() => {
     if (branchId === lastBranchIdRef.current) return
@@ -222,5 +225,19 @@ export function useUnseenAbortedOrdersCount(branchId: string | null) {
   // Realtime: mise à jour instantanée du badge
   useRealtimeRefresh('orders', branchId, fetchCount)
 
+  // Écouter les événements locaux pour mise à jour instantanée
+  useEffect(() => {
+    const handleChange = () => fetchCount()
+    window.addEventListener('aborted-orders-changed', handleChange)
+    return () => window.removeEventListener('aborted-orders-changed', handleChange)
+  }, [fetchCount])
+
   return { count, refetch: fetchCount }
+}
+
+/**
+ * Notifier que les commandes aborted ont changé (badge header se met à jour)
+ */
+export function notifyAbortedOrdersChanged() {
+  window.dispatchEvent(new Event('aborted-orders-changed'))
 }
