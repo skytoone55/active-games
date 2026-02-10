@@ -265,6 +265,13 @@ export default function ChatPage() {
         params.set('branchId', effectiveBranchId)
       } else if (effectiveBranchId === 'all') {
         params.set('branchId', 'all')
+        // Send allowed branches so API can scope "all" properly
+        if (branches.length > 0) {
+          params.set('allowedBranches', branches.map(b => b.id).join(','))
+        }
+        if (canSeeUnassigned) {
+          params.set('includeUnassigned', 'true')
+        }
       }
       if (searchQuery && activeChannelRef.current === 'whatsapp') params.set('search', searchQuery)
 
@@ -278,7 +285,7 @@ export default function ChatPage() {
     } finally {
       setWaLoading(false)
     }
-  }, [effectiveBranchId, searchQuery])
+  }, [effectiveBranchId, searchQuery, branches, canSeeUnassigned])
 
   // WhatsApp: Fetch messages
   const fetchWaMessages = useCallback(async (conversationId: string, silent = false) => {
@@ -312,6 +319,13 @@ export default function ChatPage() {
         params.set('branchId', effectiveBranchId)
       } else if (effectiveBranchId === 'all') {
         params.set('branchId', 'all')
+        // Send allowed branches so API can scope "all" properly
+        if (branches.length > 0) {
+          params.set('allowedBranches', branches.map(b => b.id).join(','))
+        }
+        if (canSeeUnassigned) {
+          params.set('includeUnassigned', 'true')
+        }
       }
       if (searchQuery && activeChannelRef.current === 'site') params.set('search', searchQuery)
 
@@ -325,7 +339,7 @@ export default function ChatPage() {
     } finally {
       setMsLoading(false)
     }
-  }, [effectiveBranchId, searchQuery, showArchived])
+  }, [effectiveBranchId, searchQuery, showArchived, branches, canSeeUnassigned])
 
   // Messenger: Fetch messages
   const fetchMsMessages = useCallback(async (conversationId: string, silent = false) => {

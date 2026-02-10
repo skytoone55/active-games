@@ -13,6 +13,8 @@ export async function GET(request: NextRequest) {
 
     const status = searchParams.get('status') || 'active'
     const branchId = searchParams.get('branchId')
+    const allowedBranches = searchParams.get('allowedBranches') // comma-separated branch IDs
+    const includeUnassigned = searchParams.get('includeUnassigned') === 'true'
     const search = searchParams.get('search')
     const page = parseInt(searchParams.get('page') || '1')
     const pageSize = parseInt(searchParams.get('pageSize') || '50')
@@ -29,11 +31,19 @@ export async function GET(request: NextRequest) {
     if (branchId === 'unassigned') {
       // Show only conversations with no branch assigned
       query = query.is('branch_id', null)
+    } else if (branchId === 'all' && allowedBranches) {
+      // "All" but scoped to user's allowed branches
+      const branchIds = allowedBranches.split(',').filter(Boolean)
+      const orParts = branchIds.map(id => `branch_id.eq.${id}`)
+      if (includeUnassigned) {
+        orParts.push('branch_id.is.null')
+      }
+      query = query.or(orParts.join(','))
     } else if (branchId && branchId !== 'all') {
       // Show only conversations for this specific branch (no unassigned)
       query = query.eq('branch_id', branchId)
     }
-    // When branchId is 'all' or not provided, show all conversations (no branch filter)
+    // When branchId is 'all' without allowedBranches, show everything (super_admin)
 
     if (search) {
       query = query.or(`phone.ilike.%${search}%,contact_name.ilike.%${search}%`)

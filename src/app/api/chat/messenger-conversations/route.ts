@@ -13,6 +13,8 @@ export async function GET(request: NextRequest) {
 
     const status = searchParams.get('status') // 'active', 'completed', 'abandoned' or null for all
     const branchId = searchParams.get('branchId')
+    const allowedBranches = searchParams.get('allowedBranches') // comma-separated branch IDs
+    const includeUnassigned = searchParams.get('includeUnassigned') === 'true'
     const search = searchParams.get('search')
     const page = parseInt(searchParams.get('page') || '1')
     const pageSize = parseInt(searchParams.get('pageSize') || '50')
@@ -37,6 +39,14 @@ export async function GET(request: NextRequest) {
 
     if (branchId === 'unassigned') {
       query = query.is('branch_id', null)
+    } else if (branchId === 'all' && allowedBranches) {
+      // "All" but scoped to user's allowed branches
+      // For site conversations, also include null branch_id (unassigned visitors)
+      const branchIds = allowedBranches.split(',').filter(Boolean)
+      const orParts = branchIds.map(id => `branch_id.eq.${id}`)
+      // Site visitors typically have no branch — always include null for messenger
+      orParts.push('branch_id.is.null')
+      query = query.or(orParts.join(','))
     } else if (branchId && branchId !== 'all') {
       // For site conversations, also include unassigned (null branch_id) since
       // most site visitors don't have a branch assigned
