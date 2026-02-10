@@ -1,6 +1,7 @@
 /**
  * Messenger Conversations API (Site chat)
  * GET - List messenger conversations with last message preview
+ * Only shows conversations that have collected NAME + NUMBER (complete intake)
  */
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -14,7 +15,6 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status') // 'active', 'completed', 'abandoned' or null for all
     const branchId = searchParams.get('branchId')
     const allowedBranches = searchParams.get('allowedBranches') // comma-separated branch IDs
-    const includeUnassigned = searchParams.get('includeUnassigned') === 'true'
     const search = searchParams.get('search')
     const page = parseInt(searchParams.get('page') || '1')
     const pageSize = parseInt(searchParams.get('pageSize') || '50')
@@ -37,25 +37,29 @@ export async function GET(request: NextRequest) {
       query = query.eq('status', 'active')
     }
 
+    // Only show conversations that have completed intake (NAME + NUMBER collected)
+    // collected_data is JSONB — filter where NAME and NUMBER keys exist and are not null
+    query = query.not('collected_data->NAME', 'is', null)
+    query = query.not('collected_data->NUMBER', 'is', null)
+
+    // Branch filter
     if (branchId === 'unassigned') {
       query = query.is('branch_id', null)
     } else if (branchId === 'all' && allowedBranches) {
       // "All" but scoped to user's allowed branches
-      // For site conversations, also include null branch_id (unassigned visitors)
       const branchIds = allowedBranches.split(',').filter(Boolean)
       const orParts = branchIds.map(id => `branch_id.eq.${id}`)
-      // Site visitors typically have no branch — always include null for messenger
+      // Site visitors may not have a branch yet — include null
       orParts.push('branch_id.is.null')
       query = query.or(orParts.join(','))
     } else if (branchId && branchId !== 'all') {
-      // For site conversations, also include unassigned (null branch_id) since
-      // most site visitors don't have a branch assigned
+      // Specific branch + include unassigned (site visitors often have no branch)
       query = query.or(`branch_id.eq.${branchId},branch_id.is.null`)
     }
 
     if (search) {
-      // Search in collected_data (JSON) or session_id
-      query = query.or(`session_id.ilike.%${search}%`)
+      // Search in collected_data name or session_id
+      query = query.or(`session_id.ilike.%${search}%,collected_data->>NAME.ilike.%${search}%,collected_data->>NUMBER.ilike.%${search}%`)
     }
 
     const { data, error, count } = await query

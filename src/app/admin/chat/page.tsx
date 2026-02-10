@@ -493,6 +493,25 @@ export default function ChatPage() {
     fetchMsMessages(conv.id)
   }
 
+  const handleMsContactCreated = async (contact: Contact) => {
+    if (!selectedMsConv) return
+    try {
+      const res = await fetch(`/api/chat/messenger-conversations/${selectedMsConv.id}/link-contact`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contactId: contact.id }),
+      })
+      const data = await res.json()
+      if (data.success && data.conversation) {
+        setSelectedMsConv(data.conversation)
+        setMsConversations(prev => prev.map(c => c.id === data.conversation.id ? { ...data.conversation, last_message: c.last_message, last_message_role: c.last_message_role, message_count: c.message_count } : c))
+      }
+    } catch (error) {
+      console.error('Error linking messenger contact:', error)
+    }
+    fetchMsConversations()
+  }
+
   const handleCloseMsConversation = async () => {
     if (!selectedMsConv || closingConversation) return
     if (!confirm(t('admin.chat.close_confirm') || 'Close this conversation? It will be archived.')) return
@@ -554,9 +573,14 @@ export default function ChatPage() {
     }
     // Use collected_data name fields if available
     const data = conv.collected_data || {}
-    const name = (data.name as string) || (data.first_name as string)
+    const name = (data.NAME as string) || (data.name as string) || (data.first_name as string)
     if (name) return name
     return `${t('admin.chat.site_visitor') || 'Visitor'} #${conv.session_id.slice(-6)}`
+  }
+
+  const getMsPhone = (conv: MessengerConversation) => {
+    const data = conv.collected_data || {}
+    return (data.NUMBER as string) || (data.phone as string) || conv.contacts?.phone || null
   }
 
   const getBranchDisplayName = (branch?: { id: string; name: string; name_en: string | null } | null) => {
@@ -845,15 +869,22 @@ export default function ChatPage() {
                       <div className="flex items-center justify-between mt-0.5">
                         <div className="flex items-center gap-1.5 min-w-0">
                           <span className={`text-sm truncate ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                            {conv.last_message
+                            {getMsPhone(conv) || (conv.last_message
                               ? conv.last_message.slice(0, 40) + (conv.last_message.length > 40 ? '...' : '')
-                              : t('admin.chat.no_messages') || 'No messages'}
+                              : t('admin.chat.no_messages') || 'No messages')}
                           </span>
                           {conv.branch_id && (
                             <span
                               className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${getBranchColor(conv.branch_id, branches)}`}
                               title={getBranchDisplayName(conv.branch) || ''}
                             />
+                          )}
+                          {!conv.contact_id && (
+                            <span className={`text-[10px] px-1.5 py-0.5 rounded-full flex-shrink-0 ${
+                              isDark ? 'bg-gray-700 text-gray-400' : 'bg-gray-200 text-gray-500'
+                            }`}>
+                              {t('admin.chat.new_contact') || 'New'}
+                            </span>
                           )}
                         </div>
                         <div className="flex items-center gap-1.5 flex-shrink-0 ml-2">
@@ -870,10 +901,6 @@ export default function ChatPage() {
                               : conv.status === 'completed'
                                 ? t('admin.chat.site_completed') || 'Done'
                                 : t('admin.chat.site_abandoned') || 'Left'}
-                          </span>
-                          {/* Message count */}
-                          <span className={`text-[10px] ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
-                            {conv.message_count} msg
                           </span>
                         </div>
                       </div>
@@ -1061,8 +1088,17 @@ export default function ChatPage() {
                     {getMsDisplayName(selectedMsConv)}
                   </div>
                   <div className={`text-sm flex items-center gap-2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                    <Globe className="w-3 h-3" />
-                    {t('admin.chat.site_conversation') || 'Site conversation'}
+                    {getMsPhone(selectedMsConv) ? (
+                      <>
+                        <Phone className="w-3 h-3" />
+                        {getMsPhone(selectedMsConv)}
+                      </>
+                    ) : (
+                      <>
+                        <Globe className="w-3 h-3" />
+                        {t('admin.chat.site_conversation') || 'Site conversation'}
+                      </>
+                    )}
                     {selectedMsConv.branch_id && (
                       <span
                         className={`w-2.5 h-2.5 rounded-full ${getBranchColor(selectedMsConv.branch_id, branches)}`}
@@ -1084,6 +1120,19 @@ export default function ChatPage() {
                     </span>
                   </div>
                 </div>
+
+                {/* Create contact button (only for unlinked conversations) */}
+                {!selectedMsConv.contact_id && (
+                  <button
+                    onClick={() => setShowQuickContact(true)}
+                    className={`p-2 rounded-lg transition-colors ${
+                      isDark ? 'hover:bg-gray-700 text-blue-400' : 'hover:bg-gray-100 text-blue-600'
+                    }`}
+                    title={t('admin.chat.create_contact') || 'Create contact'}
+                  >
+                    <UserPlus className="w-5 h-5" />
+                  </button>
+                )}
 
                 {/* Close conversation button (only for active conversations) */}
                 {selectedMsConv.status === 'active' && (
@@ -1159,7 +1208,7 @@ export default function ChatPage() {
         </div>
       </div>
 
-      {/* Quick Contact Creation Modal (WhatsApp only) */}
+      {/* Quick Contact Creation Modal (WhatsApp + Messenger) */}
       {selectedWaConv && (
         <QuickContactModal
           isOpen={showQuickContact}
@@ -1167,6 +1216,17 @@ export default function ChatPage() {
           onContactCreated={handleContactCreated}
           phone={selectedWaConv.phone}
           contactName={selectedWaConv.contact_name}
+          branches={branches}
+          isDark={isDark}
+        />
+      )}
+      {selectedMsConv && !selectedWaConv && (
+        <QuickContactModal
+          isOpen={showQuickContact}
+          onClose={() => setShowQuickContact(false)}
+          onContactCreated={handleMsContactCreated}
+          phone={getMsPhone(selectedMsConv) || ''}
+          contactName={getMsDisplayName(selectedMsConv)}
           branches={branches}
           isDark={isDark}
         />

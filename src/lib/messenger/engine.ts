@@ -31,6 +31,83 @@ const openai = new OpenAI({
 
 const gemini = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY || '')
 
+/**
+ * After collecting data, resolve branch_id from WELCOME choice
+ * and contact_id from NUMBER. Updates the conversation row.
+ */
+async function resolveConversationLinks(
+  supabase: any,
+  conversationId: string,
+  collectedData: Record<string, any>,
+  stepRef: string
+) {
+  const updates: Record<string, any> = {}
+
+  // When WELCOME (branch) is collected, resolve to branch_id
+  if (stepRef === 'WELCOME' && collectedData.WELCOME) {
+    const branchName = collectedData.WELCOME
+    // Try matching by name, name_en, name_he
+    const { data: branch } = await supabase
+      .from('branches')
+      .select('id')
+      .or(`name.ilike.%${branchName}%,name_en.ilike.%${branchName}%,name_he.eq.${branchName}`)
+      .limit(1)
+      .single()
+
+    if (branch) {
+      updates.branch_id = branch.id
+      console.log('[Engine] Resolved branch_id:', branch.id, 'from:', branchName)
+    }
+  }
+
+  // When NUMBER (phone) is collected, try to find existing contact
+  if (stepRef === 'NUMBER' && collectedData.NUMBER) {
+    const phone = collectedData.NUMBER.trim()
+    const branchId = updates.branch_id || (await supabase
+      .from('messenger_conversations')
+      .select('branch_id')
+      .eq('id', conversationId)
+      .single()
+    ).data?.branch_id
+
+    // Search contact by phone (try exact match, then without leading 0)
+    let contactQuery = supabase
+      .from('contacts')
+      .select('id, branch_id_main')
+      .or(`phone.eq.${phone},phone.eq.0${phone},phone.eq.${phone.replace(/^0/, '')}`)
+      .limit(1)
+
+    // If we have a branch, prefer contacts from that branch
+    if (branchId) {
+      contactQuery = supabase
+        .from('contacts')
+        .select('id, branch_id_main')
+        .eq('branch_id_main', branchId)
+        .or(`phone.eq.${phone},phone.eq.0${phone},phone.eq.${phone.replace(/^0/, '')}`)
+        .limit(1)
+    }
+
+    const { data: contact } = await contactQuery.single()
+    if (contact) {
+      updates.contact_id = contact.id
+      // Also set branch from contact if not already set
+      if (!updates.branch_id && contact.branch_id_main) {
+        updates.branch_id = contact.branch_id_main
+      }
+      console.log('[Engine] Resolved contact_id:', contact.id, 'from phone:', phone)
+    }
+  }
+
+  // Apply updates if any
+  if (Object.keys(updates).length > 0) {
+    await supabase
+      .from('messenger_conversations')
+      .update(updates)
+      .eq('id', conversationId)
+    console.log('[Engine] Updated conversation links:', updates)
+  }
+}
+
 export interface ExecuteStepResult {
   success: boolean
   message?: string
@@ -800,6 +877,9 @@ export async function processUserMessage(
             .update({ collected_data: collectedData })
             .eq('id', conversationId)
 
+          // Resolve branch/contact links after confirmed data
+          await resolveConversationLinks(supabase, conversationId, collectedData, currentStep.step_ref)
+
           // Marquer comme valide et ne pas continuer
           // la validation - on a déjà confirmé la bonne valeur
           isValid = true
@@ -862,6 +942,9 @@ export async function processUserMessage(
           .from('messenger_conversations')
           .update({ collected_data: collectedData })
           .eq('id', conversationId)
+
+        // Resolve branch/contact links after data collection
+        await resolveConversationLinks(supabase, conversationId, collectedData, currentStep.step_ref)
       }
       break
 
@@ -951,6 +1034,9 @@ export async function processUserMessage(
           .eq('id', conversationId)
 
         console.log('[Engine] Saved choice to collected_data:', { [currentStep.step_ref]: choiceLabel })
+
+        // Resolve branch/contact links after data collection
+        await resolveConversationLinks(supabase, conversationId, updatedCollectedData, currentStep.step_ref)
       } else {
         console.log('[Engine] No choice matched!')
         isValid = false
