@@ -54,10 +54,9 @@ export function QuickContactModal({
       }
 
       // Format phone from international to Israeli local if applicable
-      let formattedPhone = initialPhone
-      if (formattedPhone.startsWith('9725')) {
-        formattedPhone = '0' + formattedPhone.substring(4)
-      } else if (formattedPhone.startsWith('972')) {
+      let formattedPhone = initialPhone.replace(/^\+/, '') // Remove leading +
+      if (formattedPhone.startsWith('972')) {
+        // 972546643015 → 0546643015
         formattedPhone = '0' + formattedPhone.substring(3)
       }
       // For non-Israeli numbers (e.g. 33...), keep as-is - user can adjust
@@ -275,11 +274,15 @@ export function QuickContactModal({
               }}
               required
               className={`w-full px-3 py-2 rounded-lg border text-sm ${
+                isDark
+                  ? 'bg-gray-700 text-white placeholder-gray-500'
+                  : 'bg-white text-gray-900 placeholder-gray-400'
+              } ${
                 validationErrors.phone
                   ? 'border-red-500'
                   : isDark
-                  ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-500'
-                  : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'
+                    ? 'border-gray-600'
+                    : 'border-gray-300'
               } focus:outline-none focus:ring-2 focus:ring-green-500`}
               placeholder="05XXXXXXXX"
             />
@@ -313,11 +316,15 @@ export function QuickContactModal({
                 }
               }}
               className={`w-full px-3 py-2 rounded-lg border text-sm ${
+                isDark
+                  ? 'bg-gray-700 text-white placeholder-gray-500'
+                  : 'bg-white text-gray-900 placeholder-gray-400'
+              } ${
                 validationErrors.email
                   ? 'border-red-500'
                   : isDark
-                  ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-500'
-                  : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'
+                    ? 'border-gray-600'
+                    : 'border-gray-300'
               } focus:outline-none focus:ring-2 focus:ring-green-500`}
               placeholder="email@example.com"
             />
