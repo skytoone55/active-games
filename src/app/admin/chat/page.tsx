@@ -85,6 +85,11 @@ export default function ChatPage() {
   // Quick contact modal
   const [showQuickContact, setShowQuickContact] = useState(false)
 
+  // Resizable sidebar
+  const [sidebarWidth, setSidebarWidth] = useState(384) // 384px = w-96
+  const isResizing = useRef(false)
+  const sidebarRef = useRef<HTMLDivElement>(null)
+
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const selectedConvIdRef = useRef<string | null>(null)
@@ -107,6 +112,8 @@ export default function ChatPage() {
   useEffect(() => {
     const saved = localStorage.getItem('admin_theme') as 'light' | 'dark' | null
     if (saved) setTheme(saved)
+    const savedWidth = localStorage.getItem('chat_sidebar_width')
+    if (savedWidth) setSidebarWidth(Math.max(280, Math.min(600, parseInt(savedWidth))))
     const handler = () => {
       const th = localStorage.getItem('admin_theme') as 'light' | 'dark' | null
       if (th) setTheme(th)
@@ -114,6 +121,34 @@ export default function ChatPage() {
     window.addEventListener('storage', handler)
     return () => window.removeEventListener('storage', handler)
   }, [])
+
+  // Sidebar resize handlers
+  const handleResizeStart = useCallback((e: React.MouseEvent) => {
+    e.preventDefault()
+    isResizing.current = true
+    document.body.style.cursor = 'col-resize'
+    document.body.style.userSelect = 'none'
+    let lastWidth = sidebarWidth
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isResizing.current) return
+      const newWidth = Math.max(280, Math.min(600, e.clientX))
+      lastWidth = newWidth
+      setSidebarWidth(newWidth)
+    }
+
+    const handleMouseUp = () => {
+      isResizing.current = false
+      document.body.style.cursor = ''
+      document.body.style.userSelect = ''
+      localStorage.setItem('chat_sidebar_width', String(lastWidth))
+      document.removeEventListener('mousemove', handleMouseMove)
+      document.removeEventListener('mouseup', handleMouseUp)
+    }
+
+    document.addEventListener('mousemove', handleMouseMove)
+    document.addEventListener('mouseup', handleMouseUp)
+  }, [sidebarWidth])
 
   const toggleTheme = () => {
     const newTheme = theme === 'light' ? 'dark' : 'light'
@@ -348,10 +383,14 @@ export default function ChatPage() {
       />
 
       <div className={`h-[calc(100vh-88px)] flex ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`}>
-        {/* Left sidebar - Conversation list */}
-        <div className={`w-full md:w-96 flex-shrink-0 flex flex-col border-r ${
-          isDark ? 'border-gray-700 bg-gray-900' : 'border-gray-200 bg-white'
-        } ${selectedConversation ? 'hidden md:flex' : 'flex'}`}>
+        {/* Left sidebar - Conversation list (resizable on desktop) */}
+        <div
+          ref={sidebarRef}
+          style={{ width: sidebarWidth }}
+          className={`max-md:!w-full md:flex-shrink-0 flex flex-col border-r ${
+            isDark ? 'border-gray-700 bg-gray-900' : 'border-gray-200 bg-white'
+          } ${selectedConversation ? 'hidden md:flex' : 'flex'}`}
+        >
           {/* Header */}
           <div className={`p-4 border-b ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
             <div className="flex items-center justify-between mb-3">
@@ -522,8 +561,20 @@ export default function ChatPage() {
           </div>
         </div>
 
+        {/* Resize handle (desktop only) */}
+        <div
+          onMouseDown={handleResizeStart}
+          className={`hidden md:flex w-1.5 cursor-col-resize items-center justify-center hover:bg-green-500/20 active:bg-green-500/30 transition-colors group ${
+            isDark ? 'bg-gray-800' : 'bg-gray-100'
+          }`}
+        >
+          <div className={`w-0.5 h-8 rounded-full group-hover:bg-green-500 transition-colors ${
+            isDark ? 'bg-gray-700' : 'bg-gray-300'
+          }`} />
+        </div>
+
         {/* Right panel - Chat view */}
-        <div className={`flex-1 flex flex-col ${
+        <div className={`flex-1 flex flex-col min-w-0 ${
           !selectedConversation ? 'hidden md:flex' : 'flex'
         }`}>
           {!selectedConversation ? (
