@@ -661,6 +661,7 @@
       "orders": "הזמנות",
       "users": "משתמשים",
       "clients": "לקוחות",
+      "chat": "צ'אט",
       "calls": "שיחות",
       "logs": "יומן פעילות",
       "permissions": "הרשאות",
@@ -2169,6 +2170,16 @@
         }
       }
     },
+    "chat": {
+      "title": "צ'אט WhatsApp",
+      "search_placeholder": "חיפוש...",
+      "no_conversations": "אין שיחות",
+      "select_conversation": "בחר שיחה",
+      "no_messages": "אין הודעות",
+      "type_message": "כתוב הודעה...",
+      "yesterday": "אתמול",
+      "send": "שלח"
+    },
     "permissions": {
       "title": "ניהול הרשאות",
       "subtitle": "הגדרת הרשאות גישה לכל תפקיד",
@@ -2202,7 +2213,8 @@
         "agenda": "יומן",
         "orders": "הזמנות",
         "clients": "לקוחות",
-        "calls": "שיחות",
+        "chat": "צ'אט",
+      "calls": "שיחות",
         "users": "משתמשים",
         "logs": "יומן פעילות",
         "settings": "הגדרות",

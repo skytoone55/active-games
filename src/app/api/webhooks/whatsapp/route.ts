@@ -1,31 +1,38 @@
 /**
- * WhatsApp Business API Webhook Handler v1.0
+ * WhatsApp Business API Webhook Handler v2.0
  *
  * GET  - Webhook verification (Meta sends a challenge to verify the endpoint)
  * POST - Receive incoming messages and status updates from WhatsApp
+ *        Stores conversations and messages in Supabase
+ *        Auto-links contacts by phone number
  */
 
 import { NextRequest, NextResponse } from 'next/server'
+import { createServiceRoleClient } from '@/lib/supabase/service-role'
+
+// Normalize phone: 972XXXXXXXXX -> 05XXXXXXXX (Israeli format)
+function normalizePhone(phone: string): string {
+  const cleaned = phone.replace(/[\s\-\(\)\+]/g, '')
+  if (cleaned.startsWith('9725')) return '0' + cleaned.substring(4)
+  if (cleaned.startsWith('972')) return '0' + cleaned.substring(3)
+  if (cleaned.startsWith('05')) return cleaned
+  return cleaned
+}
 
 // ============================================================
 // GET - Webhook Verification
-// Meta sends this when you configure the webhook URL
 // ============================================================
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams
-
   const mode = searchParams.get('hub.mode')
   const token = searchParams.get('hub.verify_token')
   const challenge = searchParams.get('hub.challenge')
-
-  console.log('[WHATSAPP WEBHOOK] Verification request:', { mode, token: token ? '***' : 'missing' })
 
   if (mode === 'subscribe' && token === process.env.WHATSAPP_VERIFY_TOKEN) {
     console.log('[WHATSAPP WEBHOOK] Verification successful')
     return new NextResponse(challenge, { status: 200 })
   }
 
-  console.error('[WHATSAPP WEBHOOK] Verification failed - invalid token')
   return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 }
 
@@ -35,28 +42,26 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-
-    console.log('[WHATSAPP WEBHOOK] Received event:', JSON.stringify(body, null, 2))
-
-    // WhatsApp webhook payload structure
     const entry = body?.entry?.[0]
     const changes = entry?.changes?.[0]
     const value = changes?.value
 
     if (!value) {
-      console.log('[WHATSAPP WEBHOOK] No value in payload, acknowledging')
       return NextResponse.json({ received: true })
     }
+
+    const supabase = createServiceRoleClient()
 
     // ---- Status updates (sent, delivered, read) ----
     if (value.statuses) {
       for (const status of value.statuses) {
-        console.log('[WHATSAPP WEBHOOK] Status update:', {
-          messageId: status.id,
-          status: status.status,
-          recipientPhone: status.recipient_id,
-          timestamp: status.timestamp,
-        })
+        if (status.id) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          await (supabase as any)
+            .from('whatsapp_messages')
+            .update({ status: status.status })
+            .eq('whatsapp_message_id', status.id)
+        }
       }
       return NextResponse.json({ received: true })
     }
@@ -64,22 +69,18 @@ export async function POST(request: NextRequest) {
     // ---- Incoming messages ----
     if (value.messages) {
       for (const message of value.messages) {
-        const senderPhone = message.from // format: 972XXXXXXXXX
+        const senderPhone = message.from
         const messageId = message.id
-        const timestamp = message.timestamp
-        const messageType = message.type // text, image, document, interactive, button, etc.
+        const messageType = message.type
 
         let messageText = ''
-
         switch (messageType) {
           case 'text':
             messageText = message.text?.body || ''
             break
           case 'interactive':
-            // Button reply or list reply
             messageText = message.interactive?.button_reply?.title
-              || message.interactive?.list_reply?.title
-              || ''
+              || message.interactive?.list_reply?.title || ''
             break
           case 'button':
             messageText = message.button?.text || ''
@@ -88,26 +89,85 @@ export async function POST(request: NextRequest) {
             messageText = `[${messageType}]`
         }
 
-        // Contact info from WhatsApp
         const contactName = value.contacts?.[0]?.profile?.name || ''
+        const normalizedPhone = normalizePhone(senderPhone)
 
-        console.log('[WHATSAPP WEBHOOK] Incoming message:', {
-          from: senderPhone,
-          name: contactName,
-          type: messageType,
-          text: messageText,
-          messageId,
-          timestamp,
-        })
+        console.log('[WHATSAPP] Message from', senderPhone, ':', messageText)
 
-        // TODO Phase 2: Route to messenger engine
-        // await processWhatsAppMessage({ senderPhone, contactName, messageText, messageId, messageType })
+        // 1. Find or create conversation
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        let { data: conversation } = await (supabase as any)
+          .from('whatsapp_conversations')
+          .select('id, contact_id')
+          .eq('phone', senderPhone)
+          .eq('status', 'active')
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single()
 
-        // For now: send a simple echo response to confirm API works
-        await sendWhatsAppMessage(
-          senderPhone,
-          `[Test] Message recu: "${messageText}"`
-        )
+        if (!conversation) {
+          // Auto-link contact by phone
+          let contactId: string | null = null
+          let branchId: string | null = null
+
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const { data: contacts } = await (supabase as any)
+            .from('contacts')
+            .select('id, branch_id')
+            .or(`phone.eq.${normalizedPhone},phone.eq.${senderPhone}`)
+            .limit(1)
+
+          if (contacts && contacts.length === 1) {
+            contactId = contacts[0].id
+            branchId = contacts[0].branch_id
+          }
+
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const { data: newConv } = await (supabase as any)
+            .from('whatsapp_conversations')
+            .insert({
+              phone: senderPhone,
+              contact_name: contactName || null,
+              contact_id: contactId,
+              branch_id: branchId,
+              status: 'active',
+              unread_count: 1,
+            })
+            .select('id, contact_id')
+            .single()
+
+          conversation = newConv
+        } else {
+          // Update existing conversation
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          await (supabase as any)
+            .from('whatsapp_conversations')
+            .update({
+              last_message_at: new Date().toISOString(),
+              unread_count: (conversation.unread_count || 0) + 1,
+              contact_name: contactName || undefined,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', conversation.id)
+        }
+
+        if (!conversation) {
+          console.error('[WHATSAPP] Failed to create/find conversation')
+          continue
+        }
+
+        // 2. Store the inbound message
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await (supabase as any)
+          .from('whatsapp_messages')
+          .insert({
+            conversation_id: conversation.id,
+            direction: 'inbound',
+            message_type: messageType,
+            content: messageText,
+            whatsapp_message_id: messageId,
+            status: 'delivered',
+          })
       }
     }
 
@@ -115,53 +175,6 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('[WHATSAPP WEBHOOK] Error:', error)
-    // Always return 200 to prevent Meta from retrying
     return NextResponse.json({ received: true, error: 'Internal error' })
-  }
-}
-
-// ============================================================
-// Send a simple text message via WhatsApp Business API
-// ============================================================
-async function sendWhatsAppMessage(to: string, text: string): Promise<boolean> {
-  try {
-    const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID
-    const accessToken = process.env.WHATSAPP_ACCESS_TOKEN
-
-    if (!phoneNumberId || !accessToken) {
-      console.error('[WHATSAPP] Missing env variables')
-      return false
-    }
-
-    const url = `https://graph.facebook.com/v21.0/${phoneNumberId}/messages`
-
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        messaging_product: 'whatsapp',
-        recipient_type: 'individual',
-        to,
-        type: 'text',
-        text: { body: text },
-      }),
-    })
-
-    const result = await response.json()
-
-    if (!response.ok) {
-      console.error('[WHATSAPP] Send failed:', result)
-      return false
-    }
-
-    console.log('[WHATSAPP] Message sent to', to, '- ID:', result.messages?.[0]?.id)
-    return true
-
-  } catch (error) {
-    console.error('[WHATSAPP] Send error:', error)
-    return false
   }
 }

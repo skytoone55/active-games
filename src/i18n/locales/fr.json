@@ -690,6 +690,7 @@
       "agenda": "Agenda",
       "clients": "Clients",
       "orders": "Commandes",
+      "chat": "Chat",
       "calls": "Appels",
       "users": "Utilisateurs",
       "logs": "Logs",
@@ -2173,6 +2174,16 @@
           "cancel": "Annuler"
         }
       }
+    },
+    "chat": {
+      "title": "Chat WhatsApp",
+      "search_placeholder": "Rechercher...",
+      "no_conversations": "Aucune conversation",
+      "select_conversation": "Selectionnez une conversation",
+      "no_messages": "Aucun message",
+      "type_message": "Ecrire un message...",
+      "yesterday": "Hier",
+      "send": "Envoyer"
     },
     "permissions": {
       "title": "Gestion des permissions",

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, memo } from 'react'
-import { LogOut, User, ChevronDown, Sun, Moon, Users, Calendar, Menu, X, ShoppingCart, Shield, Globe, FileText, Lock, Crown, Settings, Trash2, BarChart3, Phone } from 'lucide-react'
+import { LogOut, User, ChevronDown, Sun, Moon, Users, Calendar, Menu, X, ShoppingCart, Shield, Globe, FileText, Lock, Crown, Settings, Trash2, BarChart3, Phone, MessageCircle } from 'lucide-react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
@@ -242,6 +242,21 @@ function AdminHeaderComponent({
                   {unseenAbortedCount > 9 ? '9+' : unseenAbortedCount}
                 </span>
               )}
+            </Link>
+          )}
+          {hasPermission('chat', 'can_view') && (
+            <Link
+              href="/admin/chat"
+              className={`px-4 py-2 rounded-lg transition-colors flex items-center gap-2 ${
+                pathname === '/admin/chat'
+                  ? 'bg-blue-600 text-white'
+                  : theme === 'dark'
+                    ? 'bg-gray-800 hover:bg-gray-700 text-gray-300'
+                    : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+              }`}
+            >
+              <MessageCircle className="w-4 h-4" />
+              <span>{t('admin.header.chat')}</span>
             </Link>
           )}
           {hasPermission('calls', 'can_view') && (
@@ -615,6 +630,22 @@ function AdminHeaderComponent({
                       </span>
                     )}
                   </span>
+                </Link>
+              )}
+              {hasPermission('chat', 'can_view') && (
+                <Link
+                  href="/admin/chat"
+                  onClick={() => setShowMobileMenu(false)}
+                  className={`flex items-center gap-3 px-4 py-2 rounded-lg transition-colors ${
+                    pathname === '/admin/chat'
+                      ? 'bg-blue-600 text-white'
+                      : theme === 'dark'
+                        ? 'bg-gray-800 hover:bg-gray-700 text-gray-300'
+                        : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                  }`}
+                >
+                  <MessageCircle className="w-4 h-4" />
+                  <span>{t('admin.header.chat')}</span>
                 </Link>
               )}
               {hasPermission('calls', 'can_view') && (
