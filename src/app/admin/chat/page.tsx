@@ -309,9 +309,9 @@ export default function ChatPage() {
   const fetchMsConversations = useCallback(async () => {
     try {
       const params = new URLSearchParams()
-      // When showArchived, show all statuses; otherwise only active
+      // When showArchived, show only completed (archived); otherwise only active
       if (showArchived) {
-        params.set('status', 'all')
+        params.set('status', 'completed')
       } else {
         params.set('status', 'active')
       }
