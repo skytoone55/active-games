@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { MessageCircle, Send, Search, Phone, User, ArrowLeft, Loader2, Building2, Filter, UserPlus } from 'lucide-react'
+import { MessageCircle, Send, Search, Phone, User, ArrowLeft, Loader2, Filter, UserPlus } from 'lucide-react'
 import { useTranslation } from '@/contexts/LanguageContext'
 import { useAuth } from '@/hooks/useAuth'
 import { useUserPermissions } from '@/hooks/useUserPermissions'
@@ -391,7 +391,7 @@ export default function ChatPage() {
                       onClick={() => setChatBranchFilter(
                         chatBranchFilter === branch.id ? 'inherit' : branch.id
                       )}
-                      className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors flex items-center gap-1 ${
+                      className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors flex items-center gap-1.5 ${
                         effectiveBranchId === branch.id
                           ? `${getBranchColor(branch.id, branches)} text-white`
                           : isDark
@@ -399,7 +399,11 @@ export default function ChatPage() {
                             : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                       }`}
                     >
-                      <Building2 className="w-3 h-3" />
+                      <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${
+                        effectiveBranchId === branch.id
+                          ? 'bg-white/40'
+                          : getBranchColor(branch.id, branches)
+                      }`} />
                       {locale === 'en' && branch.name_en ? branch.name_en : branch.name}
                     </button>
                   ))}
@@ -467,20 +471,12 @@ export default function ChatPage() {
                   }`}
                 >
                   {/* Avatar */}
-                  <div className={`relative w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 ${
+                  <div className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 ${
                     conv.contact_id
                       ? 'bg-green-600'
                       : isDark ? 'bg-gray-700' : 'bg-gray-300'
                   }`}>
                     <User className="w-6 h-6 text-white" />
-                    {/* Branch indicator dot */}
-                    {conv.branch_id && (
-                      <span className={`absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full border-2 ${
-                        isDark ? 'border-gray-900' : 'border-white'
-                      } ${getBranchColor(conv.branch_id, branches)}`}
-                        title={getBranchDisplayName(conv) || ''}
-                      />
-                    )}
                   </div>
 
                   {/* Info */}
@@ -498,13 +494,12 @@ export default function ChatPage() {
                         <span className={`text-sm truncate ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
                           {formatPhone(conv.phone)}
                         </span>
-                        {/* Branch name badge */}
-                        {conv.branch && (
-                          <span className={`text-[10px] px-1.5 py-0.5 rounded-full flex-shrink-0 ${
-                            getBranchColor(conv.branch_id!, branches)
-                          } text-white`}>
-                            {getBranchDisplayName(conv)}
-                          </span>
+                        {/* Branch color dot */}
+                        {conv.branch_id && (
+                          <span
+                            className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${getBranchColor(conv.branch_id, branches)}`}
+                            title={getBranchDisplayName(conv) || ''}
+                          />
                         )}
                         {!conv.branch_id && !conv.contact_id && (
                           <span className={`text-[10px] px-1.5 py-0.5 rounded-full flex-shrink-0 ${
@@ -553,15 +548,10 @@ export default function ChatPage() {
                   <ArrowLeft className="w-5 h-5" />
                 </button>
 
-                <div className={`relative w-10 h-10 rounded-full flex items-center justify-center ${
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
                   selectedConversation.contact_id ? 'bg-green-600' : isDark ? 'bg-gray-700' : 'bg-gray-300'
                 }`}>
                   <User className="w-5 h-5 text-white" />
-                  {selectedConversation.branch_id && (
-                    <span className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 ${
-                      isDark ? 'border-gray-800' : 'border-white'
-                    } ${getBranchColor(selectedConversation.branch_id, branches)}`} />
-                  )}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className={`font-medium truncate ${isDark ? 'text-white' : 'text-gray-900'}`}>
@@ -570,12 +560,11 @@ export default function ChatPage() {
                   <div className={`text-sm flex items-center gap-2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
                     <Phone className="w-3 h-3" />
                     {formatPhone(selectedConversation.phone)}
-                    {selectedConversation.branch && (
-                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
-                        getBranchColor(selectedConversation.branch_id!, branches)
-                      } text-white`}>
-                        {getBranchDisplayName(selectedConversation)}
-                      </span>
+                    {selectedConversation.branch_id && (
+                      <span
+                        className={`w-2.5 h-2.5 rounded-full ${getBranchColor(selectedConversation.branch_id, branches)}`}
+                        title={getBranchDisplayName(selectedConversation) || ''}
+                      />
                     )}
                   </div>
                 </div>
