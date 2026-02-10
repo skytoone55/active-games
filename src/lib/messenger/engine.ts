@@ -1201,13 +1201,27 @@ export async function processUserMessage(
       console.log('[Engine] order_generation - collected_data:', conversation.collected_data)
       const collectedData = conversation.collected_data as Record<string, any>
 
-      // Mapper branch name vers branch_id
+      // Mapper branch name vers branch_id (supports EN/HE labels)
       const branchName = collectedData.WELCOME || 'Rishon Lezion'
-      const { data: branch } = await supabase
+      let branch = null
+      // Try name first, then name_he
+      const { data: branchByName } = await supabase
         .from('branches')
         .select('id, slug')
         .ilike('name', branchName)
         .single()
+
+      if (branchByName) {
+        branch = branchByName
+      } else {
+        // Try Hebrew name
+        const { data: branchByHe } = await supabase
+          .from('branches')
+          .select('id, slug')
+          .eq('name_he', branchName)
+          .single()
+        branch = branchByHe
+      }
 
       if (!branch) {
         console.error('[Engine] Branch not found:', branchName)
@@ -1292,21 +1306,33 @@ export async function processUserMessage(
 
       // Determine game parameters
       const participantsCount = parseInt(collectedData.RESERVATION2 || '1')
-      const gameArea = collectedData.RESERVATION1?.includes('Active') ? 'ACTIVE' : collectedData.RESERVATION1?.includes('Laser') ? 'LASER' : 'MIX'
+      const r1 = collectedData.RESERVATION1 || ''
+      const gameArea = (r1.includes('Active') || r1.includes('אקטיב')) ? 'ACTIVE' : (r1.includes('Laser') || r1.includes('לייזר')) ? 'LASER' : 'MIX'
 
       // Calculate numberOfGames based on game type
       let numberOfGames = 2 // default
       if (gameArea === 'LASER') {
         // For LASER: use number of parties directly from LASER_GAME_NUMBER
-        numberOfGames = parseInt(collectedData.LASER_GAME_NUMBER?.match(/\d+/)?.[0] || '2')
+        const laserNum = collectedData.LASER_GAME_NUMBER || ''
+        const laserDigit = laserNum.match(/\d+/)?.[0]
+        if (laserDigit) {
+          numberOfGames = parseInt(laserDigit)
+        } else if (laserNum.includes('שעתיים')) {
+          numberOfGames = 3
+        } else if (laserNum.includes('וחצי')) {
+          numberOfGames = 2
+        } else {
+          numberOfGames = 2
+        }
       } else if (gameArea === 'ACTIVE') {
         // For ACTIVE: convert time duration to number of games
-        if (collectedData.ACTIVE_TIME_GAME?.includes('2H') || collectedData.ACTIVE_TIME_GAME?.includes('2h')) {
+        const activeTime = collectedData.ACTIVE_TIME_GAME || ''
+        if (activeTime.includes('2H') || activeTime.includes('2h') || activeTime.includes('שעתיים')) {
           numberOfGames = 4
-        } else if (collectedData.ACTIVE_TIME_GAME?.includes('1H30') || collectedData.ACTIVE_TIME_GAME?.includes('1h30')) {
+        } else if (activeTime.includes('1H30') || activeTime.includes('1h30') || activeTime.includes('וחצי')) {
           numberOfGames = 3
         } else {
-          numberOfGames = 2 // 1H default
+          numberOfGames = 2 // 1H / שעה default
         }
       }
 
@@ -1399,11 +1425,24 @@ export async function processUserMessage(
       const metadata = module.metadata || {}
       const collectedData = conversation.collected_data as Record<string, any>
 
-      // Branch
+      // Branch (supports EN/HE labels)
       let branchSlug = metadata.branch_slug || 'rishon-lezion'
       const welcomeChoice = collectedData.WELCOME
       if (welcomeChoice) {
-        branchSlug = welcomeChoice.toLowerCase().replace(/\s+/g, '-')
+        // If Hebrew name, look up slug from DB; otherwise convert to slug
+        const hasHebrew = /[\u0590-\u05FF]/.test(welcomeChoice)
+        if (hasHebrew) {
+          const { data: branchLookup } = await supabase
+            .from('branches')
+            .select('slug')
+            .eq('name_he', welcomeChoice)
+            .single()
+          if (branchLookup) {
+            branchSlug = branchLookup.slug
+          }
+        } else {
+          branchSlug = welcomeChoice.toLowerCase().replace(/\s+/g, '-')
+        }
       }
 
       // Date: convertir DD/MM/YYYY → YYYY-MM-DD
@@ -1447,9 +1486,9 @@ export async function processUserMessage(
       let gameArea = 'ACTIVE'
       const reservation1Choice = collectedData.RESERVATION1
       if (reservation1Choice) {
-        if (reservation1Choice.includes('Active')) gameArea = 'ACTIVE'
-        else if (reservation1Choice.includes('Laser')) gameArea = 'LASER'
-        else if (reservation1Choice.includes('Mix')) gameArea = 'MIX'
+        if (reservation1Choice.includes('Active') || reservation1Choice.includes('אקטיב')) gameArea = 'ACTIVE'
+        else if (reservation1Choice.includes('Laser') || reservation1Choice.includes('לייזר')) gameArea = 'LASER'
+        else if (reservation1Choice.includes('Mix') || reservation1Choice.includes('מיקס')) gameArea = 'MIX'
       }
 
       // Number of games
@@ -1460,10 +1499,12 @@ export async function processUserMessage(
       if (laserGameChoice) {
         const numMatch = laserGameChoice.match(/(\d+)/)
         if (numMatch) numberOfGames = parseInt(numMatch[1])
+        else if (laserGameChoice.includes('שעתיים')) numberOfGames = 3
+        else if (laserGameChoice.includes('וחצי')) numberOfGames = 2
       } else if (activeTimeChoice) {
-        if (activeTimeChoice.includes('2H') || activeTimeChoice.includes('2h')) numberOfGames = 4
-        else if (activeTimeChoice.includes('1H30') || activeTimeChoice.includes('1h30')) numberOfGames = 3
-        else if (activeTimeChoice.includes('1H') || activeTimeChoice.includes('1h')) numberOfGames = 2
+        if (activeTimeChoice.includes('2H') || activeTimeChoice.includes('2h') || activeTimeChoice.includes('שעתיים')) numberOfGames = 4
+        else if (activeTimeChoice.includes('1H30') || activeTimeChoice.includes('1h30') || activeTimeChoice.includes('וחצי')) numberOfGames = 3
+        else if (activeTimeChoice.includes('1H') || activeTimeChoice.includes('1h') || activeTimeChoice.includes('שעה')) numberOfGames = 2
       }
 
       console.log('[Engine] Checking availability:', { branchSlug, date, time, participants, gameType, gameArea, numberOfGames })

@@ -326,13 +326,17 @@ export function validateCriticalFormats(collectedData: Record<string, any>): {
 } {
   const invalidFields: Array<{ field: string; issue: string }> = []
 
-  // WELCOME (branch) - MUST be exact
+  // WELCOME (branch) - MUST be exact (supports EN/FR/HE labels)
   if (collectedData.WELCOME || collectedData.branch) {
     const branch = collectedData.WELCOME || collectedData.branch
-    if (branch !== 'Rishon Lezion' && branch !== 'Petach Tikva') {
+    const validBranches = [
+      'Rishon Lezion', 'Petach Tikva', 'Petah Tikva', 'Glilot',
+      'ראשון לציון', 'פתח תקווה', 'גלילות'
+    ]
+    if (!validBranches.includes(branch)) {
       invalidFields.push({
         field: 'branch',
-        issue: `Must be exactly "Rishon Lezion" or "Petach Tikva", got: "${branch}"`
+        issue: `Must be a valid branch name, got: "${branch}"`
       })
     }
   }
