@@ -2123,7 +2123,13 @@
       "send": "Send",
       "all_branches": "All",
       "new_contact": "New",
-      "create_contact": "Create contact"
+      "create_contact": "Create contact",
+      "quick_contact": {
+        "title": "Create Contact",
+        "branch": "Branch",
+        "branch_required": "Please select a branch",
+        "create_and_link": "Create & Link"
+      }
     },
     "permissions": {
       "title": "Permissions Management",

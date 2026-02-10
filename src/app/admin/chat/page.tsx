@@ -9,6 +9,8 @@ import { useUserPermissions } from '@/hooks/useUserPermissions'
 import { useBranches } from '@/hooks/useBranches'
 import { useRealtimeSubscription } from '@/hooks/useRealtimeSubscription'
 import { AdminHeader } from '../components/AdminHeader'
+import { QuickContactModal } from './components/QuickContactModal'
+import type { Contact } from '@/lib/supabase/types'
 
 interface WhatsAppConversation {
   id: string
@@ -80,6 +82,8 @@ export default function ChatPage() {
 
   // Branch filter: 'all' (see all) or a specific branch ID
   const [chatBranchFilter, setChatBranchFilter] = useState<string>('inherit')
+  // Quick contact modal
+  const [showQuickContact, setShowQuickContact] = useState(false)
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -243,6 +247,34 @@ export default function ChatPage() {
     } finally {
       setSending(false)
     }
+  }
+
+  // Handle contact created from quick modal → link to conversation
+  const handleContactCreated = async (contact: Contact) => {
+    if (!selectedConversation) return
+
+    try {
+      const res = await fetch(`/api/chat/conversations/${selectedConversation.id}/link-contact`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contactId: contact.id }),
+      })
+
+      const data = await res.json()
+      if (data.success && data.conversation) {
+        // Update the selected conversation with the linked contact data
+        setSelectedConversation(data.conversation)
+        // Update in the list too
+        setConversations(prev =>
+          prev.map(c => c.id === data.conversation.id ? data.conversation : c)
+        )
+      }
+    } catch (error) {
+      console.error('Error linking contact:', error)
+    }
+
+    // Refresh all conversations
+    fetchConversations()
   }
 
   // Format phone display
@@ -523,10 +555,7 @@ export default function ChatPage() {
                 {/* Quick create contact button when no contact linked */}
                 {!selectedConversation.contact_id && (
                   <button
-                    onClick={() => {
-                      const phone = selectedConversation.phone
-                      router.push(`/admin/clients?action=create&phone=${phone}&name=${encodeURIComponent(selectedConversation.contact_name || '')}`)
-                    }}
+                    onClick={() => setShowQuickContact(true)}
                     className={`p-2 rounded-lg transition-colors ${
                       isDark ? 'hover:bg-gray-700 text-green-400' : 'hover:bg-gray-100 text-green-600'
                     }`}
@@ -624,6 +653,19 @@ export default function ChatPage() {
           )}
         </div>
       </div>
+
+      {/* Quick Contact Creation Modal */}
+      {selectedConversation && (
+        <QuickContactModal
+          isOpen={showQuickContact}
+          onClose={() => setShowQuickContact(false)}
+          onContactCreated={handleContactCreated}
+          phone={selectedConversation.phone}
+          contactName={selectedConversation.contact_name}
+          branches={branches}
+          isDark={isDark}
+        />
+      )}
     </div>
   )
 }

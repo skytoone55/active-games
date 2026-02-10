@@ -2186,7 +2186,13 @@
       "send": "Envoyer",
       "all_branches": "Toutes",
       "new_contact": "Nouveau",
-      "create_contact": "Creer un contact"
+      "create_contact": "Creer un contact",
+      "quick_contact": {
+        "title": "Creer un contact",
+        "branch": "Branche",
+        "branch_required": "Veuillez selectionner une branche",
+        "create_and_link": "Creer et lier"
+      }
     },
     "permissions": {
       "title": "Gestion des permissions",

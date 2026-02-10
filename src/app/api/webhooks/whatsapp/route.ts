@@ -115,11 +115,15 @@ export async function POST(request: NextRequest) {
             .from('contacts')
             .select('id, branch_id')
             .or(`phone.eq.${normalizedPhone},phone.eq.${senderPhone}`)
-            .limit(1)
 
           if (contacts && contacts.length === 1) {
+            // Single match: auto-link contact and branch
             contactId = contacts[0].id
             branchId = contacts[0].branch_id
+          } else if (contacts && contacts.length > 1) {
+            // Multiple contacts with same phone (different branches)
+            // Don't auto-assign - leave for manual assignment
+            console.log(`[WHATSAPP] Multiple contacts found for ${senderPhone} (${contacts.length}), skipping auto-link`)
           }
 
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
