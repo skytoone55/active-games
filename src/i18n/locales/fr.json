@@ -171,7 +171,7 @@
       "description": "30 min Active + 1 partie Laser",
       "features": [
         "30 minutes d'Active Games",
-        "1 partie de Laser Tag",
+        "1 partie de Laser Game",
         "Bracelet intelligent : 10 NIS (reutilisable)"
       ]
     },
@@ -205,7 +205,8 @@
       "roomPrice": "500 NIS",
       "roomLabel": "Salle privee",
       "features": [
-        "Jeux Active + Laser illimites",
+        "30 minutes d'Active Games illimites",
+        "1 partie de Laser Game",
         "Salle privee pour 2 heures",
         "Systeme son et eclairage",
         "Tables de jeux",
