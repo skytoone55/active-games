@@ -148,7 +148,7 @@ export default function ChatPage() {
   // Shared state
   // ============================================================
   const [searchQuery, setSearchQuery] = useState('')
-  const [chatBranchFilter, setChatBranchFilter] = useState<string>('inherit')
+  const [chatBranchFilter, setChatBranchFilter] = useState<string>('all')
   const [showQuickContact, setShowQuickContact] = useState(false)
 
   // Non-urgent state transition (prevents INP issues)
