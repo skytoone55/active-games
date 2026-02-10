@@ -2,11 +2,12 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { MessageCircle, Send, Search, Phone, User, ArrowLeft, RefreshCw, Loader2 } from 'lucide-react'
+import { MessageCircle, Send, Search, Phone, User, ArrowLeft, Loader2, Building2, Filter, UserPlus } from 'lucide-react'
 import { useTranslation } from '@/contexts/LanguageContext'
 import { useAuth } from '@/hooks/useAuth'
 import { useUserPermissions } from '@/hooks/useUserPermissions'
 import { useBranches } from '@/hooks/useBranches'
+import { useRealtimeSubscription } from '@/hooks/useRealtimeSubscription'
 import { AdminHeader } from '../components/AdminHeader'
 
 interface WhatsAppConversation {
@@ -25,6 +26,11 @@ interface WhatsAppConversation {
     phone: string | null
     email: string | null
   } | null
+  branch?: {
+    id: string
+    name: string
+    name_en: string | null
+  } | null
 }
 
 interface WhatsAppMessage {
@@ -38,9 +44,26 @@ interface WhatsAppMessage {
   sent_by: string | null
 }
 
+// Branch color palette for badges
+const BRANCH_COLORS = [
+  'bg-blue-500',
+  'bg-purple-500',
+  'bg-orange-500',
+  'bg-teal-500',
+  'bg-pink-500',
+  'bg-indigo-500',
+  'bg-cyan-500',
+  'bg-amber-500',
+]
+
+function getBranchColor(branchId: string, allBranches: { id: string }[]): string {
+  const index = allBranches.findIndex(b => b.id === branchId)
+  return BRANCH_COLORS[index % BRANCH_COLORS.length]
+}
+
 export default function ChatPage() {
   const router = useRouter()
-  const { t } = useTranslation()
+  const { t, locale } = useTranslation()
   const { user, loading: authLoading, signOut } = useAuth()
   const { hasPermission, loading: permissionsLoading } = useUserPermissions(user?.role || null)
   const { branches, selectedBranch, selectBranch, loading: branchesLoading } = useBranches()
@@ -55,13 +78,23 @@ export default function ChatPage() {
   const [loadingMessages, setLoadingMessages] = useState(false)
   const [sending, setSending] = useState(false)
 
+  // Branch filter: 'all' (see all) or a specific branch ID
+  const [chatBranchFilter, setChatBranchFilter] = useState<string>('inherit')
+
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
-  const pollIntervalRef = useRef<NodeJS.Timeout | null>(null)
   const selectedConvIdRef = useRef<string | null>(null)
 
   const isDark = theme === 'dark'
   const isLoading = authLoading || permissionsLoading || branchesLoading || !user
+
+  // Determine if user can see all branches (super_admin or has multiple branches)
+  const canSeeAll = user?.role === 'super_admin' || branches.length > 1
+
+  // Effective branch filter for API calls
+  const effectiveBranchId = chatBranchFilter === 'inherit'
+    ? (selectedBranch?.id || (canSeeAll ? 'all' : branches[0]?.id || null))
+    : chatBranchFilter
 
   // Theme sync
   useEffect(() => {
@@ -90,7 +123,11 @@ export default function ChatPage() {
   const fetchConversations = useCallback(async () => {
     try {
       const params = new URLSearchParams({ status: 'active' })
-      if (selectedBranch?.id) params.set('branchId', selectedBranch.id)
+      if (effectiveBranchId && effectiveBranchId !== 'all') {
+        params.set('branchId', effectiveBranchId)
+      } else if (effectiveBranchId === 'all') {
+        params.set('branchId', 'all')
+      }
       if (searchQuery) params.set('search', searchQuery)
 
       const res = await fetch(`/api/chat/conversations?${params}`)
@@ -103,13 +140,13 @@ export default function ChatPage() {
     } finally {
       setLoading(false)
     }
-  }, [selectedBranch?.id, searchQuery])
+  }, [effectiveBranchId, searchQuery])
 
   useEffect(() => {
     if (!isLoading) fetchConversations()
   }, [fetchConversations, isLoading])
 
-  // Track selected conversation for polling
+  // Track selected conversation for realtime
   useEffect(() => {
     selectedConvIdRef.current = selectedConversation?.id || null
   }, [selectedConversation])
@@ -130,21 +167,39 @@ export default function ChatPage() {
     }
   }, [])
 
-  // Poll for new messages every 5 seconds
-  useEffect(() => {
-    if (isLoading) return
+  // ============================================================
+  // Supabase Realtime: listen for changes instead of polling
+  // ============================================================
+  const handleConversationChange = useCallback(() => {
+    fetchConversations()
+  }, [fetchConversations])
 
-    pollIntervalRef.current = setInterval(() => {
-      fetchConversations()
-      if (selectedConvIdRef.current) {
-        fetchMessages(selectedConvIdRef.current, true)
-      }
-    }, 5000)
-
-    return () => {
-      if (pollIntervalRef.current) clearInterval(pollIntervalRef.current)
+  const handleMessageChange = useCallback(() => {
+    // Refresh conversations list (for unread count, last_message_at, etc.)
+    fetchConversations()
+    // Refresh messages if viewing a conversation
+    if (selectedConvIdRef.current) {
+      fetchMessages(selectedConvIdRef.current, true)
     }
-  }, [fetchConversations, fetchMessages, isLoading])
+  }, [fetchConversations, fetchMessages])
+
+  // Subscribe to whatsapp_conversations changes
+  useRealtimeSubscription(
+    {
+      table: 'whatsapp_conversations',
+      onChange: handleConversationChange,
+    },
+    !isLoading
+  )
+
+  // Subscribe to whatsapp_messages changes (new inbound/outbound messages)
+  useRealtimeSubscription(
+    {
+      table: 'whatsapp_messages',
+      onChange: handleMessageChange,
+    },
+    !isLoading
+  )
 
   // Scroll to bottom on new messages
   useEffect(() => {
@@ -155,7 +210,10 @@ export default function ChatPage() {
   const handleSelectConversation = (conv: WhatsAppConversation) => {
     setSelectedConversation(conv)
     fetchMessages(conv.id)
+    // Mark as read in UI immediately
     setConversations(prev => prev.map(c => c.id === conv.id ? { ...c, unread_count: 0 } : c))
+    // Mark as read in DB
+    fetch(`/api/chat/conversations/${conv.id}/read`, { method: 'POST' }).catch(() => {})
   }
 
   // Send message
@@ -219,6 +277,12 @@ export default function ChatPage() {
     return conv.contact_name || formatPhone(conv.phone)
   }
 
+  const getBranchDisplayName = (conv: WhatsAppConversation) => {
+    if (!conv.branch) return null
+    if (locale === 'en' && conv.branch.name_en) return conv.branch.name_en
+    return conv.branch.name
+  }
+
   // Total unread
   const totalUnread = conversations.reduce((sum, c) => sum + (c.unread_count || 0), 0)
 
@@ -262,15 +326,46 @@ export default function ChatPage() {
                   </span>
                 )}
               </div>
-              <button
-                onClick={() => fetchConversations()}
-                className={`p-2 rounded-lg transition-colors ${
-                  isDark ? 'hover:bg-gray-700 text-gray-400' : 'hover:bg-gray-100 text-gray-500'
-                }`}
-              >
-                <RefreshCw className="w-4 h-4" />
-              </button>
             </div>
+
+            {/* Branch filter */}
+            {canSeeAll && branches.length > 0 && (
+              <div className="mb-3">
+                <div className="flex items-center gap-1 flex-wrap">
+                  <button
+                    onClick={() => setChatBranchFilter(chatBranchFilter === 'all' ? 'inherit' : 'all')}
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors flex items-center gap-1 ${
+                      effectiveBranchId === 'all'
+                        ? 'bg-green-600 text-white'
+                        : isDark
+                          ? 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                  >
+                    <Filter className="w-3 h-3" />
+                    {t('admin.chat.all_branches') || 'All'}
+                  </button>
+                  {branches.map((branch) => (
+                    <button
+                      key={branch.id}
+                      onClick={() => setChatBranchFilter(
+                        chatBranchFilter === branch.id ? 'inherit' : branch.id
+                      )}
+                      className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors flex items-center gap-1 ${
+                        effectiveBranchId === branch.id
+                          ? `${getBranchColor(branch.id, branches)} text-white`
+                          : isDark
+                            ? 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      }`}
+                    >
+                      <Building2 className="w-3 h-3" />
+                      {locale === 'en' && branch.name_en ? branch.name_en : branch.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Search */}
             <div className="relative">
@@ -312,12 +407,20 @@ export default function ChatPage() {
                   }`}
                 >
                   {/* Avatar */}
-                  <div className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 ${
+                  <div className={`relative w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 ${
                     conv.contact_id
                       ? 'bg-green-600'
                       : isDark ? 'bg-gray-700' : 'bg-gray-300'
                   }`}>
                     <User className="w-6 h-6 text-white" />
+                    {/* Branch indicator dot */}
+                    {conv.branch_id && (
+                      <span className={`absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full border-2 ${
+                        isDark ? 'border-gray-900' : 'border-white'
+                      } ${getBranchColor(conv.branch_id, branches)}`}
+                        title={getBranchDisplayName(conv) || ''}
+                      />
+                    )}
                   </div>
 
                   {/* Info */}
@@ -331,9 +434,26 @@ export default function ChatPage() {
                       </span>
                     </div>
                     <div className="flex items-center justify-between mt-0.5">
-                      <span className={`text-sm truncate ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                        {formatPhone(conv.phone)}
-                      </span>
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span className={`text-sm truncate ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                          {formatPhone(conv.phone)}
+                        </span>
+                        {/* Branch name badge */}
+                        {conv.branch && (
+                          <span className={`text-[10px] px-1.5 py-0.5 rounded-full flex-shrink-0 ${
+                            getBranchColor(conv.branch_id!, branches)
+                          } text-white`}>
+                            {getBranchDisplayName(conv)}
+                          </span>
+                        )}
+                        {!conv.branch_id && !conv.contact_id && (
+                          <span className={`text-[10px] px-1.5 py-0.5 rounded-full flex-shrink-0 ${
+                            isDark ? 'bg-gray-700 text-gray-400' : 'bg-gray-200 text-gray-500'
+                          }`}>
+                            {t('admin.chat.new_contact') || 'New'}
+                          </span>
+                        )}
+                      </div>
                       {conv.unread_count > 0 && (
                         <span className="bg-green-500 text-white text-xs font-bold min-w-[20px] h-5 px-1.5 rounded-full flex items-center justify-center flex-shrink-0 ml-2">
                           {conv.unread_count}
@@ -373,10 +493,15 @@ export default function ChatPage() {
                   <ArrowLeft className="w-5 h-5" />
                 </button>
 
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                <div className={`relative w-10 h-10 rounded-full flex items-center justify-center ${
                   selectedConversation.contact_id ? 'bg-green-600' : isDark ? 'bg-gray-700' : 'bg-gray-300'
                 }`}>
                   <User className="w-5 h-5 text-white" />
+                  {selectedConversation.branch_id && (
+                    <span className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 ${
+                      isDark ? 'border-gray-800' : 'border-white'
+                    } ${getBranchColor(selectedConversation.branch_id, branches)}`} />
+                  )}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className={`font-medium truncate ${isDark ? 'text-white' : 'text-gray-900'}`}>
@@ -385,8 +510,31 @@ export default function ChatPage() {
                   <div className={`text-sm flex items-center gap-2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
                     <Phone className="w-3 h-3" />
                     {formatPhone(selectedConversation.phone)}
+                    {selectedConversation.branch && (
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
+                        getBranchColor(selectedConversation.branch_id!, branches)
+                      } text-white`}>
+                        {getBranchDisplayName(selectedConversation)}
+                      </span>
+                    )}
                   </div>
                 </div>
+
+                {/* Quick create contact button when no contact linked */}
+                {!selectedConversation.contact_id && (
+                  <button
+                    onClick={() => {
+                      const phone = selectedConversation.phone
+                      router.push(`/admin/clients?action=create&phone=${phone}&name=${encodeURIComponent(selectedConversation.contact_name || '')}`)
+                    }}
+                    className={`p-2 rounded-lg transition-colors ${
+                      isDark ? 'hover:bg-gray-700 text-green-400' : 'hover:bg-gray-100 text-green-600'
+                    }`}
+                    title={t('admin.chat.create_contact') || 'Create contact'}
+                  >
+                    <UserPlus className="w-5 h-5" />
+                  </button>
+                )}
               </div>
 
               {/* Messages area */}

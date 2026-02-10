@@ -21,15 +21,16 @@ export async function GET(request: NextRequest) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let query = (supabase as any)
       .from('whatsapp_conversations')
-      .select('*, contacts:contact_id(id, first_name, last_name, phone, email)', { count: 'exact' })
+      .select('*, contacts:contact_id(id, first_name, last_name, phone, email), branch:branch_id(id, name, name_en)', { count: 'exact' })
       .eq('status', status)
       .order('last_message_at', { ascending: false })
       .range(offset, offset + pageSize - 1)
 
-    if (branchId) {
+    if (branchId && branchId !== 'all') {
       // Show conversations for this branch OR unassigned conversations (no branch yet)
       query = query.or(`branch_id.eq.${branchId},branch_id.is.null`)
     }
+    // When branchId is 'all' or not provided, show all conversations (no branch filter)
 
     if (search) {
       query = query.or(`phone.ilike.%${search}%,contact_name.ilike.%${search}%`)

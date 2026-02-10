@@ -10,6 +10,7 @@ import type { Branch, UserRole } from '@/lib/supabase/types'
 import { BranchSelector } from './BranchSelector'
 import { usePendingOrdersCount, useUnseenAbortedOrdersCount } from '@/hooks/useOrders'
 import { useUnreadContactRequestsCount } from '@/hooks/useContactRequests'
+import { useUnreadChatsCount } from '@/hooks/useUnreadChatsCount'
 import { useUserPermissions } from '@/hooks/useUserPermissions'
 import { useTranslation } from '@/contexts/LanguageContext'
 import type { Locale } from '@/i18n'
@@ -88,6 +89,10 @@ function AdminHeaderComponent({
   // Compteur de demandes de contact non lues (badge sur Clients)
   const unreadContactRequests = useUnreadContactRequestsCount(selectedBranch?.id || null)
   const hasUnreadRequests = unreadContactRequests > 0
+
+  // Compteur de conversations WhatsApp non lues (badge sur Chat)
+  const unreadChatsCount = useUnreadChatsCount(selectedBranch?.id || null)
+  const hasUnreadChats = unreadChatsCount > 0
 
   // Construire le nom complet à partir du profil
   const getUserDisplayName = () => {
@@ -247,7 +252,7 @@ function AdminHeaderComponent({
           {hasPermission('chat', 'can_view') && (
             <Link
               href="/admin/chat"
-              className={`px-4 py-2 rounded-lg transition-colors flex items-center gap-2 ${
+              className={`relative px-4 py-2 rounded-lg transition-colors flex items-center gap-2 ${
                 pathname === '/admin/chat'
                   ? 'bg-blue-600 text-white'
                   : theme === 'dark'
@@ -257,6 +262,11 @@ function AdminHeaderComponent({
             >
               <MessageCircle className="w-4 h-4" />
               <span>{t('admin.header.chat')}</span>
+              {hasUnreadChats && (
+                <span className="absolute -top-1 -right-1 bg-green-500 text-white text-[10px] font-bold min-w-[20px] h-5 px-1 rounded-full flex items-center justify-center animate-pulse shadow-lg">
+                  {unreadChatsCount > 9 ? '9+' : unreadChatsCount}
+                </span>
+              )}
             </Link>
           )}
           {hasPermission('calls', 'can_view') && (
@@ -636,7 +646,7 @@ function AdminHeaderComponent({
                 <Link
                   href="/admin/chat"
                   onClick={() => setShowMobileMenu(false)}
-                  className={`flex items-center gap-3 px-4 py-2 rounded-lg transition-colors ${
+                  className={`relative flex items-center gap-3 px-4 py-2 rounded-lg transition-colors ${
                     pathname === '/admin/chat'
                       ? 'bg-blue-600 text-white'
                       : theme === 'dark'
@@ -646,6 +656,11 @@ function AdminHeaderComponent({
                 >
                   <MessageCircle className="w-4 h-4" />
                   <span>{t('admin.header.chat')}</span>
+                  {hasUnreadChats && (
+                    <span className="bg-green-500 text-white text-xs font-bold px-2 py-0.5 rounded-full animate-pulse ml-auto">
+                      {unreadChatsCount > 9 ? '9+' : unreadChatsCount}
+                    </span>
+                  )}
                 </Link>
               )}
               {hasPermission('calls', 'can_view') && (

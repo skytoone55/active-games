@@ -2183,7 +2183,10 @@
       "no_messages": "Aucun message",
       "type_message": "Ecrire un message...",
       "yesterday": "Hier",
-      "send": "Envoyer"
+      "send": "Envoyer",
+      "all_branches": "Toutes",
+      "new_contact": "Nouveau",
+      "create_contact": "Creer un contact"
     },
     "permissions": {
       "title": "Gestion des permissions",

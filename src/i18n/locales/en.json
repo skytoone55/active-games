@@ -2120,7 +2120,10 @@
       "no_messages": "No messages yet",
       "type_message": "Type a message...",
       "yesterday": "Yesterday",
-      "send": "Send"
+      "send": "Send",
+      "all_branches": "All",
+      "new_contact": "New",
+      "create_contact": "Create contact"
     },
     "permissions": {
       "title": "Permissions Management",

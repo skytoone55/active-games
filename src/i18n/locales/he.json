@@ -2178,7 +2178,10 @@
       "no_messages": "אין הודעות",
       "type_message": "כתוב הודעה...",
       "yesterday": "אתמול",
-      "send": "שלח"
+      "send": "שלח",
+      "all_branches": "הכל",
+      "new_contact": "חדש",
+      "create_contact": "צור איש קשר"
     },
     "permissions": {
       "title": "ניהול הרשאות",
