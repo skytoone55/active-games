@@ -37,8 +37,9 @@ export async function GET(request: NextRequest) {
       query = query.eq('status', 'active')
     }
 
-    // Only show conversations that have completed intake (NAME + NUMBER collected)
-    // collected_data is JSONB — filter where NAME and NUMBER keys exist and are not null
+    // Only show conversations that have completed intake (WELCOME + NAME + NUMBER collected)
+    // collected_data is JSONB — filter where all three keys exist and are not null
+    query = query.not('collected_data->WELCOME', 'is', null)
     query = query.not('collected_data->NAME', 'is', null)
     query = query.not('collected_data->NUMBER', 'is', null)
 
