@@ -10,10 +10,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 
-// Normalize phone: 972XXXXXXXXX -> 05XXXXXXXX (Israeli format)
+// Normalize phone: 972XXXXXXXXX -> 0XXXXXXXXX (Israeli format)
 function normalizePhone(phone: string): string {
   const cleaned = phone.replace(/[\s\-\(\)\+]/g, '')
-  if (cleaned.startsWith('9725')) return '0' + cleaned.substring(4)
   if (cleaned.startsWith('972')) return '0' + cleaned.substring(3)
   if (cleaned.startsWith('05')) return cleaned
   return cleaned

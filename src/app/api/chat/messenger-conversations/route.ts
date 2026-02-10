@@ -38,7 +38,9 @@ export async function GET(request: NextRequest) {
     if (branchId === 'unassigned') {
       query = query.is('branch_id', null)
     } else if (branchId && branchId !== 'all') {
-      query = query.eq('branch_id', branchId)
+      // For site conversations, also include unassigned (null branch_id) since
+      // most site visitors don't have a branch assigned
+      query = query.or(`branch_id.eq.${branchId},branch_id.is.null`)
     }
 
     if (search) {

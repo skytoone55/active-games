@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { MessageCircle, Send, Search, Phone, User, ArrowLeft, Loader2, Filter, UserPlus, Globe, Bot, Archive, X } from 'lucide-react'
 import { useTranslation } from '@/contexts/LanguageContext'
@@ -63,7 +63,7 @@ interface MessengerConversation {
   status: string
   completed_at: string | null
   last_activity_at: string
-  created_at: string
+  started_at: string
   last_message: string | null
   last_message_role: string | null
   message_count: number
@@ -154,6 +154,9 @@ export default function ChatPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [chatBranchFilter, setChatBranchFilter] = useState<string>('inherit')
   const [showQuickContact, setShowQuickContact] = useState(false)
+
+  // Non-urgent state transition (prevents INP issues)
+  const [, startTransition] = useTransition()
 
   // Resizable sidebar
   const [sidebarWidth, setSidebarWidth] = useState(384)
@@ -626,7 +629,7 @@ export default function ChatPage() {
                 <div className="mb-3">
                   <div className="flex items-center gap-1 flex-wrap">
                     <button
-                      onClick={() => setChatBranchFilter(chatBranchFilter === 'all' ? 'inherit' : 'all')}
+                      onClick={() => startTransition(() => setChatBranchFilter(chatBranchFilter === 'all' ? 'inherit' : 'all'))}
                       className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors flex items-center gap-1 ${
                         effectiveBranchId === 'all'
                           ? 'bg-green-600 text-white'
@@ -641,9 +644,9 @@ export default function ChatPage() {
                     {branches.map((branch) => (
                       <button
                         key={branch.id}
-                        onClick={() => setChatBranchFilter(
+                        onClick={() => startTransition(() => setChatBranchFilter(
                           chatBranchFilter === branch.id ? 'inherit' : branch.id
-                        )}
+                        ))}
                         className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors flex items-center gap-1.5 ${
                           effectiveBranchId === branch.id
                             ? `${getBranchColor(branch.id, branches)} text-white`
@@ -662,9 +665,9 @@ export default function ChatPage() {
                     ))}
                     {canSeeUnassigned && (
                       <button
-                        onClick={() => setChatBranchFilter(
+                        onClick={() => startTransition(() => setChatBranchFilter(
                           chatBranchFilter === 'unassigned' ? 'inherit' : 'unassigned'
-                        )}
+                        ))}
                         className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors flex items-center gap-1 ${
                           effectiveBranchId === 'unassigned'
                             ? isDark ? 'bg-gray-600 text-white' : 'bg-gray-500 text-white'
