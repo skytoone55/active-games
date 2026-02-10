@@ -113,13 +113,13 @@ export async function POST(request: NextRequest) {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const { data: contacts } = await (supabase as any)
             .from('contacts')
-            .select('id, branch_id')
+            .select('id, branch_id_main')
             .or(`phone.eq.${normalizedPhone},phone.eq.${senderPhone}`)
 
           if (contacts && contacts.length === 1) {
             // Single match: auto-link contact and branch
             contactId = contacts[0].id
-            branchId = contacts[0].branch_id
+            branchId = contacts[0].branch_id_main
           } else if (contacts && contacts.length > 1) {
             // Multiple contacts with same phone (different branches)
             // Don't auto-assign - leave for manual assignment

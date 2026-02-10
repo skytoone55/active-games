@@ -53,11 +53,14 @@ export function QuickContactModal({
         setLastName('')
       }
 
-      // Format phone from international to local
+      // Format phone from international to Israeli local if applicable
       let formattedPhone = initialPhone
-      if (formattedPhone.startsWith('972')) {
+      if (formattedPhone.startsWith('9725')) {
+        formattedPhone = '0' + formattedPhone.substring(4)
+      } else if (formattedPhone.startsWith('972')) {
         formattedPhone = '0' + formattedPhone.substring(3)
       }
+      // For non-Israeli numbers (e.g. 33...), keep as-is - user can adjust
       setPhone(formattedPhone)
 
       setEmail('')

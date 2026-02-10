@@ -26,7 +26,7 @@ export async function POST(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: contact, error: contactError } = await (supabase as any)
       .from('contacts')
-      .select('id, branch_id, first_name, last_name')
+      .select('id, branch_id_main, first_name, last_name')
       .eq('id', contactId)
       .single()
 
@@ -40,7 +40,7 @@ export async function POST(
       .from('whatsapp_conversations')
       .update({
         contact_id: contactId,
-        branch_id: contact.branch_id,
+        branch_id: contact.branch_id_main,
         contact_name: `${contact.first_name || ''} ${contact.last_name || ''}`.trim() || undefined,
         updated_at: new Date().toISOString(),
       })

@@ -277,9 +277,14 @@ export default function ChatPage() {
     fetchConversations()
   }
 
-  // Format phone display
+  // Format phone display - add + prefix for international numbers
   const formatPhone = (phone: string) => {
-    if (phone.startsWith('972')) return '+' + phone
+    // Already has + prefix
+    if (phone.startsWith('+')) return phone
+    // International numbers (country code): add +
+    if (/^\d{10,15}$/.test(phone) && !phone.startsWith('0')) {
+      return '+' + phone
+    }
     return phone
   }
 
