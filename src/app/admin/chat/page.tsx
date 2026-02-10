@@ -92,11 +92,16 @@ export default function ChatPage() {
   }, [fetchConversations])
 
   // Poll for new messages every 5 seconds
+  const selectedConvIdRef = useRef<string | null>(null)
+  useEffect(() => {
+    selectedConvIdRef.current = selectedConversation?.id || null
+  }, [selectedConversation])
+
   useEffect(() => {
     pollIntervalRef.current = setInterval(() => {
       fetchConversations()
-      if (selectedConversation) {
-        fetchMessages(selectedConversation.id, true)
+      if (selectedConvIdRef.current) {
+        fetchMessages(selectedConvIdRef.current, true)
       }
     }, 5000)
 
@@ -104,7 +109,7 @@ export default function ChatPage() {
       if (pollIntervalRef.current) clearInterval(pollIntervalRef.current)
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedConversation])
+  }, [fetchConversations])
 
   // Fetch messages for a conversation
   const fetchMessages = async (conversationId: string, silent = false) => {
@@ -176,7 +181,8 @@ export default function ChatPage() {
     return d.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })
   }
 
-  const formatDate = (dateStr: string) => {
+  const formatDate = (dateStr: string | null) => {
+    if (!dateStr) return ''
     const d = new Date(dateStr)
     const now = new Date()
     const diff = now.getTime() - d.getTime()

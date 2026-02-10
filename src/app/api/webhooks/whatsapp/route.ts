@@ -132,6 +132,7 @@ export async function POST(request: NextRequest) {
               branch_id: branchId,
               status: 'active',
               unread_count: 1,
+              last_message_at: new Date().toISOString(),
             })
             .select('id, contact_id')
             .single()

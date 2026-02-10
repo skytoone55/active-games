@@ -27,7 +27,8 @@ export async function GET(request: NextRequest) {
       .range(offset, offset + pageSize - 1)
 
     if (branchId) {
-      query = query.eq('branch_id', branchId)
+      // Show conversations for this branch OR unassigned conversations (no branch yet)
+      query = query.or(`branch_id.eq.${branchId},branch_id.is.null`)
     }
 
     if (search) {
