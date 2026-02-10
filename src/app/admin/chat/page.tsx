@@ -122,7 +122,7 @@ export default function ChatPage() {
     return () => window.removeEventListener('storage', handler)
   }, [])
 
-  // Sidebar resize handlers
+  // Sidebar resize handlers — direct DOM manipulation during drag for performance
   const handleResizeStart = useCallback((e: React.MouseEvent) => {
     e.preventDefault()
     isResizing.current = true
@@ -134,13 +134,18 @@ export default function ChatPage() {
       if (!isResizing.current) return
       const newWidth = Math.max(280, Math.min(600, e.clientX))
       lastWidth = newWidth
-      setSidebarWidth(newWidth)
+      // Direct DOM update — no React re-render during drag
+      if (sidebarRef.current) {
+        sidebarRef.current.style.width = `${newWidth}px`
+      }
     }
 
     const handleMouseUp = () => {
       isResizing.current = false
       document.body.style.cursor = ''
       document.body.style.userSelect = ''
+      // Single React state update + persist
+      setSidebarWidth(lastWidth)
       localStorage.setItem('chat_sidebar_width', String(lastWidth))
       document.removeEventListener('mousemove', handleMouseMove)
       document.removeEventListener('mouseup', handleMouseUp)
