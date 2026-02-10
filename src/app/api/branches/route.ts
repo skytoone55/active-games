@@ -50,7 +50,7 @@ export async function GET(request: Request) {
       .from('branches')
       .select('id, slug, name, name_en, address, phone, is_active')
       .eq('is_active', true)
-      .order('name')
+      .order('sort_order')
 
     if (error) {
       console.error('Error fetching branches:', error)
