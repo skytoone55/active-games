@@ -658,7 +658,7 @@ export default function ChatPage() {
                   </span>
                 )}
                 {waHasNew && activeChannel !== 'whatsapp' && (
-                  <span className="absolute top-2 right-[calc(50%-30px)] w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse" />
+                  <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
                 )}
               </button>
               <button
@@ -672,10 +672,10 @@ export default function ChatPage() {
                 <Globe className="w-4 h-4" />
                 Site
                 {msLiveActive && (
-                  <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" title="Live conversation" />
+                  <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse" title="Live conversation" />
                 )}
                 {msHasNew && activeChannel !== 'site' && (
-                  <span className="absolute top-2 right-[calc(50%-20px)] w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse" />
+                  <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
                 )}
               </button>
             </div>
