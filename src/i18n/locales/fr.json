@@ -2220,6 +2220,8 @@
         "agenda": "Agenda",
         "orders": "Commandes",
         "clients": "Clients",
+        "chat": "Chat WhatsApp",
+        "messenger": "Messenger",
         "calls": "Appels",
         "users": "Utilisateurs",
         "logs": "Journaux d'activite",

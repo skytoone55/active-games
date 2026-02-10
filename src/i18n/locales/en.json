@@ -2156,6 +2156,8 @@
         "agenda": "Agenda",
         "orders": "Orders",
         "clients": "Clients",
+        "chat": "WhatsApp Chat",
+        "messenger": "Messenger",
         "calls": "Calls",
         "users": "Users",
         "logs": "Activity Logs",
