@@ -95,6 +95,9 @@ export default function ChatPage() {
   // Determine if user can see all branches (super_admin or has multiple branches)
   const canSeeAll = user?.role === 'super_admin' || branches.length > 1
 
+  // Can see unassigned conversations: must have multi-branch access + chat edit permission
+  const canSeeUnassigned = canSeeAll && hasPermission('chat', 'can_edit')
+
   // Effective branch filter for API calls
   const effectiveBranchId = chatBranchFilter === 'inherit'
     ? (selectedBranch?.id || (canSeeAll ? 'all' : branches[0]?.id || null))
@@ -400,6 +403,26 @@ export default function ChatPage() {
                       {locale === 'en' && branch.name_en ? branch.name_en : branch.name}
                     </button>
                   ))}
+                  {/* Unassigned filter - only for users with chat edit permission */}
+                  {canSeeUnassigned && (
+                    <button
+                      onClick={() => setChatBranchFilter(
+                        chatBranchFilter === 'unassigned' ? 'inherit' : 'unassigned'
+                      )}
+                      className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors flex items-center gap-1 ${
+                        effectiveBranchId === 'unassigned'
+                          ? isDark
+                            ? 'bg-gray-600 text-white'
+                            : 'bg-gray-500 text-white'
+                          : isDark
+                            ? 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      }`}
+                    >
+                      <Filter className="w-3 h-3" />
+                      {t('admin.chat.unassigned') || 'Unassigned'}
+                    </button>
+                  )}
                 </div>
               </div>
             )}

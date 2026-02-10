@@ -26,9 +26,12 @@ export async function GET(request: NextRequest) {
       .order('last_message_at', { ascending: false })
       .range(offset, offset + pageSize - 1)
 
-    if (branchId && branchId !== 'all') {
-      // Show conversations for this branch OR unassigned conversations (no branch yet)
-      query = query.or(`branch_id.eq.${branchId},branch_id.is.null`)
+    if (branchId === 'unassigned') {
+      // Show only conversations with no branch assigned
+      query = query.is('branch_id', null)
+    } else if (branchId && branchId !== 'all') {
+      // Show only conversations for this specific branch (no unassigned)
+      query = query.eq('branch_id', branchId)
     }
     // When branchId is 'all' or not provided, show all conversations (no branch filter)
 
