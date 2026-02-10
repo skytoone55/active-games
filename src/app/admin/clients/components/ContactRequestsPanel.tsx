@@ -41,7 +41,13 @@ export function ContactRequestsPanel({ branchId, isDark, onContactCreated }: Con
 
   const loadRequests = useCallback(() => {
     fetchRequests({ status: filterStatus, page, pageSize: 20 })
-  }, [fetchRequests, filterStatus, page])
+  }, [fetchRequests, filterStatus, page, branchId])
+
+  useEffect(() => {
+    setSelectedRequest(null)
+    setPage(1)
+    loadRequests()
+  }, [branchId])
 
   useEffect(() => {
     loadRequests()

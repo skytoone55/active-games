@@ -32,6 +32,14 @@ export function useContactRequests(branchId: string | null): UseContactRequestsR
   const branchIdRef = useRef(branchId)
   branchIdRef.current = branchId
 
+  // Reset state when branch changes
+  useEffect(() => {
+    setRequests([])
+    setTotal(0)
+    setTotalPages(1)
+    setUnreadCount(0)
+  }, [branchId])
+
   // Fetch unread count
   const fetchUnreadCount = useCallback(async (): Promise<number> => {
     if (!branchIdRef.current) return 0
