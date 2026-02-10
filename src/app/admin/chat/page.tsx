@@ -90,21 +90,15 @@ interface MessengerMessage {
   created_at: string
 }
 
-// Branch color palette for badges
-const BRANCH_COLORS = [
-  'bg-blue-500',
-  'bg-purple-500',
-  'bg-orange-500',
-  'bg-teal-500',
-  'bg-pink-500',
-  'bg-indigo-500',
-  'bg-cyan-500',
-  'bg-amber-500',
-]
+// Fixed branch colors
+const BRANCH_COLOR_MAP: Record<string, string> = {
+  '5e3b466e-0327-4ef6-ad5a-02a8ed4b367e': 'bg-blue-500',    // Rishon LeZion
+  '9fa7c0b6-cf58-4a13-9fd6-db5dd2306362': 'bg-orange-500',   // Petah Tikva
+  '2fb29792-1381-4595-ace3-9a61a8bc1f32': 'bg-yellow-500',    // Glilot
+}
 
-function getBranchColor(branchId: string, allBranches: { id: string }[]): string {
-  const index = allBranches.findIndex(b => b.id === branchId)
-  return BRANCH_COLORS[index % BRANCH_COLORS.length]
+function getBranchColor(branchId: string, _allBranches?: { id: string }[]): string {
+  return BRANCH_COLOR_MAP[branchId] || 'bg-gray-500'
 }
 
 export default function ChatPage() {
