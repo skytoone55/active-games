@@ -2193,7 +2193,19 @@
         "branch": "Branche",
         "branch_required": "Veuillez selectionner une branche",
         "create_and_link": "Creer et lier"
-      }
+      },
+      "site_visitor": "Visiteur",
+      "site_conversation": "Conversation site",
+      "site_active": "Active",
+      "site_completed": "Terminee",
+      "site_abandoned": "Abandonnee",
+      "site_read_only": "Les conversations du site sont en lecture seule",
+      "no_site_conversations": "Aucune conversation site",
+      "close_conversation": "Fermer la conversation",
+      "close_confirm": "Fermer cette conversation ? Elle sera archivee.",
+      "show_archived": "Voir archivees",
+      "hide_archived": "Masquer archivees",
+      "archived": "Archivee"
     },
     "permissions": {
       "title": "Gestion des permissions",

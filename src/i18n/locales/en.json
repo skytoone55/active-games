@@ -2130,7 +2130,19 @@
         "branch": "Branch",
         "branch_required": "Please select a branch",
         "create_and_link": "Create & Link"
-      }
+      },
+      "site_visitor": "Visitor",
+      "site_conversation": "Site conversation",
+      "site_active": "Active",
+      "site_completed": "Done",
+      "site_abandoned": "Left",
+      "site_read_only": "Site conversations are read-only",
+      "no_site_conversations": "No site conversations yet",
+      "close_conversation": "Close conversation",
+      "close_confirm": "Close this conversation? It will be archived.",
+      "show_archived": "Show archived",
+      "hide_archived": "Hide archived",
+      "archived": "Archived"
     },
     "permissions": {
       "title": "Permissions Management",

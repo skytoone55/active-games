@@ -2188,7 +2188,19 @@
         "branch": "סניף",
         "branch_required": "נא לבחור סניף",
         "create_and_link": "צור וקשר"
-      }
+      },
+      "site_visitor": "מבקר",
+      "site_conversation": "שיחת אתר",
+      "site_active": "פעיל",
+      "site_completed": "הסתיים",
+      "site_abandoned": "עזב",
+      "site_read_only": "שיחות אתר הן לקריאה בלבד",
+      "no_site_conversations": "אין שיחות אתר",
+      "close_conversation": "סגור שיחה",
+      "close_confirm": "לסגור את השיחה? היא תועבר לארכיון.",
+      "show_archived": "הצג ארכיון",
+      "hide_archived": "הסתר ארכיון",
+      "archived": "בארכיון"
     },
     "permissions": {
       "title": "ניהול הרשאות",

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { MessageCircle, Send, Search, Phone, User, ArrowLeft, Loader2, Filter, UserPlus } from 'lucide-react'
+import { MessageCircle, Send, Search, Phone, User, ArrowLeft, Loader2, Filter, UserPlus, Globe, Bot, Archive, X } from 'lucide-react'
 import { useTranslation } from '@/contexts/LanguageContext'
 import { useAuth } from '@/hooks/useAuth'
 import { useUserPermissions } from '@/hooks/useUserPermissions'
@@ -11,6 +11,12 @@ import { useRealtimeSubscription } from '@/hooks/useRealtimeSubscription'
 import { AdminHeader } from '../components/AdminHeader'
 import { QuickContactModal } from './components/QuickContactModal'
 import type { Contact } from '@/lib/supabase/types'
+
+// ============================================================
+// Types
+// ============================================================
+
+type ChatChannel = 'whatsapp' | 'site'
 
 interface WhatsAppConversation {
   id: string
@@ -46,6 +52,44 @@ interface WhatsAppMessage {
   sent_by: string | null
 }
 
+interface MessengerConversation {
+  id: string
+  session_id: string
+  branch_id: string | null
+  contact_id: string | null
+  current_workflow_id: string
+  current_step_ref: string | null
+  collected_data: Record<string, unknown>
+  status: string
+  completed_at: string | null
+  last_activity_at: string
+  created_at: string
+  last_message: string | null
+  last_message_role: string | null
+  message_count: number
+  contacts?: {
+    id: string
+    first_name: string | null
+    last_name: string | null
+    phone: string | null
+    email: string | null
+  } | null
+  branch?: {
+    id: string
+    name: string
+    name_en: string | null
+  } | null
+}
+
+interface MessengerMessage {
+  id: string
+  conversation_id: string
+  role: 'user' | 'assistant' | 'system'
+  content: string
+  step_ref: string | null
+  created_at: string
+}
+
 // Branch color palette for badges
 const BRANCH_COLORS = [
   'bg-blue-500',
@@ -71,36 +115,62 @@ export default function ChatPage() {
   const { branches, selectedBranch, selectBranch, loading: branchesLoading } = useBranches()
   const [theme, setTheme] = useState<'light' | 'dark'>('dark')
 
-  const [conversations, setConversations] = useState<WhatsAppConversation[]>([])
-  const [selectedConversation, setSelectedConversation] = useState<WhatsAppConversation | null>(null)
-  const [messages, setMessages] = useState<WhatsAppMessage[]>([])
+  // ============================================================
+  // Channel tab state
+  // ============================================================
+  const [activeChannel, setActiveChannel] = useState<ChatChannel>('whatsapp')
+
+  // ============================================================
+  // WhatsApp state
+  // ============================================================
+  const [waConversations, setWaConversations] = useState<WhatsAppConversation[]>([])
+  const [selectedWaConv, setSelectedWaConv] = useState<WhatsAppConversation | null>(null)
+  const [waMessages, setWaMessages] = useState<WhatsAppMessage[]>([])
   const [newMessage, setNewMessage] = useState('')
-  const [searchQuery, setSearchQuery] = useState('')
-  const [loading, setLoading] = useState(true)
-  const [loadingMessages, setLoadingMessages] = useState(false)
+  const [waLoading, setWaLoading] = useState(true)
+  const [waLoadingMessages, setWaLoadingMessages] = useState(false)
   const [sending, setSending] = useState(false)
 
-  // Branch filter: 'all' (see all) or a specific branch ID
+  // ============================================================
+  // Messenger (Site) state
+  // ============================================================
+  const [msConversations, setMsConversations] = useState<MessengerConversation[]>([])
+  const [selectedMsConv, setSelectedMsConv] = useState<MessengerConversation | null>(null)
+  const [msMessages, setMsMessages] = useState<MessengerMessage[]>([])
+  const [msLoading, setMsLoading] = useState(true)
+  const [msLoadingMessages, setMsLoadingMessages] = useState(false)
+
+  // ============================================================
+  // Cross-tab notification badges
+  // ============================================================
+  const [waHasNew, setWaHasNew] = useState(false)
+  const [msHasNew, setMsHasNew] = useState(false)
+  const [showArchived, setShowArchived] = useState(false)
+  const [closingConversation, setClosingConversation] = useState(false)
+
+  // ============================================================
+  // Shared state
+  // ============================================================
+  const [searchQuery, setSearchQuery] = useState('')
   const [chatBranchFilter, setChatBranchFilter] = useState<string>('inherit')
-  // Quick contact modal
   const [showQuickContact, setShowQuickContact] = useState(false)
 
   // Resizable sidebar
-  const [sidebarWidth, setSidebarWidth] = useState(384) // 384px = w-96
+  const [sidebarWidth, setSidebarWidth] = useState(384)
   const isResizing = useRef(false)
   const sidebarRef = useRef<HTMLDivElement>(null)
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
-  const selectedConvIdRef = useRef<string | null>(null)
+  const selectedWaConvIdRef = useRef<string | null>(null)
+  const selectedMsConvIdRef = useRef<string | null>(null)
+  const activeChannelRef = useRef<ChatChannel>('whatsapp')
 
   const isDark = theme === 'dark'
   const isLoading = authLoading || permissionsLoading || branchesLoading || !user
 
-  // Determine if user can see all branches (super_admin or has multiple branches)
+  // Determine if user can see all branches
   const canSeeAll = user?.role === 'super_admin' || branches.length > 1
-
-  // Can see unassigned conversations: must have multi-branch access + chat edit permission
   const canSeeUnassigned = canSeeAll && hasPermission('chat', 'can_edit')
 
   // Effective branch filter for API calls
@@ -108,7 +178,25 @@ export default function ChatPage() {
     ? (selectedBranch?.id || (canSeeAll ? 'all' : branches[0]?.id || null))
     : chatBranchFilter
 
-  // Theme sync
+  // ============================================================
+  // Selected conversation (unified accessor)
+  // ============================================================
+  const hasSelectedConversation = activeChannel === 'whatsapp' ? !!selectedWaConv : !!selectedMsConv
+
+  // Keep refs in sync
+  useEffect(() => {
+    selectedWaConvIdRef.current = selectedWaConv?.id || null
+  }, [selectedWaConv])
+  useEffect(() => {
+    selectedMsConvIdRef.current = selectedMsConv?.id || null
+  }, [selectedMsConv])
+  useEffect(() => {
+    activeChannelRef.current = activeChannel
+  }, [activeChannel])
+
+  // ============================================================
+  // Theme & sidebar width sync
+  // ============================================================
   useEffect(() => {
     const saved = localStorage.getItem('admin_theme') as 'light' | 'dark' | null
     if (saved) setTheme(saved)
@@ -122,7 +210,7 @@ export default function ChatPage() {
     return () => window.removeEventListener('storage', handler)
   }, [])
 
-  // Sidebar resize handlers — direct DOM manipulation during drag for performance
+  // Sidebar resize handlers
   const handleResizeStart = useCallback((e: React.MouseEvent) => {
     e.preventDefault()
     isResizing.current = true
@@ -134,7 +222,6 @@ export default function ChatPage() {
       if (!isResizing.current) return
       const newWidth = Math.max(280, Math.min(600, e.clientX))
       lastWidth = newWidth
-      // Direct DOM update — no React re-render during drag
       if (sidebarRef.current) {
         sidebarRef.current.style.width = `${newWidth}px`
       }
@@ -144,7 +231,6 @@ export default function ChatPage() {
       isResizing.current = false
       document.body.style.cursor = ''
       document.body.style.userSelect = ''
-      // Single React state update + persist
       setSidebarWidth(lastWidth)
       localStorage.setItem('chat_sidebar_width', String(lastWidth))
       document.removeEventListener('mousemove', handleMouseMove)
@@ -166,8 +252,10 @@ export default function ChatPage() {
     router.push('/admin/login')
   }
 
-  // Fetch conversations
-  const fetchConversations = useCallback(async () => {
+  // ============================================================
+  // WhatsApp: Fetch conversations
+  // ============================================================
+  const fetchWaConversations = useCallback(async () => {
     try {
       const params = new URLSearchParams({ status: 'active' })
       if (effectiveBranchId && effectiveBranchId !== 'all') {
@@ -175,114 +263,183 @@ export default function ChatPage() {
       } else if (effectiveBranchId === 'all') {
         params.set('branchId', 'all')
       }
-      if (searchQuery) params.set('search', searchQuery)
+      if (searchQuery && activeChannelRef.current === 'whatsapp') params.set('search', searchQuery)
 
       const res = await fetch(`/api/chat/conversations?${params}`)
       const data = await res.json()
       if (data.conversations) {
-        setConversations(data.conversations)
+        setWaConversations(data.conversations)
       }
     } catch (error) {
-      console.error('Error fetching conversations:', error)
+      console.error('Error fetching WA conversations:', error)
     } finally {
-      setLoading(false)
+      setWaLoading(false)
     }
   }, [effectiveBranchId, searchQuery])
 
-  useEffect(() => {
-    if (!isLoading) fetchConversations()
-  }, [fetchConversations, isLoading])
-
-  // Track selected conversation for realtime
-  useEffect(() => {
-    selectedConvIdRef.current = selectedConversation?.id || null
-  }, [selectedConversation])
-
-  // Fetch messages for a conversation
-  const fetchMessages = useCallback(async (conversationId: string, silent = false) => {
-    if (!silent) setLoadingMessages(true)
+  // WhatsApp: Fetch messages
+  const fetchWaMessages = useCallback(async (conversationId: string, silent = false) => {
+    if (!silent) setWaLoadingMessages(true)
     try {
       const res = await fetch(`/api/chat/messages?conversationId=${conversationId}`)
       const data = await res.json()
       if (data.messages) {
-        setMessages(data.messages)
+        setWaMessages(data.messages)
       }
     } catch (error) {
-      console.error('Error fetching messages:', error)
+      console.error('Error fetching WA messages:', error)
     } finally {
-      setLoadingMessages(false)
+      setWaLoadingMessages(false)
     }
   }, [])
 
   // ============================================================
-  // Supabase Realtime: listen for changes instead of polling
+  // Messenger: Fetch conversations
   // ============================================================
-  const handleConversationChange = useCallback(() => {
-    fetchConversations()
-  }, [fetchConversations])
+  const fetchMsConversations = useCallback(async () => {
+    try {
+      const params = new URLSearchParams()
+      // When showArchived, show all statuses; otherwise only active
+      if (showArchived) {
+        params.set('status', 'all')
+      } else {
+        params.set('status', 'active')
+      }
+      if (effectiveBranchId && effectiveBranchId !== 'all') {
+        params.set('branchId', effectiveBranchId)
+      } else if (effectiveBranchId === 'all') {
+        params.set('branchId', 'all')
+      }
+      if (searchQuery && activeChannelRef.current === 'site') params.set('search', searchQuery)
 
-  const handleMessageChange = useCallback(() => {
-    // Refresh conversations list (for unread count, last_message_at, etc.)
-    fetchConversations()
-    // Refresh messages if viewing a conversation
-    if (selectedConvIdRef.current) {
-      fetchMessages(selectedConvIdRef.current, true)
+      const res = await fetch(`/api/chat/messenger-conversations?${params}`)
+      const data = await res.json()
+      if (data.conversations) {
+        setMsConversations(data.conversations)
+      }
+    } catch (error) {
+      console.error('Error fetching messenger conversations:', error)
+    } finally {
+      setMsLoading(false)
     }
-  }, [fetchConversations, fetchMessages])
+  }, [effectiveBranchId, searchQuery, showArchived])
 
-  // Subscribe to whatsapp_conversations changes
-  useRealtimeSubscription(
-    {
-      table: 'whatsapp_conversations',
-      onChange: handleConversationChange,
-    },
-    !isLoading
-  )
+  // Messenger: Fetch messages
+  const fetchMsMessages = useCallback(async (conversationId: string, silent = false) => {
+    if (!silent) setMsLoadingMessages(true)
+    try {
+      const res = await fetch(`/api/chat/messenger-messages?conversationId=${conversationId}`)
+      const data = await res.json()
+      if (data.messages) {
+        setMsMessages(data.messages)
+      }
+    } catch (error) {
+      console.error('Error fetching messenger messages:', error)
+    } finally {
+      setMsLoadingMessages(false)
+    }
+  }, [])
 
-  // Subscribe to whatsapp_messages changes (new inbound/outbound messages)
-  useRealtimeSubscription(
-    {
-      table: 'whatsapp_messages',
-      onChange: handleMessageChange,
-    },
-    !isLoading
-  )
+  // ============================================================
+  // Initial data load
+  // ============================================================
+  useEffect(() => {
+    if (!isLoading) {
+      fetchWaConversations()
+      fetchMsConversations()
+    }
+  }, [fetchWaConversations, fetchMsConversations, isLoading])
+
+  // ============================================================
+  // Supabase Realtime
+  // ============================================================
+  const handleWaConversationChange = useCallback(() => {
+    fetchWaConversations()
+    // Notify if not on whatsapp tab
+    if (activeChannelRef.current !== 'whatsapp') {
+      setWaHasNew(true)
+    }
+  }, [fetchWaConversations])
+
+  const handleWaMessageChange = useCallback(() => {
+    fetchWaConversations()
+    if (selectedWaConvIdRef.current) {
+      fetchWaMessages(selectedWaConvIdRef.current, true)
+    }
+    if (activeChannelRef.current !== 'whatsapp') {
+      setWaHasNew(true)
+    }
+  }, [fetchWaConversations, fetchWaMessages])
+
+  const handleMsConversationChange = useCallback(() => {
+    fetchMsConversations()
+    if (activeChannelRef.current !== 'site') {
+      setMsHasNew(true)
+    }
+  }, [fetchMsConversations])
+
+  const handleMsMessageChange = useCallback(() => {
+    fetchMsConversations()
+    if (selectedMsConvIdRef.current) {
+      fetchMsMessages(selectedMsConvIdRef.current, true)
+    }
+    if (activeChannelRef.current !== 'site') {
+      setMsHasNew(true)
+    }
+  }, [fetchMsConversations, fetchMsMessages])
+
+  useRealtimeSubscription({ table: 'whatsapp_conversations', onChange: handleWaConversationChange }, !isLoading)
+  useRealtimeSubscription({ table: 'whatsapp_messages', onChange: handleWaMessageChange }, !isLoading)
+  useRealtimeSubscription({ table: 'messenger_conversations', onChange: handleMsConversationChange }, !isLoading)
+  useRealtimeSubscription({ table: 'messenger_messages', onChange: handleMsMessageChange }, !isLoading)
 
   // Scroll to bottom on new messages
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages])
+  }, [waMessages, msMessages])
 
-  // Select a conversation
-  const handleSelectConversation = (conv: WhatsAppConversation) => {
-    setSelectedConversation(conv)
-    fetchMessages(conv.id)
-    // Mark as read in UI immediately
-    setConversations(prev => prev.map(c => c.id === conv.id ? { ...c, unread_count: 0 } : c))
-    // Mark as read in DB
+  // ============================================================
+  // Clear notification when switching tabs
+  // ============================================================
+  const handleSwitchChannel = (channel: ChatChannel) => {
+    setActiveChannel(channel)
+    setSearchQuery('')
+    if (channel === 'whatsapp') {
+      setWaHasNew(false)
+      setSelectedMsConv(null)
+    } else {
+      setMsHasNew(false)
+      setSelectedWaConv(null)
+    }
+  }
+
+  // ============================================================
+  // WhatsApp actions
+  // ============================================================
+  const handleSelectWaConversation = (conv: WhatsAppConversation) => {
+    setSelectedWaConv(conv)
+    fetchWaMessages(conv.id)
+    setWaConversations(prev => prev.map(c => c.id === conv.id ? { ...c, unread_count: 0 } : c))
     fetch(`/api/chat/conversations/${conv.id}/read`, { method: 'POST' }).catch(() => {})
   }
 
-  // Send message
   const handleSendMessage = async () => {
-    if (!newMessage.trim() || !selectedConversation || sending) return
-
+    if (!newMessage.trim() || !selectedWaConv || sending) return
     setSending(true)
     try {
       const res = await fetch('/api/chat/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          conversationId: selectedConversation.id,
+          conversationId: selectedWaConv.id,
           message: newMessage.trim(),
           userId: user?.id || null,
         }),
       })
-
       const data = await res.json()
       if (data.success) {
         setNewMessage('')
-        fetchMessages(selectedConversation.id, true)
+        fetchWaMessages(selectedWaConv.id, true)
         inputRef.current?.focus()
       }
     } catch (error) {
@@ -292,46 +449,64 @@ export default function ChatPage() {
     }
   }
 
-  // Handle contact created from quick modal → link to conversation
   const handleContactCreated = async (contact: Contact) => {
-    if (!selectedConversation) return
-
+    if (!selectedWaConv) return
     try {
-      const res = await fetch(`/api/chat/conversations/${selectedConversation.id}/link-contact`, {
+      const res = await fetch(`/api/chat/conversations/${selectedWaConv.id}/link-contact`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ contactId: contact.id }),
       })
-
       const data = await res.json()
       if (data.success && data.conversation) {
-        // Update the selected conversation with the linked contact data
-        setSelectedConversation(data.conversation)
-        // Update in the list too
-        setConversations(prev =>
-          prev.map(c => c.id === data.conversation.id ? data.conversation : c)
-        )
+        setSelectedWaConv(data.conversation)
+        setWaConversations(prev => prev.map(c => c.id === data.conversation.id ? data.conversation : c))
       }
     } catch (error) {
       console.error('Error linking contact:', error)
     }
-
-    // Refresh all conversations
-    fetchConversations()
+    fetchWaConversations()
   }
 
-  // Format phone display - add + prefix for international numbers
-  const formatPhone = (phone: string) => {
-    // Already has + prefix
-    if (phone.startsWith('+')) return phone
-    // International numbers (country code): add +
-    if (/^\d{10,15}$/.test(phone) && !phone.startsWith('0')) {
-      return '+' + phone
+  // ============================================================
+  // Messenger actions
+  // ============================================================
+  const handleSelectMsConversation = (conv: MessengerConversation) => {
+    setSelectedMsConv(conv)
+    fetchMsMessages(conv.id)
+  }
+
+  const handleCloseMsConversation = async () => {
+    if (!selectedMsConv || closingConversation) return
+    if (!confirm(t('admin.chat.close_confirm') || 'Close this conversation? It will be archived.')) return
+    setClosingConversation(true)
+    try {
+      const res = await fetch('/api/chat/messenger-conversations/close', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ conversationId: selectedMsConv.id }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        setSelectedMsConv(null)
+        fetchMsConversations()
+      }
+    } catch (error) {
+      console.error('Error closing conversation:', error)
+    } finally {
+      setClosingConversation(false)
     }
+  }
+
+  // ============================================================
+  // Helpers
+  // ============================================================
+  const formatPhone = (phone: string) => {
+    if (phone.startsWith('+')) return phone
+    if (/^\d{10,15}$/.test(phone) && !phone.startsWith('0')) return '+' + phone
     return phone
   }
 
-  // Format time
   const formatTime = (dateStr: string) => {
     const d = new Date(dateStr)
     return d.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })
@@ -343,28 +518,38 @@ export default function ChatPage() {
     const now = new Date()
     const diff = now.getTime() - d.getTime()
     const days = Math.floor(diff / (1000 * 60 * 60 * 24))
-
     if (days === 0) return formatTime(dateStr)
     if (days === 1) return t('admin.chat.yesterday') || 'Yesterday'
     if (days < 7) return d.toLocaleDateString('he-IL', { weekday: 'short' })
     return d.toLocaleDateString('he-IL', { day: '2-digit', month: '2-digit' })
   }
 
-  const getContactDisplayName = (conv: WhatsAppConversation) => {
+  const getWaDisplayName = (conv: WhatsAppConversation) => {
     if (conv.contacts?.first_name || conv.contacts?.last_name) {
       return `${conv.contacts.first_name || ''} ${conv.contacts.last_name || ''}`.trim()
     }
     return conv.contact_name || formatPhone(conv.phone)
   }
 
-  const getBranchDisplayName = (conv: WhatsAppConversation) => {
-    if (!conv.branch) return null
-    if (locale === 'en' && conv.branch.name_en) return conv.branch.name_en
-    return conv.branch.name
+  const getMsDisplayName = (conv: MessengerConversation) => {
+    if (conv.contacts?.first_name || conv.contacts?.last_name) {
+      return `${conv.contacts.first_name || ''} ${conv.contacts.last_name || ''}`.trim()
+    }
+    // Use collected_data name fields if available
+    const data = conv.collected_data || {}
+    const name = (data.name as string) || (data.first_name as string)
+    if (name) return name
+    return `${t('admin.chat.site_visitor') || 'Visitor'} #${conv.session_id.slice(-6)}`
   }
 
-  // Total unread
-  const totalUnread = conversations.reduce((sum, c) => sum + (c.unread_count || 0), 0)
+  const getBranchDisplayName = (branch?: { id: string; name: string; name_en: string | null } | null) => {
+    if (!branch) return null
+    if (locale === 'en' && branch.name_en) return branch.name_en
+    return branch.name
+  }
+
+  // Total unread (WhatsApp only — messenger has no unread concept)
+  const totalWaUnread = waConversations.reduce((sum, c) => sum + (c.unread_count || 0), 0)
 
   // Loading state
   if (isLoading) {
@@ -394,174 +579,292 @@ export default function ChatPage() {
           style={{ width: sidebarWidth }}
           className={`max-md:!w-full md:flex-shrink-0 flex flex-col border-r ${
             isDark ? 'border-gray-700 bg-gray-900' : 'border-gray-200 bg-white'
-          } ${selectedConversation ? 'hidden md:flex' : 'flex'}`}
+          } ${hasSelectedConversation ? 'hidden md:flex' : 'flex'}`}
         >
-          {/* Header */}
-          <div className={`p-4 border-b ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <MessageCircle className="w-5 h-5 text-green-500" />
-                <h1 className={`text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                  {t('admin.header.chat')}
-                </h1>
-                {totalUnread > 0 && (
-                  <span className="bg-green-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
-                    {totalUnread}
+          {/* Header with channel tabs */}
+          <div className={`border-b ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
+            {/* Channel tabs */}
+            <div className="flex">
+              <button
+                onClick={() => handleSwitchChannel('whatsapp')}
+                className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium transition-colors relative ${
+                  activeChannel === 'whatsapp'
+                    ? isDark ? 'text-green-400 border-b-2 border-green-400' : 'text-green-600 border-b-2 border-green-600'
+                    : isDark ? 'text-gray-500 hover:text-gray-300' : 'text-gray-400 hover:text-gray-600'
+                }`}
+              >
+                <MessageCircle className="w-4 h-4" />
+                WhatsApp
+                {totalWaUnread > 0 && activeChannel === 'whatsapp' && (
+                  <span className="bg-green-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                    {totalWaUnread}
                   </span>
                 )}
-              </div>
+                {waHasNew && activeChannel !== 'whatsapp' && (
+                  <span className="absolute top-2 right-[calc(50%-30px)] w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse" />
+                )}
+              </button>
+              <button
+                onClick={() => handleSwitchChannel('site')}
+                className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium transition-colors relative ${
+                  activeChannel === 'site'
+                    ? isDark ? 'text-blue-400 border-b-2 border-blue-400' : 'text-blue-600 border-b-2 border-blue-600'
+                    : isDark ? 'text-gray-500 hover:text-gray-300' : 'text-gray-400 hover:text-gray-600'
+                }`}
+              >
+                <Globe className="w-4 h-4" />
+                Site
+                {msHasNew && activeChannel !== 'site' && (
+                  <span className="absolute top-2 right-[calc(50%-20px)] w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse" />
+                )}
+              </button>
             </div>
 
-            {/* Branch filter */}
-            {canSeeAll && branches.length > 0 && (
-              <div className="mb-3">
-                <div className="flex items-center gap-1 flex-wrap">
-                  <button
-                    onClick={() => setChatBranchFilter(chatBranchFilter === 'all' ? 'inherit' : 'all')}
-                    className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors flex items-center gap-1 ${
-                      effectiveBranchId === 'all'
-                        ? 'bg-green-600 text-white'
-                        : isDark
-                          ? 'bg-gray-800 text-gray-400 hover:bg-gray-700'
-                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                    }`}
-                  >
-                    <Filter className="w-3 h-3" />
-                    {t('admin.chat.all_branches') || 'All'}
-                  </button>
-                  {branches.map((branch) => (
+            {/* Branch filter + search (shared) */}
+            <div className="p-4 pt-3">
+              {canSeeAll && branches.length > 0 && (
+                <div className="mb-3">
+                  <div className="flex items-center gap-1 flex-wrap">
                     <button
-                      key={branch.id}
-                      onClick={() => setChatBranchFilter(
-                        chatBranchFilter === branch.id ? 'inherit' : branch.id
-                      )}
-                      className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors flex items-center gap-1.5 ${
-                        effectiveBranchId === branch.id
-                          ? `${getBranchColor(branch.id, branches)} text-white`
-                          : isDark
-                            ? 'bg-gray-800 text-gray-400 hover:bg-gray-700'
-                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                      }`}
-                    >
-                      <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${
-                        effectiveBranchId === branch.id
-                          ? 'bg-white/40'
-                          : getBranchColor(branch.id, branches)
-                      }`} />
-                      {locale === 'en' && branch.name_en ? branch.name_en : branch.name}
-                    </button>
-                  ))}
-                  {/* Unassigned filter - only for users with chat edit permission */}
-                  {canSeeUnassigned && (
-                    <button
-                      onClick={() => setChatBranchFilter(
-                        chatBranchFilter === 'unassigned' ? 'inherit' : 'unassigned'
-                      )}
+                      onClick={() => setChatBranchFilter(chatBranchFilter === 'all' ? 'inherit' : 'all')}
                       className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors flex items-center gap-1 ${
-                        effectiveBranchId === 'unassigned'
-                          ? isDark
-                            ? 'bg-gray-600 text-white'
-                            : 'bg-gray-500 text-white'
+                        effectiveBranchId === 'all'
+                          ? 'bg-green-600 text-white'
                           : isDark
                             ? 'bg-gray-800 text-gray-400 hover:bg-gray-700'
                             : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                       }`}
                     >
                       <Filter className="w-3 h-3" />
-                      {t('admin.chat.unassigned') || 'Unassigned'}
+                      {t('admin.chat.all_branches') || 'All'}
                     </button>
-                  )}
+                    {branches.map((branch) => (
+                      <button
+                        key={branch.id}
+                        onClick={() => setChatBranchFilter(
+                          chatBranchFilter === branch.id ? 'inherit' : branch.id
+                        )}
+                        className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors flex items-center gap-1.5 ${
+                          effectiveBranchId === branch.id
+                            ? `${getBranchColor(branch.id, branches)} text-white`
+                            : isDark
+                              ? 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        }`}
+                      >
+                        <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${
+                          effectiveBranchId === branch.id
+                            ? 'bg-white/40'
+                            : getBranchColor(branch.id, branches)
+                        }`} />
+                        {locale === 'en' && branch.name_en ? branch.name_en : branch.name}
+                      </button>
+                    ))}
+                    {canSeeUnassigned && (
+                      <button
+                        onClick={() => setChatBranchFilter(
+                          chatBranchFilter === 'unassigned' ? 'inherit' : 'unassigned'
+                        )}
+                        className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors flex items-center gap-1 ${
+                          effectiveBranchId === 'unassigned'
+                            ? isDark ? 'bg-gray-600 text-white' : 'bg-gray-500 text-white'
+                            : isDark
+                              ? 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        }`}
+                      >
+                        <Filter className="w-3 h-3" />
+                        {t('admin.chat.unassigned') || 'Unassigned'}
+                      </button>
+                    )}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {/* Search */}
-            <div className="relative">
-              <Search className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${isDark ? 'text-gray-500' : 'text-gray-400'}`} />
-              <input
-                type="text"
-                placeholder={t('admin.chat.search_placeholder') || 'Search...'}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className={`w-full pl-10 pr-4 py-2 rounded-lg text-sm ${
-                  isDark
-                    ? 'bg-gray-800 text-white placeholder-gray-500 border-gray-700'
-                    : 'bg-gray-100 text-gray-900 placeholder-gray-400 border-gray-200'
-                } border focus:outline-none focus:ring-2 focus:ring-green-500/50`}
-              />
+              {/* Search */}
+              <div className="relative">
+                <Search className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${isDark ? 'text-gray-500' : 'text-gray-400'}`} />
+                <input
+                  type="text"
+                  placeholder={t('admin.chat.search_placeholder') || 'Search...'}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className={`w-full pl-10 pr-4 py-2 rounded-lg text-sm ${
+                    isDark
+                      ? 'bg-gray-800 text-white placeholder-gray-500 border-gray-700'
+                      : 'bg-gray-100 text-gray-900 placeholder-gray-400 border-gray-200'
+                  } border focus:outline-none focus:ring-2 focus:ring-green-500/50`}
+                />
+              </div>
             </div>
           </div>
 
           {/* Conversation list */}
           <div className="flex-1 overflow-y-auto">
-            {loading ? (
-              <div className="flex items-center justify-center py-12">
-                <Loader2 className={`w-6 h-6 animate-spin ${isDark ? 'text-gray-500' : 'text-gray-400'}`} />
-              </div>
-            ) : conversations.length === 0 ? (
-              <div className={`text-center py-12 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
-                <MessageCircle className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                <p>{t('admin.chat.no_conversations') || 'No conversations yet'}</p>
-              </div>
-            ) : (
-              conversations.map((conv) => (
-                <button
-                  key={conv.id}
-                  onClick={() => handleSelectConversation(conv)}
-                  className={`w-full p-4 flex items-center gap-3 transition-colors border-b ${
-                    selectedConversation?.id === conv.id
-                      ? isDark ? 'bg-gray-800 border-gray-700' : 'bg-green-50 border-gray-100'
-                      : isDark ? 'hover:bg-gray-800/50 border-gray-800' : 'hover:bg-gray-50 border-gray-100'
-                  }`}
-                >
-                  {/* Avatar */}
-                  <div className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 ${
-                    conv.contact_id
-                      ? 'bg-green-600'
-                      : isDark ? 'bg-gray-700' : 'bg-gray-300'
-                  }`}>
-                    <User className="w-6 h-6 text-white" />
-                  </div>
-
-                  {/* Info */}
-                  <div className="flex-1 min-w-0 text-left">
-                    <div className="flex items-center justify-between">
-                      <span className={`font-medium truncate ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                        {getContactDisplayName(conv)}
-                      </span>
-                      <span className={`text-xs flex-shrink-0 ml-2 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
-                        {formatDate(conv.last_message_at)}
-                      </span>
+            {activeChannel === 'whatsapp' ? (
+              // ============================================================
+              // WhatsApp conversation list
+              // ============================================================
+              waLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className={`w-6 h-6 animate-spin ${isDark ? 'text-gray-500' : 'text-gray-400'}`} />
+                </div>
+              ) : waConversations.length === 0 ? (
+                <div className={`text-center py-12 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                  <MessageCircle className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                  <p>{t('admin.chat.no_conversations') || 'No conversations yet'}</p>
+                </div>
+              ) : (
+                waConversations.map((conv) => (
+                  <button
+                    key={conv.id}
+                    onClick={() => handleSelectWaConversation(conv)}
+                    className={`w-full p-4 flex items-center gap-3 transition-colors border-b ${
+                      selectedWaConv?.id === conv.id
+                        ? isDark ? 'bg-gray-800 border-gray-700' : 'bg-green-50 border-gray-100'
+                        : isDark ? 'hover:bg-gray-800/50 border-gray-800' : 'hover:bg-gray-50 border-gray-100'
+                    }`}
+                  >
+                    <div className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 ${
+                      conv.contact_id ? 'bg-green-600' : isDark ? 'bg-gray-700' : 'bg-gray-300'
+                    }`}>
+                      <User className="w-6 h-6 text-white" />
                     </div>
-                    <div className="flex items-center justify-between mt-0.5">
-                      <div className="flex items-center gap-1.5 min-w-0">
-                        <span className={`text-sm truncate ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                          {formatPhone(conv.phone)}
+                    <div className="flex-1 min-w-0 text-left">
+                      <div className="flex items-center justify-between">
+                        <span className={`font-medium truncate ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                          {getWaDisplayName(conv)}
                         </span>
-                        {/* Branch color dot */}
-                        {conv.branch_id && (
-                          <span
-                            className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${getBranchColor(conv.branch_id, branches)}`}
-                            title={getBranchDisplayName(conv) || ''}
-                          />
-                        )}
-                        {!conv.branch_id && !conv.contact_id && (
-                          <span className={`text-[10px] px-1.5 py-0.5 rounded-full flex-shrink-0 ${
-                            isDark ? 'bg-gray-700 text-gray-400' : 'bg-gray-200 text-gray-500'
-                          }`}>
-                            {t('admin.chat.new_contact') || 'New'}
+                        <span className={`text-xs flex-shrink-0 ml-2 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                          {formatDate(conv.last_message_at)}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between mt-0.5">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <span className={`text-sm truncate ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                            {formatPhone(conv.phone)}
+                          </span>
+                          {conv.branch_id && (
+                            <span
+                              className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${getBranchColor(conv.branch_id, branches)}`}
+                              title={getBranchDisplayName(conv.branch) || ''}
+                            />
+                          )}
+                          {!conv.branch_id && !conv.contact_id && (
+                            <span className={`text-[10px] px-1.5 py-0.5 rounded-full flex-shrink-0 ${
+                              isDark ? 'bg-gray-700 text-gray-400' : 'bg-gray-200 text-gray-500'
+                            }`}>
+                              {t('admin.chat.new_contact') || 'New'}
+                            </span>
+                          )}
+                        </div>
+                        {conv.unread_count > 0 && (
+                          <span className="bg-green-500 text-white text-xs font-bold min-w-[20px] h-5 px-1.5 rounded-full flex items-center justify-center flex-shrink-0 ml-2">
+                            {conv.unread_count}
                           </span>
                         )}
                       </div>
-                      {conv.unread_count > 0 && (
-                        <span className="bg-green-500 text-white text-xs font-bold min-w-[20px] h-5 px-1.5 rounded-full flex items-center justify-center flex-shrink-0 ml-2">
-                          {conv.unread_count}
-                        </span>
-                      )}
                     </div>
+                  </button>
+                ))
+              )
+            ) : (
+              // ============================================================
+              // Messenger (Site) conversation list
+              // ============================================================
+              <>
+                {/* Archive toggle */}
+                <div className={`px-4 py-2 border-b flex items-center justify-between ${
+                  isDark ? 'border-gray-800' : 'border-gray-100'
+                }`}>
+                  <button
+                    onClick={() => setShowArchived(!showArchived)}
+                    className={`text-xs flex items-center gap-1.5 transition-colors ${
+                      showArchived
+                        ? 'text-blue-400'
+                        : isDark ? 'text-gray-500 hover:text-gray-400' : 'text-gray-400 hover:text-gray-600'
+                    }`}
+                  >
+                    <Archive className="w-3.5 h-3.5" />
+                    {showArchived
+                      ? t('admin.chat.hide_archived') || 'Hide archived'
+                      : t('admin.chat.show_archived') || 'Show archived'}
+                  </button>
+                </div>
+                {msLoading ? (
+                  <div className="flex items-center justify-center py-12">
+                    <Loader2 className={`w-6 h-6 animate-spin ${isDark ? 'text-gray-500' : 'text-gray-400'}`} />
                   </div>
-                </button>
-              ))
+                ) : msConversations.length === 0 ? (
+                  <div className={`text-center py-12 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                    <Globe className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                    <p>{t('admin.chat.no_site_conversations') || 'No site conversations yet'}</p>
+                  </div>
+                ) : (
+                msConversations.map((conv) => (
+                  <button
+                    key={conv.id}
+                    onClick={() => handleSelectMsConversation(conv)}
+                    className={`w-full p-4 flex items-center gap-3 transition-colors border-b ${
+                      selectedMsConv?.id === conv.id
+                        ? isDark ? 'bg-gray-800 border-gray-700' : 'bg-blue-50 border-gray-100'
+                        : isDark ? 'hover:bg-gray-800/50 border-gray-800' : 'hover:bg-gray-50 border-gray-100'
+                    }`}
+                  >
+                    <div className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 ${
+                      conv.contact_id ? 'bg-blue-600' : isDark ? 'bg-gray-700' : 'bg-gray-300'
+                    }`}>
+                      <Globe className="w-6 h-6 text-white" />
+                    </div>
+                    <div className="flex-1 min-w-0 text-left">
+                      <div className="flex items-center justify-between">
+                        <span className={`font-medium truncate ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                          {getMsDisplayName(conv)}
+                        </span>
+                        <span className={`text-xs flex-shrink-0 ml-2 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                          {formatDate(conv.last_activity_at)}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between mt-0.5">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <span className={`text-sm truncate ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                            {conv.last_message
+                              ? conv.last_message.slice(0, 40) + (conv.last_message.length > 40 ? '...' : '')
+                              : t('admin.chat.no_messages') || 'No messages'}
+                          </span>
+                          {conv.branch_id && (
+                            <span
+                              className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${getBranchColor(conv.branch_id, branches)}`}
+                              title={getBranchDisplayName(conv.branch) || ''}
+                            />
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1.5 flex-shrink-0 ml-2">
+                          {/* Status badge */}
+                          <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
+                            conv.status === 'active'
+                              ? 'bg-green-500/20 text-green-400'
+                              : conv.status === 'completed'
+                                ? isDark ? 'bg-gray-700 text-gray-400' : 'bg-gray-200 text-gray-500'
+                                : 'bg-red-500/20 text-red-400'
+                          }`}>
+                            {conv.status === 'active'
+                              ? t('admin.chat.site_active') || 'Active'
+                              : conv.status === 'completed'
+                                ? t('admin.chat.site_completed') || 'Done'
+                                : t('admin.chat.site_abandoned') || 'Left'}
+                          </span>
+                          {/* Message count */}
+                          <span className={`text-[10px] ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                            {conv.message_count} msg
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </button>
+                ))
+              )}
+              </>
             )}
           </div>
         </div>
@@ -580,53 +883,55 @@ export default function ChatPage() {
 
         {/* Right panel - Chat view */}
         <div className={`flex-1 flex flex-col min-w-0 ${
-          !selectedConversation ? 'hidden md:flex' : 'flex'
+          !hasSelectedConversation ? 'hidden md:flex' : 'flex'
         }`}>
-          {!selectedConversation ? (
-            // Empty state
+          {!hasSelectedConversation ? (
             <div className={`flex-1 flex items-center justify-center ${isDark ? 'text-gray-600' : 'text-gray-300'}`}>
               <div className="text-center">
-                <MessageCircle className="w-16 h-16 mx-auto mb-4 opacity-30" />
+                {activeChannel === 'whatsapp' ? (
+                  <MessageCircle className="w-16 h-16 mx-auto mb-4 opacity-30" />
+                ) : (
+                  <Globe className="w-16 h-16 mx-auto mb-4 opacity-30" />
+                )}
                 <p className="text-lg">{t('admin.chat.select_conversation') || 'Select a conversation'}</p>
               </div>
             </div>
-          ) : (
+          ) : activeChannel === 'whatsapp' && selectedWaConv ? (
+            // ============================================================
+            // WhatsApp chat view
+            // ============================================================
             <>
               {/* Chat header */}
               <div className={`p-4 border-b flex items-center gap-3 ${
                 isDark ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-white'
               }`}>
-                {/* Back button (mobile) */}
                 <button
-                  onClick={() => setSelectedConversation(null)}
+                  onClick={() => setSelectedWaConv(null)}
                   className={`md:hidden p-1 rounded-lg ${isDark ? 'text-gray-400' : 'text-gray-500'}`}
                 >
                   <ArrowLeft className="w-5 h-5" />
                 </button>
-
                 <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                  selectedConversation.contact_id ? 'bg-green-600' : isDark ? 'bg-gray-700' : 'bg-gray-300'
+                  selectedWaConv.contact_id ? 'bg-green-600' : isDark ? 'bg-gray-700' : 'bg-gray-300'
                 }`}>
                   <User className="w-5 h-5 text-white" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className={`font-medium truncate ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                    {getContactDisplayName(selectedConversation)}
+                    {getWaDisplayName(selectedWaConv)}
                   </div>
                   <div className={`text-sm flex items-center gap-2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
                     <Phone className="w-3 h-3" />
-                    {formatPhone(selectedConversation.phone)}
-                    {selectedConversation.branch_id && (
+                    {formatPhone(selectedWaConv.phone)}
+                    {selectedWaConv.branch_id && (
                       <span
-                        className={`w-2.5 h-2.5 rounded-full ${getBranchColor(selectedConversation.branch_id, branches)}`}
-                        title={getBranchDisplayName(selectedConversation) || ''}
+                        className={`w-2.5 h-2.5 rounded-full ${getBranchColor(selectedWaConv.branch_id, branches)}`}
+                        title={getBranchDisplayName(selectedWaConv.branch) || ''}
                       />
                     )}
                   </div>
                 </div>
-
-                {/* Quick create contact button when no contact linked */}
-                {!selectedConversation.contact_id && (
+                {!selectedWaConv.contact_id && (
                   <button
                     onClick={() => setShowQuickContact(true)}
                     className={`p-2 rounded-lg transition-colors ${
@@ -639,24 +944,19 @@ export default function ChatPage() {
                 )}
               </div>
 
-              {/* Messages area */}
-              <div className={`flex-1 overflow-y-auto p-4 space-y-3 ${
-                isDark ? 'bg-gray-900' : 'bg-gray-50'
-              }`}>
-                {loadingMessages ? (
+              {/* WhatsApp messages */}
+              <div className={`flex-1 overflow-y-auto p-4 space-y-3 ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`}>
+                {waLoadingMessages ? (
                   <div className="flex items-center justify-center py-12">
                     <Loader2 className={`w-6 h-6 animate-spin ${isDark ? 'text-gray-500' : 'text-gray-400'}`} />
                   </div>
-                ) : messages.length === 0 ? (
+                ) : waMessages.length === 0 ? (
                   <div className={`text-center py-12 ${isDark ? 'text-gray-600' : 'text-gray-400'}`}>
                     <p>{t('admin.chat.no_messages') || 'No messages yet'}</p>
                   </div>
                 ) : (
-                  messages.map((msg) => (
-                    <div
-                      key={msg.id}
-                      className={`flex ${msg.direction === 'outbound' ? 'justify-end' : 'justify-start'}`}
-                    >
+                  waMessages.map((msg) => (
+                    <div key={msg.id} className={`flex ${msg.direction === 'outbound' ? 'justify-end' : 'justify-start'}`}>
                       <div className={`max-w-[75%] rounded-2xl px-4 py-2.5 ${
                         msg.direction === 'outbound'
                           ? 'bg-green-600 text-white rounded-br-md'
@@ -714,27 +1014,142 @@ export default function ChatPage() {
                         : isDark ? 'bg-gray-700 text-gray-500' : 'bg-gray-200 text-gray-400'
                     }`}
                   >
-                    {sending ? (
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                    ) : (
-                      <Send className="w-5 h-5" />
-                    )}
+                    {sending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
                   </button>
                 </div>
               </div>
             </>
-          )}
+          ) : activeChannel === 'site' && selectedMsConv ? (
+            // ============================================================
+            // Messenger (Site) chat view
+            // ============================================================
+            <>
+              {/* Chat header */}
+              <div className={`p-4 border-b flex items-center gap-3 ${
+                isDark ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-white'
+              }`}>
+                <button
+                  onClick={() => setSelectedMsConv(null)}
+                  className={`md:hidden p-1 rounded-lg ${isDark ? 'text-gray-400' : 'text-gray-500'}`}
+                >
+                  <ArrowLeft className="w-5 h-5" />
+                </button>
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                  selectedMsConv.contact_id ? 'bg-blue-600' : isDark ? 'bg-gray-700' : 'bg-gray-300'
+                }`}>
+                  <Globe className="w-5 h-5 text-white" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className={`font-medium truncate ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                    {getMsDisplayName(selectedMsConv)}
+                  </div>
+                  <div className={`text-sm flex items-center gap-2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                    <Globe className="w-3 h-3" />
+                    {t('admin.chat.site_conversation') || 'Site conversation'}
+                    {selectedMsConv.branch_id && (
+                      <span
+                        className={`w-2.5 h-2.5 rounded-full ${getBranchColor(selectedMsConv.branch_id, branches)}`}
+                        title={getBranchDisplayName(selectedMsConv.branch) || ''}
+                      />
+                    )}
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
+                      selectedMsConv.status === 'active'
+                        ? 'bg-green-500/20 text-green-400'
+                        : selectedMsConv.status === 'completed'
+                          ? isDark ? 'bg-gray-700 text-gray-400' : 'bg-gray-200 text-gray-500'
+                          : 'bg-red-500/20 text-red-400'
+                    }`}>
+                      {selectedMsConv.status === 'active'
+                        ? t('admin.chat.site_active') || 'Active'
+                        : selectedMsConv.status === 'completed'
+                          ? t('admin.chat.site_completed') || 'Done'
+                          : t('admin.chat.site_abandoned') || 'Left'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Close conversation button (only for active conversations) */}
+                {selectedMsConv.status === 'active' && (
+                  <button
+                    onClick={handleCloseMsConversation}
+                    disabled={closingConversation}
+                    className={`p-2 rounded-lg transition-colors ${
+                      isDark ? 'hover:bg-gray-700 text-red-400' : 'hover:bg-gray-100 text-red-500'
+                    } disabled:opacity-50`}
+                    title={t('admin.chat.close_conversation') || 'Close conversation'}
+                  >
+                    {closingConversation ? (
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                    ) : (
+                      <X className="w-5 h-5" />
+                    )}
+                  </button>
+                )}
+              </div>
+
+              {/* Messenger messages */}
+              <div className={`flex-1 overflow-y-auto p-4 space-y-3 ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`}>
+                {msLoadingMessages ? (
+                  <div className="flex items-center justify-center py-12">
+                    <Loader2 className={`w-6 h-6 animate-spin ${isDark ? 'text-gray-500' : 'text-gray-400'}`} />
+                  </div>
+                ) : msMessages.length === 0 ? (
+                  <div className={`text-center py-12 ${isDark ? 'text-gray-600' : 'text-gray-400'}`}>
+                    <p>{t('admin.chat.no_messages') || 'No messages yet'}</p>
+                  </div>
+                ) : (
+                  msMessages.map((msg) => {
+                    if (msg.role === 'system') return null
+                    const isAssistant = msg.role === 'assistant'
+                    return (
+                      <div key={msg.id} className={`flex ${isAssistant ? 'justify-start' : 'justify-end'}`}>
+                        {isAssistant && (
+                          <div className="w-7 h-7 rounded-full bg-blue-600 flex items-center justify-center flex-shrink-0 mr-2 mt-1">
+                            <Bot className="w-3.5 h-3.5 text-white" />
+                          </div>
+                        )}
+                        <div className={`max-w-[75%] rounded-2xl px-4 py-2.5 ${
+                          isAssistant
+                            ? isDark
+                              ? 'bg-gray-800 text-white rounded-bl-md'
+                              : 'bg-white text-gray-900 rounded-bl-md shadow-sm'
+                            : 'bg-blue-600 text-white rounded-br-md'
+                        }`}>
+                          <p className="text-sm whitespace-pre-wrap break-words">{msg.content}</p>
+                          <div className={`text-[10px] mt-1 text-right ${
+                            isAssistant
+                              ? isDark ? 'text-gray-500' : 'text-gray-400'
+                              : 'text-blue-200'
+                          }`}>
+                            {formatTime(msg.created_at)}
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })
+                )}
+                <div ref={messagesEndRef} />
+              </div>
+
+              {/* Read-only notice for site conversations */}
+              <div className={`px-4 py-3 border-t text-center text-sm ${
+                isDark ? 'border-gray-700 bg-gray-800 text-gray-500' : 'border-gray-200 bg-gray-50 text-gray-400'
+              }`}>
+                {t('admin.chat.site_read_only') || 'Site conversations are read-only'}
+              </div>
+            </>
+          ) : null}
         </div>
       </div>
 
-      {/* Quick Contact Creation Modal */}
-      {selectedConversation && (
+      {/* Quick Contact Creation Modal (WhatsApp only) */}
+      {selectedWaConv && (
         <QuickContactModal
           isOpen={showQuickContact}
           onClose={() => setShowQuickContact(false)}
           onContactCreated={handleContactCreated}
-          phone={selectedConversation.phone}
-          contactName={selectedConversation.contact_name}
+          phone={selectedWaConv.phone}
+          contactName={selectedWaConv.contact_name}
           branches={branches}
           isDark={isDark}
         />
