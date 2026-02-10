@@ -145,6 +145,8 @@ export default function ChatPage() {
   // ============================================================
   const [waHasNew, setWaHasNew] = useState(false)
   const [msHasNew, setMsHasNew] = useState(false)
+  const [msLiveActive, setMsLiveActive] = useState(false) // live conversation indicator
+  const msLiveTimerRef = useRef<NodeJS.Timeout | null>(null)
   const [showArchived, setShowArchived] = useState(false)
   const [closingConversation, setClosingConversation] = useState(false)
 
@@ -196,6 +198,11 @@ export default function ChatPage() {
   useEffect(() => {
     activeChannelRef.current = activeChannel
   }, [activeChannel])
+
+  // Cleanup live indicator timer on unmount
+  useEffect(() => {
+    return () => { if (msLiveTimerRef.current) clearTimeout(msLiveTimerRef.current) }
+  }, [])
 
   // ============================================================
   // Theme & sidebar width sync
@@ -388,22 +395,31 @@ export default function ChatPage() {
     }
   }, [fetchWaConversations, fetchWaMessages])
 
+  // Trigger the "live" indicator on Site tab — auto-expires after 2 min of silence
+  const triggerMsLive = useCallback(() => {
+    setMsLiveActive(true)
+    if (msLiveTimerRef.current) clearTimeout(msLiveTimerRef.current)
+    msLiveTimerRef.current = setTimeout(() => setMsLiveActive(false), 2 * 60 * 1000)
+  }, [])
+
   const handleMsConversationChange = useCallback(() => {
     fetchMsConversations()
+    triggerMsLive()
     if (activeChannelRef.current !== 'site') {
       setMsHasNew(true)
     }
-  }, [fetchMsConversations])
+  }, [fetchMsConversations, triggerMsLive])
 
   const handleMsMessageChange = useCallback(() => {
     fetchMsConversations()
     if (selectedMsConvIdRef.current) {
       fetchMsMessages(selectedMsConvIdRef.current, true)
     }
+    triggerMsLive()
     if (activeChannelRef.current !== 'site') {
       setMsHasNew(true)
     }
-  }, [fetchMsConversations, fetchMsMessages])
+  }, [fetchMsConversations, fetchMsMessages, triggerMsLive])
 
   useRealtimeSubscription({ table: 'whatsapp_conversations', onChange: handleWaConversationChange }, !isLoading)
   useRealtimeSubscription({ table: 'whatsapp_messages', onChange: handleWaMessageChange }, !isLoading)
@@ -655,6 +671,9 @@ export default function ChatPage() {
               >
                 <Globe className="w-4 h-4" />
                 Site
+                {msLiveActive && (
+                  <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" title="Live conversation" />
+                )}
                 {msHasNew && activeChannel !== 'site' && (
                   <span className="absolute top-2 right-[calc(50%-20px)] w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse" />
                 )}
