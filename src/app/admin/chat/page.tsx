@@ -1,10 +1,13 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import { MessageCircle, Send, Search, Phone, User, ArrowLeft, RefreshCw, Loader2 } from 'lucide-react'
 import { useTranslation } from '@/contexts/LanguageContext'
 import { useAuth } from '@/hooks/useAuth'
+import { useUserPermissions } from '@/hooks/useUserPermissions'
 import { useBranches } from '@/hooks/useBranches'
+import { AdminHeader } from '../components/AdminHeader'
 
 interface WhatsAppConversation {
   id: string
@@ -36,9 +39,11 @@ interface WhatsAppMessage {
 }
 
 export default function ChatPage() {
+  const router = useRouter()
   const { t } = useTranslation()
-  const { user } = useAuth()
-  const { selectedBranch } = useBranches()
+  const { user, loading: authLoading, signOut } = useAuth()
+  const { hasPermission, loading: permissionsLoading } = useUserPermissions(user?.role || null)
+  const { branches, selectedBranch, selectBranch, loading: branchesLoading } = useBranches()
   const [theme, setTheme] = useState<'light' | 'dark'>('dark')
 
   const [conversations, setConversations] = useState<WhatsAppConversation[]>([])
@@ -67,6 +72,26 @@ export default function ChatPage() {
     window.addEventListener('storage', handler)
     return () => window.removeEventListener('storage', handler)
   }, [])
+
+  const toggleTheme = () => {
+    const newTheme = theme === 'light' ? 'dark' : 'light'
+    localStorage.setItem('admin_theme', newTheme)
+    setTheme(newTheme)
+  }
+
+  const handleSignOut = async () => {
+    await signOut()
+    router.push('/admin/login')
+  }
+
+  // Loading state
+  if (authLoading || permissionsLoading || branchesLoading || !user) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+      </div>
+    )
+  }
 
   // Fetch conversations
   const fetchConversations = useCallback(async () => {
@@ -205,7 +230,18 @@ export default function ChatPage() {
   const totalUnread = conversations.reduce((sum, c) => sum + (c.unread_count || 0), 0)
 
   return (
-    <div className={`h-[calc(100vh-88px)] flex ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`}>
+    <div className={`min-h-screen ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`}>
+      <AdminHeader
+        user={user}
+        branches={branches}
+        selectedBranch={selectedBranch}
+        onBranchSelect={selectBranch}
+        onSignOut={handleSignOut}
+        theme={theme}
+        onToggleTheme={toggleTheme}
+      />
+
+      <div className={`h-[calc(100vh-88px)] flex ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`}>
       {/* Left sidebar - Conversation list */}
       <div className={`w-full md:w-96 flex-shrink-0 flex flex-col border-r ${
         isDark ? 'border-gray-700 bg-gray-900' : 'border-gray-200 bg-white'
@@ -436,6 +472,7 @@ export default function ChatPage() {
             </div>
           </>
         )}
+      </div>
       </div>
     </div>
   )
