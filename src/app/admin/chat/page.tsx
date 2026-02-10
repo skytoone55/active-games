@@ -1248,6 +1248,7 @@ export default function ChatPage() {
           contactName={getMsDisplayName(selectedMsConv)}
           branches={branches}
           isDark={isDark}
+          defaultBranchId={selectedMsConv.branch_id}
         />
       )}
     </div>

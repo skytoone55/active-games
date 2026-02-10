@@ -15,6 +15,7 @@ interface QuickContactModalProps {
   contactName: string | null // Pre-filled from WhatsApp profile
   branches: Branch[]
   isDark: boolean
+  defaultBranchId?: string | null // Pre-select branch (e.g. from messenger conversation)
 }
 
 export function QuickContactModal({
@@ -25,6 +26,7 @@ export function QuickContactModal({
   contactName,
   branches,
   isDark,
+  defaultBranchId,
 }: QuickContactModalProps) {
   const { t, locale } = useTranslation()
 
@@ -66,14 +68,16 @@ export function QuickContactModal({
       setError(null)
       setValidationErrors({})
 
-      // Default to first branch if only one available
-      if (branches.length === 1) {
+      // Pre-select branch: from defaultBranchId, or if only one branch available
+      if (defaultBranchId) {
+        setSelectedBranchId(defaultBranchId)
+      } else if (branches.length === 1) {
         setSelectedBranchId(branches[0].id)
       } else {
         setSelectedBranchId('')
       }
     }
-  }, [isOpen, contactName, initialPhone, branches])
+  }, [isOpen, contactName, initialPhone, branches, defaultBranchId])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -178,17 +182,17 @@ export function QuickContactModal({
             </div>
           )}
 
-          {/* Branch selector (required) */}
+          {/* Branch selector (required) — auto-selected if defaultBranchId provided */}
           <div>
             <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
               <Building2 className="w-4 h-4 inline mr-1" />
               {t('admin.chat.quick_contact.branch') || 'Branch'} *
             </label>
-            {branches.length === 1 ? (
+            {defaultBranchId || branches.length === 1 ? (
               <div className={`px-3 py-2 rounded-lg border text-sm ${
                 isDark ? 'bg-gray-700 border-gray-600 text-white' : 'bg-gray-50 border-gray-200 text-gray-900'
               }`}>
-                {getBranchName(branches[0])}
+                {getBranchName(branches.find(b => b.id === selectedBranchId) || branches[0])}
               </div>
             ) : (
               <div className="flex flex-wrap gap-2">
