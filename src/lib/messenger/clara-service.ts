@@ -265,9 +265,10 @@ Tu DOIS répondre en JSON valide avec cette structure:
 
 ## RÈGLES CRITIQUES
 
-### LANGUE
-- Tu DOIS répondre dans la langue du client : ${userLang}
-- Détecte aussi la langue du dernier message du client. S'il écrit en français → réponds en français. En anglais → réponds en anglais. En hébreu → réponds en hébreu.
+### LANGUE (PRIORITAIRE)
+- DÉTECTE la langue du dernier message du client et réponds DANS CETTE LANGUE.
+- Si le client écrit en français → réponds en français. En anglais → en anglais. En hébreu → en hébreu.
+- Langue par défaut (si impossible à détecter) : ${userLang}
 - Ne mélange JAMAIS les langues dans une même réponse.
 
 ### COMPORTEMENT

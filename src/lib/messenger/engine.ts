@@ -693,68 +693,15 @@ export async function processUserMessage(
         }
       }
 
-      // Si Clara échoue ou timeout, fallback au workflow manuel
+      // Si Clara échoue ou timeout, FALLBACK AU WORKFLOW MANUEL (pas message d'erreur)
       if (claraResponse.timeout) {
-        console.log('[Engine] Clara timeout - falling back to manual workflow')
+        console.log('[Engine] Clara timeout - falling back to MANUAL workflow processing')
       } else {
-        console.log('[Engine] Clara failed:', claraResponse.error)
+        console.log('[Engine] Clara failed:', claraResponse.error, '- falling back to MANUAL workflow processing')
       }
+      // Ne PAS afficher de message d'erreur — on continue avec le traitement normal du module
+      // Le code continue vers le switch/case standard plus bas
 
-      // Charger le message de fallback depuis les paramètres globaux
-      const { data: workflow } = await supabase
-        .from('messenger_workflows')
-        .select('clara_fallback_message, clara_fallback_action')
-        .eq('id', conversation.current_workflow_id)
-        .single()
-
-      const fallbackMessage = workflow?.clara_fallback_message ||
-        'Je rencontre un problème technique. Un conseiller va vous rappeler. 📞'
-
-      await supabase.from('messenger_messages').insert({
-        conversation_id: conversationId,
-        role: 'assistant',
-        content: fallbackMessage,
-        step_ref: currentStep.step_ref
-      })
-
-      // Selon fallback_action
-      const fallbackAction = workflow?.clara_fallback_action || 'escalate'
-
-      if (fallbackAction === 'escalate') {
-        // Marquer pour rappel humain
-        await supabase
-          .from('messenger_conversations')
-          .update({ status: 'completed', collected_data: { ...conversation.collected_data, needs_callback: true } })
-          .eq('id', conversationId)
-
-        return {
-          success: true,
-          message: fallbackMessage,
-          isComplete: true
-        }
-      } else if (fallbackAction === 'retry') {
-        // Réessayer le même module (garde la même étape)
-        return {
-          success: false,
-          message: fallbackMessage,
-          nextStepRef: currentStep.step_ref,
-          moduleType: module.module_type
-        }
-      } else if (fallbackAction === 'abort') {
-        // Abandonner la conversation
-        await supabase
-          .from('messenger_conversations')
-          .update({ status: 'abandoned' })
-          .eq('id', conversationId)
-
-        return {
-          success: true,
-          message: fallbackMessage,
-          isComplete: true
-        }
-      }
-
-      // Continue avec workflow manuel (fallthrough)
       } catch (error) {
         console.error('[Engine] Clara processing error:', error)
         // Continue avec workflow manuel en cas d'erreur
