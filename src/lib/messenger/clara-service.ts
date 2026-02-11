@@ -252,7 +252,11 @@ export async function processWithClara(request: ClaraRequest): Promise<ClaraResp
   const userLang = langMap[locale || 'he'] || 'עברית'
 
   // Build enhanced system prompt with context
-  let enhancedPrompt = config.prompt
+  // CRITICAL: Language instruction MUST come FIRST, before the DB prompt which may contain Hebrew
+  let enhancedPrompt = `## INSTRUCTION PRIORITAIRE - LANGUE
+Tu DOIS répondre dans la MÊME LANGUE que le dernier message du client. Si le client écrit en français → tu réponds en français. En anglais → en anglais. En hébreu → en hébreu. C'est la règle #1 absolue, elle prime sur tout le reste du prompt.
+
+` + config.prompt
 
   // Add strict JSON response format + behavior rules
   enhancedPrompt += `\n\n## FORMAT DE RÉPONSE OBLIGATOIRE (JSON)
