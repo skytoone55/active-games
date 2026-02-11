@@ -90,8 +90,8 @@ function AdminHeaderComponent({
   const unreadContactRequests = useUnreadContactRequestsCount(selectedBranch?.id || null)
   const hasUnreadRequests = unreadContactRequests > 0
 
-  // Compteur de conversations WhatsApp non lues (badge sur Chat)
-  const unreadChatsCount = useUnreadChatsCount(selectedBranch?.id || null)
+  // Compteur de conversations non lues WhatsApp + Messenger (badge sur Chat)
+  const unreadChatsCount = useUnreadChatsCount(branches)
   const hasUnreadChats = unreadChatsCount > 0
 
   // Construire le nom complet à partir du profil
@@ -263,7 +263,7 @@ function AdminHeaderComponent({
               <MessageCircle className="w-4 h-4" />
               <span>{t('admin.header.chat')}</span>
               {hasUnreadChats && (
-                <span className="absolute -top-1 -right-1 bg-green-500 text-white text-[10px] font-bold min-w-[20px] h-5 px-1 rounded-full flex items-center justify-center animate-pulse shadow-lg">
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold min-w-[20px] h-5 px-1 rounded-full flex items-center justify-center animate-pulse shadow-lg">
                   {unreadChatsCount > 9 ? '9+' : unreadChatsCount}
                 </span>
               )}
@@ -657,7 +657,7 @@ function AdminHeaderComponent({
                   <MessageCircle className="w-4 h-4" />
                   <span>{t('admin.header.chat')}</span>
                   {hasUnreadChats && (
-                    <span className="bg-green-500 text-white text-xs font-bold px-2 py-0.5 rounded-full animate-pulse ml-auto">
+                    <span className="bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full animate-pulse ml-auto">
                       {unreadChatsCount > 9 ? '9+' : unreadChatsCount}
                     </span>
                   )}
