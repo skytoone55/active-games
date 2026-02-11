@@ -3,7 +3,7 @@
 import { useState, useEffect, Fragment, useMemo } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Loader2, ChevronLeft, ChevronRight, Calendar, Settings, Sliders } from 'lucide-react'
-import { createClient } from '@/lib/supabase/client'
+import { getClient } from '@/lib/supabase/client'
 import { useBookings, type BookingWithSlots, type CreateBookingData } from '@/hooks/useBookings'
 import { BookingModal } from './components/BookingModal'
 import { AccountingModal } from './components/AccountingModal'
@@ -390,7 +390,7 @@ export default function AdminPage() {
         setShowBookingModal(true)
 
         // Chercher l'order_id et status correspondant
-        const supabase = createClient()
+        const supabase = getClient()
         supabase
           .from('orders')
           .select('id, status')
@@ -764,7 +764,7 @@ export default function AdminPage() {
       // Chercher l'order_id et status correspondant au booking
       setEditingBookingOrderId(null) // Reset pendant la recherche
       setEditingBookingOrderStatus(null)
-      const supabase = createClient()
+      const supabase = getClient()
       const { data: orderData } = await supabase
         .from('orders')
         .select('id, status')
@@ -914,7 +914,7 @@ export default function AdminPage() {
   // Note: L'auth est gérée par le layout parent, pas besoin de rediriger ici
   useEffect(() => {
     const loadUserData = async () => {
-      const supabase = createClient()
+      const supabase = getClient()
 
       try {
         const { data: { user } } = await supabase.auth.getUser()
@@ -995,7 +995,7 @@ export default function AdminPage() {
   }
 
   const handleSignOut = async () => {
-    const supabase = createClient()
+    const supabase = getClient()
     await supabase.auth.signOut()
     router.push('/admin/login')
   }
@@ -1318,7 +1318,7 @@ export default function AdminPage() {
     // Ne pas recharger si déjà en cache
     if (bookingsCache.has(cacheKey)) return
 
-    const supabase = createClient()
+    const supabase = getClient()
     const dateStr = formatDateToString(date)
     const startOfDay = `${dateStr}T00:00:00.000Z`
     const endOfDay = `${dateStr}T23:59:59.999Z`

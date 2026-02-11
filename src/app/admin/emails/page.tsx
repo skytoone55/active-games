@@ -18,7 +18,7 @@ import { useEmails } from '@/hooks/useEmails'
 import { useTranslation } from '@/contexts/LanguageContext'
 import { AdminHeader } from '../components/AdminHeader'
 import { EmailsTable } from './components/EmailsTable'
-import { createClient } from '@/lib/supabase/client'
+import { getClient } from '@/lib/supabase/client'
 
 export default function EmailsPage() {
   const router = useRouter()
@@ -91,7 +91,7 @@ export default function EmailsPage() {
   // Note: L'auth est gérée par le layout parent, pas de redirection ici
 
   const handleSignOut = async () => {
-    const supabase = createClient()
+    const supabase = getClient()
     await supabase.auth.signOut()
     router.push('/admin/login')
   }

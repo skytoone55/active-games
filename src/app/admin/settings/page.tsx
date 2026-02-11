@@ -24,7 +24,7 @@ import { CredentialsSection } from './components/CredentialsSection'
 import { ICountCatalogSection } from './components/ICountCatalogSection'
 import { ClaraSection } from './components/ClaraSection'
 import { MessengerSection } from './components/MessengerSection'
-import { createClient } from '@/lib/supabase/client'
+import { getClient } from '@/lib/supabase/client'
 
 type SettingsSection = 'templates' | 'credentials' | 'catalog' | 'messenger' | 'clara'
 
@@ -57,7 +57,7 @@ export default function SettingsPage() {
   // Note: L'auth est gérée par le layout parent, pas de redirection ici
 
   const handleSignOut = async () => {
-    const supabase = createClient()
+    const supabase = getClient()
     await supabase.auth.signOut()
     router.push('/admin/login')
   }

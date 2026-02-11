@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Loader2, AlertCircle } from 'lucide-react'
-import { createClient } from '@/lib/supabase/client'
+import { getClient } from '@/lib/supabase/client'
 import { useTranslation } from '@/contexts/LanguageContext'
 import { OrderDetailModal } from '../orders/components/OrderDetailModal'
 import { ConfirmationModal } from './ConfirmationModal'
@@ -51,7 +51,7 @@ export function OrderDetailModalWrapper({
   const loadOrder = useCallback(async () => {
     setLoading(true)
     setError(null)
-    const supabase = createClient()
+    const supabase = getClient()
 
     const { data, error: fetchError } = await supabase
       .from('orders')

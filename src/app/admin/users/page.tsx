@@ -15,7 +15,7 @@ import { CreateUserModal } from './components/CreateUserModal'
 import { EditUserModal } from './components/EditUserModal'
 import { EditSelfModal } from './components/EditSelfModal'
 import type { UserWithBranches } from '@/lib/supabase/types'
-import { createClient } from '@/lib/supabase/client'
+import { getClient } from '@/lib/supabase/client'
 
 export default function UsersPage() {
   const router = useRouter()
@@ -61,7 +61,7 @@ export default function UsersPage() {
   // Note: L'auth est gérée par le layout parent, pas de redirection ici
 
   const handleSignOut = async () => {
-    const supabase = createClient()
+    const supabase = getClient()
     await supabase.auth.signOut()
     router.push('/admin/login')
   }

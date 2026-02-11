@@ -13,7 +13,7 @@ import {
   Zap,
   Target
 } from 'lucide-react'
-import { createClient } from '@/lib/supabase/client'
+import { getClient } from '@/lib/supabase/client'
 import { useTranslation } from '@/contexts/LanguageContext'
 import type { Contact } from '@/lib/supabase/types'
 
@@ -67,7 +67,7 @@ export function ContactDetailsModal({
   const loadContactData = useCallback(async () => {
     setLoading(true)
     setLoadingBookings(true)
-    const supabase = createClient()
+    const supabase = getClient()
 
     // Charger le contact
     const { data: contactData } = await supabase

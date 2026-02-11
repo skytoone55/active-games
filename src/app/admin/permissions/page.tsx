@@ -10,7 +10,7 @@ import { useBranches } from '@/hooks/useBranches'
 import { useTranslation } from '@/contexts/LanguageContext'
 import { AdminHeader } from '../components/AdminHeader'
 import { PermissionsTable } from './components/PermissionsTable'
-import { createClient } from '@/lib/supabase/client'
+import { getClient } from '@/lib/supabase/client'
 
 export default function PermissionsPage() {
   const router = useRouter()
@@ -40,7 +40,7 @@ export default function PermissionsPage() {
   // Note: L'auth est gérée par le layout parent, pas de redirection ici
 
   const handleSignOut = async () => {
-    const supabase = createClient()
+    const supabase = getClient()
     await supabase.auth.signOut()
     router.push('/admin/login')
   }

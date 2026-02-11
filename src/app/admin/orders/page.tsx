@@ -29,7 +29,7 @@ import type { OrderStatus } from '@/lib/supabase/types'
 import { ContactDetailsModal } from '../components/ContactDetailsModal'
 import { ConfirmationModal } from '../components/ConfirmationModal'
 import { AccountingModal } from '../components/AccountingModal'
-import { createClient } from '@/lib/supabase/client'
+import { getClient } from '@/lib/supabase/client'
 import type { OrderWithRelations } from '@/lib/supabase/types'
 
 interface ConfirmModalState {

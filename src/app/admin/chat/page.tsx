@@ -222,17 +222,23 @@ export default function ChatPage() {
     document.body.style.userSelect = 'none'
     let lastWidth = sidebarWidth
 
+    let rafId: number | null = null
     const handleMouseMove = (e: MouseEvent) => {
       if (!isResizing.current) return
-      const newWidth = Math.max(280, Math.min(600, e.clientX))
-      lastWidth = newWidth
-      if (sidebarRef.current) {
-        sidebarRef.current.style.width = `${newWidth}px`
-      }
+      if (rafId) return // throttle to animation frame
+      rafId = requestAnimationFrame(() => {
+        const newWidth = Math.max(280, Math.min(600, e.clientX))
+        lastWidth = newWidth
+        if (sidebarRef.current) {
+          sidebarRef.current.style.width = `${newWidth}px`
+        }
+        rafId = null
+      })
     }
 
     const handleMouseUp = () => {
       isResizing.current = false
+      if (rafId) { cancelAnimationFrame(rafId); rafId = null }
       document.body.style.cursor = ''
       document.body.style.userSelect = ''
       setSidebarWidth(lastWidth)

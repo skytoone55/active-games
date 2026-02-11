@@ -29,7 +29,7 @@ function AdminLayoutContent({
     const savedTheme = localStorage.getItem('admin_theme') as 'light' | 'dark' | null
     if (savedTheme) setTheme(savedTheme)
 
-    // Écouter les changements de storage (si le thème change dans une autre page)
+    // Écouter les changements de storage (cross-tab)
     const handleStorage = (e: StorageEvent) => {
       if (e.key === 'admin_theme' && e.newValue) {
         setTheme(e.newValue as 'light' | 'dark')
@@ -37,19 +37,20 @@ function AdminLayoutContent({
     }
     window.addEventListener('storage', handleStorage)
 
-    // Observer les changements de localStorage dans la même page
-    const interval = setInterval(() => {
-      const currentTheme = localStorage.getItem('admin_theme') as 'light' | 'dark' | null
-      if (currentTheme && currentTheme !== theme) {
-        setTheme(currentTheme)
+    // Intercept localStorage.setItem to detect same-page theme changes
+    const origSetItem = localStorage.setItem.bind(localStorage)
+    localStorage.setItem = (key: string, value: string) => {
+      origSetItem(key, value)
+      if (key === 'admin_theme') {
+        setTheme(value as 'light' | 'dark')
       }
-    }, 500)
+    }
 
     return () => {
       window.removeEventListener('storage', handleStorage)
-      clearInterval(interval)
+      localStorage.setItem = origSetItem
     }
-  }, [theme])
+  }, [])
 
   // Maintenir la session active en arrière-plan
   useSessionPersistence()

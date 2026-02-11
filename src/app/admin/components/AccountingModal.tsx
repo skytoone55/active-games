@@ -20,7 +20,7 @@ import {
   CheckCheck,
   Send
 } from 'lucide-react'
-import { createClient } from '@/lib/supabase/client'
+import { getClient } from '@/lib/supabase/client'
 import { useTranslation } from '@/contexts/LanguageContext'
 import { usePricingData } from '@/hooks/usePricingData'
 import { calculateBookingPrice, type PriceCalculationResult } from '@/lib/price-calculator'
@@ -72,7 +72,7 @@ export function AccountingModal({
   const loadOrder = useCallback(async () => {
     setLoading(true)
     setError(null)
-    const supabase = createClient()
+    const supabase = getClient()
 
     // Load order with relations
     const { data, error: fetchError } = await supabase

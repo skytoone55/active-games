@@ -14,7 +14,7 @@ import { ClientModal } from './components/ClientModal'
 import { MergeContactsModal } from './components/MergeContactsModal'
 import { ConfirmationModal } from '../components/ConfirmationModal'
 import { CustomSelect } from '../components/CustomSelect'
-import { createClient } from '@/lib/supabase/client'
+import { getClient } from '@/lib/supabase/client'
 import type { Contact } from '@/lib/supabase/types'
 import { useContactRequests } from '@/hooks/useContactRequests'
 import { ContactRequestsPanel } from './components/ContactRequestsPanel'
@@ -238,7 +238,7 @@ export default function ClientsPage() {
   }
 
   const handleSignOut = async () => {
-    const supabase = createClient()
+    const supabase = getClient()
     await supabase.auth.signOut()
     router.push('/admin/login')
   }

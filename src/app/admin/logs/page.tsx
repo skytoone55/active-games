@@ -9,7 +9,7 @@ import { useLogs } from '@/hooks/useLogs'
 import { useTranslation } from '@/contexts/LanguageContext'
 import { AdminHeader } from '../components/AdminHeader'
 import { LogsTable } from './components/LogsTable'
-import { createClient } from '@/lib/supabase/client'
+import { getClient } from '@/lib/supabase/client'
 
 export default function LogsPage() {
   const router = useRouter()
@@ -52,7 +52,7 @@ export default function LogsPage() {
   // Note: L'auth est gérée par le layout parent, pas de redirection ici
 
   const handleSignOut = async () => {
-    const supabase = createClient()
+    const supabase = getClient()
     await supabase.auth.signOut()
     router.push('/admin/login')
   }

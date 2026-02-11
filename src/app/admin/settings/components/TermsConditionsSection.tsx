@@ -11,7 +11,7 @@ import {
   FileText
 } from 'lucide-react'
 import { useTranslation } from '@/contexts/LanguageContext'
-import { createClient } from '@/lib/supabase/client'
+import { getClient } from '@/lib/supabase/client'
 import type { EmailTemplate } from '@/lib/supabase/types'
 
 interface TermsConditionsSectionProps {
@@ -61,7 +61,7 @@ export function TermsConditionsSection({ isDark }: TermsConditionsSectionProps) 
     body_template: ''
   })
 
-  const supabase = createClient()
+  const supabase = getClient()
 
   const fetchTemplates = async () => {
     setLoading(true)

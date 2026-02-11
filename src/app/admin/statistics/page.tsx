@@ -43,7 +43,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { useBranches } from '@/hooks/useBranches'
 import { useTranslation } from '@/contexts/LanguageContext'
 import { AdminHeader } from '../components/AdminHeader'
-import { createClient } from '@/lib/supabase/client'
+import { getClient } from '@/lib/supabase/client'
 
 // Types
 interface StatsData {
@@ -153,7 +153,7 @@ export default function StatisticsPage() {
   // Auth check et chargement initial
   useEffect(() => {
     const checkAuth = async () => {
-      const supabase = createClient()
+      const supabase = getClient()
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
         router.push('/admin/login')

@@ -11,7 +11,7 @@ import { AdminHeader } from '../components/AdminHeader'
 import { RolesTable } from './components/RolesTable'
 import { RoleModal } from './components/RoleModal'
 import type { Role } from '@/lib/supabase/types'
-import { createClient } from '@/lib/supabase/client'
+import { getClient } from '@/lib/supabase/client'
 
 export default function RolesPage() {
   const router = useRouter()
@@ -47,7 +47,7 @@ export default function RolesPage() {
   // Note: L'auth est gérée par le layout parent, pas de redirection ici
 
   const handleSignOut = async () => {
-    const supabase = createClient()
+    const supabase = getClient()
     await supabase.auth.signOut()
     router.push('/admin/login')
   }
