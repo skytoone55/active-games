@@ -279,23 +279,23 @@ export async function processWithClara(request: ClaraRequest): Promise<ClaraResp
   const langMap: Record<string, string> = { fr: 'français', en: 'English', he: 'עברית' }
   const userLang = langMap[detectedLang] || langMap[locale || 'he'] || 'עברית'
 
-  // Build optimized system prompt
-  // Language instruction FIRST (overrides Hebrew DB prompt), then DB prompt, then compact rules
-  let enhancedPrompt = `RÈGLE #1 ABSOLUE : Réponds dans la MÊME LANGUE que le dernier message du client. Français→français, English→English, עברית→עברית. Défaut: ${userLang}.
+  // Build optimized system prompt — ALL IN ENGLISH to avoid French bias
+  let enhancedPrompt = `ABSOLUTE RULE #1: You MUST respond in the SAME LANGUAGE as the user's last message. Detected language: ${userLang}. French→French, English→English, עברית→עברית. Default: ${userLang}.
 
 ` + config.prompt + `
 
-## RÉPONSE JSON OBLIGATOIRE
-{"reply_to_user": "texte", "is_complete": true/false, "collected_data": {"CLE": "valeur"}}
+## MANDATORY JSON RESPONSE
+{"reply_to_user": "text", "is_complete": true/false, "collected_data": {"KEY": "value"}}
 
-## RÈGLES
-- Choix valide → is_complete:true, collected_data rempli, reply_to_user peut être ""
-- Question hors-sujet → is_complete:false, réponds BRIÈVEMENT puis TERMINE par relancer l'objectif du module actuel
-- Ne répète JAMAIS le choix du client
-- Ne redemande JAMAIS une info déjà dans les données collectées
-- Question ambiguë (ex: "combien ça coûte?" sans préciser) → demande des précisions
-- Message flou/incompréhensible → reformule la question du module de manière engageante
-- N'invente rien. Utilise UNIQUEMENT le FAQ fourni. Formate proprement (une info par ligne)`
+## RULES
+- Valid choice → is_complete:true, collected_data filled, reply_to_user can be ""
+- Off-topic question → is_complete:false, answer BRIEFLY then END by re-asking the current module's objective
+- NEVER repeat the user's choice
+- NEVER re-ask info already in collected data
+- Ambiguous question (e.g. "how much?" without specifying) → ask for clarification
+- Unclear/incomprehensible message → rephrase the module question in an engaging way
+- NEVER make up information. ONLY use the provided FAQ. Format neatly (one info per line)
+- ALWAYS respond in ${userLang} — match the user's language`
 
   // Module context
   if (moduleContext) {
@@ -308,7 +308,7 @@ export async function processWithClara(request: ClaraRequest): Promise<ClaraResp
                      choice.label[locale || 'he'] || choice.label.he || choice.label.fr || choice.label.en || ''
         enhancedPrompt += ` ${idx + 1}."${choice.id}"="${label}"`
       })
-      enhancedPrompt += `\nChoix valide→is_complete:true. Flou→is_complete:false, rappelle les options naturellement.`
+      enhancedPrompt += `\nValid choice→is_complete:true. Unclear→is_complete:false, remind options naturally.`
     }
 
     if (moduleContext.validationFormat) {
@@ -323,15 +323,15 @@ export async function processWithClara(request: ClaraRequest): Promise<ClaraResp
     }
 
     if (systemContext.faqItems && systemContext.faqItems.length > 0) {
-      enhancedPrompt += `\n\n## FAQ PERTINENTES`
+      enhancedPrompt += `\n\n## RELEVANT FAQ`
       systemContext.faqItems.forEach(faq => {
-        enhancedPrompt += `\nQ: ${faq.question}\nR: ${faq.answer}`
+        enhancedPrompt += `\nQ: ${faq.question}\nA: ${faq.answer}`
       })
     }
   }
 
   if (Object.keys(collectedData).length > 0) {
-    enhancedPrompt += `\n\nDéjà collecté: ${JSON.stringify(collectedData)}`
+    enhancedPrompt += `\n\nAlready collected: ${JSON.stringify(collectedData)}`
   }
 
   // Build messages array

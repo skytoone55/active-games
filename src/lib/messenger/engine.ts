@@ -449,9 +449,16 @@ export async function processUserMessage(
               return userWords.some((word: string) => allText.includes(word))
             }).slice(0, 3) // Max 3 FAQ pertinentes
 
+            // Detect user language for FAQ content
+            const faqDetectLang = (text: string): string => {
+              if (/[\u0590-\u05FF]/.test(text)) return 'he'
+              if (/[àâçéèêëîïôùûüÿœæ]/i.test(text) || /\b(je|tu|nous|vous|merci|bonjour|oui|non)\b/i.test(text)) return 'fr'
+              return 'en'
+            }
+            const faqLang = faqDetectLang(userMessage)
             faqItems = matchedFaqs.map((f: any) => ({
-              question: f.question[locale] || f.question.he || f.question.fr || f.question.en || '',
-              answer: f.answer[locale] || f.answer.he || f.answer.fr || f.answer.en || ''
+              question: f.question[faqLang] || f.question[locale] || f.question.he || f.question.fr || f.question.en || '',
+              answer: f.answer[faqLang] || f.answer[locale] || f.answer.he || f.answer.fr || f.answer.en || ''
             }))
           }
         }
@@ -783,18 +790,20 @@ export async function processUserMessage(
 
       if (looksLikeQuestion) {
         console.log('[Engine] Clara failed but message is a question - re-asking module question instead of manual validation')
-        const moduleContent = module.content[locale] || module.content.he || module.content.fr || ''
+        // Detect message language first so we can pick the right module content
+        const detectMsgLang = (text: string): string => {
+          if (/[\u0590-\u05FF]/.test(text)) return 'he'
+          if (/[àâçéèêëîïôùûüÿœæ]/i.test(text) || /\b(je|tu|nous|vous|merci|bonjour|oui|non)\b/i.test(text)) return 'fr'
+          return 'en'
+        }
+        const msgLang = detectMsgLang(userMessage)
+        // Pick module content in the user's detected language, not the site locale
+        const moduleContent = module.content[msgLang] || module.content[locale] || module.content.he || module.content.fr || ''
         const fallbackMessages: Record<string, string> = {
           fr: `Je ne peux pas répondre à cette question pour le moment. ${moduleContent}`,
           en: `I can't answer that question right now. ${moduleContent}`,
           he: `אני לא יכולה לענות על השאלה הזו כרגע. ${moduleContent}`
         }
-        const detectLang = (text: string): string => {
-          if (/[\u0590-\u05FF]/.test(text)) return 'he'
-          if (/[àâçéèêëîïôùûüÿœæ]/i.test(text) || /\b(je|tu|nous|vous|merci|bonjour|oui|non)\b/i.test(text)) return 'fr'
-          return 'en'
-        }
-        const msgLang = detectLang(userMessage)
         const fallbackMsg = fallbackMessages[msgLang] || fallbackMessages[locale] || fallbackMessages.he
 
         await supabase.from('messenger_messages').insert({
@@ -2103,7 +2112,15 @@ async function processClaraLLM(
 
     const conversationHistory = messages || []
 
-    // Construire le contexte FAQ si activé
+    // Detect user language from their message (declared early — used for FAQ + prompt)
+    const detectLang = (text: string): string => {
+      if (/[\u0590-\u05FF]/.test(text)) return 'he'
+      if (/[àâçéèêëîïôùûüÿœæ]/i.test(text) || /\b(je|tu|il|nous|vous|merci|bonjour|oui|non|est|les|des|une|pour)\b/i.test(text)) return 'fr'
+      return 'en'
+    }
+
+    // Build FAQ context if enabled — use detected user language, not site locale
+    const userLangForFaq = detectLang(userMessage)
     let faqContext = ''
     if (module.llm_config?.use_faq_context) {
       const { data: faqs } = await supabase
@@ -2115,8 +2132,9 @@ async function processClaraLLM(
       if (faqs && faqs.length > 0) {
         faqContext = '\n\n## FAQ Knowledge Base\n\n'
         faqs.forEach((faq: any) => {
-          const question = faq.question[locale] || faq.question.fr || faq.question.en
-          const answer = faq.answer[locale] || faq.answer.fr || faq.answer.en
+          // Try detected language first, then fallback chain
+          const question = faq.question[userLangForFaq] || faq.question[locale] || faq.question.he || faq.question.fr || faq.question.en
+          const answer = faq.answer[userLangForFaq] || faq.answer[locale] || faq.answer.he || faq.answer.fr || faq.answer.en
           faqContext += `Q: ${question}\nA: ${answer}\n\n`
         })
       }
@@ -2140,28 +2158,28 @@ async function processClaraLLM(
       console.log('[Clara LLM] Found workflows:', workflows)
 
       if (workflows && workflows.length > 0) {
-        workflowsContext = '\n\n## Workflows disponibles\n\n'
-        workflowsContext += 'Tu peux rediriger le client vers ces workflows quand c\'est pertinent:\n\n'
+        workflowsContext = '\n\n## Available Workflows\n\n'
+        workflowsContext += 'You can redirect the user to these workflows when relevant:\n\n'
 
         workflows.forEach((wf: any) => {
-          workflowsContext += `- **${wf.name}** (ID: ${wf.id}): ${wf.description || 'Pas de description'}\n`
+          workflowsContext += `- **${wf.name}** (ID: ${wf.id}): ${wf.description || 'No description'}\n`
         })
 
-        // Ajouter le tool pour changer de workflow
+        // Add tool for workflow navigation
         tools.push({
           name: 'navigate_to_workflow',
-          description: 'Redirige le client vers un workflow spécifique. Utilise ceci quand le client exprime une intention claire (réserver, obtenir des infos, etc.)',
+          description: 'Redirect the user to a specific workflow. Use this when the user expresses a clear intent (book, get info, etc.)',
           input_schema: {
             type: 'object',
             properties: {
               workflow_id: {
                 type: 'string',
-                description: 'L\'ID du workflow vers lequel rediriger',
+                description: 'The ID of the workflow to redirect to',
                 enum: workflows.map((wf: any) => wf.id)
               },
               reason: {
                 type: 'string',
-                description: 'Courte explication de pourquoi tu rediriges (pour les logs)'
+                description: 'Short explanation of why you are redirecting (for logs)'
               }
             },
             required: ['workflow_id', 'reason']
@@ -2172,19 +2190,13 @@ async function processClaraLLM(
       }
     }
 
-    // Detect user language from their message
-    const detectLang = (text: string): string => {
-      if (/[\u0590-\u05FF]/.test(text)) return 'he'
-      if (/[àâçéèêëîïôùûüÿœæ]/i.test(text) || /\b(je|tu|il|nous|vous|merci|bonjour|oui|non|est|les|des|une|pour)\b/i.test(text)) return 'fr'
-      return 'en'
-    }
     const userLang = detectLang(userMessage)
     const langInstruction = userLang === 'he' ? 'עברית' : userLang === 'fr' ? 'français' : 'English'
 
     // Construire le prompt système
     const systemPrompt = `ABSOLUTE RULE #1: You MUST respond in the SAME LANGUAGE as the user's last message. Detected language: ${langInstruction}. French→French, English→English, עברית→עברית.
 
-${module.llm_config?.system_prompt || 'Tu es Clara, un assistant virtuel serviable et amical.'}
+${module.llm_config?.system_prompt || 'You are Clara, a helpful and friendly virtual assistant.'}
 
 ## Collected data
 ${JSON.stringify(collectedData, null, 2)}
