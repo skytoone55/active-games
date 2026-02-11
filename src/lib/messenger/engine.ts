@@ -2078,11 +2078,11 @@ async function processClaraLLM(
         .order('order_index')
 
       if (faqs && faqs.length > 0) {
-        faqContext = '\n\n## Base de connaissances FAQ\n\n'
+        faqContext = '\n\n## FAQ Knowledge Base\n\n'
         faqs.forEach((faq: any) => {
           const question = faq.question[locale] || faq.question.fr || faq.question.en
           const answer = faq.answer[locale] || faq.answer.fr || faq.answer.en
-          faqContext += `Q: ${question}\nR: ${answer}\n\n`
+          faqContext += `Q: ${question}\nA: ${answer}\n\n`
         })
       }
     }
@@ -2137,18 +2137,30 @@ async function processClaraLLM(
       }
     }
 
-    // Construire le prompt système
-    const systemPrompt = `${module.llm_config?.system_prompt || 'Tu es Clara, un assistant virtuel serviable et amical.'}
+    // Detect user language from their message
+    const detectLang = (text: string): string => {
+      if (/[\u0590-\u05FF]/.test(text)) return 'he'
+      if (/[àâçéèêëîïôùûüÿœæ]/i.test(text) || /\b(je|tu|il|nous|vous|merci|bonjour|oui|non|est|les|des|une|pour)\b/i.test(text)) return 'fr'
+      return 'en'
+    }
+    const userLang = detectLang(userMessage)
+    const langInstruction = userLang === 'he' ? 'עברית' : userLang === 'fr' ? 'français' : 'English'
 
-## Données collectées jusqu'ici
+    // Construire le prompt système
+    const systemPrompt = `ABSOLUTE RULE #1: You MUST respond in the SAME LANGUAGE as the user's last message. Detected language: ${langInstruction}. French→French, English→English, עברית→עברית.
+
+${module.llm_config?.system_prompt || 'Tu es Clara, un assistant virtuel serviable et amical.'}
+
+## Collected data
 ${JSON.stringify(collectedData, null, 2)}
 ${faqContext}
 ${workflowsContext}
 
-RÈGLES IMPORTANTES:
-- Ne répète JAMAIS le choix ou la réponse de l'utilisateur (pas de "Merci, vous avez choisi X" ou "תודה! בחרת ב..."). Va directement à l'essentiel.
-- Réponds de manière concise et naturelle.
-- Si tu détectes une intention claire du client qui correspond à un workflow disponible, utilise le tool navigate_to_workflow pour le rediriger.`
+IMPORTANT RULES:
+- NEVER repeat the user's choice or answer (no "Thank you, you chose X"). Get straight to the point.
+- Respond concisely and naturally.
+- ALWAYS respond in ${langInstruction} — match the user's language.
+- If you detect a clear intent matching an available workflow, use the navigate_to_workflow tool to redirect.`
 
     // Construire les messages pour l'API
     const apiMessages: Anthropic.MessageParam[] = []
