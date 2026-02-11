@@ -442,6 +442,7 @@ export async function processUserMessage(
           userMessage,
           conversationHistory,
           collectedData: conversation.collected_data || {},
+          locale,
           config: {
             enabled: true,
             prompt: claraPrompt,

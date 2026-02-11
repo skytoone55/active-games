@@ -21,6 +21,7 @@ export interface ClaraRequest {
   conversationHistory: Array<{ role: 'user' | 'assistant'; content: string }>
   collectedData: Record<string, any>
   config: ClaraConfig
+  locale?: string  // User's language: 'fr', 'en', 'he'
   moduleContext?: {
     content: string  // The question/message of the current module
     choices?: Array<{ id: string; label: any }>  // Available choices if choix_multiples
@@ -240,16 +241,20 @@ async function callGemini(
  * Main Clara processing function
  */
 export async function processWithClara(request: ClaraRequest): Promise<ClaraResponse> {
-  const { userMessage, conversationHistory, collectedData, config, moduleContext, systemContext } = request
+  const { userMessage, conversationHistory, collectedData, config, moduleContext, systemContext, locale } = request
 
   if (!config.enabled) {
     return { success: false, error: 'Clara not enabled for this module' }
   }
 
+  // Detect user language from locale or conversation
+  const langMap: Record<string, string> = { fr: 'français', en: 'English', he: 'עברית' }
+  const userLang = langMap[locale || 'he'] || 'עברית'
+
   // Build enhanced system prompt with context
   let enhancedPrompt = config.prompt
 
-  // Add strict JSON response format instructions
+  // Add strict JSON response format + behavior rules
   enhancedPrompt += `\n\n## FORMAT DE RÉPONSE OBLIGATOIRE (JSON)
 Tu DOIS répondre en JSON valide avec cette structure:
 {
@@ -258,46 +263,61 @@ Tu DOIS répondre en JSON valide avec cette structure:
   "collected_data": { "CLE": "valeur" }
 }
 
-RÈGLES CRITIQUES:
-- Quand le client fait un choix valide (bouton ou texte qui correspond à une option) → is_complete: true + collected_data avec la valeur
-- Quand le client pose une question hors-sujet ou n'a pas encore répondu → is_complete: false
-- Ne répète JAMAIS le choix du client (pas de "Vous avez choisi X", "בחרת ב...", "Thank you for choosing..."). Va directement à l'essentiel.
-- Le reply_to_user ne doit PAS confirmer/répéter la sélection. Si is_complete=true, le reply_to_user peut être vide "" car le workflow passera automatiquement à l'étape suivante.`
+## RÈGLES CRITIQUES
+
+### LANGUE
+- Tu DOIS répondre dans la langue du client : ${userLang}
+- Détecte aussi la langue du dernier message du client. S'il écrit en français → réponds en français. En anglais → réponds en anglais. En hébreu → réponds en hébreu.
+- Ne mélange JAMAIS les langues dans une même réponse.
+
+### COMPORTEMENT
+- Ne répète JAMAIS le choix du client (pas de "Vous avez choisi X", "בחרת ב...", "Thank you for choosing...").
+- Quand le client fait un choix valide → is_complete: true, collected_data avec la valeur, reply_to_user peut être vide "".
+- Quand le client pose une question hors-sujet → is_complete: false. Réponds BRIÈVEMENT puis ramène vers l'objectif du module actuel avec une transition naturelle et douce.
+
+### RÉPONSES AUX QUESTIONS (FAQ)
+- Si la question du client est AMBIGUË (ex: "ça coûte combien ?" sans préciser quelle activité), ne devine PAS. Demande des précisions : "De quelle activité parlez-vous ? Laser Game, Active Games, ou un mix ?"
+- N'invente jamais d'information. Utilise UNIQUEMENT les données du FAQ ci-dessous.
+- Formate tes réponses proprement : une information par ligne, bien structuré, pas de symboles bizarres (pas de "=").
+
+### TRANSITIONS
+- Après avoir répondu à une question, fais une transition douce et naturelle vers l'objectif du module. Exemple : "Pour vous donner le meilleur service, j'aurais besoin de votre nom complet." et non pas un brutal "מה השם שלך?".
+- Sois chaleureux, professionnel et fluide.`
 
   // Add module context if available
   if (moduleContext) {
-    enhancedPrompt += `\n\n## המודול הנוכחי:\nשאלה ללקוח: "${moduleContext.content}"`
+    enhancedPrompt += `\n\n## MODULE ACTUEL\nObjectif : "${moduleContext.content}"`
 
     if (moduleContext.choices && moduleContext.choices.length > 0) {
-      enhancedPrompt += `\n\n## אופציות זמינות (בחירה מרובה):\n`
+      enhancedPrompt += `\n\nOptions disponibles :\n`
       moduleContext.choices.forEach((choice, idx) => {
         const label = typeof choice.label === 'string' ? choice.label :
-                     choice.label.he || choice.label.fr || choice.label.en || ''
-        enhancedPrompt += `${idx + 1}. ID: "${choice.id}" → Label: "${label}"\n`
+                     choice.label[locale || 'he'] || choice.label.he || choice.label.fr || choice.label.en || ''
+        enhancedPrompt += `${idx + 1}. ID: "${choice.id}" → "${label}"\n`
       })
       enhancedPrompt += `\nSi le client clique un bouton ou écrit un texte correspondant à une option → is_complete: true, collected_data avec l'ID correspondant.`
     }
 
     if (moduleContext.validationFormat) {
-      enhancedPrompt += `\n\nפורמט נדרש: ${moduleContext.validationFormat}`
+      enhancedPrompt += `\n\nFormat attendu : ${moduleContext.validationFormat}`
     }
   }
 
   // Add system context (branches, FAQ)
   if (systemContext) {
     if (systemContext.branches && systemContext.branches.length > 0) {
-      enhancedPrompt += `\n\n## סניפים זמינים (בדיוק!):\n${systemContext.branches.map(b => `- "${b}"`).join('\n')}`
+      enhancedPrompt += `\n\n## BRANCHES DISPONIBLES\n${systemContext.branches.map(b => `- "${b}"`).join('\n')}`
     }
 
     if (systemContext.faqItems && systemContext.faqItems.length > 0) {
-      enhancedPrompt += `\n\n## בסיס ידע (לשאלות הלקוח):\n`
+      enhancedPrompt += `\n\n## BASE DE CONNAISSANCES (FAQ)\n`
       systemContext.faqItems.forEach(faq => {
-        enhancedPrompt += `\nשאלה: ${faq.question}\nתשובה: ${faq.answer}\n`
+        enhancedPrompt += `\nQ: ${faq.question}\nR: ${faq.answer}\n`
       })
     }
   }
 
-  enhancedPrompt += `\n\n---\nנתונים שנאספו עד כה: ${JSON.stringify(collectedData, null, 2)}`
+  enhancedPrompt += `\n\n---\nDonnées collectées : ${JSON.stringify(collectedData, null, 2)}`
 
   // Build messages array
   const messages = [
