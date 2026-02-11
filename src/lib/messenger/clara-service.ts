@@ -46,6 +46,26 @@ export interface ClaraResponse {
   timeout?: boolean
 }
 
+/**
+ * Robustly parse JSON from AI response (handles markdown backticks, text around JSON, etc.)
+ */
+function parseJsonResponse(text: string): any {
+  // Try direct parse first
+  try { return JSON.parse(text) } catch {}
+  // Try extracting JSON from markdown code block
+  const codeBlock = text.match(/```(?:json)?\s*([\s\S]*?)```/)
+  if (codeBlock) {
+    try { return JSON.parse(codeBlock[1].trim()) } catch {}
+  }
+  // Try extracting first { ... } block
+  const firstBrace = text.indexOf('{')
+  const lastBrace = text.lastIndexOf('}')
+  if (firstBrace !== -1 && lastBrace > firstBrace) {
+    try { return JSON.parse(text.slice(firstBrace, lastBrace + 1)) } catch {}
+  }
+  throw new Error(`Failed to parse JSON from response: ${text.slice(0, 200)}`)
+}
+
 // Initialize AI clients (lazy loading)
 let openaiClient: OpenAI | null = null
 let anthropicClient: Anthropic | null = null
@@ -105,7 +125,8 @@ async function callOpenAI(
     const response = completion.choices[0]?.message?.content
     if (!response) throw new Error('Empty response from OpenAI')
 
-    const parsed = JSON.parse(response)
+    console.log('[Clara] OpenAI raw response:', response.slice(0, 300))
+    const parsed = parseJsonResponse(response)
     return {
       success: true,
       reply: parsed.reply_to_user || parsed.reply,
@@ -115,9 +136,10 @@ async function callOpenAI(
     }
   } catch (error: any) {
     if (error.name === 'AbortError') {
+      console.error('[Clara] OpenAI TIMEOUT after', timeoutMs, 'ms')
       return { success: false, timeout: true, error: 'OpenAI timeout' }
     }
-    console.error('[Clara] OpenAI error:', error)
+    console.error('[Clara] OpenAI error:', error.message, error.status || '')
     return { success: false, error: error.message }
   }
 }
@@ -159,7 +181,7 @@ async function callAnthropic(
     const response = completion.content[0]
     if (response.type !== 'text') throw new Error('Invalid Claude response type')
 
-    const parsed = JSON.parse(response.text)
+    const parsed = parseJsonResponse(response.text)
     return {
       success: true,
       reply: parsed.reply_to_user || parsed.reply,
@@ -219,7 +241,7 @@ async function callGemini(
     clearTimeout(timeoutId)
 
     const response = result.response.text()
-    const parsed = JSON.parse(response)
+    const parsed = parseJsonResponse(response)
 
     return {
       success: true,
