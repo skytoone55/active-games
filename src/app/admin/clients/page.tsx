@@ -1,28 +1,23 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { useRouter } from 'next/navigation'
-import { Search, Edit2, Archive, User, Phone, Mail, Loader2, Eye, ChevronLeft, ChevronRight, Plus, Download, ArrowUpDown, ArrowUp, ArrowDown, Users as UsersIcon, GitMerge, Settings, X, MessageSquare } from 'lucide-react'
+import { Search, Edit2, Archive, User, Loader2, Eye, ChevronLeft, ChevronRight, Plus, Download, ArrowUpDown, ArrowUp, ArrowDown, GitMerge, Settings, X, MessageSquare } from 'lucide-react'
 import { useContacts, type SearchContactsResult } from '@/hooks/useContacts'
-import { useBranches } from '@/hooks/useBranches'
-import { useAuth } from '@/hooks/useAuth'
+import { useAdmin } from '@/contexts/AdminContext'
 import { useUserPermissions } from '@/hooks/useUserPermissions'
 import { useTranslation } from '@/contexts/LanguageContext'
-import { AdminHeader } from '../components/AdminHeader'
 import { ContactDetailsModal } from '../components/ContactDetailsModal'
 import { ClientModal } from './components/ClientModal'
 import { MergeContactsModal } from './components/MergeContactsModal'
 import { ConfirmationModal } from '../components/ConfirmationModal'
 import { CustomSelect } from '../components/CustomSelect'
-import { getClient } from '@/lib/supabase/client'
 import type { Contact } from '@/lib/supabase/types'
 import { useContactRequests } from '@/hooks/useContactRequests'
 import { ContactRequestsPanel } from './components/ContactRequestsPanel'
 
 export default function ClientsPage() {
-  const router = useRouter()
   const { t, locale } = useTranslation()
-  const { user, loading: authLoading, signOut } = useAuth()
+  const { user, branches, selectedBranch, selectBranch, isDark } = useAdmin()
   const { hasPermission, loading: permissionsLoading } = useUserPermissions(user?.role || null)
 
   // Helper pour obtenir la locale de date en fonction de la langue
@@ -33,7 +28,6 @@ export default function ClientsPage() {
       default: return 'fr-FR'
     }
   }
-  const { branches, selectedBranch, selectBranch, loading: branchesLoading } = useBranches()
   const { searchContacts, archiveContact, unarchiveContact } = useContacts(selectedBranch?.id || null)
   const { unreadCount: unreadContactRequests } = useContactRequests(selectedBranch?.id || null)
 
@@ -237,30 +231,6 @@ export default function ClientsPage() {
     return parts.length > 0 ? parts.join(' ') : contact.phone
   }
 
-  const handleSignOut = async () => {
-    const supabase = getClient()
-    await supabase.auth.signOut()
-    router.push('/admin/login')
-  }
-
-  // Gérer le thème (synchronisé avec localStorage)
-  const [theme, setTheme] = useState<'light' | 'dark'>('dark')
-  
-  useEffect(() => {
-    const savedTheme = localStorage.getItem('admin_theme') as 'light' | 'dark' | null
-    if (savedTheme) {
-      setTheme(savedTheme)
-    }
-  }, [])
-
-  const toggleTheme = () => {
-    const newTheme = theme === 'light' ? 'dark' : 'light'
-    setTheme(newTheme)
-    localStorage.setItem('admin_theme', newTheme)
-  }
-
-  const isDark = theme === 'dark'
-
   // Calculer effectiveSelectedBranch avec fallback
   const effectiveSelectedBranch = selectedBranch || (branches.length > 0 ? branches[0] : null)
 
@@ -269,7 +239,7 @@ export default function ClientsPage() {
   const canEditClient = hasPermission('clients', 'can_edit')
   const canDeleteClient = hasPermission('clients', 'can_delete')
 
-  if (authLoading || branchesLoading || permissionsLoading || !user || !effectiveSelectedBranch) {
+  if (permissionsLoading || !user || !effectiveSelectedBranch) {
     return (
       <div className={`min-h-screen flex items-center justify-center ${isDark ? 'bg-gray-900' : 'bg-gray-100'}`}>
         <Loader2 className={`w-8 h-8 animate-spin ${isDark ? 'text-blue-400' : 'text-blue-600'}`} />
@@ -279,17 +249,6 @@ export default function ClientsPage() {
 
   return (
     <div className={`min-h-screen ${isDark ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-900'}`}>
-      {/* Header avec navigation */}
-      <AdminHeader
-        user={user}
-        branches={branches}
-        selectedBranch={effectiveSelectedBranch}
-        onBranchSelect={selectBranch}
-        onSignOut={handleSignOut}
-        theme={theme}
-        onToggleTheme={toggleTheme}
-      />
-
       {/* Sous-header avec titre et actions */}
       <div className={`${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border-b px-6 py-4`}>
         <div className="flex items-center justify-between">

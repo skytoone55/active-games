@@ -8,7 +8,6 @@ import { useBookings, type BookingWithSlots, type CreateBookingData } from '@/ho
 import { BookingModal } from './components/BookingModal'
 import { AccountingModal } from './components/AccountingModal'
 import { OrderDetailModalWrapper } from './components/OrderDetailModalWrapper'
-import { AdminHeader } from './components/AdminHeader'
 import { ConfirmationModal } from './components/ConfirmationModal'
 import { SettingsModal } from './components/SettingsModal'
 import { AgendaStats } from './components/AgendaStats'
@@ -19,9 +18,8 @@ import { useAuth } from '@/hooks/useAuth'
 import { useUserPermissions } from '@/hooks/useUserPermissions'
 import { useLaserRooms } from '@/hooks/useLaserRooms'
 import { useTranslation } from '@/contexts/LanguageContext'
+import { useAdmin } from '@/contexts/AdminContext'
 import type { Profile, UserBranch, GameArea, GameSession, UserRole, BookingContact, BookingSlot, Contact } from '@/lib/supabase/types'
-
-type Theme = 'light' | 'dark'
 
 interface UserData {
   id: string
@@ -82,7 +80,7 @@ export default function AdminPage() {
       branchesHook.selectBranch(branchId)
     }
   }
-  const [theme, setTheme] = useState<Theme>('light')
+  const { isDark } = useAdmin()
   const [selectedDate, setSelectedDate] = useState(() => {
     const today = new Date()
     today.setHours(0, 0, 0, 0)
@@ -98,8 +96,6 @@ export default function AdminPage() {
     monday.setHours(0, 0, 0, 0)
     return monday
   })
-  const [showBranchMenu, setShowBranchMenu] = useState(false)
-  const [showUserMenu, setShowUserMenu] = useState(false)
   const [showBookingModal, setShowBookingModal] = useState(false)
   const [modalInitialHour, setModalInitialHour] = useState(10)
   const [modalInitialMinute, setModalInitialMinute] = useState(0)
@@ -981,24 +977,6 @@ export default function AdminPage() {
 
     loadUserData()
   }, [])
-
-  // Charger le thème
-  useEffect(() => {
-    const savedTheme = localStorage.getItem('admin_theme') as Theme
-    if (savedTheme) setTheme(savedTheme)
-  }, [])
-
-  const toggleTheme = () => {
-    const newTheme = theme === 'light' ? 'dark' : 'light'
-    setTheme(newTheme)
-    localStorage.setItem('admin_theme', newTheme)
-  }
-
-  const handleSignOut = async () => {
-    const supabase = getClient()
-    await supabase.auth.signOut()
-    router.push('/admin/login')
-  }
 
   const formatDate = (date: Date) => {
     return date.toLocaleDateString(getDateLocale(), {
@@ -2171,25 +2149,6 @@ export default function AdminPage() {
   const selectedBranchFromUserData = userData.branches.find(b => b.id === selectedBranchId)
   // Récupérer le Branch complet depuis useBranches
   const selectedBranch = branches.find(b => b.id === selectedBranchId) || (branches.length > 0 ? branches[0] : null)
-  const isDark = theme === 'dark'
-
-  // Conversion userData vers format AuthUser pour AdminHeader
-  // Utiliser les branches complètes de useBranches pour avoir toutes les propriétés
-  const authUserBranches = branches.filter(b => 
-    userData?.branches.some(ub => ub.id === b.id)
-  )
-
-  const authUser = userData ? {
-    id: userData.id,
-    email: userData.email,
-    role: userData.role as UserRole,
-    profile: userData.profile as Profile | null,
-    branches: authUserBranches,
-    isSuperAdmin: userData.role === 'super_admin',
-    isBranchAdmin: userData.role === 'branch_admin',
-    isAgent: userData.role === 'agent',
-  } : null
-
   // Récupérer les salles et settings de la branche sélectionnée
   const branchWithDetails = branches.find(b => b.id === selectedBranchId)
   const branchRooms = branchWithDetails?.rooms || []
@@ -2233,27 +2192,6 @@ export default function AdminPage() {
 
   return (
     <div className={`min-h-screen ${isDark ? 'bg-gray-900' : 'bg-gray-100'}`}>
-      {/* Header avec navigation */}
-      {!loading && authUser && branches.length > 0 && (
-        <AdminHeader
-          user={authUser}
-          branches={branches}
-          selectedBranch={selectedBranch || branches[0]}
-          onBranchSelect={(branchId) => {
-            branchesHook.selectBranch(branchId) // Utiliser selectBranch du hook pour synchroniser avec le CRM
-            setShowBranchMenu(false)
-            // Fermer tous les modals quand la branche change
-            setShowBookingModal(false)
-            setShowCalendarModal(false)
-            setShowBranchSettingsModal(false)
-            setShowGridSettingsModal(false)
-          }}
-          onSignOut={handleSignOut}
-          theme={theme}
-          onToggleTheme={toggleTheme}
-        />
-      )}
-
       {/* Contenu principal */}
       <main className="p-6">
         {/* Barre de recherche */}
@@ -3295,7 +3233,7 @@ export default function AdminPage() {
         title={confirmationModal.title}
         message={confirmationModal.message}
         type={confirmationModal.type}
-        isDark={theme === 'dark'}
+        isDark={isDark}
       />
     </div>
   )

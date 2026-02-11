@@ -4,32 +4,27 @@ import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import {
-  ShoppingCart,
   Clock,
   CheckCircle,
   XCircle,
   AlertCircle,
   Search,
-  X,
   PartyPopper,
   Target,
   Gamepad2,
   Mail
 } from 'lucide-react'
 import { useOrders, notifyAbortedOrdersChanged } from '@/hooks/useOrders'
-import { useBranches } from '@/hooks/useBranches'
-import { useAuth } from '@/hooks/useAuth'
+import { useAdmin } from '@/contexts/AdminContext'
 import { useUserPermissions } from '@/hooks/useUserPermissions'
 import type { UserRole } from '@/hooks/useUserPermissions'
 import { useTranslation } from '@/contexts/LanguageContext'
-import { AdminHeader } from '../components/AdminHeader'
 import { OrdersTable } from './components/OrdersTable'
 import { OrderDetailModal } from './components/OrderDetailModal'
 import type { OrderStatus } from '@/lib/supabase/types'
 import { ContactDetailsModal } from '../components/ContactDetailsModal'
 import { ConfirmationModal } from '../components/ConfirmationModal'
 import { AccountingModal } from '../components/AccountingModal'
-import { getClient } from '@/lib/supabase/client'
 import type { OrderWithRelations } from '@/lib/supabase/types'
 
 interface ConfirmModalState {
@@ -40,13 +35,11 @@ interface ConfirmModalState {
   onConfirm: () => void
 }
 
-type Theme = 'light' | 'dark'
-
 export default function OrdersPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { t, locale } = useTranslation()
-  const { user, loading: authLoading, signOut } = useAuth()
+  const { user, branches, selectedBranch, selectedBranchId, selectBranch, isDark, signOut } = useAdmin()
 
   // Helper pour obtenir la locale de date en fonction de la langue
   const getDateLocale = () => {
@@ -56,25 +49,8 @@ export default function OrdersPage() {
       default: return 'fr-FR'
     }
   }
-  const branchesHook = useBranches()
-  const branches = branchesHook.branches
-  const branchesLoading = branchesHook.loading
-  const selectedBranchIdFromHook = branchesHook.selectedBranchId
-  
-  // Calculer effectiveSelectedBranchId avec fallback
-  const effectiveSelectedBranchId = selectedBranchIdFromHook || (branches.length > 0 ? branches[0]?.id : null)
-  
-  // Synchroniser avec le hook si nécessaire
-  useEffect(() => {
-    if (effectiveSelectedBranchId && !selectedBranchIdFromHook && branches.length === 1) {
-      branchesHook.selectBranch(effectiveSelectedBranchId)
-    }
-  }, [effectiveSelectedBranchId, selectedBranchIdFromHook, branches.length, branchesHook.selectBranch])
-  
-  const selectedBranchId = effectiveSelectedBranchId
   const [searchQuery, setSearchQuery] = useState('')
   const [quickStatusFilter, setQuickStatusFilter] = useState<string>('all')
-  const [theme, setTheme] = useState<Theme>('light')
   const [selectedOrder, setSelectedOrder] = useState<OrderWithRelations | null>(null)
   const [selectedContactId, setSelectedContactId] = useState<string | null>(null)
   const [accountingOrderId, setAccountingOrderId] = useState<string | null>(null)
@@ -100,29 +76,7 @@ export default function OrdersPage() {
   const canEditOrder = hasPermission('orders', 'can_edit')
   const canDeleteOrder = hasPermission('orders', 'can_delete')
 
-  // Charger le thème depuis localStorage
-  useEffect(() => {
-    const savedTheme = localStorage.getItem('admin-theme') as Theme | null
-    if (savedTheme) {
-      setTheme(savedTheme)
-    }
-  }, [])
-
-  // Toggle thème
-  const toggleTheme = () => {
-    const newTheme = theme === 'light' ? 'dark' : 'light'
-    setTheme(newTheme)
-    localStorage.setItem('admin-theme', newTheme)
-  }
-
   // Note: L'auth est gérée par le layout parent, pas de redirection ici
-
-  // Sélectionner la première branche par défaut si aucune n'est sélectionnée
-  useEffect(() => {
-    if (branches.length > 0 && !selectedBranchId) {
-      branchesHook.selectBranch(branches[0].id)
-    }
-  }, [branches, selectedBranchId, branchesHook.selectBranch])
 
   // Gérer le paramètre order dans l'URL pour ouvrir une commande spécifique
   useEffect(() => {
@@ -445,31 +399,8 @@ export default function OrdersPage() {
     })
   }
 
-  const isDark = theme === 'dark'
-
-  if (authLoading || branchesLoading || !user) {
-    return (
-      <div className={`min-h-screen flex items-center justify-center ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`}>
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-cyan-500"></div>
-      </div>
-    )
-  }
-
-  const selectedBranch = branches.find(b => b.id === selectedBranchId) || (branches.length > 0 ? branches[0] : null)
-
   return (
     <div className={`min-h-screen ${isDark ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
-      {/* Header */}
-      <AdminHeader
-        user={user}
-        branches={branches}
-        selectedBranch={selectedBranch || branches[0] || null}
-        onBranchSelect={(branchId) => branchesHook.selectBranch(branchId)}
-        onSignOut={signOut}
-        theme={theme}
-        onToggleTheme={toggleTheme}
-      />
-
       <main className="p-6">
         {/* Barre de recherche */}
         <div className={`${isDark ? 'bg-gray-800' : 'bg-white'} rounded-xl p-4 border ${isDark ? 'border-gray-700' : 'border-gray-200'} mb-6`}>

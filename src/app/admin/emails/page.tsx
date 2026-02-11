@@ -12,37 +12,15 @@ import {
   ArrowLeft,
   Filter
 } from 'lucide-react'
-import { useAuth } from '@/hooks/useAuth'
-import { useBranches } from '@/hooks/useBranches'
+import { useAdmin } from '@/contexts/AdminContext'
 import { useEmails } from '@/hooks/useEmails'
 import { useTranslation } from '@/contexts/LanguageContext'
-import { AdminHeader } from '../components/AdminHeader'
 import { EmailsTable } from './components/EmailsTable'
-import { getClient } from '@/lib/supabase/client'
 
 export default function EmailsPage() {
   const router = useRouter()
   const { t } = useTranslation()
-  const { user, loading: authLoading } = useAuth()
-  const { branches, selectedBranch, selectBranch, loading: branchesLoading } = useBranches()
-
-  // Theme state
-  const [theme, setTheme] = useState<'light' | 'dark'>('dark')
-
-  useEffect(() => {
-    const savedTheme = localStorage.getItem('admin_theme') as 'light' | 'dark' | null
-    if (savedTheme) {
-      setTheme(savedTheme)
-    }
-  }, [])
-
-  const toggleTheme = () => {
-    const newTheme = theme === 'light' ? 'dark' : 'light'
-    setTheme(newTheme)
-    localStorage.setItem('admin_theme', newTheme)
-  }
-
-  const isDark = theme === 'dark'
+  const { user, selectedBranch, isDark } = useAdmin()
 
   // Get user role
   const userRole = user?.role || 'agent'
@@ -88,16 +66,8 @@ export default function EmailsPage() {
     return () => clearTimeout(timer)
   }, [searchTerm, statusFilter, dateFrom, dateTo, selectedBranch?.id, userRole])
 
-  // Note: L'auth est gérée par le layout parent, pas de redirection ici
-
-  const handleSignOut = async () => {
-    const supabase = getClient()
-    await supabase.auth.signOut()
-    router.push('/admin/login')
-  }
-
   // Loading state
-  if (authLoading || branchesLoading || !user || !selectedBranch) {
+  if (!user || !selectedBranch) {
     return (
       <div className={`min-h-screen flex items-center justify-center ${isDark ? 'bg-gray-900' : 'bg-gray-100'}`}>
         <Loader2 className={`w-8 h-8 animate-spin ${isDark ? 'text-blue-400' : 'text-blue-600'}`} />
@@ -138,17 +108,6 @@ export default function EmailsPage() {
 
   return (
     <div className={`min-h-screen ${isDark ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-900'}`}>
-      {/* Header */}
-      <AdminHeader
-        user={user}
-        branches={branches}
-        selectedBranch={selectedBranch}
-        onBranchSelect={selectBranch}
-        onSignOut={handleSignOut}
-        theme={theme}
-        onToggleTheme={toggleTheme}
-      />
-
       {/* Sub-header with title */}
       <div className={`${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border-b px-6 py-4`}>
         <div className="flex items-center justify-between">

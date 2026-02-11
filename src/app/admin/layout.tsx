@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { SWRConfig } from 'swr'
 import { getClient } from '@/lib/supabase/client'
@@ -10,6 +10,30 @@ import { useSessionPersistence } from '@/hooks/useSessionPersistence'
 import { useInactivityTimeout } from '@/hooks/useInactivityTimeout'
 import { ClaraProvider } from '@/components/Clara'
 import { swrFetcher } from '@/lib/swr-fetcher'
+import { AdminProvider, useAdmin } from '@/contexts/AdminContext'
+import { AdminHeader } from './components/AdminHeader'
+
+/**
+ * AdminHeader rendu dans le layout — lit user/branches/signOut depuis AdminContext.
+ * Persiste entre les navigations car il est dans le layout, pas dans les pages.
+ */
+function AdminHeaderInLayout({ theme, toggleTheme }: { theme: 'light' | 'dark'; toggleTheme: () => void }) {
+  const { user, branches, selectedBranch, selectBranch, signOut } = useAdmin()
+
+  if (!user) return null
+
+  return (
+    <AdminHeader
+      user={user}
+      branches={branches}
+      selectedBranch={selectedBranch}
+      onBranchSelect={selectBranch}
+      onSignOut={signOut}
+      theme={theme}
+      onToggleTheme={toggleTheme}
+    />
+  )
+}
 
 function AdminLayoutContent({
   children,
@@ -26,6 +50,14 @@ function AdminLayoutContent({
   const subscriptionRef = useRef<{ unsubscribe: () => void } | null>(null)
   const isLoginPage = pathname === '/admin/login'
 
+  const toggleTheme = useCallback(() => {
+    setTheme(prev => {
+      const newTheme = prev === 'light' ? 'dark' : 'light'
+      localStorage.setItem('admin_theme', newTheme)
+      return newTheme
+    })
+  }, [])
+
   // Écouter les changements de thème depuis localStorage
   useEffect(() => {
     const savedTheme = localStorage.getItem('admin_theme') as 'light' | 'dark' | null
@@ -39,18 +71,8 @@ function AdminLayoutContent({
     }
     window.addEventListener('storage', handleStorage)
 
-    // Intercept localStorage.setItem to detect same-page theme changes
-    const origSetItem = localStorage.setItem.bind(localStorage)
-    localStorage.setItem = (key: string, value: string) => {
-      origSetItem(key, value)
-      if (key === 'admin_theme') {
-        setTheme(value as 'light' | 'dark')
-      }
-    }
-
     return () => {
       window.removeEventListener('storage', handleStorage)
-      localStorage.setItem = origSetItem
     }
   }, [])
 
@@ -148,10 +170,22 @@ function AdminLayoutContent({
   }
 
   // Authentifié - afficher le contenu avec Clara disponible
+  // Login page: pas de header, pas de AdminProvider
+  if (isLoginPage) {
+    return (
+      <ClaraProvider theme={theme}>
+        {children}
+      </ClaraProvider>
+    )
+  }
+
   return (
-    <ClaraProvider theme={theme}>
-      {children}
-    </ClaraProvider>
+    <AdminProvider theme={theme} toggleTheme={toggleTheme}>
+      <ClaraProvider theme={theme}>
+        <AdminHeaderInLayout theme={theme} toggleTheme={toggleTheme} />
+        {children}
+      </ClaraProvider>
+    </AdminProvider>
   )
 }
 

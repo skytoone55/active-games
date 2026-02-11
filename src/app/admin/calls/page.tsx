@@ -1,25 +1,19 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { useRouter } from 'next/navigation'
 import { Search, Phone, PhoneIncoming, PhoneOutgoing, Loader2, ChevronLeft, ChevronRight, RefreshCw, Download, User, ArrowUpDown } from 'lucide-react'
 import { useCalls, type SearchCallsResult } from '@/hooks/useCalls'
-import { useBranches } from '@/hooks/useBranches'
-import { useAuth } from '@/hooks/useAuth'
+import { useAdmin } from '@/contexts/AdminContext'
 import { useUserPermissions } from '@/hooks/useUserPermissions'
 import { useTranslation } from '@/contexts/LanguageContext'
-import { AdminHeader } from '../components/AdminHeader'
 import { CustomSelect } from '../components/CustomSelect'
 import { ContactDetailsModal } from '../components/ContactDetailsModal'
-import type { Call, CallStatus, CallDirection, Contact } from '@/lib/supabase/types'
+import type { Call } from '@/lib/supabase/types'
 
 export default function CallsPage() {
-  const router = useRouter()
   const { t, locale } = useTranslation()
-  const { user, loading: authLoading, signOut } = useAuth()
+  const { user, branches, selectedBranch, isDark } = useAdmin()
   const { hasPermission, loading: permissionsLoading } = useUserPermissions(user?.role || null)
-
-  const { branches, selectedBranch, selectBranch, loading: branchesLoading } = useBranches()
   const { searchCalls } = useCalls(selectedBranch?.id || null)
 
   const [searchQuery, setSearchQuery] = useState('')
@@ -40,23 +34,6 @@ export default function CallsPage() {
   const [endDate, setEndDate] = useState('')
   const [timeFilter, setTimeFilter] = useState<'all' | 'morning' | 'afternoon' | 'evening' | 'night'>('all')
   const [statusFilter, setStatusFilter] = useState<'all' | 'completed' | 'missed' | 'no-answer'>('all')
-
-  // Thème (pour correspondre au pattern des autres pages)
-  const [theme, setTheme] = useState<'light' | 'dark'>('dark')
-  useEffect(() => {
-    const savedTheme = localStorage.getItem('admin_theme') as 'light' | 'dark' | null
-    if (savedTheme) {
-      setTheme(savedTheme)
-    }
-  }, [])
-
-  const toggleTheme = () => {
-    const newTheme = theme === 'light' ? 'dark' : 'light'
-    localStorage.setItem('admin_theme', newTheme)
-    setTheme(newTheme)
-  }
-
-  const isDark = theme === 'dark'
 
   // Branche effective
   const effectiveSelectedBranch = selectedBranch || (branches.length > 0 ? branches[0] : null)
@@ -215,14 +192,8 @@ export default function CallsPage() {
     }
   }
 
-  // Handler pour la déconnexion
-  const handleSignOut = async () => {
-    await signOut()
-    router.push('/admin/login')
-  }
-
   // Loading state
-  if (authLoading || branchesLoading || permissionsLoading || !user || !effectiveSelectedBranch) {
+  if (permissionsLoading || !user || !effectiveSelectedBranch) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
@@ -302,16 +273,6 @@ export default function CallsPage() {
 
   return (
     <div className={`min-h-screen ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`}>
-      <AdminHeader
-        user={user}
-        branches={branches}
-        selectedBranch={effectiveSelectedBranch}
-        onBranchSelect={selectBranch}
-        onSignOut={handleSignOut}
-        theme={theme}
-        onToggleTheme={toggleTheme}
-      />
-
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-6 flex items-center justify-between">

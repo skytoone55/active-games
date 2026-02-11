@@ -39,10 +39,8 @@ import {
   Area,
   AreaChart
 } from 'recharts'
-import { useAuth } from '@/hooks/useAuth'
-import { useBranches } from '@/hooks/useBranches'
+import { useAdmin } from '@/contexts/AdminContext'
 import { useTranslation } from '@/contexts/LanguageContext'
-import { AdminHeader } from '../components/AdminHeader'
 import { getClient } from '@/lib/supabase/client'
 
 // Types
@@ -82,8 +80,7 @@ const CHART_COLORS = {
 
 export default function StatisticsPage() {
   const router = useRouter()
-  const { user, loading: authLoading, signOut } = useAuth()
-  const { branches, selectedBranch, selectBranch, loading: branchesLoading } = useBranches()
+  const { user, branches, selectedBranch, isDark } = useAdmin()
   const { t } = useTranslation()
 
   const [loading, setLoading] = useState(true)
@@ -93,23 +90,7 @@ export default function StatisticsPage() {
   const [customEndDate, setCustomEndDate] = useState('')
   const [selectedBranchId, setSelectedBranchId] = useState<string>('all')
   const [activeTab, setActiveTab] = useState<'overview' | 'orders' | 'clients' | 'revenue' | 'team'>('overview')
-  const [theme, setTheme] = useState<'light' | 'dark'>('dark')
 
-  // Charger le thème depuis localStorage
-  useEffect(() => {
-    const savedTheme = localStorage.getItem('admin_theme') as 'light' | 'dark' | null
-    if (savedTheme) {
-      setTheme(savedTheme)
-    }
-  }, [])
-
-  const toggleTheme = () => {
-    const newTheme = theme === 'light' ? 'dark' : 'light'
-    setTheme(newTheme)
-    localStorage.setItem('admin_theme', newTheme)
-  }
-
-  const isDark = theme === 'dark'
   const colors = isDark ? CHART_COLORS.dark : CHART_COLORS.light
 
   // Date range options with translations
@@ -188,9 +169,6 @@ export default function StatisticsPage() {
     return new Intl.NumberFormat('fr-FR').format(num)
   }
 
-  // Calculer effectiveSelectedBranch
-  const effectiveSelectedBranch = selectedBranch || (branches.length > 0 ? branches[0] : null)
-
   // Export CSV
   const handleExportCSV = () => {
     if (!stats) return
@@ -220,7 +198,7 @@ export default function StatisticsPage() {
     link.click()
   }
 
-  if (authLoading || branchesLoading || !user) {
+  if (!user) {
     return (
       <div className={`min-h-screen flex items-center justify-center ${isDark ? 'bg-gray-900' : 'bg-gray-100'}`}>
         <Loader2 className={`w-8 h-8 animate-spin ${isDark ? 'text-blue-400' : 'text-blue-600'}`} />
@@ -230,17 +208,6 @@ export default function StatisticsPage() {
 
   return (
     <div className={`min-h-screen ${isDark ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-900'}`}>
-      {/* Header */}
-      <AdminHeader
-        user={user}
-        branches={branches}
-        selectedBranch={effectiveSelectedBranch}
-        onBranchSelect={selectBranch}
-        onSignOut={signOut}
-        theme={theme}
-        onToggleTheme={toggleTheme}
-      />
-
       {/* Sous-header */}
       <div className={`${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border-b px-6 py-4`}>
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">

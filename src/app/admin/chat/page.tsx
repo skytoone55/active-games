@@ -1,14 +1,11 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback, useTransition } from 'react'
-import { useRouter } from 'next/navigation'
 import { MessageCircle, Send, Search, Phone, User, ArrowLeft, Loader2, Filter, UserPlus, Globe, Bot, Archive, X } from 'lucide-react'
 import { useTranslation } from '@/contexts/LanguageContext'
-import { useAuth } from '@/hooks/useAuth'
+import { useAdmin } from '@/contexts/AdminContext'
 import { useUserPermissions } from '@/hooks/useUserPermissions'
-import { useBranches } from '@/hooks/useBranches'
 import { useRealtimeSubscription } from '@/hooks/useRealtimeSubscription'
-import { AdminHeader } from '../components/AdminHeader'
 import { QuickContactModal } from './components/QuickContactModal'
 import type { Contact } from '@/lib/supabase/types'
 
@@ -102,12 +99,9 @@ function getBranchColor(branchId: string, _allBranches?: { id: string }[]): stri
 }
 
 export default function ChatPage() {
-  const router = useRouter()
   const { t, locale } = useTranslation()
-  const { user, loading: authLoading, signOut } = useAuth()
+  const { user, branches, selectedBranch, selectBranch, isDark, loading: adminLoading } = useAdmin()
   const { hasPermission, loading: permissionsLoading } = useUserPermissions(user?.role || null)
-  const { branches, selectedBranch, selectBranch, loading: branchesLoading } = useBranches()
-  const [theme, setTheme] = useState<'light' | 'dark'>('dark')
 
   // ============================================================
   // Channel tab state
@@ -165,8 +159,7 @@ export default function ChatPage() {
   const selectedMsConvIdRef = useRef<string | null>(null)
   const activeChannelRef = useRef<ChatChannel>('whatsapp')
 
-  const isDark = theme === 'dark'
-  const isLoading = authLoading || permissionsLoading || branchesLoading || !user
+  const isLoading = adminLoading || permissionsLoading || !user
 
   // Determine if user can see all branches
   const canSeeAll = user?.role === 'super_admin' || branches.length > 1
@@ -199,19 +192,11 @@ export default function ChatPage() {
   }, [])
 
   // ============================================================
-  // Theme & sidebar width sync
+  // Sidebar width sync
   // ============================================================
   useEffect(() => {
-    const saved = localStorage.getItem('admin_theme') as 'light' | 'dark' | null
-    if (saved) setTheme(saved)
     const savedWidth = localStorage.getItem('chat_sidebar_width')
     if (savedWidth) setSidebarWidth(Math.max(280, Math.min(600, parseInt(savedWidth))))
-    const handler = () => {
-      const th = localStorage.getItem('admin_theme') as 'light' | 'dark' | null
-      if (th) setTheme(th)
-    }
-    window.addEventListener('storage', handler)
-    return () => window.removeEventListener('storage', handler)
   }, [])
 
   // Sidebar resize handlers
@@ -250,17 +235,6 @@ export default function ChatPage() {
     document.addEventListener('mousemove', handleMouseMove)
     document.addEventListener('mouseup', handleMouseUp)
   }, [sidebarWidth])
-
-  const toggleTheme = () => {
-    const newTheme = theme === 'light' ? 'dark' : 'light'
-    localStorage.setItem('admin_theme', newTheme)
-    setTheme(newTheme)
-  }
-
-  const handleSignOut = async () => {
-    await signOut()
-    router.push('/admin/login')
-  }
 
   // ============================================================
   // WhatsApp: Fetch conversations
@@ -619,16 +593,6 @@ export default function ChatPage() {
 
   return (
     <div className={`min-h-screen ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`}>
-      <AdminHeader
-        user={user}
-        branches={branches}
-        selectedBranch={selectedBranch}
-        onBranchSelect={selectBranch}
-        onSignOut={handleSignOut}
-        theme={theme}
-        onToggleTheme={toggleTheme}
-      />
-
       <div className={`h-[calc(100vh-88px)] flex ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`}>
         {/* Left sidebar - Conversation list (resizable on desktop) */}
         <div

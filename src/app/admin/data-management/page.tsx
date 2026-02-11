@@ -3,46 +3,25 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Database, Loader2, AlertTriangle, FileX } from 'lucide-react'
-import { useAuth } from '@/hooks/useAuth'
-import { useBranches } from '@/hooks/useBranches'
+import { useAdmin } from '@/contexts/AdminContext'
 import { useTranslation } from '@/contexts/LanguageContext'
-import { AdminHeader } from '../components/AdminHeader'
 
 export default function DataManagementPage() {
   const router = useRouter()
   const { t } = useTranslation()
-  const { user, loading: authLoading, signOut } = useAuth()
-  const { branches, loading: branchesLoading, selectedBranch, selectBranch } = useBranches()
+  const { user, isDark } = useAdmin()
 
-  const [theme, setTheme] = useState<'light' | 'dark'>('dark')
   const [password, setPassword] = useState('')
   const [passwordError, setPasswordError] = useState<string | null>(null)
   const [isVerifying, setIsVerifying] = useState(false)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
 
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const savedTheme = localStorage.getItem('admin_theme') as 'light' | 'dark' | null
-      if (savedTheme) setTheme(savedTheme)
-    }
-  }, [])
-
   // Redirect non super_admin users
   useEffect(() => {
-    if (!authLoading && user && user.role !== 'super_admin') {
+    if (user && user.role !== 'super_admin') {
       router.push('/admin')
     }
-  }, [user, authLoading, router])
-
-  const handleToggleTheme = () => {
-    const newTheme = theme === 'dark' ? 'light' : 'dark'
-    setTheme(newTheme)
-    localStorage.setItem('admin_theme', newTheme)
-  }
-
-  const handleBranchSelect = (branchId: string) => {
-    selectBranch(branchId)
-  }
+  }, [user, router])
 
   const handleVerifyPassword = async () => {
     if (!password) {
@@ -78,9 +57,7 @@ export default function DataManagementPage() {
     }
   }
 
-  const isDark = theme === 'dark'
-
-  if (authLoading || branchesLoading || !user) {
+  if (!user) {
     return (
       <div className={`min-h-screen flex items-center justify-center ${isDark ? 'bg-gray-900' : 'bg-gray-100'}`}>
         <Loader2 className={`w-8 h-8 animate-spin ${isDark ? 'text-blue-400' : 'text-blue-600'}`} />
@@ -94,16 +71,6 @@ export default function DataManagementPage() {
 
   return (
     <div className={`min-h-screen ${isDark ? 'bg-gray-900' : 'bg-gray-100'}`}>
-      <AdminHeader
-        user={user}
-        branches={branches}
-        selectedBranch={selectedBranch}
-        onBranchSelect={handleBranchSelect}
-        onSignOut={signOut}
-        theme={theme}
-        onToggleTheme={handleToggleTheme}
-      />
-
       <div className="max-w-2xl mx-auto px-4 py-8">
         {!isAuthenticated ? (
           // Password Screen
