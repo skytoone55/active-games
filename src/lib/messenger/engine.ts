@@ -777,7 +777,42 @@ export async function processUserMessage(
         }
       }
 
-      // Si Clara échoue ou timeout, FALLBACK AU WORKFLOW MANUEL (pas message d'erreur)
+      // Si Clara échoue ou timeout, check si le message est une question
+      // Si oui, re-poser la question du module au lieu de valider le message comme réponse
+      const looksLikeQuestion = /\?/.test(userMessage) || /^(est-ce|is |are |do |does |can |could |when |where |what |how |who |why |combien|quand|comment|pourquoi|האם|מה |מתי|איפה|כמה|למה|איך)/.test(userMessage.trim().toLowerCase())
+
+      if (looksLikeQuestion) {
+        console.log('[Engine] Clara failed but message is a question - re-asking module question instead of manual validation')
+        const moduleContent = module.content[locale] || module.content.he || module.content.fr || ''
+        const fallbackMessages: Record<string, string> = {
+          fr: `Je ne peux pas répondre à cette question pour le moment. ${moduleContent}`,
+          en: `I can't answer that question right now. ${moduleContent}`,
+          he: `אני לא יכולה לענות על השאלה הזו כרגע. ${moduleContent}`
+        }
+        const detectLang = (text: string): string => {
+          if (/[\u0590-\u05FF]/.test(text)) return 'he'
+          if (/[àâçéèêëîïôùûüÿœæ]/i.test(text) || /\b(je|tu|nous|vous|merci|bonjour|oui|non)\b/i.test(text)) return 'fr'
+          return 'en'
+        }
+        const msgLang = detectLang(userMessage)
+        const fallbackMsg = fallbackMessages[msgLang] || fallbackMessages[locale] || fallbackMessages.he
+
+        await supabase.from('messenger_messages').insert({
+          conversation_id: conversationId,
+          role: 'assistant',
+          content: fallbackMsg,
+          step_ref: currentStep.step_ref
+        })
+
+        return {
+          success: true,
+          message: fallbackMsg,
+          nextStepRef: currentStep.step_ref,
+          moduleType: module.module_type,
+          choices: null
+        }
+      }
+
       if (claraResponse.timeout) {
         console.log('[Engine] Clara timeout - falling back to MANUAL workflow processing')
       } else {

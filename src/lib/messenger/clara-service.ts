@@ -247,9 +247,15 @@ export async function processWithClara(request: ClaraRequest): Promise<ClaraResp
     return { success: false, error: 'Clara not enabled for this module' }
   }
 
-  // Detect user language from locale or conversation
+  // Detect user language from their actual message (not locale which is site language)
+  const detectLang = (text: string): string => {
+    if (/[\u0590-\u05FF]/.test(text)) return 'he'
+    if (/[àâçéèêëîïôùûüÿœæ]/i.test(text) || /\b(je|tu|il|nous|vous|merci|bonjour|oui|non|est|les|des|une|pour|quel|quoi|comment|combien)\b/i.test(text)) return 'fr'
+    return 'en'
+  }
+  const detectedLang = detectLang(userMessage)
   const langMap: Record<string, string> = { fr: 'français', en: 'English', he: 'עברית' }
-  const userLang = langMap[locale || 'he'] || 'עברית'
+  const userLang = langMap[detectedLang] || langMap[locale || 'he'] || 'עברית'
 
   // Build optimized system prompt
   // Language instruction FIRST (overrides Hebrew DB prompt), then DB prompt, then compact rules
