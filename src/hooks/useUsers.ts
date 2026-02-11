@@ -1,5 +1,7 @@
-import { useState, useEffect, useCallback } from 'react'
-import type { UserWithBranches, UserRole } from '@/lib/supabase/types'
+import { useCallback } from 'react'
+import useSWR from 'swr'
+import type { UserWithBranches } from '@/lib/supabase/types'
+import { swrFetcher } from '@/lib/swr-fetcher'
 
 interface CreateUserData {
   email: string
@@ -22,116 +24,78 @@ interface UpdateUserData {
 }
 
 export function useUsers() {
-  const [users, setUsers] = useState<UserWithBranches[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  // Charger les utilisateurs
-  const fetchUsers = useCallback(async () => {
-    setLoading(true)
-    setError(null)
-
-    try {
-      const response = await fetch('/api/admin/users')
-      const data = await response.json()
-
-      if (data.success) {
-        setUsers(data.users)
-      } else {
-        setError(data.error || 'Erreur lors du chargement')
-      }
-    } catch (err) {
-      console.error('Error fetching users:', err)
-      setError('Erreur de connexion')
-    } finally {
-      setLoading(false)
+  const { data, error, isLoading, mutate } = useSWR<{ success: boolean; users: UserWithBranches[] }>(
+    '/api/admin/users',
+    swrFetcher,
+    {
+      revalidateOnFocus: false,
+      dedupingInterval: 10000,
     }
-  }, [])
+  )
 
-  // Créer un utilisateur
+  const users = data?.users || []
+
   const createUser = useCallback(async (userData: CreateUserData): Promise<{ success: boolean; user?: UserWithBranches; temporaryPassword?: string; error?: string }> => {
     try {
       const response = await fetch('/api/admin/users', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(userData),
       })
-
-      const data = await response.json()
-
-      if (data.success) {
-        // Rafraîchir la liste
-        await fetchUsers()
-        return { success: true, user: data.user, temporaryPassword: data.temporaryPassword }
+      const result = await response.json()
+      if (result.success) {
+        await mutate()
+        return { success: true, user: result.user, temporaryPassword: result.temporaryPassword }
       } else {
-        return { success: false, error: data.error }
+        return { success: false, error: result.error }
       }
     } catch (err) {
       console.error('Error creating user:', err)
       return { success: false, error: 'Erreur de connexion' }
     }
-  }, [fetchUsers])
+  }, [mutate])
 
-  // Mettre à jour un utilisateur
   const updateUser = useCallback(async (userId: string, updates: UpdateUserData): Promise<{ success: boolean; user?: UserWithBranches; error?: string }> => {
     try {
       const response = await fetch(`/api/admin/users/${userId}`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updates),
       })
-
-      const data = await response.json()
-
-      if (data.success) {
-        // Rafraîchir la liste
-        await fetchUsers()
-        return { success: true, user: data.user }
+      const result = await response.json()
+      if (result.success) {
+        await mutate()
+        return { success: true, user: result.user }
       } else {
-        return { success: false, error: data.error }
+        return { success: false, error: result.error }
       }
     } catch (err) {
       console.error('Error updating user:', err)
       return { success: false, error: 'Erreur de connexion' }
     }
-  }, [fetchUsers])
+  }, [mutate])
 
-  // Supprimer un utilisateur
   const deleteUser = useCallback(async (userId: string): Promise<{ success: boolean; error?: string }> => {
     try {
-      const response = await fetch(`/api/admin/users/${userId}`, {
-        method: 'DELETE',
-      })
-
-      const data = await response.json()
-
-      if (data.success) {
-        // Rafraîchir la liste
-        await fetchUsers()
+      const response = await fetch(`/api/admin/users/${userId}`, { method: 'DELETE' })
+      const result = await response.json()
+      if (result.success) {
+        await mutate()
         return { success: true }
       } else {
-        return { success: false, error: data.error }
+        return { success: false, error: result.error }
       }
     } catch (err) {
       console.error('Error deleting user:', err)
       return { success: false, error: 'Erreur de connexion' }
     }
-  }, [fetchUsers])
-
-  // Charger au montage
-  useEffect(() => {
-    fetchUsers()
-  }, [fetchUsers])
+  }, [mutate])
 
   return {
     users,
-    loading,
-    error,
-    fetchUsers,
+    loading: isLoading,
+    error: error ? 'Erreur de connexion' : null,
+    fetchUsers: () => mutate(),
     createUser,
     updateUser,
     deleteUser,

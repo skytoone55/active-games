@@ -1,7 +1,9 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useCallback, useMemo } from 'react'
+import useSWR from 'swr'
 import { useRealtimeRefresh } from './useRealtimeSubscription'
+import { swrFetcher } from '@/lib/swr-fetcher'
 import type { ActivityLogWithRelations, ActionType, TargetType, UserRole } from '@/lib/supabase/types'
 
 interface LogsFilters {
@@ -22,97 +24,94 @@ interface LogsStats {
   byActionType: Record<string, number>
 }
 
+function buildLogsUrl(branchId: string | null, userRole: UserRole, filters?: LogsFilters): string {
+  const params = new URLSearchParams()
+
+  // For super_admin, don't filter by branch unless explicitly selected
+  // For branch_admin, always filter by their branches
+  if (branchId && userRole !== 'super_admin') {
+    params.append('branch_id', branchId)
+  } else if (branchId && filters?.branchId) {
+    params.append('branch_id', filters.branchId)
+  }
+
+  if (filters?.actionType) params.append('action_type', filters.actionType)
+  if (filters?.targetType) params.append('target_type', filters.targetType)
+  if (filters?.userRole) params.append('user_role', filters.userRole)
+  if (filters?.userId) params.append('user_id', filters.userId)
+  if (filters?.dateFrom) params.append('date_from', filters.dateFrom)
+  if (filters?.dateTo) params.append('date_to', filters.dateTo)
+  if (filters?.search) params.append('search', filters.search)
+
+  return `/api/logs?${params.toString()}`
+}
+
 export function useLogs(branchId: string | null, userRole: UserRole) {
-  const [logs, setLogs] = useState<ActivityLogWithRelations[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [stats, setStats] = useState<LogsStats>({
-    total: 0,
-    today: 0,
-    thisWeek: 0,
-    byActionType: {}
-  })
+  const [activeFilters, setActiveFilters] = useState<LogsFilters | undefined>(undefined)
 
-  const fetchLogs = useCallback(async (filters?: LogsFilters) => {
-    setLoading(true)
-    setError(null)
+  // Build dynamic SWR key based on branchId, userRole, and active filters
+  const swrKey = buildLogsUrl(branchId, userRole, activeFilters)
 
-    try {
-      const params = new URLSearchParams()
+  const { data, error, isLoading, mutate } = useSWR<{
+    success: boolean
+    logs: ActivityLogWithRelations[]
+  }>(
+    swrKey,
+    swrFetcher,
+    { revalidateOnFocus: false, dedupingInterval: 10000 }
+  )
 
-      // For super_admin, don't filter by branch unless explicitly selected
-      // For branch_admin, always filter by their branches
-      if (branchId && userRole !== 'super_admin') {
-        params.append('branch_id', branchId)
-      } else if (branchId && filters?.branchId) {
-        params.append('branch_id', filters.branchId)
-      }
+  const logs = data?.logs || []
 
-      if (filters?.actionType) params.append('action_type', filters.actionType)
-      if (filters?.targetType) params.append('target_type', filters.targetType)
-      if (filters?.userRole) params.append('user_role', filters.userRole)
-      if (filters?.userId) params.append('user_id', filters.userId)
-      if (filters?.dateFrom) params.append('date_from', filters.dateFrom)
-      if (filters?.dateTo) params.append('date_to', filters.dateTo)
-      if (filters?.search) params.append('search', filters.search)
+  // Calculate stats from data
+  const stats = useMemo<LogsStats>(() => {
+    const now = new Date()
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+    const weekStart = new Date(todayStart)
+    weekStart.setDate(weekStart.getDate() - 7)
 
-      const response = await fetch(`/api/logs?${params.toString()}`)
-      const data = await response.json()
+    const byActionType: Record<string, number> = {}
+    let today = 0
+    let thisWeek = 0
 
-      if (!data.success) {
-        throw new Error(data.error || 'Failed to fetch logs')
-      }
+    logs.forEach((log: ActivityLogWithRelations) => {
+      const logDate = new Date(log.created_at)
+      if (logDate >= todayStart) today++
+      if (logDate >= weekStart) thisWeek++
+      byActionType[log.action_type] = (byActionType[log.action_type] || 0) + 1
+    })
 
-      setLogs(data.logs || [])
-
-      // Calculate stats
-      const allLogs = data.logs || []
-      const now = new Date()
-      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-      const weekStart = new Date(todayStart)
-      weekStart.setDate(weekStart.getDate() - 7)
-
-      const byActionType: Record<string, number> = {}
-      let today = 0
-      let thisWeek = 0
-
-      allLogs.forEach((log: ActivityLogWithRelations) => {
-        const logDate = new Date(log.created_at)
-        if (logDate >= todayStart) today++
-        if (logDate >= weekStart) thisWeek++
-        byActionType[log.action_type] = (byActionType[log.action_type] || 0) + 1
-      })
-
-      setStats({
-        total: allLogs.length,
-        today,
-        thisWeek,
-        byActionType
-      })
-
-    } catch (err) {
-      console.error('Error fetching logs:', err)
-      setError('Erreur lors du chargement des logs')
-    } finally {
-      setLoading(false)
+    return {
+      total: logs.length,
+      today,
+      thisWeek,
+      byActionType
     }
-  }, [branchId, userRole])
+  }, [logs])
 
-  useEffect(() => {
-    fetchLogs()
-  }, [fetchLogs])
+  // Realtime updates for logs - trigger SWR revalidation
+  const handleRealtimeRefresh = useCallback(() => {
+    mutate()
+  }, [mutate])
 
-  // Realtime updates for logs
-  useRealtimeRefresh('activity_logs', branchId, fetchLogs)
+  useRealtimeRefresh('activity_logs', branchId, handleRealtimeRefresh)
+
+  // fetchLogs with optional filters — updates the SWR key via activeFilters state
+  const fetchLogs = useCallback(async (filters?: LogsFilters) => {
+    if (filters) {
+      setActiveFilters(filters)
+    } else {
+      // Just revalidate current data
+      await mutate()
+    }
+  }, [mutate])
 
   // Delete logs (super_admin only)
   const deleteLogs = useCallback(async (logIds: string[]): Promise<boolean> => {
     if (userRole !== 'super_admin') {
-      setError('Seul un super admin peut supprimer les logs')
       return false
     }
 
-    setError(null)
     try {
       const response = await fetch('/api/logs', {
         method: 'DELETE',
@@ -120,24 +119,23 @@ export function useLogs(branchId: string | null, userRole: UserRole) {
         body: JSON.stringify({ ids: logIds })
       })
 
-      const data = await response.json()
-      if (!data.success) {
-        throw new Error(data.error || 'Failed to delete logs')
+      const result = await response.json()
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to delete logs')
       }
 
-      await fetchLogs()
+      await mutate()
       return true
     } catch (err) {
       console.error('Error deleting logs:', err)
-      setError('Erreur lors de la suppression des logs')
       return false
     }
-  }, [userRole, fetchLogs])
+  }, [userRole, mutate])
 
   return {
     logs,
-    loading,
-    error,
+    loading: isLoading,
+    error: error ? 'Erreur lors du chargement des logs' : null,
     stats,
     fetchLogs,
     deleteLogs,

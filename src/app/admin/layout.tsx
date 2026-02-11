@@ -2,12 +2,14 @@
 
 import { useEffect, useState, useRef } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
+import { SWRConfig } from 'swr'
 import { getClient } from '@/lib/supabase/client'
 import { Loader2 } from 'lucide-react'
 import { LanguageProvider, useTranslation } from '@/contexts/LanguageContext'
 import { useSessionPersistence } from '@/hooks/useSessionPersistence'
 import { useInactivityTimeout } from '@/hooks/useInactivityTimeout'
 import { ClaraProvider } from '@/components/Clara'
+import { swrFetcher } from '@/lib/swr-fetcher'
 
 function AdminLayoutContent({
   children,
@@ -159,8 +161,18 @@ export default function AdminLayout({
   children: React.ReactNode
 }) {
   return (
-    <LanguageProvider isAdmin={true}>
-      <AdminLayoutContent>{children}</AdminLayoutContent>
-    </LanguageProvider>
+    <SWRConfig
+      value={{
+        fetcher: swrFetcher,
+        revalidateOnFocus: false,
+        revalidateOnReconnect: true,
+        dedupingInterval: 10000,
+        errorRetryCount: 2,
+      }}
+    >
+      <LanguageProvider isAdmin={true}>
+        <AdminLayoutContent>{children}</AdminLayoutContent>
+      </LanguageProvider>
+    </SWRConfig>
   )
 }

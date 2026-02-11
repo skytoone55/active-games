@@ -1,7 +1,9 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useCallback, useMemo, useEffect } from 'react'
+import useSWR from 'swr'
 import { useRealtimeRefresh } from './useRealtimeSubscription'
+import { swrFetcher } from '@/lib/swr-fetcher'
 import type { Order, OrderStatus, OrderWithRelations } from '@/lib/supabase/types'
 
 interface OrdersStats {
@@ -14,76 +16,57 @@ interface OrdersStats {
 }
 
 export function useOrders(branchId: string | null) {
-  const [orders, setOrders] = useState<OrderWithRelations[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [pendingCount, setPendingCount] = useState(0)
-  const [stats, setStats] = useState<OrdersStats>({
-    total: 0,
-    pending: 0,
-    auto_confirmed: 0,
-    manually_confirmed: 0,
-    aborted: 0,
-    cancelled: 0
-  })
+  const [statusFilter, setStatusFilter] = useState<OrderStatus | undefined>(undefined)
 
-  // Charger les commandes
-  const fetchOrders = useCallback(async (statusFilter?: OrderStatus) => {
-    if (!branchId) {
-      setOrders([])
-      setLoading(false)
-      return
+  // Build SWR key based on branchId and optional statusFilter
+  const swrKey = branchId
+    ? `/api/orders?branch_id=${branchId}${statusFilter ? `&status=${statusFilter}` : ''}`
+    : null
+
+  const { data, error, isLoading, mutate } = useSWR<{
+    success: boolean
+    orders: OrderWithRelations[]
+    pending_count: number
+  }>(
+    swrKey,
+    swrFetcher,
+    { revalidateOnFocus: false, dedupingInterval: 10000 }
+  )
+
+  const orders = data?.orders || []
+  const pendingCount = data?.pending_count || 0
+
+  // Calculate stats from data
+  const stats = useMemo<OrdersStats>(() => {
+    return {
+      total: orders.length,
+      pending: orders.filter((o: Order) => o.status === 'pending').length,
+      auto_confirmed: orders.filter((o: Order) => o.status === 'auto_confirmed').length,
+      manually_confirmed: orders.filter((o: Order) => o.status === 'manually_confirmed').length,
+      aborted: orders.filter((o: Order) => o.status === 'aborted').length,
+      cancelled: orders.filter((o: Order) => o.status === 'cancelled').length,
     }
+  }, [orders])
 
-    setLoading(true)
-    setError(null)
+  // Realtime: revalidate SWR cache on changes
+  const handleRealtimeRefresh = useCallback(() => {
+    mutate()
+  }, [mutate])
 
-    try {
-      let url = `/api/orders?branch_id=${branchId}`
-      if (statusFilter) {
-        url += `&status=${statusFilter}`
-      }
+  useRealtimeRefresh('orders', branchId, handleRealtimeRefresh)
 
-      const response = await fetch(url)
-      const data = await response.json()
-
-      if (!data.success) {
-        throw new Error(data.error || 'Failed to fetch orders')
-      }
-
-      setOrders(data.orders || [])
-      setPendingCount(data.pending_count || 0)
-
-      // Calculer les stats
-      const allOrders = data.orders || []
-      setStats({
-        total: allOrders.length,
-        pending: allOrders.filter((o: Order) => o.status === 'pending').length,
-        auto_confirmed: allOrders.filter((o: Order) => o.status === 'auto_confirmed').length,
-        manually_confirmed: allOrders.filter((o: Order) => o.status === 'manually_confirmed').length,
-        aborted: allOrders.filter((o: Order) => o.status === 'aborted').length,
-        cancelled: allOrders.filter((o: Order) => o.status === 'cancelled').length,
-      })
-
-    } catch (err) {
-      console.error('Error fetching orders:', err)
-      setError('Erreur lors du chargement des commandes')
-    } finally {
-      setLoading(false)
+  // fetchOrders with optional statusFilter — updates the SWR key
+  const fetchOrders = useCallback(async (newStatusFilter?: OrderStatus) => {
+    if (newStatusFilter !== undefined) {
+      setStatusFilter(newStatusFilter)
+    } else {
+      // Just revalidate current data
+      await mutate()
     }
-  }, [branchId])
+  }, [mutate])
 
-  useEffect(() => {
-    fetchOrders()
-  }, [fetchOrders])
-
-  // Realtime: écouter les changements sur orders
-  // Mise à jour instantanée quand une commande est créée/modifiée
-  useRealtimeRefresh('orders', branchId, fetchOrders)
-
-  // Annuler une commande
+  // Cancel an order
   const cancelOrder = useCallback(async (orderId: string): Promise<boolean> => {
-    setError(null)
     try {
       const response = await fetch(`/api/orders/${orderId}`, {
         method: 'PATCH',
@@ -91,46 +74,43 @@ export function useOrders(branchId: string | null) {
         body: JSON.stringify({ action: 'cancel' })
       })
 
-      const data = await response.json()
-      if (!data.success) {
-        throw new Error(data.error || 'Failed to cancel order')
+      const result = await response.json()
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to cancel order')
       }
 
-      await fetchOrders()
+      await mutate()
       return true
     } catch (err) {
       console.error('Error cancelling order:', err)
-      setError('Erreur lors de l\'annulation')
       return false
     }
-  }, [fetchOrders])
+  }, [mutate])
 
-  // Supprimer une commande
+  // Delete an order
   const deleteOrder = useCallback(async (orderId: string): Promise<boolean> => {
-    setError(null)
     try {
       const response = await fetch(`/api/orders/${orderId}`, {
         method: 'DELETE'
       })
 
-      const data = await response.json()
-      if (!data.success) {
-        throw new Error(data.error || 'Failed to delete order')
+      const result = await response.json()
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to delete order')
       }
 
-      await fetchOrders()
+      await mutate()
       return true
     } catch (err) {
       console.error('Error deleting order:', err)
-      setError('Erreur lors de la suppression')
       return false
     }
-  }, [fetchOrders])
+  }, [mutate])
 
   return {
     orders,
-    loading,
-    error,
+    loading: isLoading,
+    error: error ? 'Erreur lors du chargement des commandes' : null,
     pendingCount,
     stats,
     fetchOrders,
@@ -140,103 +120,70 @@ export function useOrders(branchId: string | null) {
   }
 }
 
-// Hook pour obtenir juste le count des pending (pour le badge)
+// Hook for pending orders count (badge)
 export function usePendingOrdersCount(branchId: string | null) {
-  const [count, setCount] = useState(0)
-  const lastBranchIdRef = useRef<string | null>(null)
-  const isFetchingRef = useRef(false)
+  const swrKey = branchId
+    ? `/api/orders?branch_id=${branchId}&status=pending`
+    : null
 
-  const fetchCount = useCallback(async () => {
-    if (!branchId) {
-      setCount(0)
-      return
-    }
+  const { data, mutate } = useSWR<{
+    success: boolean
+    orders: OrderWithRelations[]
+    pending_count: number
+  }>(
+    swrKey,
+    swrFetcher,
+    { revalidateOnFocus: false, dedupingInterval: 15000 }
+  )
 
-    // Éviter les appels concurrents
-    if (isFetchingRef.current) {
-      return
-    }
+  // Realtime: revalidate on changes
+  const handleRealtimeRefresh = useCallback(() => {
+    mutate()
+  }, [mutate])
 
-    isFetchingRef.current = true
-    try {
-      const response = await fetch(`/api/orders?branch_id=${branchId}&status=pending`)
-      const data = await response.json()
-      setCount(data.pending_count || data.orders?.length || 0)
-    } catch (err) {
-      console.error('Error fetching pending count:', err)
-    } finally {
-      isFetchingRef.current = false
-    }
-  }, [branchId])
+  useRealtimeRefresh('orders', branchId, handleRealtimeRefresh)
 
-  // Fetch quand branchId change (avec déduplication)
-  useEffect(() => {
-    if (branchId === lastBranchIdRef.current) {
-      return
-    }
-    lastBranchIdRef.current = branchId
-    fetchCount()
-  }, [branchId, fetchCount])
-
-  // Realtime: mise à jour instantanée du badge
-  // Remplace le polling de 30 secondes
-  useRealtimeRefresh('orders', branchId, fetchCount)
-
-  return count
+  return data?.pending_count || data?.orders?.length || 0
 }
 
 /**
- * Hook pour obtenir le count des commandes aborted non vues (pour le badge header)
- * Écoute l'événement 'aborted-orders-changed' pour mise à jour instantanée
+ * Hook for unseen aborted orders count (header badge)
+ * Listens to 'aborted-orders-changed' event for instant updates
  */
 export function useUnseenAbortedOrdersCount(branchId: string | null) {
-  const [count, setCount] = useState(0)
-  const lastBranchIdRef = useRef<string | null>(null)
-  const isFetchingRef = useRef(false)
-  const branchIdRef = useRef(branchId)
-  branchIdRef.current = branchId
+  const swrKey = branchId
+    ? `/api/orders?branch_id=${branchId}&status=aborted`
+    : null
 
-  const fetchCount = useCallback(async () => {
-    if (!branchIdRef.current) {
-      setCount(0)
-      return
-    }
+  const { data, mutate } = useSWR<{
+    success: boolean
+    orders: OrderWithRelations[]
+    unseen_aborted_count: number
+  }>(
+    swrKey,
+    swrFetcher,
+    { revalidateOnFocus: false, dedupingInterval: 15000 }
+  )
 
-    if (isFetchingRef.current) return
-    isFetchingRef.current = true
+  // Realtime: revalidate on changes
+  const handleRealtimeRefresh = useCallback(() => {
+    mutate()
+  }, [mutate])
 
-    try {
-      const response = await fetch(`/api/orders?branch_id=${branchIdRef.current}&status=aborted`)
-      const data = await response.json()
-      setCount(data.unseen_aborted_count || 0)
-    } catch (err) {
-      console.error('Error fetching unseen aborted count:', err)
-    } finally {
-      isFetchingRef.current = false
-    }
-  }, [])
+  useRealtimeRefresh('orders', branchId, handleRealtimeRefresh)
 
+  // Listen to local events for instant badge update
   useEffect(() => {
-    if (branchId === lastBranchIdRef.current) return
-    lastBranchIdRef.current = branchId
-    fetchCount()
-  }, [branchId, fetchCount])
-
-  // Realtime: mise à jour instantanée du badge
-  useRealtimeRefresh('orders', branchId, fetchCount)
-
-  // Écouter les événements locaux pour mise à jour instantanée
-  useEffect(() => {
-    const handleChange = () => fetchCount()
+    const handleChange = () => mutate()
     window.addEventListener('aborted-orders-changed', handleChange)
     return () => window.removeEventListener('aborted-orders-changed', handleChange)
-  }, [fetchCount])
+  }, [mutate])
 
-  return { count, refetch: fetchCount }
+  return { count: data?.unseen_aborted_count || 0, refetch: () => mutate() }
 }
 
 /**
- * Notifier que les commandes aborted ont changé (badge header se met à jour)
+ * Notify that aborted orders have changed (header badge updates)
  */
 export function notifyAbortedOrdersChanged() {
   window.dispatchEvent(new Event('aborted-orders-changed'))
