@@ -542,14 +542,77 @@ export async function processUserMessage(
 
           console.log('[Engine] Clara validation passed ✓')
 
+          // Déterminer le output_type correct pour la transition
+          // Pour choix_multiples: output_type = "choice_{choiceId}" (pas "success")
+          // Pour saisie_texte et autres: output_type = "success"
+          let claraOutputType = 'success'
+
+          if (module.module_type === 'choix_multiples' && module.choices && module.choices.length > 0) {
+            // Clara a retourné collected_data avec l'ID ou le label du choix
+            // Chercher quel choice a été sélectionné
+            const claraData = claraResponse.collected_data || {}
+            const claraValues = Object.values(claraData).map((v: any) => String(v).toLowerCase().trim())
+            console.log('[Engine] Clara collected_data values:', claraValues)
+
+            let matchedChoice = null
+
+            // 1. Match par choice ID exact dans collected_data
+            for (const choice of module.choices) {
+              if (claraValues.includes(choice.id.toLowerCase())) {
+                matchedChoice = choice
+                break
+              }
+            }
+
+            // 2. Match par label dans collected_data
+            if (!matchedChoice) {
+              for (const choice of module.choices) {
+                const labels = [
+                  choice.label?.he, choice.label?.fr, choice.label?.en
+                ].filter(Boolean).map((l: string) => l.toLowerCase().trim())
+
+                for (const val of claraValues) {
+                  if (labels.includes(val) || labels.some((l: string) => l.includes(val) || val.includes(l))) {
+                    matchedChoice = choice
+                    break
+                  }
+                }
+                if (matchedChoice) break
+              }
+            }
+
+            // 3. Fallback: match par texte utilisateur contre les labels
+            if (!matchedChoice) {
+              const userInput = userMessage.toLowerCase().trim()
+              matchedChoice = module.choices.find((choice: any) => {
+                const label = (choice.label[locale] || choice.label.fr || choice.label.en || '').toLowerCase()
+                return label === userInput || label.includes(userInput) || userInput.includes(label)
+              })
+            }
+
+            if (matchedChoice) {
+              claraOutputType = `choice_${matchedChoice.id}`
+              console.log('[Engine] Clara choix_multiples matched choice:', matchedChoice.id, '→ outputType:', claraOutputType)
+            } else {
+              console.warn('[Engine] Clara choix_multiples: could not match any choice, trying all outputs')
+              // Fallback: chercher TOUS les outputs pour ce step (pas filtrer par type)
+            }
+          }
+
           // Chercher la transition
-          const { data: outputs } = await supabase
+          let outputsQuery = supabase
             .from('messenger_workflow_outputs')
             .select('*')
             .eq('workflow_id', conversation.current_workflow_id)
             .eq('from_step_ref', currentStep.step_ref)
-            .eq('output_type', 'success')
-            .order('priority', { ascending: true })
+
+          // Si on a un output type spécifique, filtrer par ce type
+          if (claraOutputType !== 'success' || module.module_type !== 'choix_multiples') {
+            outputsQuery = outputsQuery.eq('output_type', claraOutputType)
+          }
+          // Si choix_multiples mais pas de match → chercher tous les outputs et prendre le premier
+
+          const { data: outputs } = await outputsQuery.order('priority', { ascending: true })
 
           if (outputs && outputs.length > 0) {
             const nextOutput = outputs[0]
