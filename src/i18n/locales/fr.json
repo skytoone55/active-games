@@ -2528,7 +2528,9 @@
         "booking": "Réservation",
         "pricing": "Tarifs",
         "activities": "Activités",
-        "location": "Localisation"
+        "location": "Localisation",
+        "safety": "Sécurité & Règles",
+        "events": "Événements & Anniversaires"
       }
     },
     "formats": {

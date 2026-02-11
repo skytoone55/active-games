@@ -2521,7 +2521,9 @@
         "booking": "הזמנה",
         "pricing": "תמחור",
         "activities": "פעילויות",
-        "location": "מיקום"
+        "location": "מיקום",
+        "safety": "בטיחות וכללים",
+        "events": "אירועים ויום הולדת"
       }
     },
     "formats": {

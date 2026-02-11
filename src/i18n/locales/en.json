@@ -2464,7 +2464,9 @@
         "booking": "Booking",
         "pricing": "Pricing",
         "activities": "Activities",
-        "location": "Location"
+        "location": "Location",
+        "safety": "Safety & Rules",
+        "events": "Events & Birthdays"
       }
     },
     "formats": {

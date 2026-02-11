@@ -69,7 +69,7 @@ export function FAQModal({ faq, isDark, onSave, onCancel }: FAQModalProps) {
               className="w-full px-3 py-2 rounded-lg border"
               style={{ backgroundColor: isDark ? '#111827' : 'white', borderColor: isDark ? '#374151' : '#D1D5DB', color: isDark ? 'white' : 'black' }}
             >
-              {['general', 'booking', 'pricing', 'activities', 'location'].map((cat) => (
+              {['general', 'booking', 'pricing', 'activities', 'location', 'safety', 'events'].map((cat) => (
                 <option key={cat} value={cat}>
                   {t(`messenger.faq.categories.${cat}`)}
                 </option>
