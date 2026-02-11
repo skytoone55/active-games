@@ -1256,8 +1256,6 @@ export async function processUserMessage(
           }
         }
 
-        outputType = claraResult.outputType || 'clara_continue'
-
         // Si Clara a généré une réponse, l'enregistrer
         if (claraResult.response) {
           await supabase.from('messenger_messages').insert({
@@ -1266,16 +1264,23 @@ export async function processUserMessage(
             content: claraResult.response,
             step_ref: currentStep.step_ref
           })
+        }
 
-          // Si outputType est 'clara_continue', retourner immédiatement sans chercher d'output
-          if (outputType === 'clara_continue') {
-            console.log('[Engine] Clara continue - returning response without workflow transition')
-            return {
-              success: true,
-              message: claraResult.response,
-              nextStepRef: currentStep.step_ref
-            }
+        // Déterminer si le workflow doit continuer
+        // Si enable_workflow_navigation est activé et Clara n'a pas navigué, rester sur le même step
+        // Sinon, considérer le module comme complété et chercher la sortie 'success'
+        if (module.llm_config?.enable_workflow_navigation) {
+          // Mode conversation libre: Clara reste sur ce step tant qu'elle ne navigue pas
+          console.log('[Engine] Clara LLM with workflow navigation - staying on step (clara_continue)')
+          return {
+            success: true,
+            message: claraResult.response || '',
+            nextStepRef: currentStep.step_ref
           }
+        } else {
+          // Mode step normal: le module est traité, on continue le workflow
+          outputType = 'success'
+          console.log('[Engine] Clara LLM without workflow navigation - advancing with outputType: success')
         }
       }
       break
@@ -2043,7 +2048,10 @@ ${JSON.stringify(collectedData, null, 2)}
 ${faqContext}
 ${workflowsContext}
 
-Réponds au message de l'utilisateur de manière naturelle et pertinente. Si tu détectes une intention claire du client qui correspond à un workflow disponible, utilise le tool navigate_to_workflow pour le rediriger.`
+RÈGLES IMPORTANTES:
+- Ne répète JAMAIS le choix ou la réponse de l'utilisateur (pas de "Merci, vous avez choisi X" ou "תודה! בחרת ב..."). Va directement à l'essentiel.
+- Réponds de manière concise et naturelle.
+- Si tu détectes une intention claire du client qui correspond à un workflow disponible, utilise le tool navigate_to_workflow pour le rediriger.`
 
     // Construire les messages pour l'API
     const apiMessages: Anthropic.MessageParam[] = []
