@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback, useTransition } from 'react'
-import { MessageCircle, Send, Search, Phone, User, ArrowLeft, Loader2, Filter, UserPlus, Globe, Bot, Archive, X, Smile, Trash2 } from 'lucide-react'
+import { MessageCircle, Send, Search, Phone, User, ArrowLeft, Loader2, Filter, UserPlus, Globe, Bot, Archive, X, Smile, Trash2, EyeOff } from 'lucide-react'
 import dynamic from 'next/dynamic'
 import { Theme as EmojiTheme } from 'emoji-picker-react'
 
@@ -147,6 +147,7 @@ export default function ChatPage() {
   const [closingConversation, setClosingConversation] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [deletingConversation, setDeletingConversation] = useState(false)
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; convId: string } | null>(null)
 
   // ============================================================
   // Shared state
@@ -183,6 +184,34 @@ export default function ChatPage() {
     if (showEmojiPicker) document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [showEmojiPicker])
+
+  // Close context menu on outside click / scroll
+  useEffect(() => {
+    if (!contextMenu) return
+    const handleClose = () => setContextMenu(null)
+    document.addEventListener('click', handleClose)
+    document.addEventListener('scroll', handleClose, true)
+    return () => {
+      document.removeEventListener('click', handleClose)
+      document.removeEventListener('scroll', handleClose, true)
+    }
+  }, [contextMenu])
+
+  // Mark WhatsApp conversation as unread
+  const handleMarkAsUnread = async (convId: string) => {
+    setContextMenu(null)
+    // If this is the currently selected conversation, deselect it
+    if (selectedWaConv?.id === convId) {
+      setSelectedWaConv(null)
+    }
+    // Optimistic update
+    setWaConversations(prev => prev.map(c => c.id === convId ? { ...c, unread_count: Math.max(c.unread_count, 1) } : c))
+    try {
+      await fetch(`/api/chat/conversations/${convId}/unread`, { method: 'POST' })
+    } catch (error) {
+      console.error('Error marking as unread:', error)
+    }
+  }
 
   // Determine if user can see all branches
   const canSeeAll = user?.role === 'super_admin' || branches.length > 1
@@ -587,12 +616,14 @@ export default function ChatPage() {
     if (!dateStr) return ''
     const d = new Date(dateStr)
     const now = new Date()
-    const diff = now.getTime() - d.getTime()
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24))
-    if (days === 0) return formatTime(dateStr)
-    if (days === 1) return t('admin.chat.yesterday') || 'Yesterday'
-    if (days < 7) return d.toLocaleDateString('he-IL', { weekday: 'short' })
-    return d.toLocaleDateString('he-IL', { day: '2-digit', month: '2-digit' })
+    // Compare calendar dates (not time diff)
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+    const msgDay = new Date(d.getFullYear(), d.getMonth(), d.getDate())
+    const diffDays = Math.round((today.getTime() - msgDay.getTime()) / (1000 * 60 * 60 * 24))
+    if (diffDays === 0) return formatTime(dateStr)
+    if (diffDays === 1) return t('admin.chat.yesterday') || 'Yesterday'
+    if (diffDays < 7) return d.toLocaleDateString(locale === 'he' ? 'he-IL' : locale === 'fr' ? 'fr-FR' : 'en-US', { weekday: 'short' })
+    return d.toLocaleDateString(locale === 'he' ? 'he-IL' : locale === 'fr' ? 'fr-FR' : 'en-US', { day: '2-digit', month: '2-digit' })
   }
 
   const getWaDisplayName = (conv: WhatsAppConversation) => {
@@ -785,14 +816,18 @@ export default function ChatPage() {
                 </div>
               ) : (
                 waConversations.map((conv) => (
-                  <button
+                  <div
                     key={conv.id}
-                    onClick={() => handleSelectWaConversation(conv)}
-                    className={`w-full p-4 flex items-center gap-3 transition-colors border-b ${
+                    className={`group relative w-full p-4 flex items-center gap-3 transition-colors border-b cursor-pointer ${
                       selectedWaConv?.id === conv.id
                         ? isDark ? 'bg-gray-800 border-gray-700' : 'bg-green-50 border-gray-100'
                         : isDark ? 'hover:bg-gray-800/50 border-gray-800' : 'hover:bg-gray-50 border-gray-100'
                     }`}
+                    onClick={() => handleSelectWaConversation(conv)}
+                    onContextMenu={(e) => {
+                      e.preventDefault()
+                      setContextMenu({ x: e.clientX, y: e.clientY, convId: conv.id })
+                    }}
                   >
                     <div className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 ${
                       conv.contact_id ? 'bg-green-600' : isDark ? 'bg-gray-700' : 'bg-gray-300'
@@ -804,9 +839,23 @@ export default function ChatPage() {
                         <span className={`font-medium truncate ${isDark ? 'text-white' : 'text-gray-900'}`}>
                           {getWaDisplayName(conv)}
                         </span>
-                        <span className={`text-xs flex-shrink-0 ml-2 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
-                          {formatDate(conv.last_message_at)}
-                        </span>
+                        <div className="flex items-center gap-1 flex-shrink-0 ml-2">
+                          <span className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                            {formatDate(conv.last_message_at)}
+                          </span>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleMarkAsUnread(conv.id)
+                            }}
+                            className={`p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity ${
+                              isDark ? 'hover:bg-gray-700 text-gray-400' : 'hover:bg-gray-200 text-gray-400'
+                            }`}
+                            title={t('admin.chat.mark_unread') || 'Mark as unread'}
+                          >
+                            <EyeOff className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       </div>
                       <div className="flex items-center justify-between mt-0.5">
                         <div className="flex items-center gap-1.5 min-w-0">
@@ -850,7 +899,7 @@ export default function ChatPage() {
                         )}
                       </div>
                     </div>
-                  </button>
+                  </div>
                 ))
               )
             ) : (
@@ -1331,6 +1380,30 @@ export default function ChatPage() {
           defaultBranchId={selectedMsConv.branch_id}
         />
       )}
+      {/* Context menu for WhatsApp conversations */}
+      {contextMenu && (
+        <div
+          className={`fixed z-50 rounded-lg shadow-xl border py-1 min-w-[180px] ${
+            isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
+          }`}
+          style={{
+            left: Math.min(contextMenu.x, window.innerWidth - 200),
+            top: Math.min(contextMenu.y, window.innerHeight - 50),
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            onClick={() => handleMarkAsUnread(contextMenu.convId)}
+            className={`w-full px-4 py-2 text-sm text-left flex items-center gap-2.5 transition-colors ${
+              isDark ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-100'
+            }`}
+          >
+            <EyeOff className="w-4 h-4" />
+            {t('admin.chat.mark_unread') || 'Mark as unread'}
+          </button>
+        </div>
+      )}
+
       {/* Delete WhatsApp conversation confirm (super_admin only) */}
       <ConfirmDialog
         isOpen={showDeleteConfirm}

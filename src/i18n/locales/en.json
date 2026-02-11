@@ -2149,7 +2149,8 @@
       "show_archived": "Show archived",
       "hide_archived": "Hide archived",
       "archived": "Archived",
-      "search_emoji": "Search emoji..."
+      "search_emoji": "Search emoji...",
+      "mark_unread": "Mark as unread"
     },
     "chat_stats": {
       "error_loading": "Error loading chat statistics",

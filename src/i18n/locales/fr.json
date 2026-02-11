@@ -2212,7 +2212,8 @@
       "show_archived": "Voir archivees",
       "hide_archived": "Masquer archivees",
       "archived": "Archivee",
-      "search_emoji": "Rechercher un emoji..."
+      "search_emoji": "Rechercher un emoji...",
+      "mark_unread": "Marquer comme non lu"
     },
     "chat_stats": {
       "error_loading": "Erreur lors du chargement des statistiques chat",

@@ -2207,7 +2207,8 @@
       "show_archived": "הצג ארכיון",
       "hide_archived": "הסתר ארכיון",
       "archived": "בארכיון",
-      "search_emoji": "חיפוש אימוג'י..."
+      "search_emoji": "חיפוש אימוג'י...",
+      "mark_unread": "סמן כלא נקרא"
     },
     "chat_stats": {
       "error_loading": "שגיאה בטעינת סטטיסטיקות צ'אט",
