@@ -2523,6 +2523,9 @@
       "updated": "FAQ mise à jour",
       "deleted": "FAQ supprimée",
       "error": "Erreur",
+      "filter_all": "Tout",
+      "inactive": "Inactive",
+      "no_results": "Aucune FAQ dans cette catégorie",
       "categories": {
         "general": "Général",
         "booking": "Réservation",

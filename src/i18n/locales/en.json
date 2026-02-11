@@ -2459,6 +2459,9 @@
       "updated": "FAQ updated",
       "deleted": "FAQ deleted",
       "error": "Error",
+      "filter_all": "All",
+      "inactive": "Inactive",
+      "no_results": "No FAQ in this category",
       "categories": {
         "general": "General",
         "booking": "Booking",

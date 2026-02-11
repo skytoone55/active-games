@@ -2516,6 +2516,9 @@
       "updated": "שאלה עודכנה",
       "deleted": "שאלה נמחקה",
       "error": "שגיאה",
+      "filter_all": "הכל",
+      "inactive": "לא פעיל",
+      "no_results": "אין שאלות בקטגוריה זו",
       "categories": {
         "general": "כללי",
         "booking": "הזמנה",
