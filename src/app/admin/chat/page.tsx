@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback, useTransition } from 'react'
-import { MessageCircle, Send, Search, Phone, User, ArrowLeft, Loader2, Filter, UserPlus, Globe, Bot, Archive, X, Smile } from 'lucide-react'
+import { MessageCircle, Send, Search, Phone, User, ArrowLeft, Loader2, Filter, UserPlus, Globe, Bot, Archive, X, Smile, Trash2 } from 'lucide-react'
 import dynamic from 'next/dynamic'
 import { Theme as EmojiTheme } from 'emoji-picker-react'
 
@@ -10,6 +10,7 @@ import { useTranslation } from '@/contexts/LanguageContext'
 import { useAdmin } from '@/contexts/AdminContext'
 import { useUserPermissions } from '@/hooks/useUserPermissions'
 import { useRealtimeSubscription } from '@/hooks/useRealtimeSubscription'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { QuickContactModal } from './components/QuickContactModal'
 import type { Contact } from '@/lib/supabase/types'
 
@@ -143,6 +144,8 @@ export default function ChatPage() {
   const msLiveTimerRef = useRef<NodeJS.Timeout | null>(null)
   const [showArchived, setShowArchived] = useState(false)
   const [closingConversation, setClosingConversation] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [deletingConversation, setDeletingConversation] = useState(false)
 
   // ============================================================
   // Shared state
@@ -540,6 +543,28 @@ export default function ChatPage() {
       console.error('Error closing conversation:', error)
     } finally {
       setClosingConversation(false)
+    }
+  }
+
+  const handleDeleteWaConversation = async () => {
+    if (!selectedWaConv || deletingConversation) return
+    setDeletingConversation(true)
+    try {
+      const res = await fetch(`/api/chat/conversations/${selectedWaConv.id}/delete`, {
+        method: 'POST',
+      })
+      const data = await res.json()
+      if (data.success) {
+        setSelectedWaConv(null)
+        setShowDeleteConfirm(false)
+        fetchWaConversations()
+      } else {
+        console.error('Delete failed:', data.error)
+      }
+    } catch (error) {
+      console.error('Error deleting conversation:', error)
+    } finally {
+      setDeletingConversation(false)
     }
   }
 
@@ -1013,6 +1038,22 @@ export default function ChatPage() {
                     <UserPlus className="w-5 h-5" />
                   </button>
                 )}
+                {user?.role === 'super_admin' && (
+                  <button
+                    onClick={() => setShowDeleteConfirm(true)}
+                    disabled={deletingConversation}
+                    className={`p-2 rounded-lg transition-colors ${
+                      isDark ? 'hover:bg-red-500/20 text-red-400' : 'hover:bg-red-50 text-red-500'
+                    } disabled:opacity-50`}
+                    title={t('admin.chat.delete_conversation') || 'Delete conversation'}
+                  >
+                    {deletingConversation ? (
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                    ) : (
+                      <Trash2 className="w-5 h-5" />
+                    )}
+                  </button>
+                )}
               </div>
 
               {/* WhatsApp messages */}
@@ -1289,6 +1330,22 @@ export default function ChatPage() {
           defaultBranchId={selectedMsConv.branch_id}
         />
       )}
+      {/* Delete WhatsApp conversation confirm (super_admin only) */}
+      <ConfirmDialog
+        isOpen={showDeleteConfirm}
+        title={t('admin.chat.delete_conversation') || 'Delete conversation'}
+        message={
+          selectedWaConv
+            ? `${t('admin.chat.delete_conversation_confirm') || 'Are you sure you want to permanently delete this conversation?'}\n\n📱 ${selectedWaConv.contact_name || selectedWaConv.phone}\n\n${t('admin.chat.delete_conversation_warning') || 'All messages will be permanently deleted. This action cannot be undone.'}`
+            : ''
+        }
+        confirmLabel={t('admin.chat.delete_confirm_btn') || 'Delete'}
+        cancelLabel={t('common.cancel') || 'Cancel'}
+        isDark={isDark}
+        variant="danger"
+        onConfirm={handleDeleteWaConversation}
+        onCancel={() => setShowDeleteConfirm(false)}
+      />
     </div>
   )
 }
