@@ -312,7 +312,7 @@ export async function processWithClara(request: ClaraRequest): Promise<ClaraResp
       role: 'system',
       content: enhancedPrompt
     },
-    ...conversationHistory.slice(-5), // Last 5 messages for context
+    ...conversationHistory, // Full conversation history
     { role: 'user', content: userMessage }
   ]
 

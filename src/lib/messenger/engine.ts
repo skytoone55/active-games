@@ -532,17 +532,23 @@ export async function processUserMessage(
         if (claraResponse.is_complete) {
           console.log('[Engine] Clara marked step as complete')
 
-          // VALIDATION STRICTE des formats critiques
-          const validation = validateCriticalFormats(updatedData)
+          // Validation uniquement sur les données du step actuel (pas tout le collected_data)
+          const stepData: Record<string, any> = {}
+          if (claraResponse.collected_data) {
+            Object.assign(stepData, claraResponse.collected_data)
+          }
+          const validation = validateCriticalFormats(stepData)
 
           if (!validation.isValid) {
             console.error('[Engine] Clara validation failed:', validation.invalidFields)
 
-            // Construire un message d'erreur en hébreu pour Clara
-            const errorFields = validation.invalidFields.map(f => `- ${f.field}: ${f.issue}`).join('\n')
-            const errorMessage = `סליחה, יש בעיה עם הנתונים:\n${errorFields}\n\nאנא תקן את הפרטים.`
+            const errorMessages: Record<string, string> = {
+              fr: 'Il y a un problème avec les données fournies. Pourriez-vous réessayer ?',
+              en: 'There is an issue with the provided data. Could you please try again?',
+              he: 'יש בעיה עם הנתונים. אנא נסה שוב.'
+            }
+            const errorMessage = errorMessages[locale] || errorMessages.fr
 
-            // Enregistrer le message d'erreur
             await supabase.from('messenger_messages').insert({
               conversation_id: conversationId,
               role: 'assistant',
@@ -550,7 +556,6 @@ export async function processUserMessage(
               step_ref: currentStep.step_ref
             })
 
-            // Retourner sans passer à l'étape suivante
             return {
               success: true,
               message: errorMessage,
@@ -684,6 +689,66 @@ export async function processUserMessage(
                     nextStepRef: nextOutput.destination_ref,
                     moduleType: nextModule.module_type,
                     choices: nextChoices
+                  }
+                }
+              }
+            } else if (nextOutput.destination_type === 'workflow' && nextOutput.destination_ref) {
+              // Transition vers un autre workflow
+              console.log('[Engine] Clara: switching to workflow:', nextOutput.destination_ref)
+              const { data: targetWorkflow } = await supabase
+                .from('messenger_workflows')
+                .select('*')
+                .eq('id', nextOutput.destination_ref)
+                .single()
+
+              if (targetWorkflow) {
+                const { data: targetEntryStep } = await supabase
+                  .from('messenger_workflow_steps')
+                  .select('*')
+                  .eq('workflow_id', targetWorkflow.id)
+                  .eq('is_entry_point', true)
+                  .single()
+
+                if (targetEntryStep) {
+                  const { data: targetModule } = await supabase
+                    .from('messenger_modules')
+                    .select('*')
+                    .eq('ref_code', targetEntryStep.module_ref)
+                    .single()
+
+                  if (targetModule) {
+                    await supabase
+                      .from('messenger_conversations')
+                      .update({
+                        current_workflow_id: targetWorkflow.id,
+                        current_step_ref: targetEntryStep.step_ref,
+                        last_activity_at: new Date().toISOString()
+                      })
+                      .eq('id', conversationId)
+
+                    const targetMessage = targetModule.content[locale] || ''
+                    await supabase.from('messenger_messages').insert({
+                      conversation_id: conversationId,
+                      role: 'assistant',
+                      content: targetMessage,
+                      step_ref: targetEntryStep.step_ref
+                    })
+
+                    const targetChoices = targetModule.module_type === 'choix_multiples' && targetModule.choices
+                      ? targetModule.choices.map((choice: any, index: number) => ({
+                          id: choice.id,
+                          label: choice.label[locale] || choice.label.fr || choice.label.en,
+                          value: `${index + 1}`
+                        }))
+                      : null
+
+                    return {
+                      success: true,
+                      message: targetMessage,
+                      nextStepRef: targetEntryStep.step_ref,
+                      moduleType: targetModule.module_type,
+                      choices: targetChoices
+                    }
                   }
                 }
               }
