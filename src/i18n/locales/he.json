@@ -1992,7 +1992,9 @@
         "templates": "תבניות",
         "templates_desc": "אימיילים ותנאים",
         "credentials": "פרטי תשלום",
-        "credentials_desc": "הגדרות API של iCount לכל סניף"
+        "credentials_desc": "הגדרות API של iCount לכל סניף",
+        "whatsapp": "WhatsApp",
+        "whatsapp_desc": "אונבורדינג והודעות אוטומטיות"
       },
       "templates_tabs": {
         "emails": "תבניות אימייל",
@@ -2704,5 +2706,33 @@
     "pause_animations": "השהה אנימציות",
     "reset": "איפוס הגדרות",
     "statement": "הצהרת נגישות"
+  },
+  "whatsapp": {
+    "onboarding": {
+      "subtitle": "הגדרת תהליך האונבורדינג בוואטסאפ",
+      "enabled": "הפעל אונבורדינג אינטראקטיבי",
+      "enabled_help": "שולח הודעות אינטראקטיביות ללקוחות חדשים לזיהוי הפעילות והסניף",
+      "language": "שפת ההודעות",
+      "language_help": "השפה בה נשלחים הכפתורים וההודעות",
+      "activities_title": "פעילויות",
+      "activities_help": "מקסימום 3 פעילויות (מגבלת כפתורי וואטסאפ)",
+      "add_activity": "הוסף פעילות",
+      "branches_title": "סניפים",
+      "branches_help": "מקסימום 3 סניפים (מגבלת כפתורי וואטסאפ)",
+      "add_branch": "הוסף סניף",
+      "select_branch": "-- בחר --",
+      "button_label": "שם הכפתור",
+      "prompts_title": "הודעות אינטראקטיביות",
+      "activity_prompt": "הודעת בחירת פעילות",
+      "activity_prompt_placeholder": "לדוגמה: שלום! באיזו פעילות אתם מעוניינים?",
+      "branch_prompt": "הודעת בחירת סניף",
+      "branch_prompt_placeholder": "לדוגמה: מעולה! באיזה סניף תרצו להגיע?",
+      "welcome_message": "הודעת ברוכים הבאים",
+      "welcome_message_help": "נשלחת לאחר סיום האונבורדינג",
+      "welcome_text": "טקסט ההודעה",
+      "welcome_placeholder": "תודה! נציג יחזור אליכם בהקדם.",
+      "save": "שמור",
+      "saved": "ההגדרות נשמרו"
+    }
   }
 }

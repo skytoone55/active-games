@@ -25,6 +25,8 @@ interface WhatsAppConversation {
   contact_name: string | null
   contact_id: string | null
   branch_id: string | null
+  activity: string | null
+  onboarding_status: string | null
   status: string
   last_message_at: string
   unread_count: number
@@ -791,7 +793,23 @@ export default function ChatPage() {
                               title={getBranchDisplayName(conv.branch) || ''}
                             />
                           )}
-                          {!conv.branch_id && !conv.contact_id && (
+                          {conv.activity && (
+                            <span className={`text-[10px] px-1.5 py-0.5 rounded-full flex-shrink-0 ${
+                              conv.activity === 'laser_city'
+                                ? isDark ? 'bg-red-500/20 text-red-400' : 'bg-red-100 text-red-600'
+                                : isDark ? 'bg-purple-500/20 text-purple-400' : 'bg-purple-100 text-purple-600'
+                            }`}>
+                              {conv.activity === 'laser_city' ? 'Laser' : 'Active'}
+                            </span>
+                          )}
+                          {conv.onboarding_status && conv.onboarding_status !== 'completed' && (
+                            <span className={`text-[10px] px-1.5 py-0.5 rounded-full flex-shrink-0 animate-pulse ${
+                              isDark ? 'bg-yellow-500/20 text-yellow-400' : 'bg-yellow-100 text-yellow-600'
+                            }`}>
+                              ⏳
+                            </span>
+                          )}
+                          {!conv.branch_id && !conv.contact_id && !conv.onboarding_status && (
                             <span className={`text-[10px] px-1.5 py-0.5 rounded-full flex-shrink-0 ${
                               isDark ? 'bg-gray-700 text-gray-400' : 'bg-gray-200 text-gray-500'
                             }`}>
@@ -972,6 +990,15 @@ export default function ChatPage() {
                         className={`w-2.5 h-2.5 rounded-full ${getBranchColor(selectedWaConv.branch_id, branches)}`}
                         title={getBranchDisplayName(selectedWaConv.branch) || ''}
                       />
+                    )}
+                    {selectedWaConv.activity && (
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${
+                        selectedWaConv.activity === 'laser_city'
+                          ? isDark ? 'bg-red-500/20 text-red-400' : 'bg-red-100 text-red-600'
+                          : isDark ? 'bg-purple-500/20 text-purple-400' : 'bg-purple-100 text-purple-600'
+                      }`}>
+                        {selectedWaConv.activity === 'laser_city' ? 'Laser City' : 'Active Games'}
+                      </span>
                     )}
                   </div>
                 </div>

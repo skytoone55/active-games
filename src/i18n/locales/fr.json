@@ -1997,7 +1997,9 @@
         "templates": "Templates",
         "templates_desc": "Emails & CGV",
         "credentials": "Identifiants de paiement",
-        "credentials_desc": "Configuration API iCount par branche"
+        "credentials_desc": "Configuration API iCount par branche",
+        "whatsapp": "WhatsApp",
+        "whatsapp_desc": "Onboarding et messages automatiques"
       },
       "templates_tabs": {
         "emails": "Templates d'emails",
@@ -2710,5 +2712,33 @@
     "pause_animations": "Suspendre les animations",
     "reset": "Réinitialiser",
     "statement": "Déclaration d'accessibilité"
+  },
+  "whatsapp": {
+    "onboarding": {
+      "subtitle": "Configuration du flux d'onboarding WhatsApp",
+      "enabled": "Activer l'onboarding interactif",
+      "enabled_help": "Envoie des messages interactifs aux nouveaux contacts pour identifier l'activite et le centre",
+      "language": "Langue des messages WhatsApp",
+      "language_help": "Langue utilisee pour envoyer les boutons et messages",
+      "activities_title": "Activites",
+      "activities_help": "Maximum 3 activites (limite des boutons WhatsApp)",
+      "add_activity": "Ajouter une activite",
+      "branches_title": "Centres / Succursales",
+      "branches_help": "Maximum 3 centres (limite des boutons WhatsApp)",
+      "add_branch": "Ajouter un centre",
+      "select_branch": "-- Choisir --",
+      "button_label": "Nom du bouton",
+      "prompts_title": "Messages interactifs",
+      "activity_prompt": "Message de choix d'activite",
+      "activity_prompt_placeholder": "Ex: Bonjour ! Quelle activite vous interesse ?",
+      "branch_prompt": "Message de choix de centre",
+      "branch_prompt_placeholder": "Ex: Super ! Dans quel centre souhaitez-vous venir ?",
+      "welcome_message": "Message de bienvenue",
+      "welcome_message_help": "Envoye apres la fin de l'onboarding",
+      "welcome_text": "Texte du message",
+      "welcome_placeholder": "Merci ! Un conseiller va vous repondre rapidement.",
+      "save": "Enregistrer",
+      "saved": "Configuration sauvegardee"
+    }
   }
 }

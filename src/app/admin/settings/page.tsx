@@ -10,7 +10,8 @@ import {
   CreditCard,
   Package,
   Sparkles,
-  MessageSquare
+  MessageSquare,
+  Phone
 } from 'lucide-react'
 import { useAdmin } from '@/contexts/AdminContext'
 import { useUserPermissions } from '@/hooks/useUserPermissions'
@@ -20,8 +21,9 @@ import { CredentialsSection } from './components/CredentialsSection'
 import { ICountCatalogSection } from './components/ICountCatalogSection'
 import { ClaraSection } from './components/ClaraSection'
 import { MessengerSection } from './components/MessengerSection'
+import { WhatsAppSection } from './components/WhatsAppSection'
 
-type SettingsSection = 'templates' | 'credentials' | 'catalog' | 'messenger' | 'clara'
+type SettingsSection = 'templates' | 'credentials' | 'catalog' | 'messenger' | 'whatsapp' | 'clara'
 
 export default function SettingsPage() {
   const { t } = useTranslation()
@@ -86,6 +88,13 @@ export default function SettingsPage() {
       label: 'Messenger',
       description: 'Messagerie automatisée',
       requiredPermission: 'messenger'
+    },
+    {
+      id: 'whatsapp',
+      icon: Phone,
+      label: 'WhatsApp',
+      description: t('admin.settings.sections.whatsapp_desc'),
+      requiredPermission: 'settings'
     },
     {
       id: 'clara',
@@ -181,6 +190,9 @@ export default function SettingsPage() {
           )}
           {activeSection === 'messenger' && (
             <MessengerSection isDark={isDark} />
+          )}
+          {activeSection === 'whatsapp' && (
+            <WhatsAppSection isDark={isDark} />
           )}
           {activeSection === 'clara' && (
             <ClaraSection isDark={isDark} />

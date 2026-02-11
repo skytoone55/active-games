@@ -1934,7 +1934,9 @@
         "templates": "Templates",
         "templates_desc": "Emails & Terms",
         "credentials": "Payment Credentials",
-        "credentials_desc": "iCount API settings per branch"
+        "credentials_desc": "iCount API settings per branch",
+        "whatsapp": "WhatsApp",
+        "whatsapp_desc": "Onboarding and automated messages"
       },
       "templates_tabs": {
         "emails": "Email Templates",
@@ -2646,5 +2648,33 @@
     "pause_animations": "Pause animations",
     "reset": "Reset settings",
     "statement": "Accessibility Statement"
+  },
+  "whatsapp": {
+    "onboarding": {
+      "subtitle": "WhatsApp onboarding flow configuration",
+      "enabled": "Enable interactive onboarding",
+      "enabled_help": "Sends interactive messages to new contacts to identify the activity and location",
+      "language": "Message language",
+      "language_help": "Language used to send buttons and messages",
+      "activities_title": "Activities",
+      "activities_help": "Maximum 3 activities (WhatsApp button limit)",
+      "add_activity": "Add an activity",
+      "branches_title": "Locations / Branches",
+      "branches_help": "Maximum 3 locations (WhatsApp button limit)",
+      "add_branch": "Add a location",
+      "select_branch": "-- Select --",
+      "button_label": "Button label",
+      "prompts_title": "Interactive messages",
+      "activity_prompt": "Activity selection message",
+      "activity_prompt_placeholder": "E.g.: Hello! Which activity interests you?",
+      "branch_prompt": "Location selection message",
+      "branch_prompt_placeholder": "E.g.: Great! Which location would you like to visit?",
+      "welcome_message": "Welcome message",
+      "welcome_message_help": "Sent after onboarding is complete",
+      "welcome_text": "Message text",
+      "welcome_placeholder": "Thanks! A team member will respond shortly.",
+      "save": "Save",
+      "saved": "Configuration saved"
+    }
   }
 }
