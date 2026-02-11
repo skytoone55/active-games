@@ -194,6 +194,18 @@ body {
   background: var(--primary);
 }
 
+/* Scrollbar neutre pour l'admin */
+.admin-layout ::-webkit-scrollbar-thumb {
+  background: #4B5563;
+  border-radius: 4px;
+}
+.admin-layout ::-webkit-scrollbar-thumb:hover {
+  background: #6B7280;
+}
+.admin-layout ::-webkit-scrollbar-track {
+  background: #1F2937;
+}
+
 /* Animations */
 @keyframes float {
   0%, 100% {

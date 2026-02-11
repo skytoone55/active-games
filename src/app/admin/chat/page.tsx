@@ -1,7 +1,11 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback, useTransition } from 'react'
-import { MessageCircle, Send, Search, Phone, User, ArrowLeft, Loader2, Filter, UserPlus, Globe, Bot, Archive, X } from 'lucide-react'
+import { MessageCircle, Send, Search, Phone, User, ArrowLeft, Loader2, Filter, UserPlus, Globe, Bot, Archive, X, Smile } from 'lucide-react'
+import dynamic from 'next/dynamic'
+import { Theme as EmojiTheme } from 'emoji-picker-react'
+
+const EmojiPicker = dynamic(() => import('emoji-picker-react'), { ssr: false })
 import { useTranslation } from '@/contexts/LanguageContext'
 import { useAdmin } from '@/contexts/AdminContext'
 import { useUserPermissions } from '@/hooks/useUserPermissions'
@@ -158,8 +162,21 @@ export default function ChatPage() {
   const selectedWaConvIdRef = useRef<string | null>(null)
   const selectedMsConvIdRef = useRef<string | null>(null)
   const activeChannelRef = useRef<ChatChannel>('whatsapp')
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false)
+  const emojiPickerRef = useRef<HTMLDivElement>(null)
 
   const isLoading = adminLoading || permissionsLoading || !user
+
+  // Close emoji picker on outside click
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (emojiPickerRef.current && !emojiPickerRef.current.contains(e.target as Node)) {
+        setShowEmojiPicker(false)
+      }
+    }
+    if (showEmojiPicker) document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [showEmojiPicker])
 
   // Determine if user can see all branches
   const canSeeAll = user?.role === 'super_admin' || branches.length > 1
@@ -1013,7 +1030,37 @@ export default function ChatPage() {
 
               {/* Message input */}
               <div className={`p-4 border-t ${isDark ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-white'}`}>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 relative">
+                  {/* Emoji picker */}
+                  <div className="relative" ref={emojiPickerRef}>
+                    <button
+                      type="button"
+                      onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                      className={`p-2 rounded-full transition-colors ${
+                        showEmojiPicker
+                          ? 'bg-green-600 text-white'
+                          : isDark ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-700' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                      }`}
+                    >
+                      <Smile className="w-5 h-5" />
+                    </button>
+                    {showEmojiPicker && (
+                      <div className="absolute bottom-full mb-2 left-0 z-50">
+                        <EmojiPicker
+                          theme={isDark ? EmojiTheme.DARK : EmojiTheme.LIGHT}
+                          onEmojiClick={(emojiData) => {
+                            setNewMessage(prev => prev + emojiData.emoji)
+                            inputRef.current?.focus()
+                          }}
+                          width={350}
+                          height={400}
+                          searchPlaceHolder={t('admin.chat.search_emoji') || 'Search emoji...'}
+                          previewConfig={{ showPreview: false }}
+                        />
+                      </div>
+                    )}
+                  </div>
+
                   <input
                     ref={inputRef}
                     type="text"

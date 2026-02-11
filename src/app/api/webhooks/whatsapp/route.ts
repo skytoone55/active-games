@@ -94,6 +94,7 @@ export async function POST(request: NextRequest) {
         console.log('[WHATSAPP] Message from', senderPhone, ':', messageText)
 
         // 1. Find or create conversation
+        let isNewConversation = false
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         let { data: conversation } = await (supabase as any)
           .from('whatsapp_conversations')
@@ -141,6 +142,7 @@ export async function POST(request: NextRequest) {
             .single()
 
           conversation = newConv
+          isNewConversation = true
         } else {
           // Update existing conversation
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -172,6 +174,73 @@ export async function POST(request: NextRequest) {
             whatsapp_message_id: messageId,
             status: 'delivered',
           })
+
+        // 3. Auto-reply pour nouvelles conversations
+        if (isNewConversation) {
+          try {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const { data: msSettings } = await (supabase as any)
+              .from('messenger_settings')
+              .select('settings')
+              .single()
+
+            const autoReply = msSettings?.settings?.whatsapp_auto_reply
+            if (autoReply?.enabled && autoReply?.message) {
+              // Support both old (string) and new (multilingual object) format
+              let replyText: string = ''
+              if (typeof autoReply.message === 'string') {
+                replyText = autoReply.message
+              } else {
+                // Multilingual: pick fr first, then any available language
+                replyText = autoReply.message.fr || autoReply.message.he || autoReply.message.en || ''
+              }
+
+              const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID
+              const accessToken = process.env.WHATSAPP_ACCESS_TOKEN
+
+              if (phoneNumberId && accessToken && replyText.trim()) {
+                const waRes = await fetch(
+                  `https://graph.facebook.com/v21.0/${phoneNumberId}/messages`,
+                  {
+                    method: 'POST',
+                    headers: {
+                      'Authorization': `Bearer ${accessToken}`,
+                      'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                      messaging_product: 'whatsapp',
+                      recipient_type: 'individual',
+                      to: senderPhone,
+                      type: 'text',
+                      text: { body: replyText },
+                    }),
+                  }
+                )
+                const waResult = await waRes.json()
+                const waAutoMsgId = waResult.messages?.[0]?.id || null
+
+                // Stocker le message auto dans la DB
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                await (supabase as any)
+                  .from('whatsapp_messages')
+                  .insert({
+                    conversation_id: conversation.id,
+                    direction: 'outbound',
+                    message_type: 'text',
+                    content: replyText,
+                    whatsapp_message_id: waAutoMsgId,
+                    status: 'sent',
+                    sent_by: null, // null = message automatique
+                  })
+
+                console.log('[WHATSAPP] Auto-reply sent to', senderPhone)
+              }
+            }
+          } catch (autoReplyError) {
+            // Ne pas bloquer le webhook si l'auto-reply échoue
+            console.error('[WHATSAPP] Auto-reply error:', autoReplyError)
+          }
+        }
       }
     }
 

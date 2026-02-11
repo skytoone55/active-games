@@ -10,8 +10,8 @@ import {
   AlertCircle,
   Loader2,
   Users,
-  TrendingUp
 } from 'lucide-react'
+import { useTranslation } from '@/contexts/LanguageContext'
 import {
   BarChart,
   Bar,
@@ -107,6 +107,8 @@ export function ChatStatsTab({
   customStartDate,
   customEndDate
 }: ChatStatsTabProps) {
+  const { t } = useTranslation()
+
   // Build SWR key from filters — SWR only fetches when component is mounted
   const swrKey = useMemo(() => {
     let url = `/api/admin/statistics/chat?range=${dateRange}&branch=${selectedBranchId}`
@@ -173,7 +175,7 @@ export function ChatStatsTab({
     return (
       <div className={`flex flex-col items-center gap-3 py-20 ${isDark ? 'text-red-400' : 'text-red-500'}`}>
         <AlertCircle className="w-8 h-8" />
-        <p>Erreur lors du chargement des statistiques chat</p>
+        <p>{t('admin.chat_stats.error_loading')}</p>
       </div>
     )
   }
@@ -181,7 +183,7 @@ export function ChatStatsTab({
   if (!stats) {
     return (
       <div className={`text-center py-20 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-        Aucune donnée disponible
+        {t('admin.chat_stats.no_data')}
       </div>
     )
   }
@@ -191,15 +193,15 @@ export function ChatStatsTab({
       {/* KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <KPICard
-          title="Temps de réponse moyen"
+          title={t('admin.chat_stats.avg_response_time')}
           value={formatTime(stats.avgResponseTime)}
-          subtitle={`Médian : ${formatTime(stats.medianResponseTime)}`}
+          subtitle={t('admin.chat_stats.median_label', { time: formatTime(stats.medianResponseTime) })}
           icon={Clock}
           isDark={isDark}
           color="blue"
         />
         <KPICard
-          title="Conversations"
+          title={t('admin.chat_stats.conversations')}
           value={stats.totalConversations.toString()}
           subtitle={`WA: ${stats.whatsapp.activeConversations} · Messenger: ${stats.messenger.totalConversations}`}
           icon={MessagesSquare}
@@ -207,7 +209,7 @@ export function ChatStatsTab({
           color="green"
         />
         <KPICard
-          title="Messages total"
+          title={t('admin.chat_stats.total_messages')}
           value={stats.totalMessages.toString()}
           subtitle={`↓ ${stats.whatsapp.inboundCount} · ↑ ${stats.whatsapp.outboundCount} (WA)`}
           icon={MessageCircle}
@@ -215,9 +217,9 @@ export function ChatStatsTab({
           color="purple"
         />
         <KPICard
-          title="Réponses < 5min"
+          title={t('admin.chat_stats.responses_under_5min')}
           value={`${stats.under5minPercent}%`}
-          subtitle={`${stats.responseTimeDistribution.under5min} / ${stats.totalResponses} réponses`}
+          subtitle={t('admin.chat_stats.responses_count', { count: stats.responseTimeDistribution.under5min, total: stats.totalResponses })}
           icon={Zap}
           isDark={isDark}
           color="orange"
@@ -233,10 +235,10 @@ export function ChatStatsTab({
             <h3 className={`text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>WhatsApp</h3>
           </div>
           <div className="grid grid-cols-2 gap-4">
-            <StatItem label="Messages entrants" value={stats.whatsapp.inboundCount} isDark={isDark} />
-            <StatItem label="Messages sortants" value={stats.whatsapp.outboundCount} isDark={isDark} />
-            <StatItem label="Conversations actives" value={stats.whatsapp.activeConversations} isDark={isDark} />
-            <StatItem label="Non lues" value={stats.unreadConversations} isDark={isDark} highlight={stats.unreadConversations > 0} />
+            <StatItem label={t('admin.chat_stats.inbound_messages')} value={stats.whatsapp.inboundCount} isDark={isDark} />
+            <StatItem label={t('admin.chat_stats.outbound_messages')} value={stats.whatsapp.outboundCount} isDark={isDark} />
+            <StatItem label={t('admin.chat_stats.active_conversations')} value={stats.whatsapp.activeConversations} isDark={isDark} />
+            <StatItem label={t('admin.chat_stats.unread')} value={stats.unreadConversations} isDark={isDark} highlight={stats.unreadConversations > 0} />
           </div>
         </div>
 
@@ -247,10 +249,10 @@ export function ChatStatsTab({
             <h3 className={`text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>Messenger</h3>
           </div>
           <div className="grid grid-cols-2 gap-4">
-            <StatItem label="Conversations" value={stats.messenger.totalConversations} isDark={isDark} />
-            <StatItem label="Messages" value={stats.messenger.totalMessages} isDark={isDark} />
-            <StatItem label="Actives" value={stats.messenger.byStatus.active} isDark={isDark} />
-            <StatItem label="Terminées" value={stats.messenger.byStatus.completed} isDark={isDark} />
+            <StatItem label={t('admin.chat_stats.messenger_conversations')} value={stats.messenger.totalConversations} isDark={isDark} />
+            <StatItem label={t('admin.chat_stats.messenger_messages')} value={stats.messenger.totalMessages} isDark={isDark} />
+            <StatItem label={t('admin.chat_stats.messenger_active')} value={stats.messenger.byStatus.active} isDark={isDark} />
+            <StatItem label={t('admin.chat_stats.messenger_completed')} value={stats.messenger.byStatus.completed} isDark={isDark} />
           </div>
         </div>
       </div>
@@ -258,7 +260,7 @@ export function ChatStatsTab({
       {/* Charts Row: Distribution + Activity by Hour */}
       <div className="grid lg:grid-cols-2 gap-6">
         {/* Response Time Distribution */}
-        <ChartCard title="Distribution des temps de réponse" isDark={isDark}>
+        <ChartCard title={t('admin.chat_stats.response_time_distribution')} isDark={isDark}>
           {stats.totalResponses > 0 ? (
             <ResponsiveContainer width="100%" height={260}>
               <BarChart data={distributionData}>
@@ -274,12 +276,12 @@ export function ChatStatsTab({
               </BarChart>
             </ResponsiveContainer>
           ) : (
-            <EmptyChart isDark={isDark} />
+            <EmptyChart isDark={isDark} message={t('admin.chat_stats.no_data_chart')} />
           )}
         </ChartCard>
 
         {/* Activity by Hour */}
-        <ChartCard title="Activité par heure" isDark={isDark}>
+        <ChartCard title={t('admin.chat_stats.activity_by_hour')} isDark={isDark}>
           {stats.activityByHour.some(h => h.inbound > 0 || h.outbound > 0) ? (
             <ResponsiveContainer width="100%" height={260}>
               <BarChart data={stats.activityByHour}>
@@ -287,19 +289,19 @@ export function ChatStatsTab({
                 <XAxis dataKey="hour" stroke={isDark ? '#9ca3af' : '#6b7280'} fontSize={11} />
                 <YAxis stroke={isDark ? '#9ca3af' : '#6b7280'} fontSize={12} />
                 <Tooltip contentStyle={tooltipStyle} />
-                <Bar dataKey="inbound" name="Entrants" fill={colors[0]} radius={[4, 4, 0, 0]} stackId="a" />
-                <Bar dataKey="outbound" name="Sortants" fill={colors[2]} radius={[4, 4, 0, 0]} stackId="a" />
+                <Bar dataKey="inbound" name={t('admin.chat_stats.inbound')} fill={colors[0]} radius={[4, 4, 0, 0]} stackId="a" />
+                <Bar dataKey="outbound" name={t('admin.chat_stats.outbound')} fill={colors[2]} radius={[4, 4, 0, 0]} stackId="a" />
               </BarChart>
             </ResponsiveContainer>
           ) : (
-            <EmptyChart isDark={isDark} />
+            <EmptyChart isDark={isDark} message={t('admin.chat_stats.no_data_chart')} />
           )}
         </ChartCard>
       </div>
 
       {/* Activity by Day */}
       <div className="grid lg:grid-cols-2 gap-6">
-        <ChartCard title="Activité par jour" isDark={isDark}>
+        <ChartCard title={t('admin.chat_stats.activity_by_day')} isDark={isDark}>
           {stats.activityByDay.some(d => d.count > 0) ? (
             <ResponsiveContainer width="100%" height={220}>
               <BarChart data={stats.activityByDay}>
@@ -307,16 +309,16 @@ export function ChatStatsTab({
                 <XAxis dataKey="day" stroke={isDark ? '#9ca3af' : '#6b7280'} fontSize={12} />
                 <YAxis stroke={isDark ? '#9ca3af' : '#6b7280'} fontSize={12} />
                 <Tooltip contentStyle={tooltipStyle} />
-                <Bar dataKey="count" name="Messages" fill={colors[3]} radius={[4, 4, 0, 0]} />
+                <Bar dataKey="count" name={t('admin.chat_stats.messages')} fill={colors[3]} radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           ) : (
-            <EmptyChart isDark={isDark} />
+            <EmptyChart isDark={isDark} message={t('admin.chat_stats.no_data_chart')} />
           )}
         </ChartCard>
 
         {/* Agent Performance Chart */}
-        <ChartCard title="Performance agents (temps moyen)" isDark={isDark}>
+        <ChartCard title={t('admin.chat_stats.agent_performance')} isDark={isDark}>
           {agentData.length > 0 ? (
             <ResponsiveContainer width="100%" height={Math.max(220, agentData.length * 50)}>
               <BarChart data={agentData} layout="vertical">
@@ -336,13 +338,13 @@ export function ChatStatsTab({
                 />
                 <Tooltip
                   contentStyle={tooltipStyle}
-                  formatter={(value) => [formatTime(value as number), 'Temps moyen']}
+                  formatter={(value) => [formatTime(value as number), t('admin.chat_stats.avg_time_label')]}
                 />
                 <Bar dataKey="avgResponseTime" fill={colors[0]} radius={[0, 4, 4, 0]} />
               </BarChart>
             </ResponsiveContainer>
           ) : (
-            <EmptyChart isDark={isDark} message="Aucune donnée agent" />
+            <EmptyChart isDark={isDark} message={t('admin.chat_stats.no_agent_data')} />
           )}
         </ChartCard>
       </div>
@@ -353,7 +355,7 @@ export function ChatStatsTab({
           <h3 className={`text-lg font-semibold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>
             <div className="flex items-center gap-2">
               <Users className="w-5 h-5" />
-              Classement agents
+              {t('admin.chat_stats.agent_ranking')}
             </div>
           </h3>
           <div className="overflow-x-auto">
@@ -361,11 +363,11 @@ export function ChatStatsTab({
               <thead>
                 <tr className={`border-b ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
                   <th className={`text-left py-3 px-4 font-medium text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>#</th>
-                  <th className={`text-left py-3 px-4 font-medium text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Agent</th>
-                  <th className={`text-center py-3 px-4 font-medium text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Messages</th>
-                  <th className={`text-center py-3 px-4 font-medium text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Temps moyen</th>
-                  <th className={`text-center py-3 px-4 font-medium text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Plus rapide</th>
-                  <th className={`text-center py-3 px-4 font-medium text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Plus lent</th>
+                  <th className={`text-left py-3 px-4 font-medium text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{t('admin.chat_stats.col_agent')}</th>
+                  <th className={`text-center py-3 px-4 font-medium text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{t('admin.chat_stats.col_messages')}</th>
+                  <th className={`text-center py-3 px-4 font-medium text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{t('admin.chat_stats.col_avg_time')}</th>
+                  <th className={`text-center py-3 px-4 font-medium text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{t('admin.chat_stats.col_fastest')}</th>
+                  <th className={`text-center py-3 px-4 font-medium text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{t('admin.chat_stats.col_slowest')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -475,7 +477,7 @@ function StatItem({ label, value, isDark, highlight }: { label: string; value: n
   )
 }
 
-function EmptyChart({ isDark, message = 'Aucune donnée' }: { isDark: boolean; message?: string }) {
+function EmptyChart({ isDark, message = '-' }: { isDark: boolean; message?: string }) {
   return (
     <div className={`flex items-center justify-center h-[220px] ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
       <p className="text-sm">{message}</p>

@@ -182,8 +182,10 @@ function AdminLayoutContent({
   return (
     <AdminProvider theme={theme} toggleTheme={toggleTheme}>
       <ClaraProvider theme={theme}>
-        <AdminHeaderInLayout theme={theme} toggleTheme={toggleTheme} />
-        {children}
+        <div className="admin-layout">
+          <AdminHeaderInLayout theme={theme} toggleTheme={toggleTheme} />
+          {children}
+        </div>
       </ClaraProvider>
     </AdminProvider>
   )
