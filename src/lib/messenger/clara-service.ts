@@ -249,6 +249,21 @@ export async function processWithClara(request: ClaraRequest): Promise<ClaraResp
   // Build enhanced system prompt with context
   let enhancedPrompt = config.prompt
 
+  // Add strict JSON response format instructions
+  enhancedPrompt += `\n\n## FORMAT DE RÉPONSE OBLIGATOIRE (JSON)
+Tu DOIS répondre en JSON valide avec cette structure:
+{
+  "reply_to_user": "ton message au client (texte seulement)",
+  "is_complete": true ou false,
+  "collected_data": { "CLE": "valeur" }
+}
+
+RÈGLES CRITIQUES:
+- Quand le client fait un choix valide (bouton ou texte qui correspond à une option) → is_complete: true + collected_data avec la valeur
+- Quand le client pose une question hors-sujet ou n'a pas encore répondu → is_complete: false
+- Ne répète JAMAIS le choix du client (pas de "Vous avez choisi X", "בחרת ב...", "Thank you for choosing..."). Va directement à l'essentiel.
+- Le reply_to_user ne doit PAS confirmer/répéter la sélection. Si is_complete=true, le reply_to_user peut être vide "" car le workflow passera automatiquement à l'étape suivante.`
+
   // Add module context if available
   if (moduleContext) {
     enhancedPrompt += `\n\n## המודול הנוכחי:\nשאלה ללקוח: "${moduleContext.content}"`
@@ -260,9 +275,7 @@ export async function processWithClara(request: ClaraRequest): Promise<ClaraResp
                      choice.label.he || choice.label.fr || choice.label.en || ''
         enhancedPrompt += `${idx + 1}. ID: "${choice.id}" → Label: "${label}"\n`
       })
-      enhancedPrompt += `\n**אתה יכול להציג את הכפתורים האלו ללקוח!**`
-      enhancedPrompt += `\nאם הלקוח כותב בעצמו - התאם את התשובה לאחד מה-IDs הנכונים.`
-      enhancedPrompt += `\nאם אתה רוצה להציג כפתורים, השתמש בפורמט show_buttons.`
+      enhancedPrompt += `\nSi le client clique un bouton ou écrit un texte correspondant à une option → is_complete: true, collected_data avec l'ID correspondant.`
     }
 
     if (moduleContext.validationFormat) {

@@ -460,9 +460,9 @@ export async function processUserMessage(
         }
       })
 
-      // Si Clara réussit
-      if (claraResponse.success && claraResponse.reply) {
-        console.log('[Engine] Clara response:', claraResponse.reply)
+      // Si Clara réussit (accepter reply vide si is_complete=true)
+      if (claraResponse.success && (claraResponse.reply || claraResponse.is_complete)) {
+        console.log('[Engine] Clara response:', claraResponse.reply, 'is_complete:', claraResponse.is_complete)
 
         // Mettre à jour les données collectées
         const updatedData = {
@@ -476,15 +476,17 @@ export async function processUserMessage(
           .eq('id', conversationId)
 
         // Replace variables in Clara's reply ({{firstName}}, {{branch}}, etc.)
-        const personalizedReply = replaceDynamicVariables(claraResponse.reply, updatedData)
+        const personalizedReply = claraResponse.reply ? replaceDynamicVariables(claraResponse.reply, updatedData) : ''
 
-        // Enregistrer la réponse de Clara
-        await supabase.from('messenger_messages').insert({
-          conversation_id: conversationId,
-          role: 'assistant',
-          content: personalizedReply,
-          step_ref: currentStep.step_ref
-        })
+        // Enregistrer la réponse de Clara (seulement si non vide)
+        if (personalizedReply) {
+          await supabase.from('messenger_messages').insert({
+            conversation_id: conversationId,
+            role: 'assistant',
+            content: personalizedReply,
+            step_ref: currentStep.step_ref
+          })
+        }
 
         // If Clara wants to show buttons, prepare them
         const claraChoices = claraResponse.show_buttons
