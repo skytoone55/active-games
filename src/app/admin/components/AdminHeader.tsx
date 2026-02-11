@@ -14,7 +14,6 @@ import { useUnreadChatsCount } from '@/hooks/useUnreadChatsCount'
 import { useUserPermissions } from '@/hooks/useUserPermissions'
 import { useTranslation } from '@/contexts/LanguageContext'
 import type { Locale } from '@/i18n'
-import { ClaraButton, useClara } from '@/components/Clara'
 
 interface AdminHeaderProps {
   user: AuthUser
@@ -52,9 +51,6 @@ function AdminHeaderComponent({
 
   // Permissions de l'utilisateur pour conditionner l'affichage des menus
   const { hasPermission } = useUserPermissions(user.role as UserRole)
-
-  // Clara AI Assistant
-  const { isOpen: isClaraOpen, toggleClara } = useClara()
 
   // Éviter les problèmes d'hydratation
   useEffect(() => {
@@ -342,9 +338,6 @@ function AdminHeaderComponent({
               </div>
             )}
           </div>
-
-          {/* Clara AI Assistant Button */}
-          <ClaraButton onClick={toggleClara} isOpen={isClaraOpen} />
 
           {/* Toggle thème */}
           <button
