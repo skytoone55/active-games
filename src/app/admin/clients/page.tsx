@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, startTransition } from 'react'
 import { Search, Edit2, Archive, User, Loader2, Eye, ChevronLeft, ChevronRight, Plus, Download, ArrowUpDown, ArrowUp, ArrowDown, GitMerge, Settings, X, MessageSquare } from 'lucide-react'
 import { useContacts, type SearchContactsResult } from '@/hooks/useContacts'
 import { useAdmin } from '@/contexts/AdminContext'
@@ -151,11 +151,11 @@ export default function ClientsPage() {
     }
   }
 
-  // Ouvrir les détails
-  const handleViewDetails = (contact: Contact) => {
+  // Ouvrir les détails — startTransition pour éviter le blocage INP
+  const handleViewDetails = useCallback((contact: Contact) => {
     setSelectedContact(contact)
-    setShowDetailsModal(true)
-  }
+    startTransition(() => setShowDetailsModal(true))
+  }, [])
 
   // Export CSV
   const handleExportCSV = () => {
@@ -556,7 +556,7 @@ export default function ClientsPage() {
                   isDark ? 'divide-gray-700' : 'divide-gray-200'
                 }`}>
                   {contacts.map((contact) => (
-                    <tr key={contact.id} className={`transition-colors ${
+                    <tr key={contact.id} onClick={() => handleViewDetails(contact)} className={`transition-colors cursor-pointer ${
                       isDark ? 'hover:bg-gray-700/30' : 'hover:bg-gray-50'
                     }`}>
                       <td className="px-4 py-3">
@@ -618,7 +618,7 @@ export default function ClientsPage() {
                       <td className="px-4 py-3">
                         <div className="flex items-center justify-end gap-2">
                           <button
-                            onClick={() => handleViewDetails(contact)}
+                            onClick={(e) => { e.stopPropagation(); handleViewDetails(contact) }}
                             className={`p-2 rounded-lg transition-colors ${
                               isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100'
                             }`}
@@ -627,7 +627,7 @@ export default function ClientsPage() {
                             <Eye className="w-4 h-4 text-blue-400" />
                           </button>
                           <button
-                            onClick={() => handleOpenEditModal(contact)}
+                            onClick={(e) => { e.stopPropagation(); handleOpenEditModal(contact) }}
                             disabled={!canEditClient}
                             className={`p-2 rounded-lg transition-colors ${
                               canEditClient
@@ -642,7 +642,7 @@ export default function ClientsPage() {
                           </button>
                           {contact.status === 'archived' ? (
                             <button
-                              onClick={() => handleUnarchive(contact)}
+                              onClick={(e) => { e.stopPropagation(); handleUnarchive(contact) }}
                               disabled={!canDeleteClient}
                               className={`p-2 rounded-lg transition-colors ${
                                 canDeleteClient
@@ -655,7 +655,7 @@ export default function ClientsPage() {
                             </button>
                           ) : (
                             <button
-                              onClick={() => handleArchive(contact)}
+                              onClick={(e) => { e.stopPropagation(); handleArchive(contact) }}
                               disabled={!canDeleteClient}
                               className={`p-2 rounded-lg transition-colors ${
                                 canDeleteClient
