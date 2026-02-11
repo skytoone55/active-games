@@ -25,6 +25,7 @@ const DEFAULT_PERMISSIONS: Record<ResourceType, PermissionSet> = {
   settings: { can_view: false, can_create: false, can_edit: false, can_delete: false },
   permissions: { can_view: false, can_create: false, can_edit: false, can_delete: false },
   messenger: { can_view: false, can_create: false, can_edit: false, can_delete: false },
+  chat_stats: { can_view: false, can_create: false, can_edit: false, can_delete: false },
 }
 
 /**
@@ -88,6 +89,7 @@ export function useUserPermissions(userRole: UserRole | null): UseUserPermission
           settings: { can_view: true, can_create: true, can_edit: true, can_delete: true },
           permissions: { can_view: true, can_create: true, can_edit: true, can_delete: true },
           messenger: { can_view: true, can_create: true, can_edit: true, can_delete: true },
+          chat_stats: { can_view: true, can_create: true, can_edit: true, can_delete: true },
         }
         setPermissions(superAdminPerms)
       }

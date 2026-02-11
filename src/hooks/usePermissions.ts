@@ -17,7 +17,7 @@ interface UsePermissionsReturn {
 }
 
 // Resource display order
-const RESOURCE_ORDER: ResourceType[] = ['agenda', 'orders', 'chat', 'clients', 'calls', 'users', 'logs', 'settings', 'permissions', 'messenger']
+const RESOURCE_ORDER: ResourceType[] = ['agenda', 'orders', 'chat', 'clients', 'calls', 'users', 'logs', 'settings', 'permissions', 'messenger', 'chat_stats']
 
 export function usePermissions(): UsePermissionsReturn {
   const { data, error, isLoading, mutate } = useSWR<{ success: boolean; permissions: RolePermission[] }>(

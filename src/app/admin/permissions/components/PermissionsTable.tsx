@@ -13,7 +13,7 @@ interface PermissionsTableProps {
 }
 
 // Resource display order
-const RESOURCE_ORDER: ResourceType[] = ['agenda', 'orders', 'chat', 'clients', 'calls', 'users', 'logs', 'settings', 'permissions']
+const RESOURCE_ORDER: ResourceType[] = ['agenda', 'orders', 'chat', 'clients', 'calls', 'users', 'logs', 'settings', 'permissions', 'chat_stats']
 
 // Permission columns
 const PERMISSION_COLUMNS: (keyof PermissionSet)[] = ['can_view', 'can_create', 'can_edit', 'can_delete']
@@ -402,7 +402,8 @@ function getResourceColor(resource: ResourceType): string {
     logs: 'bg-yellow-500',
     settings: 'bg-pink-500',
     permissions: 'bg-red-500',
-    messenger: 'bg-indigo-500'
+    messenger: 'bg-indigo-500',
+    chat_stats: 'bg-teal-500'
   }
   return colors[resource] || 'bg-gray-500'
 }

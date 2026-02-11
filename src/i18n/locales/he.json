@@ -2241,7 +2241,8 @@
         "users": "משתמשים",
         "logs": "יומן פעילות",
         "settings": "הגדרות",
-        "permissions": "הרשאות"
+        "permissions": "הרשאות",
+        "chat_stats": "סטטיסטיקות צ'אט"
       }
     },
     "icount_catalog": {

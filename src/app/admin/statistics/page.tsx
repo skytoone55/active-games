@@ -20,7 +20,8 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   Percent,
-  Download
+  Download,
+  MessageCircle
 } from 'lucide-react'
 import {
   BarChart,
@@ -41,7 +42,10 @@ import {
 } from 'recharts'
 import { useAdmin } from '@/contexts/AdminContext'
 import { useTranslation } from '@/contexts/LanguageContext'
+import { useUserPermissions } from '@/hooks/useUserPermissions'
+import { ChatStatsTab } from './components/ChatStatsTab'
 import { getClient } from '@/lib/supabase/client'
+import type { UserRole } from '@/lib/supabase/types'
 
 // Types
 interface StatsData {
@@ -89,7 +93,11 @@ export default function StatisticsPage() {
   const [customStartDate, setCustomStartDate] = useState('')
   const [customEndDate, setCustomEndDate] = useState('')
   const [selectedBranchId, setSelectedBranchId] = useState<string>('all')
-  const [activeTab, setActiveTab] = useState<'overview' | 'orders' | 'clients' | 'revenue' | 'team'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'orders' | 'clients' | 'revenue' | 'team' | 'chat'>('overview')
+
+  // Permission check for chat stats
+  const { hasPermission } = useUserPermissions(user?.role as UserRole || null)
+  const canViewChatStats = hasPermission('chat_stats', 'can_view')
 
   const colors = isDark ? CHART_COLORS.dark : CHART_COLORS.light
 
@@ -335,6 +343,7 @@ export default function StatisticsPage() {
             { id: 'orders', label: t('admin.stats.tabs.orders'), icon: ShoppingCart },
             { id: 'clients', label: t('admin.stats.tabs.clients'), icon: Users },
             { id: 'team', label: t('admin.stats.tabs.team'), icon: UserCheck },
+            ...(canViewChatStats ? [{ id: 'chat', label: 'Chat', icon: MessageCircle }] : []),
           ].map(tab => (
             <button
               key={tab.id}
@@ -699,6 +708,18 @@ export default function StatisticsPage() {
                   </ResponsiveContainer>
                 </ChartCard>
               </div>
+            )}
+
+            {/* Chat Tab — lazy loaded: only fetches when this tab is active */}
+            {activeTab === 'chat' && canViewChatStats && (
+              <ChatStatsTab
+                isDark={isDark}
+                branches={branches}
+                selectedBranchId={selectedBranchId}
+                dateRange={dateRange}
+                customStartDate={customStartDate}
+                customEndDate={customEndDate}
+              />
             )}
           </>
         ) : (

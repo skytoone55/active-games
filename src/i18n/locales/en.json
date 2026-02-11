@@ -2184,7 +2184,8 @@
         "users": "Users",
         "logs": "Activity Logs",
         "settings": "Settings",
-        "permissions": "Permissions"
+        "permissions": "Permissions",
+        "chat_stats": "Chat Stats"
       }
     },
     "icount_catalog": {
