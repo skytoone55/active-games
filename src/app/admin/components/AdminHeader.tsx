@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef, memo } from 'react'
+import { useState, useEffect, useRef, memo, useCallback, startTransition } from 'react'
 import { LogOut, User, ChevronDown, Sun, Moon, Users, Calendar, Menu, X, ShoppingCart, Shield, Globe, FileText, Lock, Crown, Settings, Trash2, BarChart3, Phone, MessageCircle } from 'lucide-react'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -51,6 +51,14 @@ function AdminHeaderComponent({
 
   // Permissions de l'utilisateur pour conditionner l'affichage des menus
   const { hasPermission } = useUserPermissions(user.role as UserRole)
+
+  // Close menus via startTransition to avoid blocking navigation paint (INP fix)
+  const closeUserMenu = useCallback(() => {
+    startTransition(() => setShowUserMenu(false))
+  }, [])
+  const closeMobileMenu = useCallback(() => {
+    startTransition(() => setShowMobileMenu(false))
+  }, [])
 
   // Éviter les problèmes d'hydratation
   useEffect(() => {
@@ -408,7 +416,7 @@ function AdminHeaderComponent({
                     {hasPermission('users', 'can_view') && (
                       <Link
                         href="/admin/users"
-                        onClick={() => setShowUserMenu(false)}
+                        onClick={closeUserMenu}
                         className={`w-full px-4 py-2 text-left flex items-center gap-2 transition-colors ${
                           pathname === '/admin/users'
                             ? 'bg-blue-600 text-white'
@@ -424,7 +432,7 @@ function AdminHeaderComponent({
                     {hasPermission('logs', 'can_view') && (
                       <Link
                         href="/admin/logs"
-                        onClick={() => setShowUserMenu(false)}
+                        onClick={closeUserMenu}
                         className={`w-full px-4 py-2 text-left flex items-center gap-2 transition-colors ${
                           pathname === '/admin/logs'
                             ? 'bg-blue-600 text-white'
@@ -440,7 +448,7 @@ function AdminHeaderComponent({
                     {hasPermission('permissions', 'can_view') && (
                       <Link
                         href="/admin/permissions"
-                        onClick={() => setShowUserMenu(false)}
+                        onClick={closeUserMenu}
                         className={`w-full px-4 py-2 text-left flex items-center gap-2 transition-colors ${
                           pathname === '/admin/permissions'
                             ? 'bg-blue-600 text-white'
@@ -463,7 +471,7 @@ function AdminHeaderComponent({
                   }`}>
                     <Link
                       href="/admin/statistics"
-                      onClick={() => setShowUserMenu(false)}
+                      onClick={closeUserMenu}
                       className={`w-full px-4 py-2 text-left flex items-center gap-2 transition-colors ${
                         pathname === '/admin/statistics'
                           ? 'bg-blue-600 text-white'
@@ -477,7 +485,7 @@ function AdminHeaderComponent({
                     </Link>
                     <Link
                       href="/admin/settings"
-                      onClick={() => setShowUserMenu(false)}
+                      onClick={closeUserMenu}
                       className={`w-full px-4 py-2 text-left flex items-center gap-2 transition-colors ${
                         pathname === '/admin/settings'
                           ? 'bg-blue-600 text-white'
@@ -491,7 +499,7 @@ function AdminHeaderComponent({
                     </Link>
                     <Link
                       href="/admin/data-management"
-                      onClick={() => setShowUserMenu(false)}
+                      onClick={closeUserMenu}
                       className={`w-full px-4 py-2 text-left flex items-center gap-2 transition-colors ${
                         pathname === '/admin/data-management'
                           ? 'bg-red-600 text-white'
@@ -569,7 +577,7 @@ function AdminHeaderComponent({
             <div className="space-y-2">
               <Link
                 href="/admin"
-                onClick={() => setShowMobileMenu(false)}
+                onClick={closeMobileMenu}
                 className={`flex items-center gap-3 px-4 py-2 rounded-lg transition-colors relative ${
                   pathname === '/admin'
                     ? 'bg-blue-600 text-white'
@@ -589,7 +597,7 @@ function AdminHeaderComponent({
               {hasPermission('clients', 'can_view') && (
                 <Link
                   href="/admin/clients"
-                  onClick={() => setShowMobileMenu(false)}
+                  onClick={closeMobileMenu}
                   className={`flex items-center gap-3 px-4 py-2 rounded-lg transition-colors ${
                     pathname === '/admin/clients'
                       ? 'bg-blue-600 text-white'
@@ -610,7 +618,7 @@ function AdminHeaderComponent({
               {hasPermission('orders', 'can_view') && (
                 <Link
                   href="/admin/orders"
-                  onClick={() => setShowMobileMenu(false)}
+                  onClick={closeMobileMenu}
                   className={`flex items-center gap-3 px-4 py-2 rounded-lg transition-colors relative ${
                     pathname === '/admin/orders'
                       ? 'bg-blue-600 text-white'
@@ -638,7 +646,7 @@ function AdminHeaderComponent({
               {hasPermission('chat', 'can_view') && (
                 <Link
                   href="/admin/chat"
-                  onClick={() => setShowMobileMenu(false)}
+                  onClick={closeMobileMenu}
                   className={`relative flex items-center gap-3 px-4 py-2 rounded-lg transition-colors ${
                     pathname === '/admin/chat'
                       ? 'bg-blue-600 text-white'
@@ -659,7 +667,7 @@ function AdminHeaderComponent({
               {hasPermission('calls', 'can_view') && (
                 <Link
                   href="/admin/calls"
-                  onClick={() => setShowMobileMenu(false)}
+                  onClick={closeMobileMenu}
                   className={`flex items-center gap-3 px-4 py-2 rounded-lg transition-colors ${
                     pathname === '/admin/calls'
                       ? 'bg-blue-600 text-white'
@@ -720,7 +728,7 @@ function AdminHeaderComponent({
               {hasPermission('users', 'can_view') && (
                 <Link
                   href="/admin/users"
-                  onClick={() => setShowMobileMenu(false)}
+                  onClick={closeMobileMenu}
                   className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg transition-colors ${
                     pathname === '/admin/users'
                       ? 'bg-blue-600 text-white'
@@ -736,7 +744,7 @@ function AdminHeaderComponent({
               {hasPermission('logs', 'can_view') && (
                 <Link
                   href="/admin/logs"
-                  onClick={() => setShowMobileMenu(false)}
+                  onClick={closeMobileMenu}
                   className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg transition-colors ${
                     pathname === '/admin/logs'
                       ? 'bg-blue-600 text-white'
@@ -752,7 +760,7 @@ function AdminHeaderComponent({
               {hasPermission('permissions', 'can_view') && (
                 <Link
                   href="/admin/permissions"
-                  onClick={() => setShowMobileMenu(false)}
+                  onClick={closeMobileMenu}
                   className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg transition-colors ${
                     pathname === '/admin/permissions'
                       ? 'bg-blue-600 text-white'
@@ -770,7 +778,7 @@ function AdminHeaderComponent({
                 <>
                   <Link
                     href="/admin/statistics"
-                    onClick={() => setShowMobileMenu(false)}
+                    onClick={closeMobileMenu}
                     className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg transition-colors ${
                       pathname === '/admin/statistics'
                         ? 'bg-blue-600 text-white'
@@ -784,7 +792,7 @@ function AdminHeaderComponent({
                   </Link>
                   <Link
                     href="/admin/settings"
-                    onClick={() => setShowMobileMenu(false)}
+                    onClick={closeMobileMenu}
                     className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg transition-colors ${
                       pathname === '/admin/settings'
                         ? 'bg-blue-600 text-white'
