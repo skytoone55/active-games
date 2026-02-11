@@ -251,82 +251,60 @@ export async function processWithClara(request: ClaraRequest): Promise<ClaraResp
   const langMap: Record<string, string> = { fr: 'français', en: 'English', he: 'עברית' }
   const userLang = langMap[locale || 'he'] || 'עברית'
 
-  // Build enhanced system prompt with context
-  // CRITICAL: Language instruction MUST come FIRST, before the DB prompt which may contain Hebrew
-  let enhancedPrompt = `## INSTRUCTION PRIORITAIRE - LANGUE
-Tu DOIS répondre dans la MÊME LANGUE que le dernier message du client. Si le client écrit en français → tu réponds en français. En anglais → en anglais. En hébreu → en hébreu. C'est la règle #1 absolue, elle prime sur tout le reste du prompt.
+  // Build optimized system prompt
+  // Language instruction FIRST (overrides Hebrew DB prompt), then DB prompt, then compact rules
+  let enhancedPrompt = `RÈGLE #1 ABSOLUE : Réponds dans la MÊME LANGUE que le dernier message du client. Français→français, English→English, עברית→עברית. Défaut: ${userLang}.
 
-` + config.prompt
+` + config.prompt + `
 
-  // Add strict JSON response format + behavior rules
-  enhancedPrompt += `\n\n## FORMAT DE RÉPONSE OBLIGATOIRE (JSON)
-Tu DOIS répondre en JSON valide avec cette structure:
-{
-  "reply_to_user": "ton message au client (texte seulement)",
-  "is_complete": true ou false,
-  "collected_data": { "CLE": "valeur" }
-}
+## RÉPONSE JSON OBLIGATOIRE
+{"reply_to_user": "texte", "is_complete": true/false, "collected_data": {"CLE": "valeur"}}
 
-## RÈGLES CRITIQUES
+## RÈGLES
+- Choix valide → is_complete:true, collected_data rempli, reply_to_user peut être ""
+- Question hors-sujet → is_complete:false, réponds BRIÈVEMENT puis TERMINE par relancer l'objectif du module actuel
+- Ne répète JAMAIS le choix du client
+- Ne redemande JAMAIS une info déjà dans les données collectées
+- Question ambiguë (ex: "combien ça coûte?" sans préciser) → demande des précisions
+- Message flou/incompréhensible → reformule la question du module de manière engageante
+- N'invente rien. Utilise UNIQUEMENT le FAQ fourni. Formate proprement (une info par ligne)`
 
-### LANGUE (PRIORITAIRE)
-- DÉTECTE la langue du dernier message du client et réponds DANS CETTE LANGUE.
-- Si le client écrit en français → réponds en français. En anglais → en anglais. En hébreu → en hébreu.
-- Langue par défaut (si impossible à détecter) : ${userLang}
-- Ne mélange JAMAIS les langues dans une même réponse.
-
-### COMPORTEMENT
-- Ne répète JAMAIS le choix du client (pas de "Vous avez choisi X", "בחרת ב...", "Thank you for choosing...").
-- Quand le client fait un choix valide → is_complete: true, collected_data avec la valeur, reply_to_user peut être vide "".
-- Quand le client pose une question hors-sujet → is_complete: false. Réponds BRIÈVEMENT puis TOUJOURS re-poser la question du module actuel à la fin de ta réponse.
-- OBLIGATOIRE : quand is_complete=false, ta réponse DOIT se terminer par une relance vers l'objectif du module actuel (pas un module précédent !). Tu ne peux JAMAIS répondre à une question sans relancer l'objectif.
-- N'utilise JAMAIS les données déjà collectées pour re-poser une question déjà répondue. Si le nom est déjà dans les données collectées, ne redemande JAMAIS le nom. Concentre-toi UNIQUEMENT sur l'objectif du MODULE ACTUEL.
-- Si le message du client est incompréhensible ou flou, ne devine pas. Reformule la question du module actuel de manière plus claire et engageante.
-
-### RÉPONSES AUX QUESTIONS (FAQ)
-- Si la question du client est AMBIGUË (ex: "ça coûte combien ?" sans préciser quelle activité), ne devine PAS. Demande des précisions. Mais termine QUAND MÊME par relancer l'objectif du module.
-- N'invente jamais d'information. Utilise UNIQUEMENT les données du FAQ ci-dessous.
-- Formate tes réponses proprement : une information par ligne, bien structuré, pas de symboles bizarres (pas de "=").
-
-### TRANSITIONS
-- CHAQUE réponse hors-sujet DOIT se terminer par une transition douce qui re-pose la question du module. Exemple : "Nous sommes situés à Rishon LeZion, Bar-On Center. Pour continuer, pourriez-vous me donner votre nom complet ?"
-- Sois chaleureux, professionnel et fluide.`
-
-  // Add module context if available
+  // Module context
   if (moduleContext) {
-    enhancedPrompt += `\n\n## MODULE ACTUEL\nObjectif : "${moduleContext.content}"`
+    enhancedPrompt += `\n\n## MODULE ACTUEL: "${moduleContext.content}"`
 
     if (moduleContext.choices && moduleContext.choices.length > 0) {
-      enhancedPrompt += `\n\nOptions disponibles :\n`
+      enhancedPrompt += `\nOptions:`
       moduleContext.choices.forEach((choice, idx) => {
         const label = typeof choice.label === 'string' ? choice.label :
                      choice.label[locale || 'he'] || choice.label.he || choice.label.fr || choice.label.en || ''
-        enhancedPrompt += `${idx + 1}. ID: "${choice.id}" → "${label}"\n`
+        enhancedPrompt += ` ${idx + 1}."${choice.id}"="${label}"`
       })
-      enhancedPrompt += `\nSi le client clique un bouton ou écrit un texte correspondant à une option → is_complete: true, collected_data avec l'ID correspondant.
-Si le client dit quelque chose de flou ou hors-sujet → is_complete: false, rappelle-lui les options disponibles de manière naturelle (ex: "Je peux vous aider pour des informations ou une réservation, que préférez-vous ?").`
+      enhancedPrompt += `\nChoix valide→is_complete:true. Flou→is_complete:false, rappelle les options naturellement.`
     }
 
     if (moduleContext.validationFormat) {
-      enhancedPrompt += `\n\nFormat attendu : ${moduleContext.validationFormat}`
+      enhancedPrompt += `\nFormat: ${moduleContext.validationFormat}`
     }
   }
 
-  // Add system context (branches, FAQ)
+  // System context (branches + FAQ pertinentes seulement)
   if (systemContext) {
     if (systemContext.branches && systemContext.branches.length > 0) {
-      enhancedPrompt += `\n\n## BRANCHES DISPONIBLES\n${systemContext.branches.map(b => `- "${b}"`).join('\n')}`
+      enhancedPrompt += `\nBranches: ${systemContext.branches.join(', ')}`
     }
 
     if (systemContext.faqItems && systemContext.faqItems.length > 0) {
-      enhancedPrompt += `\n\n## BASE DE CONNAISSANCES (FAQ)\n`
+      enhancedPrompt += `\n\n## FAQ PERTINENTES`
       systemContext.faqItems.forEach(faq => {
-        enhancedPrompt += `\nQ: ${faq.question}\nR: ${faq.answer}\n`
+        enhancedPrompt += `\nQ: ${faq.question}\nR: ${faq.answer}`
       })
     }
   }
 
-  enhancedPrompt += `\n\n---\nDonnées collectées : ${JSON.stringify(collectedData, null, 2)}`
+  if (Object.keys(collectedData).length > 0) {
+    enhancedPrompt += `\n\nDéjà collecté: ${JSON.stringify(collectedData)}`
+  }
 
   // Build messages array
   const messages = [

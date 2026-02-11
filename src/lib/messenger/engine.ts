@@ -405,15 +405,14 @@ export async function processUserMessage(
       console.warn('[Engine] Clara enabled but no prompt configured (module or global)')
     } else {
       try {
-        // Récupérer l'historique de conversation (derniers 10 messages)
+        // Récupérer TOUT l'historique de conversation (messages courts, pas besoin de limiter)
         const { data: messageHistory } = await supabase
           .from('messenger_messages')
           .select('role, content')
           .eq('conversation_id', conversationId)
-          .order('created_at', { ascending: false })
-          .limit(10)
+          .order('created_at', { ascending: true })
 
-        const conversationHistory = (messageHistory || []).reverse().map((msg: any) => ({
+        const conversationHistory = (messageHistory || []).map((msg: any) => ({
           role: msg.role as 'user' | 'assistant',
           content: msg.content
         }))
@@ -425,19 +424,39 @@ export async function processUserMessage(
           .eq('is_active', true)
         const branchNames = branches?.map((b: any) => b.name) || []
 
-        // Charger FAQ pour questions hors-sujet
-        const { data: faqs } = await supabase
-          .from('messenger_faq')
-          .select('question, answer')
-          .eq('is_active', true)
-          .order('order_index')
-          .limit(10)
-        const faqItems = faqs?.map((f: any) => ({
-          question: f.question[locale] || f.question.he || f.question.fr || f.question.en || '',
-          answer: f.answer[locale] || f.answer.he || f.answer.fr || f.answer.en || ''
-        })) || []
+        // Recherche FAQ intelligente : seulement si le message ressemble à une question
+        // On cherche les FAQ pertinentes par mots-clés au lieu d'injecter les 43
+        let faqItems: Array<{ question: string; answer: string }> = []
+        const userWords = userMessage.toLowerCase().split(/\s+/).filter((w: string) => w.length > 3)
 
-        // Appeler Clara avec context enrichi
+        if (userWords.length > 0) {
+          // Chercher les FAQ qui matchent les mots-clés du message
+          const searchPattern = userWords.join('|')
+          const { data: faqs } = await supabase
+            .from('messenger_faq')
+            .select('question, answer, category')
+            .eq('is_active', true)
+            .order('order_index')
+
+          if (faqs && faqs.length > 0) {
+            // Filtrer côté client : chercher dans question ET answer dans toutes les langues
+            const matchedFaqs = faqs.filter((f: any) => {
+              const allText = [
+                f.question?.fr, f.question?.en, f.question?.he,
+                f.answer?.fr, f.answer?.en, f.answer?.he,
+                f.category
+              ].filter(Boolean).join(' ').toLowerCase()
+              return userWords.some((word: string) => allText.includes(word))
+            }).slice(0, 3) // Max 3 FAQ pertinentes
+
+            faqItems = matchedFaqs.map((f: any) => ({
+              question: f.question[locale] || f.question.he || f.question.fr || f.question.en || '',
+              answer: f.answer[locale] || f.answer.he || f.answer.fr || f.answer.en || ''
+            }))
+          }
+        }
+
+        // Appeler Clara avec context optimisé
         const claraResponse = await processWithClara({
           userMessage,
           conversationHistory,
@@ -448,7 +467,7 @@ export async function processUserMessage(
             prompt: claraPrompt,
             model: module.clara_model || 'gpt-4o-mini',
             temperature: module.clara_temperature ?? 0.7,
-            timeout_ms: module.clara_timeout_ms ?? 5000
+            timeout_ms: module.clara_timeout_ms ?? 8000
           },
         moduleContext: {
           content: module.content[locale] || module.content.he || module.content.fr || '',
@@ -457,7 +476,7 @@ export async function processUserMessage(
         },
         systemContext: {
           branches: branchNames,
-          faqItems: faqItems
+          faqItems: faqItems.length > 0 ? faqItems : undefined
         }
       })
 
