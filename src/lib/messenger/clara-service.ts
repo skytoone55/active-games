@@ -275,7 +275,9 @@ Tu DOIS répondre en JSON valide avec cette structure:
 - Ne répète JAMAIS le choix du client (pas de "Vous avez choisi X", "בחרת ב...", "Thank you for choosing...").
 - Quand le client fait un choix valide → is_complete: true, collected_data avec la valeur, reply_to_user peut être vide "".
 - Quand le client pose une question hors-sujet → is_complete: false. Réponds BRIÈVEMENT puis TOUJOURS re-poser la question du module actuel à la fin de ta réponse.
-- OBLIGATOIRE : quand is_complete=false, ta réponse DOIT se terminer par une relance vers l'objectif du module. Tu ne peux JAMAIS répondre à une question sans relancer l'objectif.
+- OBLIGATOIRE : quand is_complete=false, ta réponse DOIT se terminer par une relance vers l'objectif du module actuel (pas un module précédent !). Tu ne peux JAMAIS répondre à une question sans relancer l'objectif.
+- N'utilise JAMAIS les données déjà collectées pour re-poser une question déjà répondue. Si le nom est déjà dans les données collectées, ne redemande JAMAIS le nom. Concentre-toi UNIQUEMENT sur l'objectif du MODULE ACTUEL.
+- Si le message du client est incompréhensible ou flou, ne devine pas. Reformule la question du module actuel de manière plus claire et engageante.
 
 ### RÉPONSES AUX QUESTIONS (FAQ)
 - Si la question du client est AMBIGUË (ex: "ça coûte combien ?" sans préciser quelle activité), ne devine PAS. Demande des précisions. Mais termine QUAND MÊME par relancer l'objectif du module.
@@ -297,7 +299,8 @@ Tu DOIS répondre en JSON valide avec cette structure:
                      choice.label[locale || 'he'] || choice.label.he || choice.label.fr || choice.label.en || ''
         enhancedPrompt += `${idx + 1}. ID: "${choice.id}" → "${label}"\n`
       })
-      enhancedPrompt += `\nSi le client clique un bouton ou écrit un texte correspondant à une option → is_complete: true, collected_data avec l'ID correspondant.`
+      enhancedPrompt += `\nSi le client clique un bouton ou écrit un texte correspondant à une option → is_complete: true, collected_data avec l'ID correspondant.
+Si le client dit quelque chose de flou ou hors-sujet → is_complete: false, rappelle-lui les options disponibles de manière naturelle (ex: "Je peux vous aider pour des informations ou une réservation, que préférez-vous ?").`
     }
 
     if (moduleContext.validationFormat) {
