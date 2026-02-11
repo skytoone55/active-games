@@ -28,6 +28,7 @@ interface WhatsAppConversation {
   branch_id: string | null
   activity: string | null
   onboarding_status: string | null
+  onboarding_data: Record<string, string> | null
   status: string
   last_message_at: string
   unread_count: number

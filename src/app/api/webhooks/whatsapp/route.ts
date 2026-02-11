@@ -1,11 +1,11 @@
 /**
- * WhatsApp Business API Webhook Handler v3.0
+ * WhatsApp Business API Webhook Handler v4.0
  *
  * GET  - Webhook verification (Meta sends a challenge to verify the endpoint)
  * POST - Receive incoming messages and status updates from WhatsApp
  *        Stores conversations and messages in Supabase
  *        Auto-links contacts by phone number
- *        Interactive onboarding flow (activity + branch selection)
+ *        Generic step-based onboarding flow (N configurable steps)
  */
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -112,6 +112,84 @@ function getLocalizedText(multilingual: Record<string, string> | string | undefi
 }
 
 // ============================================================
+// Generic Step Helpers
+// ============================================================
+
+// Get enabled steps sorted by order (must have at least 1 option)
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function getEnabledSteps(config: any): any[] {
+  return (config.steps || [])
+    .filter((s: { enabled: boolean; options?: unknown[] }) => s.enabled && s.options && s.options.length > 0)
+    .sort((a: { order: number }, b: { order: number }) => a.order - b.order)
+}
+
+// Get the first enabled step
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function getFirstStep(config: any): any | null {
+  const steps = getEnabledSteps(config)
+  return steps.length > 0 ? steps[0] : null
+}
+
+// Get the next enabled step after currentStepId
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function getNextStep(config: any, currentStepId: string): any | null {
+  const steps = getEnabledSteps(config)
+  const idx = steps.findIndex((s: { id: string }) => s.id === currentStepId)
+  if (idx === -1 || idx >= steps.length - 1) return null
+  return steps[idx + 1]
+}
+
+// Get step by ID
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function getStepById(config: any, stepId: string): any | null {
+  return (config.steps || []).find((s: { id: string }) => s.id === stepId) || null
+}
+
+// Parse onboarding_status: "waiting:activity" → { waiting: true, stepId: 'activity' }
+// Backward compatible with old format: "waiting_activity" → { waiting: true, stepId: 'activity' }
+function parseOnboardingStatus(status: string | null): { waiting: boolean; stepId: string | null } {
+  if (!status) return { waiting: false, stepId: null }
+  if (status === 'completed') return { waiting: false, stepId: null }
+  // New format: "waiting:step_id"
+  if (status.startsWith('waiting:')) return { waiting: true, stepId: status.substring(8) }
+  // Legacy format: "waiting_activity", "waiting_branch"
+  if (status === 'waiting_activity') return { waiting: true, stepId: 'activity' }
+  if (status === 'waiting_branch') return { waiting: true, stepId: 'branch' }
+  return { waiting: false, stepId: null }
+}
+
+// Send buttons for a given step
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function sendStepButtons(supabase: any, conversationId: string, senderPhone: string, step: any, language: string) {
+  const promptText = getLocalizedText(step.prompt, language)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const buttons = (step.options || []).map((opt: any) => ({
+    id: step.type === 'branch' ? (opt.branch_id || opt.id) : opt.id,
+    title: `${opt.emoji || ''} ${getLocalizedText(opt.label, language)}`.trim()
+  }))
+
+  if (promptText && buttons.length > 0) {
+    const waId = await sendInteractiveButtons(senderPhone, promptText, buttons)
+    await storeOutboundMessage(supabase, conversationId, promptText, 'interactive', waId)
+    console.log(`[WHATSAPP] Onboarding: step "${step.id}" buttons sent to`, senderPhone)
+  }
+}
+
+// Match user reply against step options
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function matchOption(step: any, buttonReplyId: string | null, messageText: string): any | null {
+  const options = step.options || []
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return options.find((opt: any) => {
+    const optId = step.type === 'branch' ? (opt.branch_id || opt.id) : opt.id
+    if (buttonReplyId && buttonReplyId === optId) return true
+    // Fallback: text matching
+    const labels = Object.values(opt.label || {}) as string[]
+    return labels.some((l: string) => l && messageText.toLowerCase().includes(l.toLowerCase()))
+  }) || null
+}
+
+// ============================================================
 // GET - Webhook Verification
 // ============================================================
 export async function GET(request: NextRequest) {
@@ -168,6 +246,7 @@ export async function POST(request: NextRequest) {
     const onboardingConfig = msSettings?.settings?.whatsapp_onboarding
     const isOnboardingEnabled = onboardingConfig?.enabled === true
     const onboardingLang = onboardingConfig?.language || 'he'
+    const hasEnabledSteps = isOnboardingEnabled && getEnabledSteps(onboardingConfig).length > 0
 
     // Legacy auto-reply fallback
     const legacyAutoReply = msSettings?.settings?.whatsapp_auto_reply
@@ -209,7 +288,7 @@ export async function POST(request: NextRequest) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         let { data: conversation } = await (supabase as any)
           .from('whatsapp_conversations')
-          .select('id, contact_id, onboarding_status, activity, branch_id')
+          .select('id, contact_id, onboarding_status, activity, branch_id, onboarding_data')
           .eq('phone', senderPhone)
           .eq('status', 'active')
           .order('created_at', { ascending: false })
@@ -234,6 +313,10 @@ export async function POST(request: NextRequest) {
             console.log(`[WHATSAPP] Multiple contacts found for ${senderPhone} (${contacts.length}), skipping auto-link`)
           }
 
+          // Determine initial onboarding status
+          const firstStep = hasEnabledSteps ? getFirstStep(onboardingConfig) : null
+          const initialStatus = firstStep ? `waiting:${firstStep.id}` : null
+
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const { data: newConv } = await (supabase as any)
             .from('whatsapp_conversations')
@@ -245,9 +328,9 @@ export async function POST(request: NextRequest) {
               status: 'active',
               unread_count: 1,
               last_message_at: new Date().toISOString(),
-              onboarding_status: isOnboardingEnabled ? 'waiting_activity' : null,
+              onboarding_status: initialStatus,
             })
-            .select('id, contact_id, onboarding_status, activity, branch_id')
+            .select('id, contact_id, onboarding_status, activity, branch_id, onboarding_data')
             .single()
 
           conversation = newConv
@@ -286,7 +369,7 @@ export async function POST(request: NextRequest) {
 
         // 3. Onboarding flow / auto-reply
         try {
-          if (isOnboardingEnabled && onboardingConfig.activities?.length > 0) {
+          if (hasEnabledSteps) {
             await handleOnboarding(
               supabase, conversation, senderPhone, isNewConversation,
               messageText, buttonReplyId, onboardingConfig, onboardingLang
@@ -320,9 +403,8 @@ export async function POST(request: NextRequest) {
 }
 
 // ============================================================
-// Onboarding State Machine
+// Generic Onboarding State Machine
 // ============================================================
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function handleOnboarding(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   supabase: any,
@@ -336,113 +418,90 @@ async function handleOnboarding(
   config: any,
   language: string
 ) {
-  const status = conversation.onboarding_status
+  const { waiting, stepId } = parseOnboardingStatus(conversation.onboarding_status)
 
-  // --- NEW CONVERSATION: send activity buttons ---
-  if (isNewConversation && status === 'waiting_activity') {
-    const promptText = getLocalizedText(config.activity_prompt, language)
-    const buttons = config.activities.map((a: { id: string; label: Record<string, string>; emoji?: string }) => ({
-      id: a.id,
-      title: `${a.emoji || ''} ${getLocalizedText(a.label, language)}`.trim()
-    }))
-
-    if (promptText && buttons.length > 0) {
-      const waId = await sendInteractiveButtons(senderPhone, promptText, buttons)
-      await storeOutboundMessage(supabase, conversation.id, promptText, 'interactive', waId)
-      console.log('[WHATSAPP] Onboarding: activity buttons sent to', senderPhone)
+  // --- NEW CONVERSATION: send first step buttons ---
+  if (isNewConversation && waiting && stepId) {
+    const firstStep = getStepById(config, stepId) || getFirstStep(config)
+    if (firstStep) {
+      await sendStepButtons(supabase, conversation.id, senderPhone, firstStep, language)
     }
     return
   }
 
-  // --- WAITING FOR ACTIVITY SELECTION ---
-  if (status === 'waiting_activity') {
-    const activities = config.activities || []
-    const matched = activities.find((a: { id: string; label: Record<string, string> }) => {
-      if (buttonReplyId && buttonReplyId === a.id) return true
-      // Fallback: match by label text in any language
-      const labels = Object.values(a.label || {}) as string[]
-      return labels.some(l => l && messageText.toLowerCase().includes(l.toLowerCase()))
-    })
+  // --- WAITING FOR A STEP RESPONSE ---
+  if (waiting && stepId) {
+    const currentStep = getStepById(config, stepId)
 
-    if (matched) {
-      // Save activity, advance to branch selection
+    // Step removed/disabled mid-onboarding → complete immediately
+    if (!currentStep || !currentStep.enabled) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await (supabase as any)
         .from('whatsapp_conversations')
-        .update({ activity: matched.id, onboarding_status: 'waiting_branch' })
+        .update({ onboarding_status: 'completed' })
         .eq('id', conversation.id)
-
-      // Send branch buttons
-      const branchPrompt = getLocalizedText(config.branch_prompt, language)
-      const branchButtons = (config.branches || []).map((b: { branch_id: string; label: Record<string, string>; emoji?: string }) => ({
-        id: b.branch_id,
-        title: `${b.emoji || ''} ${getLocalizedText(b.label, language)}`.trim()
-      }))
-
-      if (branchPrompt && branchButtons.length > 0) {
-        const waId = await sendInteractiveButtons(senderPhone, branchPrompt, branchButtons)
-        await storeOutboundMessage(supabase, conversation.id, branchPrompt, 'interactive', waId)
-        console.log('[WHATSAPP] Onboarding: branch buttons sent to', senderPhone)
-      }
-    } else {
-      // No match: resend activity buttons
-      const promptText = getLocalizedText(config.activity_prompt, language)
-      const buttons = activities.map((a: { id: string; label: Record<string, string>; emoji?: string }) => ({
-        id: a.id,
-        title: `${a.emoji || ''} ${getLocalizedText(a.label, language)}`.trim()
-      }))
-      if (promptText && buttons.length > 0) {
-        const waId = await sendInteractiveButtons(senderPhone, promptText, buttons)
-        await storeOutboundMessage(supabase, conversation.id, promptText, 'interactive', waId)
-        console.log('[WHATSAPP] Onboarding: resent activity buttons to', senderPhone)
-      }
+      console.log('[WHATSAPP] Onboarding: step not found, auto-completing for', senderPhone)
+      return
     }
-    return
-  }
 
-  // --- WAITING FOR BRANCH SELECTION ---
-  if (status === 'waiting_branch') {
-    const branches = config.branches || []
-    const matched = branches.find((b: { branch_id: string; label: Record<string, string> }) => {
-      if (buttonReplyId && buttonReplyId === b.branch_id) return true
-      const labels = Object.values(b.label || {}) as string[]
-      return labels.some(l => l && messageText.toLowerCase().includes(l.toLowerCase()))
-    })
+    // Try to match the user's reply
+    const matched = matchOption(currentStep, buttonReplyId, messageText)
 
     if (matched) {
-      // Save branch, mark onboarding complete
+      // Save the answer based on step type
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await (supabase as any)
-        .from('whatsapp_conversations')
-        .update({ branch_id: matched.branch_id, onboarding_status: 'completed' })
-        .eq('id', conversation.id)
+      const updateFields: Record<string, any> = {}
 
-      console.log('[WHATSAPP] Onboarding completed for', senderPhone, '- activity:', conversation.activity, 'branch:', matched.branch_id)
+      if (currentStep.type === 'activity') {
+        updateFields.activity = matched.id
+      } else if (currentStep.type === 'branch') {
+        updateFields.branch_id = matched.branch_id || matched.id
+      } else {
+        // Custom step → store in onboarding_data JSONB
+        const existingData = conversation.onboarding_data || {}
+        updateFields.onboarding_data = { ...existingData, [currentStep.id]: matched.id }
+      }
 
-      // Send welcome message if enabled
-      if (config.welcome_message_enabled && config.welcome_message) {
-        const welcomeText = getLocalizedText(config.welcome_message, language)
-        if (welcomeText.trim()) {
-          const waId = await sendTextMessage(senderPhone, welcomeText)
-          await storeOutboundMessage(supabase, conversation.id, welcomeText, 'text', waId)
-          console.log('[WHATSAPP] Welcome message sent to', senderPhone)
+      // Check for next step
+      const nextStep = getNextStep(config, stepId)
+
+      if (nextStep) {
+        // Advance to next step
+        updateFields.onboarding_status = `waiting:${nextStep.id}`
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await (supabase as any)
+          .from('whatsapp_conversations')
+          .update(updateFields)
+          .eq('id', conversation.id)
+
+        await sendStepButtons(supabase, conversation.id, senderPhone, nextStep, language)
+      } else {
+        // All steps done → completed
+        updateFields.onboarding_status = 'completed'
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await (supabase as any)
+          .from('whatsapp_conversations')
+          .update(updateFields)
+          .eq('id', conversation.id)
+
+        console.log('[WHATSAPP] Onboarding completed for', senderPhone)
+
+        // Send welcome message if enabled
+        if (config.welcome_message_enabled && config.welcome_message) {
+          const welcomeText = getLocalizedText(config.welcome_message, language)
+          if (welcomeText.trim()) {
+            const waId = await sendTextMessage(senderPhone, welcomeText)
+            await storeOutboundMessage(supabase, conversation.id, welcomeText, 'text', waId)
+            console.log('[WHATSAPP] Welcome message sent to', senderPhone)
+          }
         }
       }
     } else {
-      // No match: resend branch buttons
-      const branchPrompt = getLocalizedText(config.branch_prompt, language)
-      const branchButtons = branches.map((b: { branch_id: string; label: Record<string, string>; emoji?: string }) => ({
-        id: b.branch_id,
-        title: `${b.emoji || ''} ${getLocalizedText(b.label, language)}`.trim()
-      }))
-      if (branchPrompt && branchButtons.length > 0) {
-        const waId = await sendInteractiveButtons(senderPhone, branchPrompt, branchButtons)
-        await storeOutboundMessage(supabase, conversation.id, branchPrompt, 'interactive', waId)
-        console.log('[WHATSAPP] Onboarding: resent branch buttons to', senderPhone)
-      }
+      // No match → resend current step buttons
+      await sendStepButtons(supabase, conversation.id, senderPhone, currentStep, language)
     }
     return
   }
 
-  // --- COMPLETED or NULL: normal behavior, no onboarding action ---
+  // --- COMPLETED or NULL: no onboarding action ---
 }

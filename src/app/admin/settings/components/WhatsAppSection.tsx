@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useTranslation } from '@/contexts/LanguageContext'
 import { useAdmin } from '@/contexts/AdminContext'
 import {
-  Loader2, Save, Phone, Plus, Trash2, MessageCircle
+  Loader2, Save, Plus, Trash2, MessageCircle, ChevronUp, ChevronDown
 } from 'lucide-react'
 import type { MessengerSettings } from '@/types/messenger'
 
@@ -17,25 +17,27 @@ interface MultilingualText {
   he: string
 }
 
-interface ActivityConfig {
+interface OnboardingStepOption {
   id: string
   label: MultilingualText
   emoji: string
+  branch_id?: string // only for branch type
 }
 
-interface BranchConfig {
-  branch_id: string
-  label: MultilingualText
-  emoji: string
+interface OnboardingStep {
+  id: string
+  type: 'activity' | 'branch' | 'custom'
+  enabled: boolean
+  order: number
+  name: MultilingualText
+  prompt: MultilingualText
+  options: OnboardingStepOption[]
 }
 
 interface WhatsAppOnboardingConfig {
   enabled: boolean
   language: 'he' | 'fr' | 'en'
-  activities: ActivityConfig[]
-  branches: BranchConfig[]
-  activity_prompt: MultilingualText
-  branch_prompt: MultilingualText
+  steps: OnboardingStep[]
   welcome_message_enabled: boolean
   welcome_message: MultilingualText
 }
@@ -45,12 +47,77 @@ const emptyMultilingual = (): MultilingualText => ({ fr: '', en: '', he: '' })
 const DEFAULT_CONFIG: WhatsAppOnboardingConfig = {
   enabled: false,
   language: 'he',
-  activities: [],
-  branches: [],
-  activity_prompt: { fr: 'Choisissez votre activité :', en: 'Choose your activity:', he: 'בחרו את הפעילות:' },
-  branch_prompt: { fr: 'Choisissez votre centre :', en: 'Choose your location:', he: 'בחרו את הסניף:' },
+  steps: [
+    {
+      id: 'activity',
+      type: 'activity',
+      enabled: true,
+      order: 0,
+      name: { fr: 'Activite', en: 'Activity', he: 'פעילות' },
+      prompt: { fr: 'Choisissez votre activite :', en: 'Choose your activity:', he: 'בחרו את הפעילות:' },
+      options: [],
+    },
+    {
+      id: 'branch',
+      type: 'branch',
+      enabled: true,
+      order: 1,
+      name: { fr: 'Centre', en: 'Location', he: 'סניף' },
+      prompt: { fr: 'Choisissez votre centre :', en: 'Choose your location:', he: 'בחרו את הסניף:' },
+      options: [],
+    },
+  ],
   welcome_message_enabled: true,
   welcome_message: emptyMultilingual(),
+}
+
+// Migrate old config format (activities/branches arrays) to new steps format
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function migrateConfig(saved: any): WhatsAppOnboardingConfig {
+  // Already in new format
+  if (saved.steps) return { ...DEFAULT_CONFIG, ...saved }
+
+  // Migrate from old format
+  const steps: OnboardingStep[] = []
+
+  // Activity step
+  steps.push({
+    id: 'activity',
+    type: 'activity',
+    enabled: true,
+    order: 0,
+    name: { fr: 'Activite', en: 'Activity', he: 'פעילות' },
+    prompt: saved.activity_prompt || DEFAULT_CONFIG.steps[0].prompt,
+    options: (saved.activities || []).map((a: { id: string; label: MultilingualText; emoji?: string }) => ({
+      id: a.id,
+      label: a.label,
+      emoji: a.emoji || '',
+    })),
+  })
+
+  // Branch step
+  steps.push({
+    id: 'branch',
+    type: 'branch',
+    enabled: true,
+    order: 1,
+    name: { fr: 'Centre', en: 'Location', he: 'סניף' },
+    prompt: saved.branch_prompt || DEFAULT_CONFIG.steps[1].prompt,
+    options: (saved.branches || []).map((b: { branch_id: string; label: MultilingualText; emoji?: string }) => ({
+      id: b.branch_id,
+      label: b.label,
+      emoji: b.emoji || '',
+      branch_id: b.branch_id,
+    })),
+  })
+
+  return {
+    enabled: saved.enabled ?? false,
+    language: saved.language || 'he',
+    steps,
+    welcome_message_enabled: saved.welcome_message_enabled ?? true,
+    welcome_message: saved.welcome_message || emptyMultilingual(),
+  }
 }
 
 interface WhatsAppSectionProps {
@@ -78,7 +145,7 @@ export function WhatsAppSection({ isDark }: WhatsAppSectionProps) {
         setSettings(data.data)
         const saved = data.data.settings?.whatsapp_onboarding
         if (saved) {
-          setConfig({ ...DEFAULT_CONFIG, ...saved })
+          setConfig(migrateConfig(saved))
         }
       }
     } catch (error) {
@@ -116,80 +183,126 @@ export function WhatsAppSection({ isDark }: WhatsAppSectionProps) {
     }
   }
 
-  // Helpers
+  // Config updater
   const updateConfig = (partial: Partial<WhatsAppOnboardingConfig>) => {
     setConfig(prev => ({ ...prev, ...partial }))
   }
 
-  const updateMultilingual = (
-    field: 'activity_prompt' | 'branch_prompt' | 'welcome_message',
-    loc: Locale,
-    value: string
-  ) => {
-    setConfig(prev => ({
-      ...prev,
-      [field]: { ...prev[field], [loc]: value }
-    }))
-  }
+  // ============================================================
+  // Step management
+  // ============================================================
+  const sortedSteps = [...config.steps].sort((a, b) => a.order - b.order)
 
-  const addActivity = () => {
-    if (config.activities.length >= 3) return
-    const id = `activity_${Date.now()}`
-    updateConfig({
-      activities: [...config.activities, { id, label: emptyMultilingual(), emoji: '' }]
-    })
-  }
+  const addStep = (type: 'activity' | 'branch' | 'custom') => {
+    // Don't allow duplicate built-in types
+    if (type !== 'custom' && config.steps.some(s => s.id === type)) return
 
-  const removeActivity = (index: number) => {
-    updateConfig({
-      activities: config.activities.filter((_, i) => i !== index)
-    })
-  }
+    const maxOrder = config.steps.length > 0
+      ? Math.max(...config.steps.map(s => s.order)) + 1
+      : 0
+    const id = type === 'custom' ? `custom_${Date.now()}` : type
 
-  const updateActivity = (index: number, field: keyof ActivityConfig, value: string | MultilingualText) => {
-    const updated = [...config.activities]
-    updated[index] = { ...updated[index], [field]: value }
-    updateConfig({ activities: updated })
-  }
-
-  const updateActivityLabel = (index: number, loc: Locale, value: string) => {
-    const updated = [...config.activities]
-    updated[index] = {
-      ...updated[index],
-      label: { ...updated[index].label, [loc]: value }
+    const newStep: OnboardingStep = {
+      id,
+      type,
+      enabled: true,
+      order: maxOrder,
+      name: type === 'activity'
+        ? { fr: 'Activite', en: 'Activity', he: 'פעילות' }
+        : type === 'branch'
+          ? { fr: 'Centre', en: 'Location', he: 'סניף' }
+          : emptyMultilingual(),
+      prompt: emptyMultilingual(),
+      options: [],
     }
-    updateConfig({ activities: updated })
+    updateConfig({ steps: [...config.steps, newStep] })
   }
 
-  const addBranch = () => {
-    if (config.branches.length >= 3) return
+  const removeStep = (stepId: string) => {
+    updateConfig({ steps: config.steps.filter(s => s.id !== stepId) })
+  }
+
+  const toggleStep = (stepId: string) => {
     updateConfig({
-      branches: [...config.branches, { branch_id: '', label: emptyMultilingual(), emoji: '' }]
+      steps: config.steps.map(s =>
+        s.id === stepId ? { ...s, enabled: !s.enabled } : s
+      )
     })
   }
 
-  const removeBranch = (index: number) => {
-    updateConfig({
-      branches: config.branches.filter((_, i) => i !== index)
-    })
-  }
-
-  const updateBranch = (index: number, field: keyof BranchConfig, value: string | MultilingualText) => {
-    const updated = [...config.branches]
-    updated[index] = { ...updated[index], [field]: value }
-    updateConfig({ branches: updated })
-  }
-
-  const updateBranchLabel = (index: number, loc: Locale, value: string) => {
-    const updated = [...config.branches]
-    updated[index] = {
-      ...updated[index],
-      label: { ...updated[index].label, [loc]: value }
+  const moveStep = (stepId: string, direction: 'up' | 'down') => {
+    const sorted = [...config.steps].sort((a, b) => a.order - b.order)
+    const idx = sorted.findIndex(s => s.id === stepId)
+    if (direction === 'up' && idx > 0) {
+      const prevOrder = sorted[idx - 1].order
+      sorted[idx - 1] = { ...sorted[idx - 1], order: sorted[idx].order }
+      sorted[idx] = { ...sorted[idx], order: prevOrder }
+    } else if (direction === 'down' && idx < sorted.length - 1) {
+      const nextOrder = sorted[idx + 1].order
+      sorted[idx + 1] = { ...sorted[idx + 1], order: sorted[idx].order }
+      sorted[idx] = { ...sorted[idx], order: nextOrder }
     }
-    updateConfig({ branches: updated })
+    updateConfig({ steps: sorted })
   }
 
-  // Card styling
+  const updateStep = (stepId: string, partial: Partial<OnboardingStep>) => {
+    updateConfig({
+      steps: config.steps.map(s => s.id === stepId ? { ...s, ...partial } : s)
+    })
+  }
+
+  const updateStepPrompt = (stepId: string, loc: Locale, value: string) => {
+    const step = config.steps.find(s => s.id === stepId)
+    if (!step) return
+    updateStep(stepId, { prompt: { ...step.prompt, [loc]: value } })
+  }
+
+  const updateStepName = (stepId: string, loc: Locale, value: string) => {
+    const step = config.steps.find(s => s.id === stepId)
+    if (!step) return
+    updateStep(stepId, { name: { ...step.name, [loc]: value } })
+  }
+
+  // ============================================================
+  // Option management
+  // ============================================================
+  const addOption = (stepId: string) => {
+    const step = config.steps.find(s => s.id === stepId)
+    if (!step || step.options.length >= 3) return
+    const newOption: OnboardingStepOption = {
+      id: `opt_${Date.now()}`,
+      label: emptyMultilingual(),
+      emoji: '',
+    }
+    updateStep(stepId, { options: [...step.options, newOption] })
+  }
+
+  const removeOption = (stepId: string, optionIndex: number) => {
+    const step = config.steps.find(s => s.id === stepId)
+    if (!step) return
+    updateStep(stepId, { options: step.options.filter((_, i) => i !== optionIndex) })
+  }
+
+  const updateOption = (stepId: string, optionIndex: number, field: string, value: string) => {
+    const step = config.steps.find(s => s.id === stepId)
+    if (!step) return
+    const updated = [...step.options]
+    updated[optionIndex] = { ...updated[optionIndex], [field]: value }
+    updateStep(stepId, { options: updated })
+  }
+
+  const updateOptionLabel = (stepId: string, optionIndex: number, loc: Locale, value: string) => {
+    const step = config.steps.find(s => s.id === stepId)
+    if (!step) return
+    const updated = [...step.options]
+    updated[optionIndex] = {
+      ...updated[optionIndex],
+      label: { ...updated[optionIndex].label, [loc]: value }
+    }
+    updateStep(stepId, { options: updated })
+  }
+
+  // Styling
   const cardStyle = {
     backgroundColor: isDark ? '#1F2937' : 'white',
     borderColor: isDark ? '#374151' : '#E5E7EB'
@@ -227,6 +340,22 @@ export function WhatsAppSection({ isDark }: WhatsAppSectionProps) {
     </div>
   )
 
+  const typeBadgeColor = (type: string) => {
+    if (type === 'activity') return isDark ? 'bg-purple-500/20 text-purple-400' : 'bg-purple-100 text-purple-700'
+    if (type === 'branch') return isDark ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-100 text-blue-700'
+    return isDark ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-700'
+  }
+
+  const typeLabel = (type: string) => {
+    if (type === 'activity') return t('whatsapp.onboarding.type_activity') || 'Activite'
+    if (type === 'branch') return t('whatsapp.onboarding.type_branch') || 'Centre'
+    return t('whatsapp.onboarding.type_custom') || 'Personnalise'
+  }
+
+  // Check which built-in types are already added
+  const hasActivity = config.steps.some(s => s.type === 'activity')
+  const hasBranch = config.steps.some(s => s.type === 'branch')
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -247,7 +376,7 @@ export function WhatsAppSection({ isDark }: WhatsAppSectionProps) {
               {t('whatsapp.onboarding.enabled') || "Activer l'onboarding interactif"}
             </label>
             <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-              {t('whatsapp.onboarding.enabled_help') || "Envoie des messages interactifs aux nouveaux contacts pour identifier l'activité et le centre"}
+              {t('whatsapp.onboarding.enabled_help') || "Envoie des messages interactifs aux nouveaux contacts"}
             </p>
           </div>
           <button
@@ -271,7 +400,7 @@ export function WhatsAppSection({ isDark }: WhatsAppSectionProps) {
               {t('whatsapp.onboarding.language') || "Langue des messages WhatsApp"}
             </label>
             <p className={`text-sm mb-3 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-              {t('whatsapp.onboarding.language_help') || "Langue utilisée pour envoyer les boutons et messages"}
+              {t('whatsapp.onboarding.language_help') || "Langue utilisee pour envoyer les boutons et messages"}
             </p>
             <div className="flex gap-2">
               {LOCALES.map((loc) => (
@@ -284,198 +413,242 @@ export function WhatsAppSection({ isDark }: WhatsAppSectionProps) {
                       : isDark ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                   }`}
                 >
-                  {loc === 'he' ? '🇮🇱 עברית' : loc === 'fr' ? '🇫🇷 Français' : '🇬🇧 English'}
+                  {loc === 'he' ? '🇮🇱 עברית' : loc === 'fr' ? '🇫🇷 Francais' : '🇬🇧 English'}
                 </button>
               ))}
             </div>
           </div>
 
-          {/* Activités */}
-          <div className="p-6 rounded-lg border" style={cardStyle}>
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h3 className={`font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                  {t('whatsapp.onboarding.activities_title') || 'Activités'}
-                </h3>
-                <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                  {t('whatsapp.onboarding.activities_help') || 'Maximum 3 activités (limite des boutons WhatsApp)'}
-                </p>
-              </div>
-              <LanguageTabs />
-            </div>
-
-            <div className="space-y-3">
-              {config.activities.map((activity, idx) => (
-                <div key={idx} className="flex items-center gap-3">
-                  <input
-                    type="text"
-                    value={activity.emoji}
-                    onChange={(e) => updateActivity(idx, 'emoji', e.target.value)}
-                    placeholder="🎮"
-                    className="w-12 px-2 py-2 rounded-lg border text-center"
-                    style={inputStyle}
-                    maxLength={2}
-                  />
-                  <input
-                    type="text"
-                    value={activity.id}
-                    onChange={(e) => updateActivity(idx, 'id', e.target.value.replace(/\s/g, '_').toLowerCase())}
-                    placeholder="activity_id"
-                    className="w-36 px-3 py-2 rounded-lg border text-sm font-mono"
-                    style={inputStyle}
-                  />
-                  <input
-                    type="text"
-                    value={activity.label[activeLocale]}
-                    onChange={(e) => updateActivityLabel(idx, activeLocale, e.target.value)}
-                    placeholder={`${t('whatsapp.onboarding.button_label') || 'Nom du bouton'} (${activeLocale.toUpperCase()})`}
-                    className="flex-1 px-3 py-2 rounded-lg border"
-                    style={inputStyle}
-                    maxLength={20}
-                  />
-                  <span className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
-                    {activity.label[activeLocale]?.length || 0}/20
-                  </span>
-                  <button
-                    onClick={() => removeActivity(idx)}
-                    className="p-2 text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              ))}
-            </div>
-
-            {config.activities.length < 3 && (
-              <button
-                onClick={addActivity}
-                className={`mt-3 flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
-                  isDark ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-600 hover:bg-gray-100'
-                }`}
-              >
-                <Plus className="w-4 h-4" />
-                {t('whatsapp.onboarding.add_activity') || 'Ajouter une activité'}
-              </button>
-            )}
-          </div>
-
-          {/* Branches */}
-          <div className="p-6 rounded-lg border" style={cardStyle}>
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h3 className={`font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                  {t('whatsapp.onboarding.branches_title') || 'Centres / Succursales'}
-                </h3>
-                <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                  {t('whatsapp.onboarding.branches_help') || 'Maximum 3 centres (limite des boutons WhatsApp)'}
-                </p>
-              </div>
-              <LanguageTabs />
-            </div>
-
-            <div className="space-y-3">
-              {config.branches.map((branch, idx) => (
-                <div key={idx} className="flex items-center gap-3">
-                  <input
-                    type="text"
-                    value={branch.emoji}
-                    onChange={(e) => updateBranch(idx, 'emoji', e.target.value)}
-                    placeholder="📍"
-                    className="w-12 px-2 py-2 rounded-lg border text-center"
-                    style={inputStyle}
-                    maxLength={2}
-                  />
-                  <select
-                    value={branch.branch_id}
-                    onChange={(e) => updateBranch(idx, 'branch_id', e.target.value)}
-                    className="w-48 px-3 py-2 rounded-lg border text-sm"
-                    style={inputStyle}
-                  >
-                    <option value="">{t('whatsapp.onboarding.select_branch') || '-- Choisir --'}</option>
-                    {branches.map((b) => (
-                      <option key={b.id} value={b.id}>
-                        {b.name} {b.name_en ? `(${b.name_en})` : ''}
-                      </option>
-                    ))}
-                  </select>
-                  <input
-                    type="text"
-                    value={branch.label[activeLocale]}
-                    onChange={(e) => updateBranchLabel(idx, activeLocale, e.target.value)}
-                    placeholder={`${t('whatsapp.onboarding.button_label') || 'Nom du bouton'} (${activeLocale.toUpperCase()})`}
-                    className="flex-1 px-3 py-2 rounded-lg border"
-                    style={inputStyle}
-                    maxLength={20}
-                  />
-                  <span className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
-                    {branch.label[activeLocale]?.length || 0}/20
-                  </span>
-                  <button
-                    onClick={() => removeBranch(idx)}
-                    className="p-2 text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              ))}
-            </div>
-
-            {config.branches.length < 3 && (
-              <button
-                onClick={addBranch}
-                className={`mt-3 flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
-                  isDark ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-600 hover:bg-gray-100'
-                }`}
-              >
-                <Plus className="w-4 h-4" />
-                {t('whatsapp.onboarding.add_branch') || 'Ajouter un centre'}
-              </button>
-            )}
-          </div>
-
-          {/* Messages de prompt */}
-          <div className="p-6 rounded-lg border" style={cardStyle}>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className={`font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                {t('whatsapp.onboarding.prompts_title') || 'Messages interactifs'}
+          {/* Steps title */}
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className={`font-semibold text-lg ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                {t('whatsapp.onboarding.steps_title') || "Etapes d'onboarding"}
               </h3>
-              <LanguageTabs />
+              <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                {t('whatsapp.onboarding.steps_help') || 'Ajoutez, activez ou desactivez des etapes. Max 3 boutons par etape.'}
+              </p>
             </div>
-
-            <div className="space-y-4">
-              {/* Activity prompt */}
-              <div>
-                <label className={`block text-sm font-medium mb-1 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                  {t('whatsapp.onboarding.activity_prompt') || "Message de choix d'activité"}
-                </label>
-                <textarea
-                  rows={2}
-                  value={config.activity_prompt[activeLocale]}
-                  onChange={(e) => updateMultilingual('activity_prompt', activeLocale, e.target.value)}
-                  placeholder={t('whatsapp.onboarding.activity_prompt_placeholder') || "Ex: Bonjour ! Quelle activité vous intéresse ?"}
-                  className="w-full px-3 py-2 rounded-lg border resize-none"
-                  style={inputStyle}
-                />
-              </div>
-
-              {/* Branch prompt */}
-              <div>
-                <label className={`block text-sm font-medium mb-1 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                  {t('whatsapp.onboarding.branch_prompt') || 'Message de choix de centre'}
-                </label>
-                <textarea
-                  rows={2}
-                  value={config.branch_prompt[activeLocale]}
-                  onChange={(e) => updateMultilingual('branch_prompt', activeLocale, e.target.value)}
-                  placeholder={t('whatsapp.onboarding.branch_prompt_placeholder') || 'Ex: Super ! Dans quel centre souhaitez-vous venir ?'}
-                  className="w-full px-3 py-2 rounded-lg border resize-none"
-                  style={inputStyle}
-                />
-              </div>
-            </div>
+            <LanguageTabs />
           </div>
 
-          {/* Message de bienvenue */}
+          {/* Steps list */}
+          {sortedSteps.map((step, stepIndex) => (
+            <div
+              key={step.id}
+              className={`p-6 rounded-lg border transition-opacity ${!step.enabled ? 'opacity-50' : ''}`}
+              style={cardStyle}
+            >
+              {/* Step header */}
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <span className={`text-xs px-2 py-1 rounded-full font-medium ${typeBadgeColor(step.type)}`}>
+                    {typeLabel(step.type)}
+                  </span>
+                  {step.type === 'custom' ? (
+                    <input
+                      type="text"
+                      value={step.name[activeLocale]}
+                      onChange={(e) => updateStepName(step.id, activeLocale, e.target.value)}
+                      placeholder={t('whatsapp.onboarding.step_name') || "Nom de l'etape"}
+                      className={`font-semibold bg-transparent border-b px-1 py-0.5 text-sm ${isDark ? 'border-gray-600 text-white' : 'border-gray-300 text-gray-900'}`}
+                      style={{ color: isDark ? 'white' : 'black' }}
+                    />
+                  ) : (
+                    <h4 className={`font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                      {step.name[activeLocale] || step.id}
+                    </h4>
+                  )}
+                </div>
+                <div className="flex items-center gap-1">
+                  {/* Move up */}
+                  <button
+                    onClick={() => moveStep(step.id, 'up')}
+                    disabled={stepIndex === 0}
+                    className={`p-1.5 rounded transition-colors disabled:opacity-30 ${
+                      isDark ? 'hover:bg-gray-700 text-gray-400' : 'hover:bg-gray-100 text-gray-500'
+                    }`}
+                    title={t('whatsapp.onboarding.move_up') || 'Monter'}
+                  >
+                    <ChevronUp className="w-4 h-4" />
+                  </button>
+                  {/* Move down */}
+                  <button
+                    onClick={() => moveStep(step.id, 'down')}
+                    disabled={stepIndex === sortedSteps.length - 1}
+                    className={`p-1.5 rounded transition-colors disabled:opacity-30 ${
+                      isDark ? 'hover:bg-gray-700 text-gray-400' : 'hover:bg-gray-100 text-gray-500'
+                    }`}
+                    title={t('whatsapp.onboarding.move_down') || 'Descendre'}
+                  >
+                    <ChevronDown className="w-4 h-4" />
+                  </button>
+                  {/* Enable/disable toggle */}
+                  <button
+                    onClick={() => toggleStep(step.id)}
+                    className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ml-2 ${
+                      step.enabled ? 'bg-green-600' : isDark ? 'bg-gray-700' : 'bg-gray-300'
+                    }`}
+                    title={step.enabled
+                      ? (t('whatsapp.onboarding.disable_step') || 'Desactiver')
+                      : (t('whatsapp.onboarding.enable_step') || 'Activer')
+                    }
+                  >
+                    <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${
+                      step.enabled ? 'translate-x-[18px]' : 'translate-x-[3px]'
+                    }`} />
+                  </button>
+                  {/* Delete (custom only) */}
+                  {step.type === 'custom' && (
+                    <button
+                      onClick={() => removeStep(step.id)}
+                      className="p-1.5 rounded text-red-500 hover:bg-red-500/10 transition-colors ml-1"
+                      title={t('whatsapp.onboarding.delete_step') || 'Supprimer'}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {step.enabled && (
+                <>
+                  {/* Step prompt */}
+                  <div className="mb-4">
+                    <label className={`block text-sm font-medium mb-1 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                      {t('whatsapp.onboarding.step_prompt') || 'Message de la question'}
+                    </label>
+                    <textarea
+                      rows={2}
+                      value={step.prompt[activeLocale]}
+                      onChange={(e) => updateStepPrompt(step.id, activeLocale, e.target.value)}
+                      placeholder={t('whatsapp.onboarding.step_prompt_placeholder') || 'Ex: Quel est votre choix ?'}
+                      className="w-full px-3 py-2 rounded-lg border resize-none text-sm"
+                      style={inputStyle}
+                    />
+                  </div>
+
+                  {/* Options */}
+                  <div className="space-y-2">
+                    <label className={`block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                      {t('whatsapp.onboarding.options') || 'Options'} ({step.options.length}/3)
+                    </label>
+                    {step.options.map((opt, idx) => (
+                      <div key={idx} className="flex items-center gap-2">
+                        {/* Emoji */}
+                        <input
+                          type="text"
+                          value={opt.emoji}
+                          onChange={(e) => updateOption(step.id, idx, 'emoji', e.target.value)}
+                          placeholder="🎮"
+                          className="w-11 px-1.5 py-2 rounded-lg border text-center text-sm"
+                          style={inputStyle}
+                          maxLength={2}
+                        />
+                        {/* Branch selector for branch type */}
+                        {step.type === 'branch' ? (
+                          <select
+                            value={opt.branch_id || ''}
+                            onChange={(e) => {
+                              const updated = [...step.options]
+                              updated[idx] = { ...updated[idx], branch_id: e.target.value, id: e.target.value }
+                              updateStep(step.id, { options: updated })
+                            }}
+                            className="w-40 px-2 py-2 rounded-lg border text-sm"
+                            style={inputStyle}
+                          >
+                            <option value="">{t('whatsapp.onboarding.select_branch') || '-- Choisir --'}</option>
+                            {branches.map((b) => (
+                              <option key={b.id} value={b.id}>
+                                {b.name} {b.name_en ? `(${b.name_en})` : ''}
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          <input
+                            type="text"
+                            value={opt.id}
+                            onChange={(e) => updateOption(step.id, idx, 'id', e.target.value.replace(/\s/g, '_').toLowerCase())}
+                            placeholder={t('whatsapp.onboarding.option_id') || 'identifiant'}
+                            className="w-32 px-2 py-2 rounded-lg border text-sm font-mono"
+                            style={inputStyle}
+                          />
+                        )}
+                        {/* Label */}
+                        <input
+                          type="text"
+                          value={opt.label[activeLocale]}
+                          onChange={(e) => updateOptionLabel(step.id, idx, activeLocale, e.target.value)}
+                          placeholder={`${t('whatsapp.onboarding.button_label') || 'Nom du bouton'} (${activeLocale.toUpperCase()})`}
+                          className="flex-1 px-2 py-2 rounded-lg border text-sm"
+                          style={inputStyle}
+                          maxLength={20}
+                        />
+                        <span className={`text-xs w-8 text-right ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                          {opt.label[activeLocale]?.length || 0}/20
+                        </span>
+                        <button
+                          onClick={() => removeOption(step.id, idx)}
+                          className="p-1.5 text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+
+                  {step.options.length < 3 && (
+                    <button
+                      onClick={() => addOption(step.id)}
+                      className={`mt-2 flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm transition-colors ${
+                        isDark ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-600 hover:bg-gray-100'
+                      }`}
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      {t('whatsapp.onboarding.add_option') || 'Ajouter une option'}
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
+          ))}
+
+          {/* Add step buttons */}
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => addStep('custom')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border transition-colors ${
+                isDark ? 'border-gray-600 text-gray-300 hover:bg-gray-700' : 'border-gray-300 text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              <Plus className="w-4 h-4" />
+              {t('whatsapp.onboarding.add_custom_step') || 'Ajouter une etape personnalisee'}
+            </button>
+            {!hasActivity && (
+              <button
+                onClick={() => addStep('activity')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border transition-colors ${
+                  isDark ? 'border-purple-800 text-purple-400 hover:bg-purple-500/10' : 'border-purple-200 text-purple-600 hover:bg-purple-50'
+                }`}
+              >
+                <Plus className="w-4 h-4" />
+                {t('whatsapp.onboarding.type_activity') || 'Activite'}
+              </button>
+            )}
+            {!hasBranch && (
+              <button
+                onClick={() => addStep('branch')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border transition-colors ${
+                  isDark ? 'border-blue-800 text-blue-400 hover:bg-blue-500/10' : 'border-blue-200 text-blue-600 hover:bg-blue-50'
+                }`}
+              >
+                <Plus className="w-4 h-4" />
+                {t('whatsapp.onboarding.type_branch') || 'Centre'}
+              </button>
+            )}
+          </div>
+
+          {/* Welcome message */}
           <div className="p-6 rounded-lg border" style={cardStyle}>
             <div className="flex items-center gap-2 mb-4">
               <MessageCircle className={`w-5 h-5 ${isDark ? 'text-green-400' : 'text-green-600'}`} />
@@ -487,7 +660,7 @@ export function WhatsAppSection({ isDark }: WhatsAppSectionProps) {
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                  {t('whatsapp.onboarding.welcome_message_help') || "Envoyé après la fin de l'onboarding"}
+                  {t('whatsapp.onboarding.welcome_message_help') || "Envoye apres la fin de l'onboarding"}
                 </p>
                 <button
                   onClick={() => updateConfig({ welcome_message_enabled: !config.welcome_message_enabled })}
@@ -512,8 +685,11 @@ export function WhatsAppSection({ isDark }: WhatsAppSectionProps) {
                   <textarea
                     rows={3}
                     value={config.welcome_message[activeLocale]}
-                    onChange={(e) => updateMultilingual('welcome_message', activeLocale, e.target.value)}
-                    placeholder={t('whatsapp.onboarding.welcome_placeholder') || 'Merci ! Un conseiller va vous répondre rapidement.'}
+                    onChange={(e) => setConfig(prev => ({
+                      ...prev,
+                      welcome_message: { ...prev.welcome_message, [activeLocale]: e.target.value }
+                    }))}
+                    placeholder={t('whatsapp.onboarding.welcome_placeholder') || 'Merci ! Un conseiller va vous repondre rapidement.'}
                     className="w-full px-3 py-2 rounded-lg border resize-none"
                     style={inputStyle}
                   />
