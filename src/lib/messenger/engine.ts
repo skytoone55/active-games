@@ -427,7 +427,7 @@ export async function processUserMessage(
         // Recherche FAQ intelligente : seulement si le message ressemble à une question
         // On cherche les FAQ pertinentes par mots-clés au lieu d'injecter les 43
         let faqItems: Array<{ question: string; answer: string }> = []
-        const userWords = userMessage.toLowerCase().split(/\s+/).filter((w: string) => w.length > 3)
+        const userWords = userMessage.toLowerCase().split(/\s+/).filter((w: string) => w.length > 2)
 
         if (userWords.length > 0) {
           // Chercher les FAQ qui matchent les mots-clés du message
@@ -789,22 +789,66 @@ export async function processUserMessage(
       const looksLikeQuestion = /\?/.test(userMessage) || /^(est-ce|is |are |do |does |can |could |when |where |what |how |who |why |combien|quand|comment|pourquoi|האם|מה |מתי|איפה|כמה|למה|איך)/.test(userMessage.trim().toLowerCase())
 
       if (looksLikeQuestion) {
-        console.log('[Engine] Clara failed but message is a question - re-asking module question instead of manual validation')
-        // Detect message language first so we can pick the right module content
+        console.log('[Engine] Clara failed but message is a question - trying FAQ fallback')
+        // Detect message language
         const detectMsgLang = (text: string): string => {
           if (/[\u0590-\u05FF]/.test(text)) return 'he'
           if (/[àâçéèêëîïôùûüÿœæ]/i.test(text) || /\b(je|tu|nous|vous|merci|bonjour|oui|non)\b/i.test(text)) return 'fr'
           return 'en'
         }
         const msgLang = detectMsgLang(userMessage)
-        // Pick module content in the user's detected language, not the site locale
-        const moduleContent = module.content[msgLang] || module.content[locale] || module.content.he || module.content.fr || ''
-        const fallbackMessages: Record<string, string> = {
-          fr: `Je ne peux pas répondre à cette question pour le moment. ${moduleContent}`,
-          en: `I can't answer that question right now. ${moduleContent}`,
-          he: `אני לא יכולה לענות על השאלה הזו כרגע. ${moduleContent}`
+
+        // Try to find a matching FAQ answer to include in fallback
+        let faqAnswer = ''
+        try {
+          const faqWords = userMessage.toLowerCase().split(/\s+/).filter((w: string) => w.length > 2)
+          if (faqWords.length > 0) {
+            const { data: faqs } = await supabase
+              .from('messenger_faq')
+              .select('question, answer, category')
+              .eq('is_active', true)
+
+            if (faqs && faqs.length > 0) {
+              const matched = faqs.filter((f: any) => {
+                const allText = [
+                  f.question?.fr, f.question?.en, f.question?.he,
+                  f.answer?.fr, f.answer?.en, f.answer?.he,
+                  f.category
+                ].filter(Boolean).join(' ').toLowerCase()
+                return faqWords.some((word: string) => allText.includes(word))
+              }).slice(0, 1) // Best match only
+
+              if (matched.length > 0) {
+                faqAnswer = matched[0].answer[msgLang] || matched[0].answer[locale] || matched[0].answer.he || matched[0].answer.fr || matched[0].answer.en || ''
+              }
+            }
+          }
+        } catch (faqErr) {
+          console.error('[Engine] FAQ fallback error:', faqErr)
         }
-        const fallbackMsg = fallbackMessages[msgLang] || fallbackMessages[locale] || fallbackMessages.he
+
+        // Pick module content in the user's detected language
+        const moduleContent = module.content[msgLang] || module.content[locale] || module.content.he || module.content.fr || ''
+
+        let fallbackMsg: string
+        if (faqAnswer) {
+          // FAQ found — give the answer + re-ask module question
+          console.log('[Engine] FAQ match found for fallback, answering question')
+          const templates: Record<string, string> = {
+            fr: `${faqAnswer}\n\n${moduleContent}`,
+            en: `${faqAnswer}\n\n${moduleContent}`,
+            he: `${faqAnswer}\n\n${moduleContent}`
+          }
+          fallbackMsg = templates[msgLang] || templates.he
+        } else {
+          // No FAQ — generic "can't answer" + re-ask
+          const templates: Record<string, string> = {
+            fr: `Je ne peux pas répondre à cette question pour le moment. ${moduleContent}`,
+            en: `I can't answer that question right now. ${moduleContent}`,
+            he: `אני לא יכולה לענות על השאלה הזו כרגע. ${moduleContent}`
+          }
+          fallbackMsg = templates[msgLang] || templates[locale] || templates.he
+        }
 
         await supabase.from('messenger_messages').insert({
           conversation_id: conversationId,
