@@ -11,6 +11,7 @@ interface ClaraSettingsModalProps {
 }
 
 interface ClaraSettings {
+  clara_global_enabled: boolean
   clara_default_prompt: string
   clara_personality: string
   clara_rules: string
@@ -37,6 +38,7 @@ export function ClaraSettingsModal({ isDark, onClose, workflowId }: ClaraSetting
   const [activeTab, setActiveTab] = useState<TabId>('prompt')
 
   const [settings, setSettings] = useState<ClaraSettings>({
+    clara_global_enabled: true,
     clara_default_prompt: '',
     clara_personality: '',
     clara_rules: '',
@@ -198,6 +200,21 @@ Already collected: {"firstName": "...", ...}`
                 Chaque section du prompt envoyé à Clara est modifiable
               </p>
             </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className={`text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+              Clara {settings.clara_global_enabled ? 'ON' : 'OFF'}
+            </span>
+            <button
+              onClick={() => setSettings({ ...settings, clara_global_enabled: !settings.clara_global_enabled })}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                settings.clara_global_enabled ? 'bg-green-500' : isDark ? 'bg-gray-600' : 'bg-gray-300'
+              }`}
+            >
+              <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                settings.clara_global_enabled ? 'translate-x-6' : 'translate-x-1'
+              }`} />
+            </button>
           </div>
           <button
             onClick={onClose}

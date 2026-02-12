@@ -3,6 +3,7 @@ import { createServiceRoleClient } from '@/lib/supabase/service-role'
 
 // Type definition
 interface WorkflowClaraSettings {
+  clara_global_enabled: boolean | null
   clara_default_prompt: string | null
   clara_personality: string | null
   clara_rules: string | null
@@ -65,7 +66,7 @@ export async function GET(request: NextRequest) {
     // Get first active workflow's Clara settings as global defaults
     const { data: workflow, error } = await supabase
       .from('messenger_workflows')
-      .select('clara_default_prompt, clara_personality, clara_rules, clara_model_global, clara_temperature_global, clara_fallback_action, clara_fallback_message')
+      .select('clara_global_enabled, clara_default_prompt, clara_personality, clara_rules, clara_model_global, clara_temperature_global, clara_fallback_action, clara_fallback_message')
       .eq('is_active', true)
       .single() as { data: WorkflowClaraSettings | null, error: any }
 
@@ -75,6 +76,7 @@ export async function GET(request: NextRequest) {
 
     // Merge workflow settings with defaults
     const settings = {
+      clara_global_enabled: workflow?.clara_global_enabled ?? true,
       clara_default_prompt: workflow?.clara_default_prompt || DEFAULT_PROMPT,
       clara_personality: workflow?.clara_personality || DEFAULT_PERSONALITY,
       clara_rules: workflow?.clara_rules || DEFAULT_RULES,
@@ -111,6 +113,7 @@ export async function PUT(request: NextRequest) {
   try {
     const body = await request.json()
     const {
+      clara_global_enabled,
       clara_default_prompt,
       clara_personality,
       clara_rules,
@@ -126,6 +129,7 @@ export async function PUT(request: NextRequest) {
     const updateData: Record<string, any> = {
       updated_at: new Date().toISOString()
     }
+    if (clara_global_enabled !== undefined) updateData.clara_global_enabled = clara_global_enabled
     if (clara_default_prompt !== undefined) updateData.clara_default_prompt = clara_default_prompt
     if (clara_personality !== undefined) updateData.clara_personality = clara_personality
     if (clara_rules !== undefined) updateData.clara_rules = clara_rules

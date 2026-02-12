@@ -498,8 +498,16 @@ export async function processUserMessage(
     }
   }
 
-  // Si Clara est activé pour ce module, traiter avec l'IA
-  if (module.clara_enabled) {
+  // Check global Clara ON/OFF from workflow settings
+  const { data: currentWorkflow } = await supabase
+    .from('messenger_workflows')
+    .select('clara_global_enabled')
+    .eq('id', conversation.current_workflow_id)
+    .single()
+  const claraGlobalEnabled = currentWorkflow?.clara_global_enabled ?? true
+
+  // Si Clara est activé globalement ET pour ce module, traiter avec l'IA
+  if (module.clara_enabled && claraGlobalEnabled) {
     console.log('[Engine] Clara enabled for module:', module.ref_code)
 
     // Charger le prompt + personality + rules + fallback (module-specific ou global par défaut)
