@@ -6,9 +6,13 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
+import { verifyApiPermission } from '@/lib/permissions'
 
 export async function GET(request: NextRequest) {
   try {
+    const { success, errorResponse } = await verifyApiPermission('chat', 'view')
+    if (!success) return errorResponse!
+
     const supabase = createServiceRoleClient()
     const { searchParams } = request.nextUrl
 

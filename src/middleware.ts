@@ -37,6 +37,12 @@ export async function middleware(request: NextRequest) {
 
   const isAdminRoute = request.nextUrl.pathname.startsWith('/admin')
   const isLoginPage = request.nextUrl.pathname === '/admin/login'
+  const isChatApiRoute = request.nextUrl.pathname.startsWith('/api/chat')
+
+  // API routes: return 401 JSON if not authenticated
+  if (isChatApiRoute && !user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
 
   // If accessing admin pages (not login) without auth → redirect to login
   if (isAdminRoute && !isLoginPage && !user) {
@@ -59,5 +65,7 @@ export const config = {
   matcher: [
     // Match all admin routes
     '/admin/:path*',
+    // Match all chat API routes (require authentication)
+    '/api/chat/:path*',
   ],
 }

@@ -5,10 +5,14 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
+import { verifyApiPermission } from '@/lib/permissions'
 
 // GET - Fetch all shortcuts for the current user
 export async function GET(request: NextRequest) {
   try {
+    const { success, errorResponse } = await verifyApiPermission('chat', 'view')
+    if (!success) return errorResponse!
+
     const userId = request.nextUrl.searchParams.get('userId')
     if (!userId) {
       return NextResponse.json({ error: 'userId required' }, { status: 400 })
@@ -36,6 +40,9 @@ export async function GET(request: NextRequest) {
 // POST - Create a new shortcut
 export async function POST(request: NextRequest) {
   try {
+    const { success, errorResponse } = await verifyApiPermission('chat', 'create')
+    if (!success) return errorResponse!
+
     const { userId, label, message, emoji } = await request.json()
 
     if (!userId || !label?.trim() || !message?.trim()) {
@@ -82,6 +89,9 @@ export async function POST(request: NextRequest) {
 // PUT - Update an existing shortcut
 export async function PUT(request: NextRequest) {
   try {
+    const { success, errorResponse } = await verifyApiPermission('chat', 'edit')
+    if (!success) return errorResponse!
+
     const { id, userId, label, message, emoji } = await request.json()
 
     if (!id || !userId) {
@@ -119,6 +129,9 @@ export async function PUT(request: NextRequest) {
 // DELETE - Remove a shortcut
 export async function DELETE(request: NextRequest) {
   try {
+    const { success, errorResponse } = await verifyApiPermission('chat', 'delete')
+    if (!success) return errorResponse!
+
     const { id, userId } = await request.json()
 
     if (!id || !userId) {

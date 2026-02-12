@@ -103,11 +103,15 @@ export async function GET(request: NextRequest) {
     const from = (page - 1) * pageSize
     const to = from + pageSize - 1
 
+    // Use estimated count for faster queries when no search/filters active
+    const hasFilters = !!(query?.trim() || source || dateFrom || dateTo)
+    const countMode = hasFilters ? 'exact' : 'estimated'
+
     // Construire la requête
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let dbQuery = (supabase as any)
       .from('contacts')
-      .select('*', { count: 'exact' })
+      .select('*', { count: countMode })
       .eq('branch_id_main', branchId)
 
     // Filtrer par status

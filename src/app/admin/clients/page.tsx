@@ -12,7 +12,7 @@ import { MergeContactsModal } from './components/MergeContactsModal'
 import { ConfirmationModal } from '../components/ConfirmationModal'
 import { CustomSelect } from '../components/CustomSelect'
 import type { Contact } from '@/lib/supabase/types'
-import { useContactRequests } from '@/hooks/useContactRequests'
+import { useUnreadContactRequestsCount } from '@/hooks/useContactRequests'
 import { ContactRequestsPanel } from './components/ContactRequestsPanel'
 
 export default function ClientsPage() {
@@ -29,7 +29,7 @@ export default function ClientsPage() {
     }
   }
   const { searchContacts, archiveContact, unarchiveContact } = useContacts(selectedBranch?.id || null)
-  const { unreadCount: unreadContactRequests } = useContactRequests(selectedBranch?.id || null)
+  const unreadContactRequests = useUnreadContactRequestsCount(selectedBranch?.id || null)
 
   const [showContactRequests, setShowContactRequests] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
@@ -239,7 +239,7 @@ export default function ClientsPage() {
   const canEditClient = hasPermission('clients', 'can_edit')
   const canDeleteClient = hasPermission('clients', 'can_delete')
 
-  if (permissionsLoading || !user || !effectiveSelectedBranch) {
+  if (!user || !effectiveSelectedBranch) {
     return (
       <div className={`min-h-screen flex items-center justify-center ${isDark ? 'bg-gray-900' : 'bg-gray-100'}`}>
         <Loader2 className={`w-8 h-8 animate-spin ${isDark ? 'text-blue-400' : 'text-blue-600'}`} />

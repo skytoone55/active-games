@@ -5,9 +5,13 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
+import { verifyApiPermission } from '@/lib/permissions'
 
 export async function POST(request: NextRequest) {
   try {
+    const { success, errorResponse } = await verifyApiPermission('chat', 'create')
+    if (!success) return errorResponse!
+
     const { conversationId, message, userId } = await request.json()
 
     if (!conversationId || !message) {
