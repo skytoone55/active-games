@@ -118,48 +118,6 @@ function getBranchColor(branchId: string, _allBranches?: { id: string }[]): stri
   return BRANCH_COLOR_MAP[branchId] || 'bg-gray-500'
 }
 
-// Phone ring notification sound (Web Audio API — no external file needed)
-function playEscalationSound() {
-  try {
-    const ctx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)()
-
-    // Ring pattern: two short tones repeated 3 times
-    const playRing = (startTime: number) => {
-      // Tone 1 (higher pitch)
-      const osc1 = ctx.createOscillator()
-      const gain1 = ctx.createGain()
-      osc1.type = 'sine'
-      osc1.frequency.value = 880
-      gain1.gain.value = 0.3
-      osc1.connect(gain1)
-      gain1.connect(ctx.destination)
-      osc1.start(startTime)
-      osc1.stop(startTime + 0.15)
-
-      // Tone 2 (lower pitch)
-      const osc2 = ctx.createOscillator()
-      const gain2 = ctx.createGain()
-      osc2.type = 'sine'
-      osc2.frequency.value = 660
-      gain2.gain.value = 0.3
-      osc2.connect(gain2)
-      gain2.connect(ctx.destination)
-      osc2.start(startTime + 0.2)
-      osc2.stop(startTime + 0.35)
-    }
-
-    // 3 rings with pauses
-    playRing(ctx.currentTime)
-    playRing(ctx.currentTime + 0.6)
-    playRing(ctx.currentTime + 1.2)
-
-    // Close context after sound finishes
-    setTimeout(() => ctx.close(), 2000)
-  } catch (e) {
-    console.warn('[Chat] Could not play escalation sound:', e)
-  }
-}
-
 export default function ChatPage() {
   const { t, locale } = useTranslation()
   const { user, branches, selectedBranch, selectBranch, isDark, loading: adminLoading } = useAdmin()
@@ -225,7 +183,6 @@ export default function ChatPage() {
   const activeChannelRef = useRef<ChatChannel>('whatsapp')
   const [showEmojiPicker, setShowEmojiPicker] = useState(false)
   const emojiPickerRef = useRef<HTMLDivElement>(null)
-  const notifiedEscalationsRef = useRef<Set<string>>(new Set())
 
   // ============================================================
   // Chat shortcuts state
@@ -544,21 +501,11 @@ export default function ChatPage() {
   // ============================================================
   // Supabase Realtime
   // ============================================================
-  const handleWaConversationChange = useCallback((payload?: { new?: Record<string, unknown>; old?: Record<string, unknown>; eventType?: string }) => {
+  const handleWaConversationChange = useCallback(() => {
     fetchWaConversations()
     // Notify if not on whatsapp tab
     if (activeChannelRef.current !== 'whatsapp') {
       setWaHasNew(true)
-    }
-    // Play notification sound when needs_human changes to true (Clara escalation)
-    const convId = payload?.new?.id as string | undefined
-    if (payload?.eventType === 'UPDATE' && payload?.new?.needs_human === true && convId && !notifiedEscalationsRef.current.has(convId)) {
-      notifiedEscalationsRef.current.add(convId)
-      playEscalationSound()
-    }
-    // Remove from notified set when resolved
-    if (payload?.eventType === 'UPDATE' && payload?.new?.needs_human === false && convId) {
-      notifiedEscalationsRef.current.delete(convId)
     }
   }, [fetchWaConversations])
 
