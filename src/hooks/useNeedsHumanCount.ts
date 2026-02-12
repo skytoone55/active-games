@@ -45,10 +45,13 @@ function playEscalationSound() {
  * Hook to get the count of conversations (WhatsApp + Messenger) that need human attention.
  * Listens to realtime changes on both tables.
  * Plays a notification sound when a new escalation is detected.
+ *
+ * Optimized: debounces realtime events, but plays sound immediately on escalation.
  */
 export function useNeedsHumanCount(branches: { id: string }[]) {
   const [count, setCount] = useState(0)
   const notifiedRef = useRef<Set<string>>(new Set())
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null)
 
   const fetchCount = useCallback(async () => {
     let total = 0
@@ -61,14 +64,6 @@ export function useNeedsHumanCount(branches: { id: string }[]) {
       }
       waParams.set('includeUnassigned', 'true')
 
-      const waRes = await fetch(`/api/chat/conversations?${waParams}`)
-      const waData = await waRes.json()
-      if (waData.conversations) {
-        total += waData.conversations.filter(
-          (c: { needs_human: boolean | null }) => c.needs_human === true
-        ).length
-      }
-
       // Messenger conversations
       const msParams = new URLSearchParams({ status: 'all', pageSize: '200' })
       msParams.set('branchId', 'all')
@@ -76,8 +71,20 @@ export function useNeedsHumanCount(branches: { id: string }[]) {
         msParams.set('allowedBranches', branches.map(b => b.id).join(','))
       }
 
-      const msRes = await fetch(`/api/chat/messenger-conversations?${msParams}`)
-      const msData = await msRes.json()
+      // Fetch both in parallel
+      const [waRes, msRes] = await Promise.all([
+        fetch(`/api/chat/conversations?${waParams}`),
+        fetch(`/api/chat/messenger-conversations?${msParams}`)
+      ])
+
+      const [waData, msData] = await Promise.all([waRes.json(), msRes.json()])
+
+      if (waData.conversations) {
+        total += waData.conversations.filter(
+          (c: { needs_human: boolean | null }) => c.needs_human === true
+        ).length
+      }
+
       if (msData.conversations) {
         total += msData.conversations.filter(
           (c: { needs_human: boolean | null }) => c.needs_human === true
@@ -96,10 +103,27 @@ export function useNeedsHumanCount(branches: { id: string }[]) {
     }
   }, [fetchCount, branches.length])
 
-  // Shared handler for realtime escalation detection
-  const handleEscalation = useCallback((payload?: { new?: Record<string, unknown>; eventType?: string }) => {
-    fetchCount()
+  // Cleanup debounce timer
+  useEffect(() => {
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current)
+      }
+    }
+  }, [])
 
+  // Shared handler for realtime escalation detection
+  // Sound plays immediately, but fetch is debounced
+  const handleEscalation = useCallback((payload?: { new?: Record<string, unknown>; eventType?: string }) => {
+    // Debounce the fetch
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current)
+    }
+    debounceTimerRef.current = setTimeout(() => {
+      fetchCount()
+    }, 500)
+
+    // Sound plays immediately (no debounce) when a new escalation is detected
     const convId = payload?.new?.id as string | undefined
     if (payload?.eventType === 'UPDATE' && payload?.new?.needs_human === true && convId && !notifiedRef.current.has(convId)) {
       notifiedRef.current.add(convId)

@@ -7,6 +7,9 @@
  * - La session ne expire pas pendant l'utilisation
  * - Le token est rafraîchi silencieusement en arrière-plan
  * - L'utilisateur reste connecté tant qu'il utilise l'app
+ *
+ * Coordonné avec useInactivityTimeout via localStorage LAST_ACTIVITY_KEY
+ * Removed the 30s check interval to reduce unnecessary API calls.
  */
 
 import { useEffect, useRef, useCallback } from 'react'
@@ -15,21 +18,38 @@ import { getClient } from '@/lib/supabase/client'
 // Intervalle de rafraîchissement du token (toutes les 10 minutes)
 const REFRESH_INTERVAL = 10 * 60 * 1000 // 10 minutes
 
-// Intervalle de vérification de session (toutes les 30 secondes)
-const CHECK_INTERVAL = 30 * 1000 // 30 secondes
+// Clé partagée avec useInactivityTimeout
+const LAST_ACTIVITY_KEY = 'last_activity_timestamp'
+const INACTIVITY_TIMEOUT = 5 * 60 * 1000 // 5 minutes — same as useInactivityTimeout
 
 export function useSessionPersistence() {
   const lastActivityRef = useRef(Date.now())
   const refreshTimerRef = useRef<NodeJS.Timeout | null>(null)
-  const checkTimerRef = useRef<NodeJS.Timeout | null>(null)
 
   // Met à jour le timestamp de dernière activité
   const updateActivity = useCallback(() => {
     lastActivityRef.current = Date.now()
   }, [])
 
+  // Check if user is still active (not timed out by inactivity)
+  const isUserActive = useCallback(() => {
+    const lastActivity = localStorage.getItem(LAST_ACTIVITY_KEY)
+    if (lastActivity) {
+      const elapsed = Date.now() - parseInt(lastActivity, 10)
+      if (elapsed > INACTIVITY_TIMEOUT) {
+        return false // User is inactive, don't refresh
+      }
+    }
+    return true
+  }, [])
+
   // Rafraîchit le token silencieusement
   const refreshSession = useCallback(async () => {
+    // Don't refresh if user is considered inactive — let useInactivityTimeout handle logout
+    if (!isUserActive()) {
+      return false
+    }
+
     const supabase = getClient()
 
     try {
@@ -37,7 +57,6 @@ export function useSessionPersistence() {
       const { data: { session: currentSession } } = await supabase.auth.getSession()
 
       if (!currentSession) {
-        console.warn('No active session to refresh')
         return false
       }
 
@@ -46,8 +65,6 @@ export function useSessionPersistence() {
 
       if (error) {
         console.warn('Session refresh failed:', error.message)
-        // Si le refresh échoue, la session est probablement invalide
-        // Supabase va automatiquement déclencher SIGNED_OUT
         return false
       }
 
@@ -59,23 +76,7 @@ export function useSessionPersistence() {
     }
 
     return false
-  }, [])
-
-  // Vérifie si la session est toujours valide
-  const checkSession = useCallback(async () => {
-    const supabase = getClient()
-
-    try {
-      const { data: { session } } = await supabase.auth.getSession()
-
-      if (!session) {
-        // Essayer de rafraîchir
-        await refreshSession()
-      }
-    } catch (e) {
-      console.warn('Session check failed:', e)
-    }
-  }, [refreshSession])
+  }, [isUserActive])
 
   // Configurer les listeners d'activité utilisateur
   useEffect(() => {
@@ -104,21 +105,15 @@ export function useSessionPersistence() {
     }
   }, [updateActivity])
 
-  // Configurer le rafraîchissement périodique du token
+  // Configurer le rafraîchissement périodique du token (every 10 min, no more 30s check)
   useEffect(() => {
-    // Rafraîchir le token toutes les 10 minutes
+    // Rafraîchir le token toutes les 10 minutes (only if user is active)
     refreshTimerRef.current = setInterval(async () => {
-      // Seulement si l'utilisateur a été actif dans les 30 dernières minutes
       const timeSinceActivity = Date.now() - lastActivityRef.current
-      if (timeSinceActivity < 30 * 60 * 1000) {
+      if (timeSinceActivity < 30 * 60 * 1000 && isUserActive()) {
         await refreshSession()
       }
     }, REFRESH_INTERVAL)
-
-    // Vérifier la session toutes les 30 secondes
-    checkTimerRef.current = setInterval(async () => {
-      await checkSession()
-    }, CHECK_INTERVAL)
 
     // Premier refresh immédiat
     refreshSession()
@@ -127,11 +122,8 @@ export function useSessionPersistence() {
       if (refreshTimerRef.current) {
         clearInterval(refreshTimerRef.current)
       }
-      if (checkTimerRef.current) {
-        clearInterval(checkTimerRef.current)
-      }
     }
-  }, [refreshSession, checkSession])
+  }, [refreshSession, isUserActive])
 
   // Gérer la visibilité de la page (quand l'utilisateur revient sur l'onglet)
   useEffect(() => {
@@ -140,9 +132,11 @@ export function useSessionPersistence() {
     const handleVisibilityChange = async () => {
       if (document.visibilityState === 'visible') {
         // L'utilisateur est revenu - vérifier et rafraîchir la session
+        // But only if not timed out by inactivity
         updateActivity()
-        await checkSession()
-        await refreshSession()
+        if (isUserActive()) {
+          await refreshSession()
+        }
       }
     }
 
@@ -151,27 +145,10 @@ export function useSessionPersistence() {
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange)
     }
-  }, [updateActivity, checkSession, refreshSession])
-
-  // Gérer le focus de la fenêtre
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-
-    const handleFocus = async () => {
-      updateActivity()
-      await checkSession()
-    }
-
-    window.addEventListener('focus', handleFocus)
-
-    return () => {
-      window.removeEventListener('focus', handleFocus)
-    }
-  }, [updateActivity, checkSession])
+  }, [updateActivity, refreshSession, isUserActive])
 
   return {
     updateActivity,
     refreshSession,
-    checkSession,
   }
 }

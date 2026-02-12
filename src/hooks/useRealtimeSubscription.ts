@@ -22,6 +22,8 @@ let channelCounter = 0
 
 /**
  * Hook pour s'abonner aux changements en temps réel sur une table Supabase
+ * Utilise des refs pour les callbacks afin d'éviter de recréer la subscription
+ * à chaque re-render du parent.
  */
 export function useRealtimeSubscription(
   config: SubscriptionConfig,
@@ -31,6 +33,17 @@ export function useRealtimeSubscription(
   const isSubscribingRef = useRef(false)
 
   const { table, event = '*', filter, onInsert, onUpdate, onDelete, onChange } = config
+
+  // Store callbacks in refs so subscription doesn't re-create when callbacks change
+  const onChangeRef = useRef(onChange)
+  const onInsertRef = useRef(onInsert)
+  const onUpdateRef = useRef(onUpdate)
+  const onDeleteRef = useRef(onDelete)
+
+  useEffect(() => { onChangeRef.current = onChange }, [onChange])
+  useEffect(() => { onInsertRef.current = onInsert }, [onInsert])
+  useEffect(() => { onUpdateRef.current = onUpdate }, [onUpdate])
+  useEffect(() => { onDeleteRef.current = onDelete }, [onDelete])
 
   useEffect(() => {
     // Ne pas s'abonner si désactivé ou déjà en cours
@@ -75,19 +88,19 @@ export function useRealtimeSubscription(
         'postgres_changes',
         channelConfig,
         (payload: RealtimePostgresChangesPayload<Record<string, unknown>>) => {
-          if (onChange) {
-            onChange(payload)
+          if (onChangeRef.current) {
+            onChangeRef.current(payload)
           }
 
           switch (payload.eventType) {
             case 'INSERT':
-              if (onInsert) onInsert(payload)
+              if (onInsertRef.current) onInsertRef.current(payload)
               break
             case 'UPDATE':
-              if (onUpdate) onUpdate(payload)
+              if (onUpdateRef.current) onUpdateRef.current(payload)
               break
             case 'DELETE':
-              if (onDelete) onDelete(payload)
+              if (onDeleteRef.current) onDeleteRef.current(payload)
               break
           }
         }
@@ -106,6 +119,7 @@ export function useRealtimeSubscription(
     channelRef.current = channel
 
     // Cleanup au démontage ou changement de dépendances
+    // Only re-subscribe when table/event/filter/enabled change, NOT when callbacks change
     return () => {
       isSubscribingRef.current = false
       if (channelRef.current) {
@@ -113,7 +127,7 @@ export function useRealtimeSubscription(
         channelRef.current = null
       }
     }
-  }, [enabled, table, event, filter, onChange, onInsert, onUpdate, onDelete])
+  }, [enabled, table, event, filter])
 
   const unsubscribe = useCallback(() => {
     if (channelRef.current) {

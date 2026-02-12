@@ -37,7 +37,7 @@ export function AdminProvider({ children, theme, toggleTheme }: {
 
   const value: AdminContextValue = {
     user,
-    loading: authLoading || branchesLoading,
+    loading: authLoading, // Only block on auth, not branches — pages can render while branches load
     signOut,
     refreshUser,
     branches,
