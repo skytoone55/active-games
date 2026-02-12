@@ -398,22 +398,24 @@ export async function processUserMessage(
   if (module.clara_enabled) {
     console.log('[Engine] Clara enabled for module:', module.ref_code)
 
-    // Charger le prompt + personality + rules (module-specific ou global par défaut)
+    // Charger le prompt + personality + rules + fallback (module-specific ou global par défaut)
     let claraPrompt = module.clara_prompt
     let claraPersonality: string | null = null
     let claraRules: string | null = null
+    let claraFallbackMessage: { fr: string; en: string; he: string } | null = null
 
     if (!claraPrompt) {
       console.log('[Engine] No module prompt, loading global Clara prompt from current workflow')
       const { data: workflow } = await supabase
         .from('messenger_workflows')
-        .select('clara_default_prompt, clara_personality, clara_rules')
+        .select('clara_default_prompt, clara_personality, clara_rules, clara_fallback_message')
         .eq('id', conversation.current_workflow_id)
         .single()
 
       claraPrompt = workflow?.clara_default_prompt
       claraPersonality = workflow?.clara_personality || null
       claraRules = workflow?.clara_rules || null
+      claraFallbackMessage = workflow?.clara_fallback_message || null
     }
 
     // Fallback: if current workflow has no prompt, load from any active workflow that has one
@@ -421,7 +423,7 @@ export async function processUserMessage(
       console.log('[Engine] No prompt in current workflow, loading from active workflow with prompt')
       const { data: activeWorkflow } = await supabase
         .from('messenger_workflows')
-        .select('clara_default_prompt, clara_personality, clara_rules')
+        .select('clara_default_prompt, clara_personality, clara_rules, clara_fallback_message')
         .eq('is_active', true)
         .not('clara_default_prompt', 'is', null)
         .limit(1)
@@ -430,6 +432,7 @@ export async function processUserMessage(
       claraPrompt = activeWorkflow?.clara_default_prompt
       if (!claraPersonality) claraPersonality = activeWorkflow?.clara_personality || null
       if (!claraRules) claraRules = activeWorkflow?.clara_rules || null
+      if (!claraFallbackMessage) claraFallbackMessage = activeWorkflow?.clara_fallback_message || null
     }
 
     // Si toujours pas de prompt, skip Clara
@@ -899,13 +902,9 @@ export async function processUserMessage(
           }
           fallbackMsg = templates[msgLang] || templates.he
         } else {
-          // No FAQ — generic "can't answer" + re-ask + escalate to human
-          const templates: Record<string, string> = {
-            fr: `Je ne suis pas en mesure de répondre à cette question. Un membre de notre équipe va prendre le relais très bientôt. En attendant, n'hésitez pas à continuer.\n\n${moduleContent}`,
-            en: `I'm not able to answer this question. A team member will follow up with you shortly. In the meantime, feel free to continue.\n\n${moduleContent}`,
-            he: `אני לא מצליחה לענות על השאלה הזו. חבר צוות ייצור איתך קשר בהקדם. בינתיים, אפשר להמשיך.\n\n${moduleContent}`
-          }
-          fallbackMsg = templates[msgLang] || templates[locale] || templates.he
+          // No FAQ — use fallback message from settings + re-ask + escalate to human
+          const fbMsg = claraFallbackMessage?.[msgLang as 'fr'|'en'|'he'] || claraFallbackMessage?.[locale as 'fr'|'en'|'he'] || claraFallbackMessage?.he || ''
+          fallbackMsg = fbMsg ? `${fbMsg}\n\n${moduleContent}` : moduleContent
         }
 
         // Auto-escalate to human when fallback is triggered
@@ -941,14 +940,9 @@ export async function processUserMessage(
         console.log('[Engine] Clara failed:', claraResponse.error, '- falling back to MANUAL workflow processing + auto-escalation')
       }
 
-      // Auto-escalate to human when Clara fails completely
+      // Auto-escalate to human when Clara fails completely — use fallback from settings
       const failLang = detectMessageLanguage(userMessage)
-      const failTemplates: Record<string, string> = {
-        fr: 'Un petit souci technique de mon côté. Un membre de notre équipe va vous répondre très bientôt !',
-        en: 'I\'m having a small technical issue. A team member will get back to you very shortly!',
-        he: 'יש לי תקלה טכנית קטנה. חבר צוות ייצור איתך קשר בהקדם!'
-      }
-      const failMsg = failTemplates[failLang] || failTemplates[locale] || failTemplates.he
+      const failMsg = claraFallbackMessage?.[failLang as 'fr'|'en'|'he'] || claraFallbackMessage?.[locale as 'fr'|'en'|'he'] || claraFallbackMessage?.he || 'Technical issue. A team member will contact you shortly.'
 
       await supabase
         .from('messenger_conversations')
@@ -977,14 +971,9 @@ export async function processUserMessage(
       } catch (error) {
         console.error('[Engine] Clara processing error:', error)
 
-        // Auto-escalate on crash too
+        // Auto-escalate on crash too — use fallback from settings
         const crashLang = detectMessageLanguage(userMessage)
-        const crashTemplates: Record<string, string> = {
-          fr: 'Un petit souci technique de mon côté. Un membre de notre équipe va vous répondre très bientôt !',
-          en: 'I\'m having a small technical issue. A team member will get back to you very shortly!',
-          he: 'יש לי תקלה טכנית קטנה. חבר צוות ייצור איתך קשר בהקדם!'
-        }
-        const crashMsg = crashTemplates[crashLang] || crashTemplates[locale] || crashTemplates.he
+        const crashMsg = claraFallbackMessage?.[crashLang as 'fr'|'en'|'he'] || claraFallbackMessage?.[locale as 'fr'|'en'|'he'] || claraFallbackMessage?.he || 'Technical issue. A team member will contact you shortly.'
 
         await supabase
           .from('messenger_conversations')
