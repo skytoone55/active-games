@@ -97,6 +97,38 @@ async function sendInteractiveButtons(
   return result.messages?.[0]?.id || null
 }
 
+/**
+ * Mark message as read + show typing indicator ("..." in WhatsApp)
+ * The typing indicator disappears when response is sent or after 25s
+ */
+async function sendTypingIndicator(messageId: string): Promise<void> {
+  const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID
+  const accessToken = process.env.WHATSAPP_ACCESS_TOKEN
+  if (!phoneNumberId || !accessToken || !messageId) return
+
+  try {
+    await fetch(
+      `https://graph.facebook.com/v21.0/${phoneNumberId}/messages`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          messaging_product: 'whatsapp',
+          status: 'read',
+          message_id: messageId,
+          typing_indicator: { type: 'text' },
+        }),
+      }
+    )
+  } catch (err) {
+    // Non-blocking — don't fail if typing indicator fails
+    console.error('[WHATSAPP] Typing indicator error:', err)
+  }
+}
+
 // Store an outbound message in DB
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function storeOutboundMessage(supabase: any, conversationId: string, content: string, msgType: string, waMessageId: string | null) {
@@ -379,6 +411,9 @@ export async function POST(request: NextRequest) {
         // 3. Onboarding flow / auto-reply / Clara AI
         const claraWhatsAppConfig = msSettings?.settings?.whatsapp_clara
         try {
+          // Show "typing..." indicator for any response
+          await sendTypingIndicator(messageId)
+
           if (hasEnabledSteps) {
             await handleOnboarding(
               supabase, conversation, senderPhone, isNewConversation,
@@ -453,6 +488,8 @@ export async function POST(request: NextRequest) {
         }
 
         if (claraWhatsAppConfig?.enabled && isOnboardingDone && isNotWaiting && !claraPaused && !outsideSchedule && !branchInactive && !isNewConversation && messageText && messageText !== `[${messageType}]`) {
+          // Show "typing..." indicator to user while Clara processes
+          await sendTypingIndicator(messageId)
           try {
             await handleClaraWhatsApp(
               supabase, conversation, senderPhone, messageText,
