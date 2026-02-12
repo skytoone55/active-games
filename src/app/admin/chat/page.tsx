@@ -76,6 +76,9 @@ interface MessengerConversation {
   last_message: string | null
   last_message_role: string | null
   message_count: number
+  needs_human: boolean | null
+  needs_human_reason: string | null
+  clara_paused: boolean | null
   contacts?: {
     id: string
     first_name: string | null
@@ -194,6 +197,8 @@ export default function ChatPage() {
   const [editingShortcutId, setEditingShortcutId] = useState<string | null>(null)
   const [togglingClara, setTogglingClara] = useState(false)
   const [resolvingHuman, setResolvingHuman] = useState(false)
+  const [togglingMsClara, setTogglingMsClara] = useState(false)
+  const [resolvingMsHuman, setResolvingMsHuman] = useState(false)
 
   const isLoading = adminLoading || permissionsLoading || !user
 
@@ -695,6 +700,49 @@ export default function ChatPage() {
     }
   }
 
+  const handleToggleMsClara = async () => {
+    if (!selectedMsConv || togglingMsClara) return
+    setTogglingMsClara(true)
+    try {
+      const newPaused = !selectedMsConv.clara_paused
+      const res = await fetch(`/api/chat/messenger-conversations/${selectedMsConv.id}/clara-toggle`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ paused: newPaused }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        const updated = { ...selectedMsConv, clara_paused: data.conversation.clara_paused }
+        setSelectedMsConv(updated)
+        setMsConversations(prev => prev.map(c => c.id === updated.id ? { ...c, ...updated } : c))
+      }
+    } catch (error) {
+      console.error('Error toggling Messenger Clara:', error)
+    } finally {
+      setTogglingMsClara(false)
+    }
+  }
+
+  const handleResolveMsHuman = async () => {
+    if (!selectedMsConv || resolvingMsHuman) return
+    setResolvingMsHuman(true)
+    try {
+      const res = await fetch(`/api/chat/messenger-conversations/${selectedMsConv.id}/resolve-human`, {
+        method: 'POST',
+      })
+      const data = await res.json()
+      if (data.success) {
+        const updated = { ...selectedMsConv, needs_human: false, needs_human_reason: null }
+        setSelectedMsConv(updated)
+        setMsConversations(prev => prev.map(c => c.id === updated.id ? { ...c, ...updated } : c))
+      }
+    } catch (error) {
+      console.error('Error resolving Messenger human escalation:', error)
+    } finally {
+      setResolvingMsHuman(false)
+    }
+  }
+
   // ============================================================
   // Messenger actions
   // ============================================================
@@ -1173,6 +1221,14 @@ export default function ChatPage() {
                                 ? t('admin.chat.site_completed') || 'Done'
                                 : t('admin.chat.site_abandoned') || 'Left'}
                           </span>
+                          {conv.needs_human && (
+                            <span
+                              className="flex items-center gap-1 bg-orange-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full animate-pulse"
+                              title={conv.needs_human_reason || (t('admin.chat.needs_human') || 'Needs human')}
+                            >
+                              <HandHelping className="w-3 h-3" />
+                            </span>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -1553,7 +1609,47 @@ export default function ChatPage() {
                     )}
                   </button>
                 )}
+
+                {/* Clara AI toggle for Messenger */}
+                <button
+                  onClick={handleToggleMsClara}
+                  disabled={togglingMsClara}
+                  className={`px-2.5 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-all ${
+                    selectedMsConv.clara_paused
+                      ? isDark ? 'bg-gray-700 text-gray-400 hover:bg-gray-600' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                      : 'bg-purple-600/20 text-purple-400 hover:bg-purple-600/30 ring-1 ring-purple-500/30'
+                  } disabled:opacity-50`}
+                  title={selectedMsConv.clara_paused
+                    ? (t('admin.chat.clara_activate') || 'Activate Clara AI')
+                    : (t('admin.chat.clara_pause') || 'Pause Clara AI')
+                  }
+                >
+                  {togglingMsClara ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Sparkles className={`w-3.5 h-3.5 ${selectedMsConv.clara_paused ? '' : 'animate-pulse'}`} />
+                  )}
+                  <span>Clara {selectedMsConv.clara_paused ? 'OFF' : 'ON'}</span>
+                </button>
               </div>
+
+              {/* Needs human banner for Messenger */}
+              {selectedMsConv.needs_human && (
+                <div className="px-4 py-2 bg-orange-600/20 border-b border-orange-500/50 flex items-center justify-between">
+                  <span className="text-xs text-orange-300 truncate" title={selectedMsConv.needs_human_reason || ''}>
+                    <HandHelping className="w-3.5 h-3.5 inline mr-1" />
+                    {selectedMsConv.needs_human_reason || (t('admin.chat.needs_human') || 'Needs human')}
+                  </span>
+                  <button
+                    onClick={handleResolveMsHuman}
+                    disabled={resolvingMsHuman}
+                    className="flex items-center gap-1 text-xs text-green-400 hover:text-green-300 disabled:opacity-50"
+                  >
+                    {resolvingMsHuman ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCircle className="w-3 h-3" />}
+                    {t('admin.chat.resolve') || 'Resolve'}
+                  </button>
+                </div>
+              )}
 
               {/* Messenger messages */}
               <div className={`flex-1 overflow-y-auto p-4 space-y-3 ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`}>

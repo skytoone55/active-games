@@ -383,6 +383,17 @@ export async function processUserMessage(
   // ============================================================================
   // CLARA AI PROCESSING
   // ============================================================================
+  // Check if Clara is paused (human takeover) — skip AI processing
+  if (conversation.clara_paused === true) {
+    console.log('[Engine] Clara is paused for conversation', conversationId, '— skipping AI processing')
+    return {
+      success: true,
+      message: '',
+      nextStepRef: conversation.current_step_ref,
+      moduleType: module.module_type
+    }
+  }
+
   // Si Clara est activé pour ce module, traiter avec l'IA
   if (module.clara_enabled) {
     console.log('[Engine] Clara enabled for module:', module.ref_code)
@@ -512,7 +523,20 @@ export async function processUserMessage(
 
       // Si Clara réussit (accepter reply vide si is_complete=true)
       if (claraResponse.success && (claraResponse.reply || claraResponse.is_complete)) {
-        console.log('[Engine] Clara response:', claraResponse.reply, 'is_complete:', claraResponse.is_complete)
+        console.log('[Engine] Clara response:', claraResponse.reply, 'is_complete:', claraResponse.is_complete, 'needs_human:', claraResponse.needs_human)
+
+        // Flag conversation for human attention if Clara requests escalation
+        if (claraResponse.needs_human) {
+          console.log('[Engine] Clara requested human escalation for conversation', conversationId)
+          await supabase
+            .from('messenger_conversations')
+            .update({
+              needs_human: true,
+              needs_human_reason: 'Clara escalation: customer needs human assistance',
+              clara_paused: true,
+            })
+            .eq('id', conversationId)
+        }
 
         // Mettre à jour les données collectées
         const updatedData = {

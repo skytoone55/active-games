@@ -42,9 +42,8 @@ function playEscalationSound() {
 }
 
 /**
- * Hook to get the count of WhatsApp conversations that need human attention (for header badge).
- * Returns the number of conversations with needs_human = true.
- * Listens to realtime changes on whatsapp_conversations.
+ * Hook to get the count of conversations (WhatsApp + Messenger) that need human attention.
+ * Listens to realtime changes on both tables.
  * Plays a notification sound when a new escalation is detected.
  */
 export function useNeedsHumanCount(branches: { id: string }[]) {
@@ -52,26 +51,42 @@ export function useNeedsHumanCount(branches: { id: string }[]) {
   const notifiedRef = useRef<Set<string>>(new Set())
 
   const fetchCount = useCallback(async () => {
+    let total = 0
     try {
-      const params = new URLSearchParams({ status: 'active', pageSize: '200' })
-      params.set('branchId', 'all')
+      // WhatsApp conversations
+      const waParams = new URLSearchParams({ status: 'active', pageSize: '200' })
+      waParams.set('branchId', 'all')
       if (branches.length > 0) {
-        params.set('allowedBranches', branches.map(b => b.id).join(','))
+        waParams.set('allowedBranches', branches.map(b => b.id).join(','))
       }
-      params.set('includeUnassigned', 'true')
+      waParams.set('includeUnassigned', 'true')
 
-      const res = await fetch(`/api/chat/conversations?${params}`)
-      const data = await res.json()
-
-      if (data.conversations) {
-        const needsHumanConvs = data.conversations.filter(
+      const waRes = await fetch(`/api/chat/conversations?${waParams}`)
+      const waData = await waRes.json()
+      if (waData.conversations) {
+        total += waData.conversations.filter(
           (c: { needs_human: boolean | null }) => c.needs_human === true
-        )
-        setCount(needsHumanConvs.length)
+        ).length
+      }
+
+      // Messenger conversations
+      const msParams = new URLSearchParams({ status: 'all', pageSize: '200' })
+      msParams.set('branchId', 'all')
+      if (branches.length > 0) {
+        msParams.set('allowedBranches', branches.map(b => b.id).join(','))
+      }
+
+      const msRes = await fetch(`/api/chat/messenger-conversations?${msParams}`)
+      const msData = await msRes.json()
+      if (msData.conversations) {
+        total += msData.conversations.filter(
+          (c: { needs_human: boolean | null }) => c.needs_human === true
+        ).length
       }
     } catch (error) {
       console.error('[useNeedsHumanCount] Error:', error)
     }
+    setCount(total)
   }, [branches])
 
   // Initial fetch
@@ -81,24 +96,27 @@ export function useNeedsHumanCount(branches: { id: string }[]) {
     }
   }, [fetchCount, branches.length])
 
-  // Realtime: listen for changes on WhatsApp conversations
-  const handleChange = useCallback((payload?: { new?: Record<string, unknown>; eventType?: string }) => {
+  // Shared handler for realtime escalation detection
+  const handleEscalation = useCallback((payload?: { new?: Record<string, unknown>; eventType?: string }) => {
     fetchCount()
 
-    // Play sound when needs_human changes to true
     const convId = payload?.new?.id as string | undefined
     if (payload?.eventType === 'UPDATE' && payload?.new?.needs_human === true && convId && !notifiedRef.current.has(convId)) {
       notifiedRef.current.add(convId)
       playEscalationSound()
     }
-    // Remove from notified set when resolved
     if (payload?.eventType === 'UPDATE' && payload?.new?.needs_human === false && convId) {
       notifiedRef.current.delete(convId)
     }
   }, [fetchCount])
 
+  // Listen to both WhatsApp and Messenger conversations
   useRealtimeSubscription(
-    { table: 'whatsapp_conversations', onChange: handleChange },
+    { table: 'whatsapp_conversations', onChange: handleEscalation },
+    true
+  )
+  useRealtimeSubscription(
+    { table: 'messenger_conversations', onChange: handleEscalation },
     true
   )
 

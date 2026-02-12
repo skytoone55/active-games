@@ -45,6 +45,7 @@ export interface ClaraResponse {
   }>
   collected_data?: Record<string, any>
   is_complete?: boolean
+  needs_human?: boolean
   error?: string
   timeout?: boolean
 }
@@ -135,7 +136,8 @@ async function callOpenAI(
       reply: parsed.reply_to_user || parsed.reply,
       show_buttons: parsed.show_buttons || undefined,
       collected_data: parsed.collected_data,
-      is_complete: parsed.is_complete ?? false
+      is_complete: parsed.is_complete ?? false,
+      needs_human: parsed.needs_human ?? false
     }
   } catch (error: any) {
     if (error.name === 'AbortError') {
@@ -190,7 +192,8 @@ async function callAnthropic(
       reply: parsed.reply_to_user || parsed.reply,
       show_buttons: parsed.show_buttons || undefined,
       collected_data: parsed.collected_data,
-      is_complete: parsed.is_complete ?? false
+      is_complete: parsed.is_complete ?? false,
+      needs_human: parsed.needs_human ?? false
     }
   } catch (error: any) {
     if (error.name === 'AbortError') {
@@ -254,7 +257,8 @@ async function callGemini(
       reply: parsed.reply_to_user || parsed.reply,
       show_buttons: parsed.show_buttons || undefined,
       collected_data: parsed.collected_data,
-      is_complete: parsed.is_complete ?? false
+      is_complete: parsed.is_complete ?? false,
+      needs_human: parsed.needs_human ?? false
     }
   } catch (error: any) {
     if (error.name === 'AbortError') {
@@ -293,11 +297,12 @@ export async function processWithClara(request: ClaraRequest): Promise<ClaraResp
 ${personality}
 
 ## MANDATORY JSON RESPONSE
-{"reply_to_user": "text", "is_complete": true/false, "collected_data": {"KEY": "value"}}
+{"reply_to_user": "text", "is_complete": true/false, "collected_data": {"KEY": "value"}, "needs_human": false}
 
 ## RULES
 ${rules}
-- CRITICAL LANGUAGE RULE: Your ENTIRE response must be in ONE language only: ${userLang}. The module question is provided in that language. Do NOT mix languages. Do NOT add translations. Every word must be in ${userLang}.`
+- CRITICAL LANGUAGE RULE: Your ENTIRE response must be in ONE language only: ${userLang}. The module question is provided in that language. Do NOT mix languages. Do NOT add translations. Every word must be in ${userLang}.
+- Set "needs_human": true ONLY when the customer explicitly asks to speak to a human/staff, or the situation requires human judgment (complaints, complex issues you cannot resolve). Tell the customer a team member will follow up.`
 
   // Module context
   if (moduleContext) {
