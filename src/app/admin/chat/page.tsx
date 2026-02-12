@@ -248,10 +248,18 @@ export default function ChatPage() {
     fetchShortcuts()
   }, [fetchShortcuts])
 
+  // Auto-resize textarea whenever newMessage changes (shortcut, emoji, paste, etc.)
+  useEffect(() => {
+    const el = inputRef.current
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = Math.min(el.scrollHeight, 160) + 'px'
+  }, [newMessage])
+
   const handleShortcutClick = (shortcut: ChatShortcut) => {
     setNewMessage(prev => {
       if (!prev.trim()) return shortcut.message
-      return prev + ' ' + shortcut.message
+      return prev + '\n' + shortcut.message
     })
     inputRef.current?.focus()
   }
@@ -1301,12 +1309,7 @@ export default function ChatPage() {
                   <textarea
                     ref={inputRef}
                     value={newMessage}
-                    onChange={(e) => {
-                      setNewMessage(e.target.value)
-                      // Auto-resize: reset then grow
-                      e.target.style.height = 'auto'
-                      e.target.style.height = Math.min(e.target.scrollHeight, 160) + 'px'
-                    }}
+                    onChange={(e) => setNewMessage(e.target.value)}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' && !e.shiftKey) {
                         e.preventDefault()
