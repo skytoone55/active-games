@@ -797,8 +797,9 @@ export const generateBookingLink = tool({
     if (phone) params.set('phone', phone)
     if (email) params.set('email', email)
 
-    // URL de base (sera relative, le frontend ajoutera le domaine)
-    const bookingUrl = `/reservation?${params.toString()}`
+    // Full URL with domain — prevents LLM from hallucinating wrong domain
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://activegames.co.il'
+    const bookingUrl = `${baseUrl}/reservation?${params.toString()}`
 
     // Résumé pour Clara
     const branchNames: Record<string, string> = {
@@ -900,7 +901,7 @@ export const generateBookingLink = tool({
         time,
         hasContactInfo: !!(firstName && phone),
       },
-      message: `Booking link generated successfully. Customer should click the link to proceed to payment.`,
+      message: `Link generated. Send the EXACT URL below to the customer (do NOT modify it). Remind the customer: the booking is NOT confirmed until payment is completed via this link. The slot is NOT reserved yet.`,
     }
   },
 })
