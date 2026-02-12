@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Sinon, traiter le message utilisateur
-    const { conversationId } = body
+    const { conversationId, choiceId } = body
     if (!conversationId) {
       return NextResponse.json(
         { success: false, error: 'conversationId is required' },
@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const result = await processUserMessage(conversationId, message)
+    const result = await processUserMessage(conversationId, message, choiceId)
 
     if (!result.success) {
       return NextResponse.json(

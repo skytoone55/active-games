@@ -9,7 +9,7 @@ import { processUserMessage } from '@/lib/messenger/engine'
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { conversationId, message } = body
+    const { conversationId, message, choiceId } = body
 
     if (!conversationId || message === undefined) {
       return NextResponse.json(
@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const result = await processUserMessage(conversationId, message)
+    const result = await processUserMessage(conversationId, message, choiceId)
 
     console.log('[Message API] Result from engine:', {
       success: result.success,

@@ -513,7 +513,7 @@ export function ClaraWidget({
   }, [sessionId, branchId, conversationId])
 
   // Envoyer un message
-  const sendMessage = useCallback(async (userMessage: string) => {
+  const sendMessage = useCallback(async (userMessage: string, choiceId?: string) => {
     if (!conversationId || isLoading) return
 
     // Ajouter le message utilisateur
@@ -532,7 +532,8 @@ export function ClaraWidget({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           conversationId,
-          message: userMessage
+          message: userMessage,
+          ...(choiceId && { choiceId })
         })
       })
 
@@ -857,7 +858,7 @@ export function ClaraWidget({
                           <button
                             key={choice.id}
                             onClick={() => {
-                              sendMessage(choice.label)
+                              sendMessage(choice.label, choice.id)
                             }}
                             className="px-4 py-2 rounded-lg transition-colors hover:opacity-90 flex-shrink-0"
                             style={{

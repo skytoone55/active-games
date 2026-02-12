@@ -331,7 +331,8 @@ export async function startConversation(
  */
 export async function processUserMessage(
   conversationId: string,
-  userMessage: string
+  userMessage: string,
+  choiceId?: string
 ): Promise<ExecuteStepResult> {
   const supabase = createServiceRoleClient() as any
 
@@ -379,6 +380,109 @@ export async function processUserMessage(
 
   // Utiliser la locale de la conversation
   const locale: Locale = (conversation.locale as Locale) || 'fr'
+
+  // ============================================================================
+  // DIRECT CHOICE HANDLING — bypass Clara for button clicks on choix_multiples
+  // ============================================================================
+  if (choiceId && module.module_type === 'choix_multiples' && module.choices) {
+    const matchedChoice = module.choices.find((c: any) => c.id === choiceId)
+    if (matchedChoice) {
+      const choiceLabel = matchedChoice.label[locale] || matchedChoice.label.he || matchedChoice.label.fr
+      console.log('[Engine] Direct choice click:', choiceId, '→', choiceLabel)
+
+      // Save user message
+      await supabase.from('messenger_messages').insert({
+        conversation_id: conversationId,
+        role: 'user',
+        content: userMessage,
+        step_ref: currentStep.step_ref,
+        metadata: { choiceId }
+      })
+
+      // Update collected data
+      const updatedData = {
+        ...conversation.collected_data,
+        [currentStep.step_ref]: choiceLabel
+      }
+      await supabase
+        .from('messenger_conversations')
+        .update({ collected_data: updatedData })
+        .eq('id', conversationId)
+
+      // Find transition output
+      const outputType = `choice_${choiceId}`
+      const { data: outputs } = await supabase
+        .from('messenger_workflow_outputs')
+        .select('*')
+        .eq('workflow_id', conversation.current_workflow_id)
+        .eq('from_step_ref', currentStep.step_ref)
+        .eq('output_type', outputType)
+        .order('priority', { ascending: true })
+
+      if (outputs && outputs.length > 0) {
+        const nextOutput = outputs[0]
+
+        if (nextOutput.destination_type === 'step' && nextOutput.destination_ref) {
+          await supabase.from('messenger_conversations')
+            .update({ current_step_ref: nextOutput.destination_ref })
+            .eq('id', conversationId)
+
+          const { data: nextStep } = await supabase.from('messenger_workflow_steps')
+            .select('*').eq('workflow_id', conversation.current_workflow_id)
+            .eq('step_ref', nextOutput.destination_ref).single()
+
+          if (nextStep) {
+            const { data: nextModule } = await supabase.from('messenger_modules')
+              .select('*').eq('ref_code', nextStep.module_ref).single()
+
+            if (nextModule) {
+              const nextMessage = nextModule.content[locale] || nextModule.content.he || ''
+              await supabase.from('messenger_messages').insert({
+                conversation_id: conversationId, role: 'assistant',
+                content: nextMessage, step_ref: nextOutput.destination_ref
+              })
+              const nextChoices = nextModule.module_type === 'choix_multiples' && nextModule.choices
+                ? nextModule.choices.map((c: any, i: number) => ({ id: c.id, label: c.label[locale] || c.label.fr || c.label.en, value: `${i + 1}` }))
+                : null
+              return { success: true, message: nextMessage, nextStepRef: nextOutput.destination_ref, moduleType: nextModule.module_type, choices: nextChoices }
+            }
+          }
+        } else if (nextOutput.destination_type === 'workflow' && nextOutput.destination_ref) {
+          console.log('[Engine] Direct choice: switching to workflow:', nextOutput.destination_ref)
+          const { data: targetWorkflow } = await supabase.from('messenger_workflows')
+            .select('*').eq('id', nextOutput.destination_ref).single()
+
+          if (targetWorkflow) {
+            const { data: targetEntryStep } = await supabase.from('messenger_workflow_steps')
+              .select('*').eq('workflow_id', targetWorkflow.id).eq('is_entry_point', true).single()
+
+            if (targetEntryStep) {
+              const { data: targetModule } = await supabase.from('messenger_modules')
+                .select('*').eq('ref_code', targetEntryStep.module_ref).single()
+
+              if (targetModule) {
+                await supabase.from('messenger_conversations')
+                  .update({ current_workflow_id: targetWorkflow.id, current_step_ref: targetEntryStep.step_ref, last_activity_at: new Date().toISOString() })
+                  .eq('id', conversationId)
+
+                const targetMessage = targetModule.content[locale] || targetModule.content.he || ''
+                await supabase.from('messenger_messages').insert({
+                  conversation_id: conversationId, role: 'assistant',
+                  content: targetMessage, step_ref: targetEntryStep.step_ref
+                })
+                const targetChoices = targetModule.module_type === 'choix_multiples' && targetModule.choices
+                  ? targetModule.choices.map((c: any, i: number) => ({ id: c.id, label: c.label[locale] || c.label.fr || c.label.en, value: `${i + 1}` }))
+                  : null
+                return { success: true, message: targetMessage, nextStepRef: targetEntryStep.step_ref, moduleType: targetModule.module_type, choices: targetChoices }
+              }
+            }
+          }
+        }
+      }
+
+      console.warn('[Engine] No output found for choice', choiceId, 'outputType:', outputType)
+    }
+  }
 
   // ============================================================================
   // CLARA AI PROCESSING
@@ -563,23 +667,6 @@ export async function processUserMessage(
               value: `${index + 1}`
             }))
           : null
-
-        // FORCE complete for choix_multiples: if user message matches a choice, override Clara's is_complete
-        // Clara sometimes returns is_complete=false even when user clearly selected a choice
-        if (!claraResponse.is_complete && module.module_type === 'choix_multiples' && module.choices) {
-          const userInput = userMessage.toLowerCase().trim()
-          const forcedMatch = module.choices.find((choice: any) => {
-            const labels = [choice.label?.he, choice.label?.fr, choice.label?.en]
-              .filter(Boolean)
-              .map((l: string) => l.toLowerCase().trim())
-            return labels.includes(userInput) || labels.some((l: string) => l.includes(userInput) || userInput.includes(l))
-          })
-          if (forcedMatch) {
-            console.log('[Engine] FORCE COMPLETE: choix_multiples user input matches choice:', forcedMatch.id, '- overriding Clara is_complete=false')
-            claraResponse.is_complete = true
-            claraResponse.collected_data = { ...claraResponse.collected_data, [currentStep.step_ref]: forcedMatch.label[locale] || forcedMatch.label.he || forcedMatch.label.fr }
-          }
-        }
 
         // If not complete, return Clara's message as-is
         // Clara already has the module question in her prompt and will re-ask naturally
