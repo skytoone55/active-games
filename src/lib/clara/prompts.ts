@@ -4,7 +4,6 @@
  */
 
 import { CLARA_SCHEMA_SUMMARY } from './supabase-schema'
-import { getKnowledgeSummary } from './knowledge'
 
 /**
  * Génère la date/heure actuelle formatée pour Israël
@@ -137,7 +136,8 @@ Si une info manque → demande-la avant de continuer.
 - **getEventRooms** : voir les salles disponibles pour événements
 
 ## INFOS UTILES
-${getKnowledgeSummary()}`
+Utilise les outils (getPricing, getBranchInfo, getEventRooms) pour récupérer les infos à jour.
+Les réponses aux questions fréquentes sont dans le FAQ ci-dessous (si disponible).`
 }
 
 // Alias pour rétro-compatibilité (mais utilise la fonction pour avoir la date à jour)
@@ -195,10 +195,6 @@ Si tu n'es pas sûre d'une réponse ou si la question est technique/complexe, co
 **Résumé complet du code de l'application:**
 - Fichier: repomix/repomix-output-ultralight.xml
 - Quand l'utiliser: Pour comprendre comment fonctionne une fonctionnalité, la logique de calcul des prix, les APIs disponibles, ou répondre à des questions techniques sur le système
-
-**Base de connaissances métier:**
-- Fichier: src/lib/clara/knowledge.ts
-- Quand l'utiliser: Pour les infos business (tarifs, horaires, règles, descriptions des activités, processus de réservation)
 
 Sois précis, rapide et utile pour l'équipe !`
 

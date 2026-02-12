@@ -705,10 +705,22 @@ async function handleClaraWhatsApp(
   // Build system prompt
   let systemPrompt = ''
   if (claraConfig.prompt && claraConfig.prompt.trim()) {
-    // Custom WhatsApp prompt
+    // Custom WhatsApp prompt — inject current date/time
+    const now = new Date()
+    const israelTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Jerusalem' }))
+    const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+    const y = israelTime.getFullYear()
+    const m = String(israelTime.getMonth() + 1).padStart(2, '0')
+    const d = String(israelTime.getDate()).padStart(2, '0')
+    const h = String(israelTime.getHours()).padStart(2, '0')
+    const min = String(israelTime.getMinutes()).padStart(2, '0')
+    const dateStr = `${y}-${m}-${d}`
+    const dayName = dayNames[israelTime.getDay()]
+
     systemPrompt = claraConfig.prompt
+    systemPrompt += `\n\n## CURRENT DATE & TIME (Israel)\nToday: ${dayName} ${d}/${m}/${y} (${dateStr}), ${h}:${min}\nUse this to convert relative dates: "tomorrow" = day after ${dateStr}, etc.`
   } else {
-    // Default Clara public prompt
+    // Default Clara public prompt (already includes date + knowledge)
     systemPrompt = await getPublicSystemPrompt()
   }
 

@@ -21,9 +21,8 @@ let claraSettingsCache: ClaraSettings | null = null
 let settingsCacheTime = 0
 const SETTINGS_CACHE_TTL = 5 * 60 * 1000 // 5 minutes
 
-// Cache du prompt et knowledge personnalisés
+// Cache du prompt personnalisé
 let customPromptCache: string | null = null
-let customKnowledgeCache: string | null = null
 let promptCacheTime = 0
 const PROMPT_CACHE_TTL = 2 * 60 * 1000 // 2 minutes (plus court pour refléter les changements rapidement)
 
@@ -73,42 +72,30 @@ export async function getClaraSettings(): Promise<ClaraSettings> {
 }
 
 /**
- * Récupère le prompt et knowledge personnalisés (avec cache)
+ * Récupère le prompt personnalisé (avec cache)
  */
 export async function getCustomPromptAndKnowledge(): Promise<{
   customPrompt: string | null
-  customKnowledge: string | null
 }> {
   const now = Date.now()
 
   if (promptCacheTime && now - promptCacheTime < PROMPT_CACHE_TTL) {
     return {
       customPrompt: customPromptCache,
-      customKnowledge: customKnowledgeCache,
     }
   }
 
-  // Récupérer les deux en parallèle
-  const [promptResult, knowledgeResult] = await Promise.all([
-    supabase
-      .from('system_settings')
-      .select('value')
-      .eq('key', 'clara_public_prompt')
-      .single(),
-    supabase
-      .from('system_settings')
-      .select('value')
-      .eq('key', 'clara_knowledge')
-      .single(),
-  ])
+  const promptResult = await supabase
+    .from('system_settings')
+    .select('value')
+    .eq('key', 'clara_public_prompt')
+    .single()
 
   customPromptCache = promptResult.data?.value?.prompt || null
-  customKnowledgeCache = knowledgeResult.data?.value?.knowledge || null
   promptCacheTime = now
 
   return {
     customPrompt: customPromptCache,
-    customKnowledge: customKnowledgeCache,
   }
 }
 
@@ -118,37 +105,15 @@ export async function getCustomPromptAndKnowledge(): Promise<{
  * IMPORTANT: Appelle generatePublicSystemPrompt() à chaque fois pour avoir la date/heure à jour
  */
 export async function getPublicSystemPrompt(): Promise<string> {
-  const { customPrompt, customKnowledge } = await getCustomPromptAndKnowledge()
+  const { customPrompt } = await getCustomPromptAndKnowledge()
 
-  // Import dynamique pour éviter les dépendances circulaires
-  const { CLARA_KNOWLEDGE } = await import('./knowledge')
-
-  // Si un prompt personnalisé existe, l'utiliser avec le knowledge approprié
+  // Si un prompt personnalisé existe, l'utiliser directement
   if (customPrompt) {
-    const knowledge = customKnowledge || CLARA_KNOWLEDGE
-    // Injecter le knowledge à la fin du prompt personnalisé
-    return `${customPrompt}
-
-## BASE DE CONNAISSANCES
-${knowledge}`
-  }
-
-  // Générer le prompt par défaut avec la date/heure actuelle
-  const defaultPrompt = generatePublicSystemPrompt()
-
-  // Si knowledge personnalisé, remplacer la section knowledge
-  if (customKnowledge) {
-    return defaultPrompt.replace(
-      /## BASE DE CONNAISSANCES[\s\S]*?(?=Sois utile|$)/,
-      `## BASE DE CONNAISSANCES
-${customKnowledge}
-
-`
-    )
+    return customPrompt
   }
 
   // Tout par défaut (avec date/heure à jour)
-  return defaultPrompt
+  return generatePublicSystemPrompt()
 }
 
 /**

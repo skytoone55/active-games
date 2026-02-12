@@ -7,7 +7,6 @@ import {
   RotateCcw,
   Sparkles,
   MessageSquare,
-  BookOpen,
   Sliders,
   CheckCircle,
   AlertCircle,
@@ -67,7 +66,7 @@ interface ClaraSettings {
   }
 }
 
-type Tab = 'general' | 'prompt' | 'knowledge' | 'model'
+type Tab = 'general' | 'prompt' | 'model'
 
 // Interface pour le modal de confirmation
 interface ConfirmModalProps {
@@ -183,23 +182,17 @@ export function ClaraSection({ isDark }: ClaraSectionProps) {
   // Data states
   const [settings, setSettings] = useState<ClaraSettings | null>(null)
   const [activePrompt, setActivePrompt] = useState<string>('') // Le prompt actuellement actif (custom ou default)
-  const [activeKnowledge, setActiveKnowledge] = useState<string>('') // Le knowledge actuellement actif
   const [defaultPrompt, setDefaultPrompt] = useState<string>('')
-  const [defaultKnowledge, setDefaultKnowledge] = useState<string>('')
   const [isUsingCustomPrompt, setIsUsingCustomPrompt] = useState(false)
-  const [isUsingCustomKnowledge, setIsUsingCustomKnowledge] = useState(false)
   const [providers, setProviders] = useState<Record<LLMProvider, ProviderConfig>>({} as Record<LLMProvider, ProviderConfig>)
   const [apiKeys, setApiKeys] = useState<Record<LLMProvider, ApiKeyStatus>>({} as Record<LLMProvider, ApiKeyStatus>)
 
   // Original values for cancel/discard when switching tabs
   const [originalSettings, setOriginalSettings] = useState<ClaraSettings | null>(null)
   const [originalPrompt, setOriginalPrompt] = useState<string>('')
-  const [originalKnowledge, setOriginalKnowledge] = useState<string>('')
-
   // Per-section saving states
   const [savingGeneral, setSavingGeneral] = useState(false)
   const [savingPrompt, setSavingPrompt] = useState(false)
-  const [savingKnowledge, setSavingKnowledge] = useState(false)
   const [savingModel, setSavingModel] = useState(false)
 
   // Modal de confirmation
@@ -235,17 +228,11 @@ export function ClaraSection({ isDark }: ClaraSectionProps) {
       }
       setSettings(data.settings)
       setDefaultPrompt(data.defaultPrompt || '')
-      setDefaultKnowledge(data.defaultKnowledge || '')
 
       // Si un prompt personnalisé existe, l'utiliser, sinon utiliser le défaut
       const hasCustomPrompt = !!data.customPrompt
       setIsUsingCustomPrompt(hasCustomPrompt)
       setActivePrompt(hasCustomPrompt ? data.customPrompt : data.defaultPrompt || '')
-
-      // Pareil pour le knowledge
-      const hasCustomKnowledge = !!data.customKnowledge
-      setIsUsingCustomKnowledge(hasCustomKnowledge)
-      setActiveKnowledge(hasCustomKnowledge ? data.customKnowledge : data.defaultKnowledge || '')
 
       setProviders(data.providers || {})
       setApiKeys(data.apiKeys || {})
@@ -253,7 +240,6 @@ export function ClaraSection({ isDark }: ClaraSectionProps) {
       // Store original values for cancel/discard
       setOriginalSettings(data.settings)
       setOriginalPrompt(hasCustomPrompt ? data.customPrompt : data.defaultPrompt || '')
-      setOriginalKnowledge(hasCustomKnowledge ? data.customKnowledge : data.defaultKnowledge || '')
 
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load settings')
@@ -319,37 +305,6 @@ export function ClaraSection({ isDark }: ClaraSectionProps) {
     }
   }
 
-  // Save Knowledge only
-  const saveKnowledge = async () => {
-    try {
-      setSavingKnowledge(true)
-      setError(null)
-      setSuccess(null)
-
-      const knowledgeIsCustom = activeKnowledge !== defaultKnowledge
-
-      const response = await fetch('/api/admin/clara/settings', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          customKnowledge: knowledgeIsCustom ? activeKnowledge : null,
-        }),
-      })
-
-      if (!response.ok) throw new Error('Failed to save knowledge')
-
-      setOriginalKnowledge(activeKnowledge)
-      setIsUsingCustomKnowledge(knowledgeIsCustom)
-      setSuccess(t('admin.settings.clara.messages.knowledge_saved'))
-      setTimeout(() => setSuccess(null), 3000)
-
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save knowledge')
-    } finally {
-      setSavingKnowledge(false)
-    }
-  }
-
   // Save Model settings only
   const saveModelSettings = async () => {
     try {
@@ -383,8 +338,6 @@ export function ClaraSection({ isDark }: ClaraSectionProps) {
         return JSON.stringify(settings) !== JSON.stringify(originalSettings)
       case 'prompt':
         return activePrompt !== originalPrompt
-      case 'knowledge':
-        return activeKnowledge !== originalKnowledge
       case 'model':
         return JSON.stringify(settings) !== JSON.stringify(originalSettings)
       default:
@@ -407,8 +360,6 @@ export function ClaraSection({ isDark }: ClaraSectionProps) {
             setSettings(originalSettings)
           } else if (activeTab === 'prompt') {
             setActivePrompt(originalPrompt)
-          } else if (activeTab === 'knowledge') {
-            setActiveKnowledge(originalKnowledge)
           }
           setActiveTab(newTab)
           setConfirmModal(prev => ({ ...prev, isOpen: false }))
@@ -458,45 +409,6 @@ export function ClaraSection({ isDark }: ClaraSectionProps) {
     })
   }
 
-  // Fonction interne pour exécuter le reset du knowledge
-  const executeResetKnowledge = async () => {
-    try {
-      setSavingKnowledge(true)
-      const response = await fetch('/api/admin/clara/settings', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ resetKnowledge: true }),
-      })
-
-      if (!response.ok) throw new Error('Failed to reset')
-
-      setActiveKnowledge(defaultKnowledge)
-      setOriginalKnowledge(defaultKnowledge)
-      setIsUsingCustomKnowledge(false)
-      setSuccess(t('admin.settings.clara.messages.knowledge_reset'))
-      setTimeout(() => setSuccess(null), 3000)
-
-    } catch (err) {
-      setError(t('admin.settings.clara.messages.reset_error'))
-    } finally {
-      setSavingKnowledge(false)
-    }
-  }
-
-  const resetKnowledge = () => {
-    setConfirmModal({
-      isOpen: true,
-      title: t('admin.settings.clara.confirm.reset_knowledge_title'),
-      message: t('admin.settings.clara.confirm.reset_knowledge_message'),
-      confirmText: t('admin.settings.clara.confirm.reset'),
-      variant: 'danger',
-      onConfirm: () => {
-        setConfirmModal(prev => ({ ...prev, isOpen: false }))
-        executeResetKnowledge()
-      },
-    })
-  }
-
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -508,7 +420,6 @@ export function ClaraSection({ isDark }: ClaraSectionProps) {
   const tabs: { id: Tab; label: string; icon: typeof Sparkles }[] = [
     { id: 'general', label: t('admin.settings.clara.tabs.general'), icon: Sparkles },
     { id: 'prompt', label: t('admin.settings.clara.tabs.prompt'), icon: MessageSquare },
-    { id: 'knowledge', label: t('admin.settings.clara.tabs.knowledge'), icon: BookOpen },
     { id: 'model', label: t('admin.settings.clara.tabs.model'), icon: Sliders },
   ]
 
@@ -795,72 +706,6 @@ export function ClaraSection({ isDark }: ClaraSectionProps) {
                 }`}
               >
                 {savingPrompt ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Save className="w-4 h-4" />
-                )}
-                {t('admin.settings.clara.actions.save')}
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Knowledge Tab */}
-        {activeTab === 'knowledge' && (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className={`font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                  {t('admin.settings.clara.knowledge.title')}
-                </h3>
-                <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                  {isUsingCustomKnowledge || activeKnowledge !== defaultKnowledge
-                    ? `⚡ ${t('admin.settings.clara.knowledge.custom_active')}`
-                    : `📚 ${t('admin.settings.clara.knowledge.default_active')}`
-                  }
-                </p>
-              </div>
-              <button
-                onClick={resetKnowledge}
-                disabled={savingKnowledge || activeKnowledge === defaultKnowledge}
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm ${
-                  isDark
-                    ? 'bg-orange-500/20 text-orange-400 hover:bg-orange-500/30 disabled:opacity-50'
-                    : 'bg-orange-100 text-orange-700 hover:bg-orange-200 disabled:opacity-50'
-                }`}
-              >
-                <RotateCcw className="w-4 h-4" />
-                {t('admin.settings.clara.knowledge.reset_default')}
-              </button>
-            </div>
-
-            <textarea
-              value={activeKnowledge}
-              onChange={(e) => setActiveKnowledge(e.target.value)}
-              rows={20}
-              className={`w-full px-4 py-3 rounded-lg border font-mono text-sm transition-colors ${
-                isDark
-                  ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-500 focus:border-pink-500'
-                  : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-pink-500'
-              } focus:outline-none focus:ring-2 focus:ring-pink-500/20`}
-            />
-
-            <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
-              {activeKnowledge.length} {t('admin.settings.clara.knowledge.characters')}
-            </p>
-
-            {/* Save Button */}
-            <div className="flex justify-end pt-4 border-t border-gray-700">
-              <button
-                onClick={saveKnowledge}
-                disabled={savingKnowledge || !hasUnsavedChanges('knowledge')}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
-                  isDark
-                    ? 'bg-pink-500 text-white hover:bg-pink-600 disabled:bg-gray-700 disabled:text-gray-500'
-                    : 'bg-pink-600 text-white hover:bg-pink-700 disabled:bg-gray-200 disabled:text-gray-400'
-                }`}
-              >
-                {savingKnowledge ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
                 ) : (
                   <Save className="w-4 h-4" />

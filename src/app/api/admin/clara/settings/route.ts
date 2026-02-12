@@ -7,7 +7,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
-import { CLARA_KNOWLEDGE } from '@/lib/clara/knowledge'
 import { generatePublicSystemPrompt } from '@/lib/clara/prompts'
 
 // Type for system_settings table (not in generated types)
@@ -128,13 +127,6 @@ export async function GET(request: NextRequest) {
       .eq('key', 'clara_public_prompt')
       .single() as { data: SystemSetting | null }
 
-    // Récupérer la knowledge base personnalisée (si existe)
-    const { data: knowledgeSetting } = await db
-      .from('system_settings')
-      .select('value')
-      .eq('key', 'clara_knowledge')
-      .single() as { data: SystemSetting | null }
-
     // Récupérer les clés API de chaque provider (masquées)
     const apiKeys: Record<string, { configured: boolean; masked: string | null }> = {}
 
@@ -163,9 +155,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       settings: mergedSettings,
       customPrompt: (promptSetting?.value as { prompt?: string })?.prompt || null,
-      customKnowledge: (knowledgeSetting?.value as { knowledge?: string })?.knowledge || null,
+      customKnowledge: null,
       defaultPrompt: DEFAULT_PUBLIC_PROMPT,
-      defaultKnowledge: CLARA_KNOWLEDGE,
+      defaultKnowledge: null,
       providers: LLM_PROVIDERS,
       apiKeys,
     })
@@ -188,7 +180,7 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { settings, customPrompt, customKnowledge, resetPrompt, resetKnowledge, resetSettings } = body
+    const { settings, customPrompt, resetPrompt, resetSettings } = body
 
     const supabase = createServiceRoleClient()
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -217,16 +209,6 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ success: true, message: 'Prompt reset to default' })
     }
 
-    // Reset knowledge si demandé
-    if (resetKnowledge) {
-      await db
-        .from('system_settings')
-        .delete()
-        .eq('key', 'clara_knowledge')
-
-      return NextResponse.json({ success: true, message: 'Knowledge reset to default' })
-    }
-
     // Mettre à jour les settings généraux
     if (settings) {
       await db
@@ -252,25 +234,6 @@ export async function PUT(request: NextRequest) {
           .upsert({
             key: 'clara_public_prompt',
             value: { prompt: customPrompt },
-            updated_at: new Date().toISOString(),
-          }, { onConflict: 'key' })
-      }
-    }
-
-    // Mettre à jour la knowledge base personnalisée
-    if (customKnowledge !== undefined) {
-      if (customKnowledge === null || customKnowledge === '') {
-        // Supprimer la knowledge personnalisée (revenir au défaut)
-        await db
-          .from('system_settings')
-          .delete()
-          .eq('key', 'clara_knowledge')
-      } else {
-        await db
-          .from('system_settings')
-          .upsert({
-            key: 'clara_knowledge',
-            value: { knowledge: customKnowledge },
             updated_at: new Date().toISOString(),
           }, { onConflict: 'key' })
       }
