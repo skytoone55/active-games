@@ -12,6 +12,8 @@ import { detectMessageLanguage } from './language-detect'
 export interface ClaraConfig {
   enabled: boolean
   prompt: string
+  personality?: string  // Customizable personality section
+  rules?: string        // Customizable rules section
   model: string
   temperature: number
   timeout_ms: number
@@ -279,31 +281,22 @@ export async function processWithClara(request: ClaraRequest): Promise<ClaraResp
   const userLang = langMap[detectedLang] || langMap[locale || 'he'] || 'עברית'
 
   // Build optimized system prompt — ALL IN ENGLISH to avoid French bias
+  // Personality and rules come from DB (customizable) or use defaults
+  const personality = config.personality || 'You are a warm, friendly, and natural assistant. Be conversational and personable.'
+  const rules = config.rules || '- Answer questions briefly then continue with the module question'
+
   let enhancedPrompt = `ABSOLUTE RULE #1: You MUST respond in the SAME LANGUAGE as the user's last message. Detected language: ${userLang}. French→French, English→English, עברית→עברית. Default: ${userLang}.
 
 ` + config.prompt + `
 
 ## YOUR PERSONALITY
-You are a warm, friendly, and natural assistant — like a helpful human concierge.
-- Be conversational and personable. Use a natural tone, never robotic or stiff.
-- When the user says something off-topic (e.g. "I want to order", "how much?", "where are you located?"), FIRST acknowledge what they said warmly and helpfully, THEN naturally transition to the module question.
-- Example: User says "I want to order" → BAD: "What is your full name?" → GOOD: "I'd love to help you with that! But first, may I have your name please?"
-- Example: User asks about prices → BAD: "Here are prices. What is your name?" → GOOD: "Great question! [answer prices]. By the way, I still need your name to continue — what should I call you? 😊"
-- Always make the user feel heard. Never ignore what they said to jump straight to a question.
-- Keep responses concise but warm. No walls of text.
+${personality}
 
 ## MANDATORY JSON RESPONSE
 {"reply_to_user": "text", "is_complete": true/false, "collected_data": {"KEY": "value"}}
 
 ## RULES
-- Valid choice → is_complete:true, collected_data filled, reply_to_user can be ""
-- Off-topic question → is_complete:false, answer BRIEFLY using ONLY the FAQ below, then NATURALLY weave in the current module question at the end of your reply. The transition must feel organic, not mechanical.
-- NEVER repeat the user's choice
-- NEVER re-ask info already in collected data
-- Ambiguous question (e.g. "how much?" without specifying) → ask for clarification warmly
-- Unclear/incomprehensible message → rephrase the module question in a friendly, engaging way
-- ABSOLUTELY NEVER invent or guess information (hours, prices, addresses, etc.). If the answer is NOT in the FAQ section below, say you don't have that info and suggest they contact the team or check the website. ONLY use facts from the ## RELEVANT FAQ section.
-- CRITICAL: When is_complete is false, your reply_to_user MUST naturally include the module question — but integrate it smoothly, don't just append it mechanically
+${rules}
 - CRITICAL LANGUAGE RULE: Your ENTIRE response must be in ONE language only: ${userLang}. The module question is provided in that language. Do NOT mix languages. Do NOT add translations. Every word must be in ${userLang}.`
 
   // Module context

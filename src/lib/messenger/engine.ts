@@ -387,18 +387,22 @@ export async function processUserMessage(
   if (module.clara_enabled) {
     console.log('[Engine] Clara enabled for module:', module.ref_code)
 
-    // Charger le prompt (module-specific ou global par défaut)
+    // Charger le prompt + personality + rules (module-specific ou global par défaut)
     let claraPrompt = module.clara_prompt
+    let claraPersonality: string | null = null
+    let claraRules: string | null = null
 
     if (!claraPrompt) {
       console.log('[Engine] No module prompt, loading global Clara prompt from current workflow')
       const { data: workflow } = await supabase
         .from('messenger_workflows')
-        .select('clara_default_prompt')
+        .select('clara_default_prompt, clara_personality, clara_rules')
         .eq('id', conversation.current_workflow_id)
         .single()
 
       claraPrompt = workflow?.clara_default_prompt
+      claraPersonality = workflow?.clara_personality || null
+      claraRules = workflow?.clara_rules || null
     }
 
     // Fallback: if current workflow has no prompt, load from any active workflow that has one
@@ -406,13 +410,15 @@ export async function processUserMessage(
       console.log('[Engine] No prompt in current workflow, loading from active workflow with prompt')
       const { data: activeWorkflow } = await supabase
         .from('messenger_workflows')
-        .select('clara_default_prompt')
+        .select('clara_default_prompt, clara_personality, clara_rules')
         .eq('is_active', true)
         .not('clara_default_prompt', 'is', null)
         .limit(1)
         .single()
 
       claraPrompt = activeWorkflow?.clara_default_prompt
+      if (!claraPersonality) claraPersonality = activeWorkflow?.clara_personality || null
+      if (!claraRules) claraRules = activeWorkflow?.clara_rules || null
     }
 
     // Si toujours pas de prompt, skip Clara
@@ -487,6 +493,8 @@ export async function processUserMessage(
           config: {
             enabled: true,
             prompt: claraPrompt,
+            personality: claraPersonality || undefined,
+            rules: claraRules || undefined,
             model: module.clara_model || 'gpt-4o-mini',
             temperature: module.clara_temperature ?? 0.7,
             timeout_ms: module.clara_timeout_ms ?? 8000
