@@ -1,10 +1,10 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { X, ShieldX, ShieldAlert, AlertTriangle } from 'lucide-react'
+import { X, ShieldX, ShieldAlert, AlertTriangle, CheckCircle } from 'lucide-react'
 import { useTranslation } from '@/contexts/LanguageContext'
 
-export type ToastType = 'error' | 'warning' | 'permission_denied'
+export type ToastType = 'error' | 'warning' | 'permission_denied' | 'success'
 
 export interface ToastMessage {
   id: string
@@ -64,6 +64,8 @@ function ToastItem({ toast, onDismiss, isDark }: ToastItemProps) {
 
   const getIcon = () => {
     switch (toast.type) {
+      case 'success':
+        return <CheckCircle className="w-5 h-5 text-green-400" />
       case 'permission_denied':
         return <ShieldX className="w-5 h-5 text-red-400" />
       case 'error':
@@ -77,6 +79,8 @@ function ToastItem({ toast, onDismiss, isDark }: ToastItemProps) {
 
   const getBorderColor = () => {
     switch (toast.type) {
+      case 'success':
+        return isDark ? 'border-green-500/50' : 'border-green-200'
       case 'permission_denied':
       case 'error':
         return isDark ? 'border-red-500/50' : 'border-red-200'
@@ -89,6 +93,8 @@ function ToastItem({ toast, onDismiss, isDark }: ToastItemProps) {
 
   const getBackgroundColor = () => {
     switch (toast.type) {
+      case 'success':
+        return isDark ? 'bg-green-900/20' : 'bg-green-50'
       case 'permission_denied':
       case 'error':
         return isDark ? 'bg-red-900/20' : 'bg-red-50'
@@ -185,6 +191,16 @@ export function usePermissionToast() {
     })
   }
 
+  const showSuccess = (message: string, messageKey?: string) => {
+    showToast({
+      type: 'success',
+      title: 'Succes',
+      message,
+      messageKey,
+      duration: 3000,
+    })
+  }
+
   return {
     toasts,
     showToast,
@@ -192,5 +208,6 @@ export function usePermissionToast() {
     showPermissionError,
     showError,
     showWarning,
+    showSuccess,
   }
 }

@@ -7,6 +7,7 @@ import {
   Loader2, Save, Plus, Trash2, MessageCircle, ChevronUp, ChevronDown, Sparkles, BookOpen,
   Settings, Clock, FileText, Copy, Building2
 } from 'lucide-react'
+import { PermissionToast, usePermissionToast } from '@/app/admin/components/PermissionToast'
 import type { MessengerSettings } from '@/types/messenger'
 
 const LOCALES = ['fr', 'en', 'he'] as const
@@ -178,6 +179,7 @@ interface WhatsAppSectionProps {
 export function WhatsAppSection({ isDark }: WhatsAppSectionProps) {
   const { t, locale } = useTranslation()
   const { branches } = useAdmin()
+  const { toasts, dismissToast, showSuccess, showError } = usePermissionToast()
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [settings, setSettings] = useState<MessengerSettings | null>(null)
@@ -233,10 +235,13 @@ export function WhatsAppSection({ isDark }: WhatsAppSectionProps) {
       const data = await res.json()
       if (data.success) {
         setSettings(updatedSettings)
-        alert(t('whatsapp.onboarding.saved') || 'Saved!')
+        showSuccess(t('whatsapp.onboarding.saved') || 'Saved!')
+      } else {
+        showError(data.error || t('whatsapp.onboarding.save_error') || 'Save failed')
       }
     } catch (error) {
       console.error('Failed to save settings:', error)
+      showError(t('whatsapp.onboarding.save_error') || 'Save failed')
     } finally {
       setSaving(false)
     }
@@ -417,6 +422,9 @@ export function WhatsAppSection({ isDark }: WhatsAppSectionProps) {
 
   return (
     <div className="space-y-6">
+      {/* Toast notifications */}
+      <PermissionToast toasts={toasts} onDismiss={dismissToast} isDark={isDark} />
+
       {/* Header */}
       <div>
         <h2 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
