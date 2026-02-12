@@ -766,8 +766,7 @@ async function handleClaraWhatsApp(
 - This is a WhatsApp conversation. Keep responses concise (max 300 words).
 - Do NOT use markdown formatting (no **, no #, no bullet points with *). Use plain text only.
 - Use line breaks for readability.
-- The user's language is: ${language === 'he' ? 'Hebrew' : language === 'fr' ? 'French' : 'English'}.
-- Respond in the same language as the user's message.`
+- LANGUAGE RULE: Detect the language of each user message and ALWAYS respond in that SAME language. If the user writes in English, respond in English. If in Hebrew, respond in Hebrew. If in French, respond in French. Never say you can only respond in one language.`
 
   // Load FAQ if enabled
   if (claraConfig.faq_enabled) {
@@ -779,11 +778,12 @@ async function handleClaraWhatsApp(
         .order('order_index')
 
       if (faqs && faqs.length > 0) {
-        systemPrompt += '\n\n## FAQ\n'
+        systemPrompt += '\n\n## FAQ (translate answers to match user language)\n'
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         faqs.forEach((faq: any) => {
-          const q = faq.question?.[language] || faq.question?.he || faq.question?.fr || faq.question?.en || ''
-          const a = faq.answer?.[language] || faq.answer?.he || faq.answer?.fr || faq.answer?.en || ''
+          // Load Hebrew first (primary), fallback to other languages
+          const q = faq.question?.he || faq.question?.fr || faq.question?.en || ''
+          const a = faq.answer?.he || faq.answer?.fr || faq.answer?.en || ''
           if (q && a) {
             systemPrompt += `Q: ${q}\nA: ${a}\n\n`
           }
