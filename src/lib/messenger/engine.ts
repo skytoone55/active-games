@@ -611,9 +611,7 @@ export async function processUserMessage(
             const errorMessages: Record<string, string> = {
               fr: 'Il y a un problème avec les données fournies. Pourriez-vous réessayer ?',
               en: 'There is an issue with the provided data. Could you please try again?',
-              he: 'יש בעיה עם הנתונים. אנא נסה שוב.',
-              ar: 'هناك مشكلة في البيانات المقدمة. هل يمكنك المحاولة مرة أخرى؟',
-              ru: 'Возникла проблема с предоставленными данными. Не могли бы вы попробовать снова?'
+              he: 'יש בעיה עם הנתונים. אנא נסה שוב.'
             }
             const errorMessage = errorMessages[valLang] || errorMessages[locale] || errorMessages.fr
 
@@ -905,9 +903,7 @@ export async function processUserMessage(
           const templates: Record<string, string> = {
             fr: `Je ne suis pas en mesure de répondre à cette question. Un membre de notre équipe va prendre le relais très bientôt. En attendant, n'hésitez pas à continuer.\n\n${moduleContent}`,
             en: `I'm not able to answer this question. A team member will follow up with you shortly. In the meantime, feel free to continue.\n\n${moduleContent}`,
-            he: `אני לא מצליחה לענות על השאלה הזו. חבר צוות ייצור איתך קשר בהקדם. בינתיים, אפשר להמשיך.\n\n${moduleContent}`,
-            ar: `لا أستطيع الإجابة على هذا السؤال. سيتواصل معك أحد أعضاء الفريق قريبًا. في هذه الأثناء، يمكنك المتابعة.\n\n${moduleContent}`,
-            ru: `Я не могу ответить на этот вопрос. Член нашей команды свяжется с вами в ближайшее время. А пока вы можете продолжить.\n\n${moduleContent}`
+            he: `אני לא מצליחה לענות על השאלה הזו. חבר צוות ייצור איתך קשר בהקדם. בינתיים, אפשר להמשיך.\n\n${moduleContent}`
           }
           fallbackMsg = templates[msgLang] || templates[locale] || templates.he
         }
@@ -950,9 +946,7 @@ export async function processUserMessage(
       const failTemplates: Record<string, string> = {
         fr: 'Un petit souci technique de mon côté. Un membre de notre équipe va vous répondre très bientôt !',
         en: 'I\'m having a small technical issue. A team member will get back to you very shortly!',
-        he: 'יש לי תקלה טכנית קטנה. חבר צוות ייצור איתך קשר בהקדם!',
-        ar: 'لدي مشكلة تقنية صغيرة. سيتواصل معك أحد أعضاء الفريق قريبًا!',
-        ru: 'У меня небольшая техническая проблема. Член команды свяжется с вами очень скоро!'
+        he: 'יש לי תקלה טכנית קטנה. חבר צוות ייצור איתך קשר בהקדם!'
       }
       const failMsg = failTemplates[failLang] || failTemplates[locale] || failTemplates.he
 
@@ -988,9 +982,7 @@ export async function processUserMessage(
         const crashTemplates: Record<string, string> = {
           fr: 'Un petit souci technique de mon côté. Un membre de notre équipe va vous répondre très bientôt !',
           en: 'I\'m having a small technical issue. A team member will get back to you very shortly!',
-          he: 'יש לי תקלה טכנית קטנה. חבר צוות ייצור איתך קשר בהקדם!',
-          ar: 'لدي مشكلة تقنية صغيرة. سيتواصل معك أحد أعضاء الفريق قريبًا!',
-          ru: 'У меня небольшая техническая проблема. Член команды свяжется с вами очень скоро!'
+          he: 'יש לי תקלה טכנית קטנה. חבר צוות ייצור איתך קשר בהקדם!'
         }
         const crashMsg = crashTemplates[crashLang] || crashTemplates[locale] || crashTemplates.he
 
