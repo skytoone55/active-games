@@ -914,6 +914,14 @@ export default function AdminPage() {
   // Charger les données utilisateur
   // Note: L'auth est gérée par le layout parent, pas besoin de rediriger ici
   useEffect(() => {
+    // Timeout de sécurité : si le chargement prend plus de 10s, arrêter le spinner
+    const safetyTimeout = setTimeout(() => {
+      if (loading) {
+        console.warn('[Agenda] Safety timeout: loading took >10s, forcing stop')
+        setLoading(false)
+      }
+    }, 10000)
+
     const loadUserData = async () => {
       const supabase = getClient()
 
@@ -981,6 +989,8 @@ export default function AdminPage() {
     }
 
     loadUserData()
+
+    return () => clearTimeout(safetyTimeout)
   }, [])
 
   const formatDate = (date: Date) => {

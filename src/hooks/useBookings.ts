@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { getClient } from '@/lib/supabase/client'
-import { useRealtimeRefresh } from './useRealtimeSubscription'
+import { useRealtimeRefresh, type TableName } from './useRealtimeSubscription'
 import {
   getCachedBookings,
   setCachedBookings,
@@ -82,9 +82,9 @@ export function useBookings(branchId: string | null, date?: string) {
     if (!branchId || !date || initialCacheLoadedRef.current) return
 
     const cached = getCachedBookings(branchId, date)
-    if (cached && cached.length > 0) {
+    if (cached !== null) {
       setBookings(cached)
-      setLoading(false) // Affichage instantané !
+      setLoading(false) // Affichage instantané (y compris jours vides)
       initialCacheLoadedRef.current = true
     }
   }, [branchId, date])
@@ -114,9 +114,9 @@ export function useBookings(branchId: string | null, date?: string) {
       }
     }, 15000)
 
-    // Ne montrer le loading que si pas de cache
+    // Ne montrer le loading que si pas de cache (null = pas en cache, [] = jour vide en cache)
     const cached = date ? getCachedBookings(branchId, date) : null
-    if (!cached || cached.length === 0) {
+    if (cached === null) {
       setLoading(true)
     }
     setError(null)
@@ -145,6 +145,12 @@ export function useBookings(branchId: string | null, date?: string) {
 
       if (!bookingsData || bookingsData.length === 0) {
         setBookings([])
+        // Mettre en cache même les jours vides pour éviter de repartir "à froid"
+        // à chaque événement realtime (sinon setLoading(true) à chaque fois)
+        if (date && branchId) {
+          setCachedBookings(branchId, date, [])
+          setLastSyncTime(branchId)
+        }
         setLoading(false)
         return
       }
@@ -288,11 +294,15 @@ export function useBookings(branchId: string | null, date?: string) {
 
   // Realtime: écouter les changements sur bookings et game_sessions
   // Remplace le polling de 30 secondes - mise à jour instantanée
+  // IMPORTANT: useMemo pour stabiliser la référence du tableau — sinon useEffect
+  // dans useRealtimeRefresh détruit et recrée les subscriptions à chaque render,
+  // causant une boucle infinie quand des events arrivent pendant la re-souscription
+  const additionalRealtimeTables = useMemo<TableName[]>(() => ['game_sessions', 'booking_slots'], [])
   useRealtimeRefresh(
     'bookings',
     branchId,
     fetchBookings,
-    ['game_sessions', 'booking_slots'] // Tables liées qui déclenchent aussi un refresh
+    additionalRealtimeTables
   )
 
   // Créer une réservation via l'API (garantit les logs et l'email)

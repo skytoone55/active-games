@@ -4,7 +4,7 @@ import { useEffect, useRef, useCallback } from 'react'
 import { getClient } from '@/lib/supabase/client'
 import type { RealtimeChannel, RealtimePostgresChangesPayload } from '@supabase/supabase-js'
 
-type TableName = 'bookings' | 'orders' | 'contacts' | 'game_sessions' | 'booking_slots' | 'activity_logs' | 'role_permissions' | 'whatsapp_conversations' | 'whatsapp_messages' | 'messenger_conversations' | 'messenger_messages'
+export type TableName = 'bookings' | 'orders' | 'contacts' | 'game_sessions' | 'booking_slots' | 'activity_logs' | 'role_permissions' | 'whatsapp_conversations' | 'whatsapp_messages' | 'messenger_conversations' | 'messenger_messages'
 type EventType = 'INSERT' | 'UPDATE' | 'DELETE' | '*'
 
 interface SubscriptionConfig {
@@ -172,7 +172,7 @@ export function useRealtimeRefresh(
   )
 
   // Subscriptions additionnelles (ex: game_sessions pour bookings)
-  // Debounced to 500ms to avoid cascading refreshes from bulk operations
+  // Debounced to 1s to avoid cascading refreshes from bulk operations
   const additionalDebounceRef = useRef<NodeJS.Timeout | null>(null)
 
   useEffect(() => {
@@ -185,23 +185,33 @@ export function useRealtimeRefresh(
       const channelId = ++channelCounter
       const channelName = `rt_${additionalTable}_related_${channelId}`
 
+      // Filtrer par branch_id si la table le supporte (booking_slots oui, game_sessions non)
+      const tableFilter = additionalTable === 'booking_slots' && branchId
+        ? `branch_id=eq.${branchId}`
+        : undefined
+
+      const channelConfig: Record<string, unknown> = {
+        event: '*' as const,
+        schema: 'public' as const,
+        table: additionalTable,
+      }
+      if (tableFilter) {
+        channelConfig.filter = tableFilter
+      }
+
       const channel = supabase
         .channel(channelName)
         .on(
           'postgres_changes' as const,
-          {
-            event: '*' as const,
-            schema: 'public' as const,
-            table: additionalTable,
-          },
+          channelConfig as { event: '*'; schema: 'public'; table: string; filter?: string },
           () => {
-            // Debounce: wait 500ms before refreshing to batch rapid changes
+            // Debounce: wait 1s before refreshing to batch rapid changes
             if (additionalDebounceRef.current) {
               clearTimeout(additionalDebounceRef.current)
             }
             additionalDebounceRef.current = setTimeout(() => {
               onRefreshRef.current()
-            }, 500)
+            }, 1000)
           }
         )
         .subscribe()
