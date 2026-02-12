@@ -220,7 +220,7 @@ This tool will tell you if the slot is really available or not, and suggest alte
     }
 
     const gameDuration = settings.game_duration_minutes || 30
-    const pauseDuration = 30
+    const pauseDuration = 0
 
     // Clara envoie l'heure ISRAEL (ce que le client voit)
     // La BD stocke en UTC, donc convertir Israel → UTC

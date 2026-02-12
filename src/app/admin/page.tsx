@@ -13,13 +13,16 @@ import { SettingsModal } from './components/SettingsModal'
 import { AgendaStats } from './components/AgendaStats'
 import { GridSettingsPopup } from './components/GridSettingsPopup'
 import { AgendaSearch } from './components/AgendaSearch'
-import { useBranches } from '@/hooks/useBranches'
 import { useAuth } from '@/hooks/useAuth'
 import { useUserPermissions } from '@/hooks/useUserPermissions'
 import { useLaserRooms } from '@/hooks/useLaserRooms'
 import { useTranslation } from '@/contexts/LanguageContext'
 import { useAdmin } from '@/contexts/AdminContext'
+import { toIsraelLocalDate } from '@/lib/dates'
 import type { Profile, UserBranch, GameArea, GameSession, UserRole, ResourceType, BookingContact, BookingSlot, Contact } from '@/lib/supabase/types'
+
+// Helper: convertit un ISO datetime en Date "Israel-local" pour que .getHours()/.getMinutes() retournent l'heure d'Israël
+const toIL = (d: Date) => toIsraelLocalDate(d)
 
 interface UserData {
   id: string
@@ -45,9 +48,10 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(true)
   const [userData, setUserData] = useState<UserData | null>(null)
   // Utiliser useBranches pour partager la branche sélectionnée avec le CRM
-  const branchesHook = useBranches()
-  const branches = branchesHook.branches
-  const selectedBranchIdFromHook = branchesHook.selectedBranchId
+  // Utiliser le contexte AdminContext pour les branches (partagé avec le header/sidebar)
+  // IMPORTANT: Ne pas utiliser useBranches() localement car c'est une instance séparée
+  // qui ne se met pas à jour quand l'utilisateur change de branche via le header
+  const { branches, selectedBranchId: adminSelectedBranchId, selectBranch: adminSelectBranch, refreshBranches, isDark } = useAdmin()
 
   // Permissions pour l'agenda - Hook appelé tôt pour respecter l'ordre des hooks
   const { hasPermission, loading: permissionsLoading } = useUserPermissions(userData?.role as UserRole || null)
@@ -77,31 +81,12 @@ export default function AdminPage() {
     }
   }, [permissionsLoading, canViewAgenda, userData, hasPermission, router])
 
-  // Calculer effectiveSelectedBranchId AVANT useBookings pour éviter les problèmes de timing
-  // Si selectedBranchId n'est pas défini, utiliser la première branche disponible
-  const effectiveSelectedBranchId = selectedBranchIdFromHook || (branches.length > 0 ? branches[0]?.id : null)
-  
-  // Vérifier que selectedBranchIdFromHook est bien dans les branches autorisées
-  const isValidBranchId = selectedBranchIdFromHook && branches.some(b => b.id === selectedBranchIdFromHook)
-  const finalSelectedBranchId = isValidBranchId ? selectedBranchIdFromHook : (branches.length > 0 ? branches[0]?.id : null)
-  
-  // Synchroniser avec le hook si nécessaire
-  useEffect(() => {
-    if (finalSelectedBranchId && !selectedBranchIdFromHook && branches.length > 0) {
-      branchesHook.selectBranch(finalSelectedBranchId)
-    } else if (selectedBranchIdFromHook && !isValidBranchId && branches.length > 0) {
-      // Si la branche sauvegardée n'est plus autorisée, réinitialiser avec la première
-      branchesHook.selectBranch(branches[0].id)
-    }
-  }, [finalSelectedBranchId, selectedBranchIdFromHook, isValidBranchId, branches.length, branchesHook.selectBranch])
-  
-  const selectedBranchId = finalSelectedBranchId
+  const selectedBranchId = adminSelectedBranchId || (branches.length > 0 ? branches[0]?.id : null)
   const setSelectedBranchId = (branchId: string | null) => {
     if (branchId) {
-      branchesHook.selectBranch(branchId)
+      adminSelectBranch(branchId)
     }
   }
-  const { isDark } = useAdmin()
   const [selectedDate, setSelectedDate] = useState(() => {
     const today = new Date()
     today.setHours(0, 0, 0, 0)
@@ -236,8 +221,7 @@ export default function AdminPage() {
     refresh: refreshAllBookings
   } = useBookings(selectedBranchId, undefined) // undefined = pas de filtre par date, on charge tout
 
-  // branches déjà défini plus haut
-  const refreshBranches = branchesHook.refresh
+  // refreshBranches est maintenant fourni par useAdmin() (AdminContext)
 
   // Filtrer les réservations pour l'agenda du jour sélectionné (MEMOIZED pour performance)
   // IMPORTANT : Pour les réservations LASER, vérifier aussi les dates des game_sessions LASER
@@ -275,8 +259,8 @@ export default function AdminPage() {
       const startStr = booking.game_start_datetime || booking.start_datetime
       const endStr = booking.game_end_datetime || booking.end_datetime
 
-      const startDate = new Date(startStr)
-      const endDate = new Date(endStr)
+      const startDate = toIL(new Date(startStr))
+      const endDate = toIL(new Date(endStr))
 
       // Vérifier que la réservation est bien sur le jour sélectionné
       const bookingDate = new Date(startDate)
@@ -399,7 +383,7 @@ export default function AdminPage() {
         }
 
         // Ouvrir le modal avec cette réservation
-        const startTime = booking.game_start_datetime ? new Date(booking.game_start_datetime) : new Date(booking.start_datetime)
+        const startTime = toIL(new Date(booking.game_start_datetime || booking.start_datetime))
         setModalInitialHour(startTime.getHours())
         setModalInitialMinute(startTime.getMinutes())
         setEditingBooking(booking)
@@ -793,7 +777,7 @@ export default function AdminPage() {
         setEditingBookingOrderStatus(order.status)
       }
       // Extraire l'heure de début de la réservation
-      const startTime = new Date(booking.game_start_datetime || booking.start_datetime)
+      const startTime = toIL(new Date(booking.game_start_datetime || booking.start_datetime))
       setModalInitialHour(startTime.getHours())
       setModalInitialMinute(startTime.getMinutes())
       // Le type sera celui de la réservation existante
@@ -1001,6 +985,7 @@ export default function AdminPage() {
 
   const formatDate = (date: Date) => {
     return date.toLocaleDateString(getDateLocale(), {
+      timeZone: 'Asia/Jerusalem',
       weekday: 'long',
       day: 'numeric',
       month: 'long',
@@ -1010,6 +995,7 @@ export default function AdminPage() {
 
   const formatDateFull = (date: Date) => {
     return date.toLocaleDateString(getDateLocale(), {
+      timeZone: 'Asia/Jerusalem',
       weekday: 'long',
       day: 'numeric',
       month: 'long',
@@ -1226,15 +1212,15 @@ export default function AdminPage() {
     const monthTotalParticipants = monthBookings.reduce((sum, b) => sum + b.participants_count, 0)
     
     // Formater la période de la semaine
-    const weekStartStr = weekStart.toLocaleDateString(getDateLocale(), { day: '2-digit', month: 'short' })
-    const weekEndStr = weekEnd.toLocaleDateString(getDateLocale(), { day: '2-digit', month: 'short', year: 'numeric' })
-    
+    const weekStartStr = weekStart.toLocaleDateString(getDateLocale(), { timeZone: 'Asia/Jerusalem', day: '2-digit', month: 'short' })
+    const weekEndStr = weekEnd.toLocaleDateString(getDateLocale(), { timeZone: 'Asia/Jerusalem', day: '2-digit', month: 'short', year: 'numeric' })
+
     return {
       day: {
         withRoom: dayWithRoom.length,
         withoutRoom: dayWithoutRoom.length,
         totalParticipants: dayTotalParticipants,
-        dateStr: selectedDate.toLocaleDateString(getDateLocale(), { day: '2-digit', month: 'short' })
+        dateStr: selectedDate.toLocaleDateString(getDateLocale(), { timeZone: 'Asia/Jerusalem', day: '2-digit', month: 'short' })
       },
       week: {
         withRoom: weekWithRoom.length,
@@ -1246,7 +1232,7 @@ export default function AdminPage() {
         withRoom: monthWithRoom.length,
         withoutRoom: monthWithoutRoom.length,
         totalParticipants: monthTotalParticipants,
-        period: selectedDate.toLocaleDateString(getDateLocale(), { month: 'long', year: 'numeric' })
+        period: selectedDate.toLocaleDateString(getDateLocale(), { timeZone: 'Asia/Jerusalem', month: 'long', year: 'numeric' })
       }
     }
   }
@@ -1260,7 +1246,7 @@ export default function AdminPage() {
         const contactData = getContactDisplayData(b)
         const customerName = `${contactData.firstName || ''} ${contactData.lastName || ''}`.toLowerCase().trim()
         const bookingDate = extractLocalDateFromISO(b.start_datetime)
-        const startTime = new Date(b.start_datetime)
+        const startTime = toIL(new Date(b.start_datetime))
         const timeStr = `${String(startTime.getHours()).padStart(2, '0')}:${String(startTime.getMinutes()).padStart(2, '0')}`
         const notes = (b.notes || '').toLowerCase()
         const customerPhone = contactData.phone.toLowerCase()
@@ -1630,7 +1616,7 @@ export default function AdminPage() {
         maxOverbookedCount = Math.max(maxOverbookedCount, overbookedCount)
         maxOverbookedSlots = Math.max(maxOverbookedSlots, overbookedSlots)
         
-        const timeLabel = timeSlotStart.toLocaleTimeString(getDateLocale(), { hour: '2-digit', minute: '2-digit' })
+        const timeLabel = timeSlotStart.toLocaleTimeString(getDateLocale(), { timeZone: 'Asia/Jerusalem', hour: '2-digit', minute: '2-digit' })
         affectedTimeSlots.push({
           time: timeLabel,
           overbookedCount,
@@ -2063,8 +2049,8 @@ export default function AdminPage() {
       // IMPORTANT : La grille ROOMS affiche la réservation de la salle
       // Les sessions ACTIVE apparaissent dans la grille ACTIVE, les sessions LASER dans la grille LASER
       // On affiche la salle pendant toute sa durée (start_datetime à end_datetime) pour montrer qu'elle est réservée
-      const startTime = new Date(booking.start_datetime)
-      const endTime = new Date(booking.end_datetime)
+      const startTime = toIL(new Date(booking.start_datetime))
+      const endTime = toIL(new Date(booking.end_datetime))
       const bookingStartMinutes = startTime.getHours() * 60 + startTime.getMinutes()
       const bookingEndMinutes = endTime.getHours() * 60 + endTime.getMinutes()
       
@@ -2119,11 +2105,11 @@ export default function AdminPage() {
     }
     
     // Pour ACTIVE et autres : utiliser la durée totale
-    const startTime = new Date(booking.game_start_datetime || booking.start_datetime)
-    const endTime = new Date(booking.game_end_datetime || booking.end_datetime)
+    const startTime = toIL(new Date(booking.game_start_datetime || booking.start_datetime))
+    const endTime = toIL(new Date(booking.game_end_datetime || booking.end_datetime))
     const bookingStartMinutes = startTime.getHours() * 60 + startTime.getMinutes()
     const bookingEndMinutes = endTime.getHours() * 60 + endTime.getMinutes()
-    
+
     // Calculer le nombre de créneaux horaires (chaque créneau = 30 min)
     const durationMinutes = bookingEndMinutes - bookingStartMinutes
     const numberOfTimeSlots = Math.ceil(durationMinutes / 30)
@@ -2465,7 +2451,7 @@ export default function AdminPage() {
                     }`}
                   >
                     <div className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'} leading-tight`}>
-                      {day.toLocaleDateString(getDateLocale(), { weekday: 'short' })}
+                      {day.toLocaleDateString(getDateLocale(), { timeZone: 'Asia/Jerusalem', weekday: 'short' })}
                     </div>
                     <div className={`text-sm font-bold leading-tight ${isDark ? 'text-white' : 'text-gray-900'}`}>
                       {day.getDate()}
@@ -2661,7 +2647,7 @@ export default function AdminPage() {
                       : (booking ? (isDark ? '#6b7280' : '#9ca3af') : (isDark ? '#374151' : '#e5e7eb')) // Gris pour contour réservation
                     
                     // Formater l'heure pour l'affichage
-                    const bookingStartTime = booking ? (booking.game_start_datetime ? new Date(booking.game_start_datetime) : new Date(booking.start_datetime)) : null
+                    const bookingStartTime = booking ? toIL(new Date(booking.game_start_datetime || booking.start_datetime)) : null
                     const displayTime = bookingStartTime ? formatTime(bookingStartTime) : ''
 
                     // Vérifier que colSpan ne dépasse jamais TOTAL_SLOTS (hard boundary)
@@ -3091,7 +3077,7 @@ export default function AdminPage() {
                     const borderBottomColor = isBookingBottom ? (isDark ? '#6b7280' : '#9ca3af') : 'none' // Gris pour contour réservation
                     
                     // Formater l'heure pour l'affichage
-                    const roomBookingStartTime = booking ? new Date(booking.start_datetime) : null
+                    const roomBookingStartTime = booking ? toIL(new Date(booking.start_datetime)) : null
                     const roomDisplayTime = roomBookingStartTime ? formatTime(roomBookingStartTime) : ''
 
                     return (

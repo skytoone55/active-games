@@ -168,7 +168,7 @@ export function BookingModal({
   const [bookingType, setBookingType] = useState<BookingType>('GAME')
   const [hour, setHour] = useState(initialHour)
   const [minute, setMinute] = useState(initialMinute)
-  const [durationMinutes, setDurationMinutes] = useState('60') // Durée en minutes (champ libre)
+  const [durationMinutes, setDurationMinutes] = useState('30') // Durée en minutes (champ libre)
   const [participants, setParticipants] = useState('')
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
@@ -832,11 +832,7 @@ export function BookingModal({
         setNotes('')
         setContactId(generateContactId())
         // Initialiser la durée selon le type de jeu
-        if (defaultBookingType === 'GAME' && defaultGameArea === 'LASER') {
-          setDurationMinutes('30') // 30 min par défaut pour LASER
-        } else {
-          setDurationMinutes('60') // 60 min par défaut pour ACTIVE ou autres
-        }
+        setDurationMinutes('30') // 30 min par défaut pour LASER et ACTIVE
         setRoomDurationMinutes('120')
         // Initialiser les pauses pour les événements
         if (defaultBookingType === 'EVENT') {
@@ -1082,7 +1078,7 @@ export function BookingModal({
     const timeoutId = setTimeout(() => {
       // Calculer parsedParticipants directement ici
       const currentParsedParticipants = parseInt(participants) || 0
-      const currentParsedDuration = parseInt(durationMinutes) || 60
+      const currentParsedDuration = parseInt(durationMinutes) || 30
       const currentParsedRoomDuration = parseInt(roomDurationMinutes) || 120
       
       // Ne valider que si on a des données de réservation valides
@@ -1223,7 +1219,7 @@ export function BookingModal({
 
   // Parser les valeurs
   const parsedParticipants = parseInt(participants) || 0
-  const parsedDuration = parseInt(durationMinutes) || 60
+  const parsedDuration = parseInt(durationMinutes) || 30
   const parsedRoomDuration = parseInt(roomDurationMinutes) || 120 // Durée salle modifiable, par défaut 2 heures
 
   // Calcul du prix en temps réel
@@ -1474,7 +1470,7 @@ export function BookingModal({
           for (let i = 0; i < numberOfGames; i++) {
             // Si un seul jeu, utiliser durationMinutes, sinon utiliser gameDurations[i]
             const gameDuration = numberOfGames === 1 
-              ? (parseInt(durationMinutes) || 60) 
+              ? (parseInt(durationMinutes) || 30) 
               : (parseInt(gameDurations[i] || '30', 10))
             const sessionStart = new Date(currentStart)
             const sessionEnd = new Date(sessionStart)
@@ -3097,7 +3093,7 @@ export function BookingModal({
                                 type="number"
                                 min="0"
                                 step="15"
-                                value={eventGamePauses[index] ?? 30}
+                                value={eventGamePauses[index] ?? 0}
                                 onChange={(e) => {
                                   const newPauses = [...eventGamePauses]
                                   const value = e.target.value === '' ? 0 : parseInt(e.target.value, 10)
@@ -3322,7 +3318,7 @@ export function BookingModal({
                         setNumberOfGames(2)
                         setGameDurations(['30', '30'])
                         setGamePauses([0]) // Pause après le premier jeu (0 par défaut)
-                        setDurationMinutes('60') // Durée par défaut pour un jeu ACTIVE simple (60 min)
+                        setDurationMinutes('30') // Durée par défaut pour un jeu ACTIVE simple (30 min)
                       }}
                   className={`p-3 rounded-xl border-2 transition-all flex items-center gap-3 ${
                     gameArea === 'ACTIVE'

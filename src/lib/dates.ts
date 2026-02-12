@@ -91,6 +91,31 @@ export function formatIsraelDate(isoString: string, locale: string = 'he-IL', op
 }
 
 /**
+ * Extrait heures et minutes d'une Date en timezone Israel
+ * Remplace date.getHours()/getMinutes() qui utilisent le timezone du navigateur
+ */
+export function getIsraelHoursMinutes(date: Date): { hours: number; minutes: number } {
+  const timeStr = date.toLocaleTimeString('en-US', {
+    timeZone: ISRAEL_TIMEZONE,
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
+  })
+  const [h, m] = timeStr.split(':').map(Number)
+  return { hours: h, minutes: m }
+}
+
+/**
+ * Convertit une Date UTC en une Date dont .getHours()/.getMinutes()
+ * retournent l'heure d'Israël, quel que soit le timezone du navigateur.
+ * Utile pour l'agenda qui utilise .getHours() partout pour positionner les bookings.
+ */
+export function toIsraelLocalDate(date: Date): Date {
+  const israelTime = date.toLocaleString('en-US', { timeZone: ISRAEL_TIMEZONE })
+  return new Date(israelTime)
+}
+
+/**
  * Extrait la date (YYYY-MM-DD) d'une ISO string en timezone Israel
  */
 export function extractIsraelDate(isoString: string): string {

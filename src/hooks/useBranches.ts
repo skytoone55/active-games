@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { getClient } from '@/lib/supabase/client'
 import type { Branch, BranchSettings, EventRoom, LaserRoom } from '@/lib/supabase/types'
 
-interface BranchWithDetails extends Branch {
+export interface BranchWithDetails extends Branch {
   settings: BranchSettings | null
   rooms: EventRoom[]
   laserRooms: LaserRoom[]

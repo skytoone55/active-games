@@ -4,8 +4,7 @@ import { createContext, useContext, useCallback, useState, useEffect } from 'rea
 import { useRouter } from 'next/navigation'
 import { getClient } from '@/lib/supabase/client'
 import { useAuth, type AuthUser } from '@/hooks/useAuth'
-import { useBranches } from '@/hooks/useBranches'
-import type { Branch } from '@/lib/supabase/types'
+import { useBranches, type BranchWithDetails } from '@/hooks/useBranches'
 
 interface AdminContextValue {
   // Auth
@@ -14,10 +13,11 @@ interface AdminContextValue {
   signOut: () => Promise<void>
   refreshUser: () => Promise<void>
   // Branches
-  branches: Branch[]
-  selectedBranch: Branch | null
+  branches: BranchWithDetails[]
+  selectedBranch: BranchWithDetails | null
   selectedBranchId: string | null
   selectBranch: (branchId: string) => void
+  refreshBranches: () => Promise<void>
   branchesLoading: boolean
   // Theme
   theme: 'light' | 'dark'
@@ -33,7 +33,7 @@ export function AdminProvider({ children, theme, toggleTheme }: {
   toggleTheme: () => void
 }) {
   const { user, loading: authLoading, signOut, refreshUser } = useAuth()
-  const { branches, selectedBranch, selectedBranchId, selectBranch, loading: branchesLoading } = useBranches()
+  const { branches, selectedBranch, selectedBranchId, selectBranch, loading: branchesLoading, refresh: refreshBranches } = useBranches()
 
   const value: AdminContextValue = {
     user,
@@ -44,6 +44,7 @@ export function AdminProvider({ children, theme, toggleTheme }: {
     selectedBranch,
     selectedBranchId,
     selectBranch,
+    refreshBranches,
     branchesLoading,
     theme,
     toggleTheme,

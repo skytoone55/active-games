@@ -2,6 +2,7 @@
 
 import { Search } from 'lucide-react'
 import { useTranslation } from '@/contexts/LanguageContext'
+import { toIsraelLocalDate } from '@/lib/dates'
 import type { BookingWithSlots } from '@/hooks/useBookings'
 import type { Contact } from '@/lib/supabase/types'
 
@@ -73,8 +74,9 @@ export function AgendaSearch({
             </div>
             <div className="divide-y divide-gray-700">
               {searchResults.map((booking) => {
-                const bookingDate = new Date(booking.start_datetime)
+                const bookingDate = toIsraelLocalDate(new Date(booking.start_datetime))
                 const dateFormatted = bookingDate.toLocaleDateString(getDateLocale(), {
+                  timeZone: 'Asia/Jerusalem',
                   day: '2-digit',
                   month: 'short',
                   year: 'numeric'

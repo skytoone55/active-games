@@ -147,6 +147,7 @@ function CGVValidationContent() {
     const locale = order?.preferred_locale || 'he'
     const localeMap = { he: 'he-IL', fr: 'fr-FR', en: 'en-US' }
     return date.toLocaleDateString(localeMap[locale], {
+      timeZone: 'Asia/Jerusalem',
       weekday: 'long',
       day: 'numeric',
       month: 'long',

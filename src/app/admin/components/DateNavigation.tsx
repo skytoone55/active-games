@@ -67,6 +67,7 @@ export function DateNavigation({
 
   const formatDateLong = (date: Date) => {
     return date.toLocaleDateString(getDateLocale(), {
+      timeZone: 'Asia/Jerusalem',
       weekday: 'long',
       day: 'numeric',
       month: 'long',
@@ -79,8 +80,8 @@ export function DateNavigation({
     const endOfWeek = new Date(startOfWeek)
     endOfWeek.setDate(endOfWeek.getDate() + 6)
 
-    const startStr = startOfWeek.toLocaleDateString(getDateLocale(), { day: 'numeric', month: 'short' })
-    const endStr = endOfWeek.toLocaleDateString(getDateLocale(), { day: 'numeric', month: 'short', year: 'numeric' })
+    const startStr = startOfWeek.toLocaleDateString(getDateLocale(), { timeZone: 'Asia/Jerusalem', day: 'numeric', month: 'short' })
+    const endStr = endOfWeek.toLocaleDateString(getDateLocale(), { timeZone: 'Asia/Jerusalem', day: 'numeric', month: 'short', year: 'numeric' })
 
     return `${startStr} - ${endStr}`
   }

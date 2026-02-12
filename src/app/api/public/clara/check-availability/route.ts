@@ -40,7 +40,7 @@ async function findAlternativeSlots(
 
     // Calculer durée nécessaire
     const gameDuration = settings.game_duration_minutes || 30
-    const pauseDuration = 30
+    const pauseDuration = 0
     let totalDuration: number
     if ((gameArea === 'LASER' || gameArea === 'laser') && numberOfGames > 1) {
       totalDuration = (numberOfGames * gameDuration) + ((numberOfGames - 1) * pauseDuration)
@@ -194,7 +194,7 @@ async function checkTimeAvailability(
   }
 
   const gameDuration = settings.game_duration_minutes || 30
-  const pauseDuration = 30
+  const pauseDuration = 0
   const startDateTime = new Date(`${date}T${time}:00`)
   const numGames = numberOfGames || 1
 
@@ -394,7 +394,7 @@ export async function POST(request: NextRequest) {
     }
 
     const gameDuration = settings.game_duration_minutes || 30
-    const pauseDuration = 30
+    const pauseDuration = 0
     const startDateTime = new Date(`${date}T${time}:00`)
 
     // ========== VÉRIFICATION GAME ==========

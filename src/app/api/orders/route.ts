@@ -424,7 +424,7 @@ export async function POST(request: NextRequest) {
     }
 
     const gameDuration = settings.game_duration_minutes || 30
-    const pauseDuration = 30 // 30 min de pause entre les jeux (comme admin)
+    const pauseDuration = 0
     const eventSetupPause = 15 // 15 min de pause entre début salle et premier jeu (comme admin)
 
     // 3. Construire les dates/heures du booking
