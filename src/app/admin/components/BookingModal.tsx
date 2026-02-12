@@ -1,13 +1,14 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
-import { X, Loader2, Users, Clock, User, Phone, Mail, MessageSquare, Gamepad2, PartyPopper, Palette, Home, Calendar, ChevronLeft, ChevronRight, Trash2, Edit2, RefreshCw, AlertTriangle, ChevronDown, Building2, Zap, Target, FileText, Receipt, CheckCheck } from 'lucide-react'
+import { X, Loader2, Users, Clock, User, Phone, Mail, MessageSquare, Gamepad2, PartyPopper, Palette, Home, Calendar, ChevronLeft, ChevronRight, Edit2, RefreshCw, AlertTriangle, ChevronDown, Building2, Zap, Target, FileText, Receipt, CheckCheck, Ban } from 'lucide-react'
 import type { CreateBookingData, BookingWithSlots } from '@/hooks/useBookings'
 import { ContactFieldAutocomplete } from './ContactFieldAutocomplete'
 import { useContacts } from '@/hooks/useContacts'
 import type { Contact, GameArea, LaserRoom } from '@/lib/supabase/types'
 import { useTranslation } from '@/contexts/LanguageContext'
 import { validateIsraeliPhone, validateEmail, VALIDATION_MESSAGES } from '@/lib/validation'
+import { toIsraelLocalDate } from '@/lib/dates'
 import { usePricingData } from '@/hooks/usePricingData'
 import { calculateBookingPrice, type PriceCalculationResult } from '@/lib/price-calculator'
 
@@ -261,7 +262,7 @@ export function BookingModal({
   const [eventNumberOfGames, setEventNumberOfGames] = useState(2) // DEPRECATED
   const [eventSession1Duration, setEventSession1Duration] = useState('30') // DEPRECATED
   const [eventSession2Duration, setEventSession2Duration] = useState('30') // DEPRECATED
-  const [eventPause, setEventPause] = useState(30) // DEPRECATED
+  const [eventPause, setEventPause] = useState(0) // DEPRECATED
 
   // Fonction pour générer un ID unique de contact (numéro séquentiel simple)
   // NOTE: Ceci est conservé pour rétrocompatibilité mais ne sera plus utilisé avec le CRM
@@ -494,8 +495,8 @@ export function BookingModal({
       if (editingBooking) {
         // Mode édition : pré-remplir avec les données de la réservation
         const bookingStartDate = extractLocalDateFromISO(editingBooking.game_start_datetime || editingBooking.start_datetime)
-        const bookingStartTime = new Date(editingBooking.game_start_datetime || editingBooking.start_datetime)
-        
+        const bookingStartTime = toIsraelLocalDate(new Date(editingBooking.game_start_datetime || editingBooking.start_datetime))
+
         setLocalDate(bookingStartDate)
         setCalendarMonth(bookingStartDate.getMonth())
         setCalendarYear(bookingStartDate.getFullYear())
@@ -527,8 +528,8 @@ export function BookingModal({
           
           // Calculer la durée de la salle
           if (editingBooking.start_datetime && editingBooking.end_datetime) {
-            const roomStart = new Date(editingBooking.start_datetime)
-            const roomEnd = new Date(editingBooking.end_datetime)
+            const roomStart = toIsraelLocalDate(new Date(editingBooking.start_datetime))
+            const roomEnd = toIsraelLocalDate(new Date(editingBooking.end_datetime))
             const roomDurationMs = roomEnd.getTime() - roomStart.getTime()
             const roomDurationMinutes = Math.round(roomDurationMs / (1000 * 60))
             setRoomDurationMinutes(String(roomDurationMinutes))
@@ -542,7 +543,7 @@ export function BookingModal({
               
               // Pour l'heure du premier jeu, utiliser game_start_datetime si disponible
               if (editingBooking.game_start_datetime) {
-                const gameStart = new Date(editingBooking.game_start_datetime)
+                const gameStart = toIsraelLocalDate(new Date(editingBooking.game_start_datetime))
                 setEventFirstGameStartHour(gameStart.getHours())
                 setEventFirstGameStartMinute(gameStart.getMinutes())
               }
@@ -721,7 +722,7 @@ export function BookingModal({
               
               // Initialiser l'heure de début du premier jeu
               if (sessions.length > 0) {
-                const firstGameStart = new Date(sessions[0].start_datetime)
+                const firstGameStart = toIsraelLocalDate(new Date(sessions[0].start_datetime))
                 setEventFirstGameStartHour(firstGameStart.getHours())
                 setEventFirstGameStartMinute(firstGameStart.getMinutes())
               }
@@ -742,7 +743,7 @@ export function BookingModal({
             setEventGamePlan('AA')
             setEventSession1Duration('30')
             setEventSession2Duration('30')
-            setEventPause(30)
+            setEventPause(0)
           }
         }
         
@@ -836,7 +837,7 @@ export function BookingModal({
         setRoomDurationMinutes('120')
         // Initialiser les pauses pour les événements
         if (defaultBookingType === 'EVENT') {
-          setEventGamePauses([30]) // Par défaut : 30 min de pause après le premier jeu
+          setEventGamePauses([0]) // Par défaut : 0 min de pause après le premier jeu
           setEventCustomGamePauses([0]) // Par défaut : 0 min de pause pour le plan sur mesure
         }
         setError(null)
@@ -2957,7 +2958,7 @@ export function BookingModal({
                           const count = parseInt(planType)
                           // Initialiser les durées et pauses selon le nombre de jeux
                           const defaultDurations = Array(count).fill('30')
-                          const defaultPauses = Array(count - 1).fill(30) // Pauses après chaque jeu (sauf le dernier)
+                          const defaultPauses = Array(count - 1).fill(0) // Pauses après chaque jeu (sauf le dernier)
                           setEventGameDurations(defaultDurations)
                           setEventGamePauses(defaultPauses)
                           // Sélectionner le premier plan prédéfini disponible
@@ -2966,7 +2967,7 @@ export function BookingModal({
                             setEventQuickPlan(availablePlans[0])
                             // Réinitialiser les pauses selon le nouveau plan
                             const areas = getQuickPlanAreas(availablePlans[0])
-                            const newPauses = Array(areas.length - 1).fill(30)
+                            const newPauses = Array(areas.length - 1).fill(0)
                             setEventGamePauses(newPauses)
                           }
                         }
@@ -3583,8 +3584,8 @@ export function BookingModal({
                         setNumberOfGames(num)
                         // Initialiser les durées et pauses
                         setGameDurations(Array(num).fill('30'))
-                        // Pauses après chaque jeu (sauf le dernier) : 0 pour ACTIVE, 30 pour LASER
-                        const defaultPause = gameArea === 'ACTIVE' ? 0 : 30
+                        // Pauses après chaque jeu (sauf le dernier) : 0 par défaut
+                        const defaultPause = 0
                         setGamePauses(Array(num - 1).fill(defaultPause)) // num-1 car pas de pause après le dernier jeu
                         setLaserRoomIds(Array(num).fill(''))
                       }}
@@ -4119,8 +4120,8 @@ export function BookingModal({
                       : 'text-red-600 hover:bg-red-50 hover:text-red-700'
                 } disabled:opacity-50 disabled:cursor-not-allowed`}
               >
-                <Trash2 className="w-4 h-4" />
-                {t('admin.booking_modal.actions.delete')}
+                <Ban className="w-4 h-4" />
+                {t('admin.booking_modal.actions.cancel_order')}
               </button>
             )}
           </div>
@@ -4495,10 +4496,10 @@ export function BookingModal({
           <div className={`relative w-full max-w-md mx-4 rounded-2xl shadow-2xl ${isDark ? 'bg-gray-800' : 'bg-white'}`}>
             <div className="p-6">
               <h3 className={`text-xl font-bold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                {t('admin.booking_modal.modals.confirm_delete')}
+                {t('admin.booking_modal.modals.confirm_cancel')}
               </h3>
               <p className={`mb-6 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                {t('admin.booking_modal.modals.delete_irreversible')}
+                {t('admin.booking_modal.modals.cancel_irreversible')}
               </p>
               <div className="flex items-center justify-end gap-3">
                 <button
@@ -4522,12 +4523,12 @@ export function BookingModal({
                   {loading ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin" />
-                      {t('admin.booking_modal.actions.deleting')}
+                      {t('admin.booking_modal.actions.cancelling')}
                     </>
                   ) : (
                     <>
-                      <Trash2 className="w-4 h-4" />
-                      {t('admin.booking_modal.actions.delete')}
+                      <Ban className="w-4 h-4" />
+                      {t('admin.booking_modal.actions.cancel_order')}
                     </>
                   )}
                 </button>

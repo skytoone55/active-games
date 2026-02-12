@@ -1428,6 +1428,8 @@
       "actions": {
         "delete": "Delete",
         "cancel": "Cancel",
+        "cancel_order": "Cancel",
+        "cancelling": "Cancelling...",
         "create": "Create booking",
         "modify": "Modify",
         "creating": "Creating...",
@@ -1468,6 +1470,8 @@
         "authorize_continue": "Authorize and continue",
         "confirm_delete": "Confirm deletion",
         "delete_irreversible": "Are you sure you want to permanently delete this booking? This action is irreversible.",
+        "confirm_cancel": "Confirm cancellation",
+        "cancel_irreversible": "Are you sure you want to cancel this booking? This action is irreversible.",
         "vests_limit": "Vest limit reached",
         "vests_limit_reached": "The main limit of {{max}} vests has been reached.",
         "spare_vests_available": "Are the {{spare}} spare vests available?",

@@ -1515,6 +1515,8 @@
       "actions": {
         "delete": "Supprimer",
         "cancel": "Annuler",
+        "cancel_order": "Annuler",
+        "cancelling": "Annulation...",
         "create": "Creer la reservation",
         "modify": "Modifier",
         "creating": "Creation...",
@@ -1555,6 +1557,8 @@
         "authorize_continue": "Autoriser et continuer",
         "confirm_delete": "Confirmer la suppression",
         "delete_irreversible": "Etes-vous sur de vouloir supprimer definitivement cette reservation ? Cette action est irreversible.",
+        "confirm_cancel": "Confirmer l'annulation",
+        "cancel_irreversible": "Etes-vous sur de vouloir annuler cette reservation ? Cette action est irreversible.",
         "vests_limit": "Limite de vestes atteinte",
         "vests_limit_reached": "La limite principale de {{max}} vestes est atteinte.",
         "spare_vests_available": "Les {{spare}} vestes de spare sont-elles disponibles ?",
