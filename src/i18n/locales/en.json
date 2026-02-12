@@ -2133,6 +2133,8 @@
       "create_contact": "Create contact",
       "clara_activate": "Activate Clara AI",
       "clara_pause": "Pause Clara AI",
+      "needs_human": "Needs human",
+      "resolve_human": "Mark as resolved",
       "quick_contact": {
         "title": "Create Contact",
         "branch": "Branch",
@@ -2725,7 +2727,30 @@
       "prompt_help": "Leave empty to use Clara's default prompt",
       "prompt_placeholder": "Enter a custom prompt for Clara on WhatsApp...",
       "auto_resume": "Auto-resume",
-      "auto_resume_help": "Clara automatically resumes after this delay when an admin takes over"
+      "auto_resume_help": "Clara automatically resumes after this delay when an admin takes over",
+      "tabs": {
+        "general": "General",
+        "schedule": "Schedule",
+        "prompt": "Prompt"
+      },
+      "schedule_enabled": "Enable schedule",
+      "schedule_help": "Define when Clara is active. Off = 24/7",
+      "schedule_title": "Schedule by day",
+      "schedule_start": "Start",
+      "schedule_end": "End",
+      "apply_to_all": "Apply to all",
+      "active_branches": "Active branches",
+      "active_branches_help": "Select branches. Empty = all",
+      "all_branches": "All branches",
+      "days": {
+        "sunday": "Sunday",
+        "monday": "Monday",
+        "tuesday": "Tuesday",
+        "wednesday": "Wednesday",
+        "thursday": "Thursday",
+        "friday": "Friday",
+        "saturday": "Saturday"
+      }
     }
   }
 }

@@ -2191,6 +2191,8 @@
       "create_contact": "צור איש קשר",
       "clara_activate": "הפעל קלרה AI",
       "clara_pause": "השהה קלרה AI",
+      "needs_human": "צריך נציג",
+      "resolve_human": "סמן כטופל",
       "quick_contact": {
         "title": "צור איש קשר",
         "branch": "סניף",
@@ -2783,7 +2785,30 @@
       "prompt_help": "השאר ריק לשימוש בפרומפט ברירת המחדל של קלרה",
       "prompt_placeholder": "הזן פרומפט מותאם אישית עבור קלרה בוואטסאפ...",
       "auto_resume": "חידוש אוטומטי",
-      "auto_resume_help": "קלרה חוזרת אוטומטית לפעולה לאחר זמן זה כשמנהל משיב"
+      "auto_resume_help": "קלרה חוזרת אוטומטית לפעולה לאחר זמן זה כשמנהל משיב",
+      "tabs": {
+        "general": "כללי",
+        "schedule": "לוח זמנים",
+        "prompt": "פרומפט"
+      },
+      "schedule_enabled": "הפעל לוח זמנים",
+      "schedule_help": "הגדר מתי קלרה פעילה. כבוי = 24/7",
+      "schedule_title": "לוח זמנים לפי יום",
+      "schedule_start": "התחלה",
+      "schedule_end": "סיום",
+      "apply_to_all": "החל על הכל",
+      "active_branches": "סניפים פעילים",
+      "active_branches_help": "בחר סניפים. ריק = הכל",
+      "all_branches": "כל הסניפים",
+      "days": {
+        "sunday": "ראשון",
+        "monday": "שני",
+        "tuesday": "שלישי",
+        "wednesday": "רביעי",
+        "thursday": "חמישי",
+        "friday": "שישי",
+        "saturday": "שבת"
+      }
     }
   }
 }

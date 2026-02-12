@@ -2196,6 +2196,8 @@
       "create_contact": "Creer un contact",
       "clara_activate": "Activer Clara IA",
       "clara_pause": "Mettre Clara en pause",
+      "needs_human": "Besoin d'un humain",
+      "resolve_human": "Marquer comme resolu",
       "quick_contact": {
         "title": "Creer un contact",
         "branch": "Branche",
@@ -2789,7 +2791,30 @@
       "prompt_help": "Laissez vide pour utiliser le prompt par defaut de Clara",
       "prompt_placeholder": "Entrez un prompt personnalise pour Clara sur WhatsApp...",
       "auto_resume": "Reprise automatique",
-      "auto_resume_help": "Clara reprend automatiquement apres ce delai si un admin prend la main"
+      "auto_resume_help": "Clara reprend automatiquement apres ce delai si un admin prend la main",
+      "tabs": {
+        "general": "General",
+        "schedule": "Horaires",
+        "prompt": "Prompt"
+      },
+      "schedule_enabled": "Activer les horaires",
+      "schedule_help": "Definir quand Clara est active. Desactive = 24/7",
+      "schedule_title": "Horaires par jour",
+      "schedule_start": "Debut",
+      "schedule_end": "Fin",
+      "apply_to_all": "Appliquer a tous",
+      "active_branches": "Branches actives",
+      "active_branches_help": "Selectionner les branches. Vide = toutes",
+      "all_branches": "Toutes les branches",
+      "days": {
+        "sunday": "Dimanche",
+        "monday": "Lundi",
+        "tuesday": "Mardi",
+        "wednesday": "Mercredi",
+        "thursday": "Jeudi",
+        "friday": "Vendredi",
+        "saturday": "Samedi"
+      }
     }
   }
 }

@@ -1026,6 +1026,53 @@ export const getOrderDetails = tool({
 })
 
 // ============================================
+// TOOL WhatsApp : Escalade vers humain
+// ============================================
+
+/**
+ * Factory: crée un tool escalateToHuman avec le conversationId en closure.
+ * Clara appelle ce tool quand elle ne peut pas aider et a besoin d'un humain.
+ * Ça met needs_human=true sur la conversation → pastille spéciale dans l'UI admin.
+ */
+export function createEscalateToHumanTool(conversationId: string) {
+  return tool({
+    description: `Flag this conversation as needing human attention. Use this tool when:
+- You cannot answer a question or help the customer
+- The customer explicitly asks to speak to a human / staff member
+- The situation requires human judgment (complaints, special requests, complex issues)
+- You are unsure about something important (pricing, availability edge case, etc.)
+
+When you call this tool, the admin team will see a special notification badge on this conversation.
+After calling this tool, let the customer know that a team member will follow up shortly.`,
+    inputSchema: z.object({
+      reason: z.string().describe('Brief reason why human attention is needed (e.g., "Customer wants to speak to manager", "Complex pricing question I cannot answer")'),
+    }),
+    execute: async ({ reason }) => {
+      console.log('[Tool:escalateToHuman] Flagging conversation', conversationId, 'reason:', reason)
+
+      const { error } = await supabase
+        .from('whatsapp_conversations')
+        .update({
+          needs_human: true,
+          needs_human_reason: reason,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', conversationId)
+
+      if (error) {
+        console.error('[Tool:escalateToHuman] Error:', error)
+        return { success: false, error: error.message }
+      }
+
+      return {
+        success: true,
+        message: 'Conversation flagged for human attention. The admin team will be notified.',
+      }
+    },
+  })
+}
+
+// ============================================
 // Export des tools par contexte
 // ============================================
 
@@ -1036,6 +1083,16 @@ export const publicTools = {
   simulateBooking,
   getEventRooms,
   generateBookingLink,
+}
+
+/**
+ * Create WhatsApp-specific tools that include escalateToHuman with conversation context.
+ */
+export function createWhatsAppTools(conversationId: string) {
+  return {
+    ...publicTools,
+    escalateToHuman: createEscalateToHumanTool(conversationId),
+  }
 }
 
 export const crmTools = {

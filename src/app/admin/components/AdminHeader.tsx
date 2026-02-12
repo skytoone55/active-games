@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, memo, useCallback, startTransition } from 'react'
-import { LogOut, User, ChevronDown, Sun, Moon, Users, Calendar, Menu, X, ShoppingCart, Shield, Globe, FileText, Lock, Crown, Settings, Trash2, BarChart3, Phone, MessageCircle } from 'lucide-react'
+import { LogOut, User, ChevronDown, Sun, Moon, Users, Calendar, Menu, X, ShoppingCart, Shield, Globe, FileText, Lock, Crown, Settings, Trash2, BarChart3, Phone, MessageCircle, HandHelping } from 'lucide-react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
@@ -11,6 +11,7 @@ import { BranchSelector } from './BranchSelector'
 import { usePendingOrdersCount, useUnseenAbortedOrdersCount } from '@/hooks/useOrders'
 import { useUnreadContactRequestsCount } from '@/hooks/useContactRequests'
 import { useUnreadChatsCount } from '@/hooks/useUnreadChatsCount'
+import { useNeedsHumanCount } from '@/hooks/useNeedsHumanCount'
 import { useUserPermissions } from '@/hooks/useUserPermissions'
 import { useTranslation } from '@/contexts/LanguageContext'
 import type { Locale } from '@/i18n'
@@ -97,6 +98,10 @@ function AdminHeaderComponent({
   // Compteur de conversations non lues WhatsApp + Messenger (badge sur Chat)
   const unreadChatsCount = useUnreadChatsCount(branches)
   const hasUnreadChats = unreadChatsCount > 0
+
+  // Compteur de conversations WhatsApp nécessitant un humain (pastille orange sur Chat)
+  const needsHumanCount = useNeedsHumanCount(branches)
+  const hasNeedsHuman = needsHumanCount > 0
 
   // Construire le nom complet à partir du profil
   const getUserDisplayName = () => {
@@ -271,6 +276,12 @@ function AdminHeaderComponent({
               {hasUnreadChats && (
                 <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold min-w-[20px] h-5 px-1 rounded-full flex items-center justify-center animate-pulse shadow-lg">
                   {unreadChatsCount > 9 ? '9+' : unreadChatsCount}
+                </span>
+              )}
+              {hasNeedsHuman && (
+                <span className={`absolute ${hasUnreadChats ? '-bottom-1' : '-top-1'} -left-1 bg-orange-500 text-white text-[10px] font-bold h-5 px-1 rounded-full flex items-center justify-center animate-pulse shadow-lg gap-0.5`}>
+                  <HandHelping className="w-3 h-3" />
+                  {needsHumanCount > 1 ? needsHumanCount : ''}
                 </span>
               )}
             </Link>
@@ -661,11 +672,19 @@ function AdminHeaderComponent({
                 >
                   <MessageCircle className="w-4 h-4" />
                   <span>{t('admin.header.chat')}</span>
-                  {hasUnreadChats && (
-                    <span className="bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full animate-pulse ml-auto">
-                      {unreadChatsCount > 9 ? '9+' : unreadChatsCount}
-                    </span>
-                  )}
+                  <span className="flex items-center gap-1 ml-auto">
+                    {hasNeedsHuman && (
+                      <span className="bg-orange-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full animate-pulse flex items-center gap-0.5">
+                        <HandHelping className="w-3 h-3" />
+                        {needsHumanCount}
+                      </span>
+                    )}
+                    {hasUnreadChats && (
+                      <span className="bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full animate-pulse">
+                        {unreadChatsCount > 9 ? '9+' : unreadChatsCount}
+                      </span>
+                    )}
+                  </span>
                 </Link>
               )}
               {hasPermission('calls', 'can_view') && (

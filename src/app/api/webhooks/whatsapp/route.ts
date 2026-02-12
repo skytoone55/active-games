@@ -18,7 +18,7 @@ import {
   getPublicSystemPrompt,
 } from '@/lib/clara/service'
 import { streamLLMResponse, convertToAIMessages, truncateHistory, createLLMOptionsFromSettings } from '@/lib/clara/llm-provider'
-import { publicTools } from '@/lib/clara/tools'
+import { createWhatsAppTools } from '@/lib/clara/tools'
 
 // Normalize phone: 972XXXXXXXXX -> 0XXXXXXXXX (Israeli format)
 function normalizePhone(phone: string): string {
@@ -425,7 +425,34 @@ export async function POST(request: NextRequest) {
           }
         }
 
-        if (claraWhatsAppConfig?.enabled && isOnboardingDone && isNotWaiting && !claraPaused && !isNewConversation && messageText && messageText !== `[${messageType}]`) {
+        // Check schedule (Israel timezone)
+        let outsideSchedule = false
+        if (claraWhatsAppConfig?.schedule_enabled && claraWhatsAppConfig?.schedule) {
+          const israelNow = new Date().toLocaleString('en-US', { timeZone: 'Asia/Jerusalem' })
+          const israelDate = new Date(israelNow)
+          const dayName = israelDate.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase()
+          const currentTime = israelDate.toTimeString().slice(0, 5) // "HH:MM"
+          const daySchedule = claraWhatsAppConfig.schedule[dayName]
+
+          if (!daySchedule?.enabled) {
+            outsideSchedule = true
+            console.log(`[WHATSAPP CLARA] Skipping — day ${dayName} is disabled`)
+          } else if (currentTime < daySchedule.start || currentTime >= daySchedule.end) {
+            outsideSchedule = true
+            console.log(`[WHATSAPP CLARA] Skipping — outside schedule (${currentTime} not in ${daySchedule.start}-${daySchedule.end})`)
+          }
+        }
+
+        // Check active branches
+        let branchInactive = false
+        if (claraWhatsAppConfig?.active_branches?.length > 0 && conversation.branch_id) {
+          if (!claraWhatsAppConfig.active_branches.includes(conversation.branch_id)) {
+            branchInactive = true
+            console.log(`[WHATSAPP CLARA] Skipping — branch ${conversation.branch_id} not in active branches`)
+          }
+        }
+
+        if (claraWhatsAppConfig?.enabled && isOnboardingDone && isNotWaiting && !claraPaused && !outsideSchedule && !branchInactive && !isNewConversation && messageText && messageText !== `[${messageType}]`) {
           try {
             await handleClaraWhatsApp(
               supabase, conversation, senderPhone, messageText,
@@ -699,7 +726,7 @@ async function handleClaraWhatsApp(
     model,
     maxTokens: globalSettings.max_tokens || 4096,
     temperature,
-    tools: publicTools,
+    tools: createWhatsAppTools(conversation.id),
   })
 
   // Collect full response (no streaming for WhatsApp — we send the complete message)

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback, useTransition } from 'react'
-import { MessageCircle, Send, Search, Phone, User, ArrowLeft, Loader2, Filter, UserPlus, Globe, Bot, Archive, X, Smile, Trash2, EyeOff, Plus, Zap, Settings2, Sparkles } from 'lucide-react'
+import { MessageCircle, Send, Search, Phone, User, ArrowLeft, Loader2, Filter, UserPlus, Globe, Bot, Archive, X, Smile, Trash2, EyeOff, Plus, Zap, Settings2, Sparkles, HandHelping, CheckCircle } from 'lucide-react'
 import dynamic from 'next/dynamic'
 import { Theme as EmojiTheme } from 'emoji-picker-react'
 
@@ -31,6 +31,8 @@ interface WhatsAppConversation {
   onboarding_data: Record<string, string> | null
   clara_paused: boolean | null
   clara_paused_until: string | null
+  needs_human: boolean | null
+  needs_human_reason: string | null
   status: string
   last_message_at: string
   unread_count: number
@@ -191,6 +193,7 @@ export default function ChatPage() {
   const [savingShortcut, setSavingShortcut] = useState(false)
   const [editingShortcutId, setEditingShortcutId] = useState<string | null>(null)
   const [togglingClara, setTogglingClara] = useState(false)
+  const [resolvingHuman, setResolvingHuman] = useState(false)
 
   const isLoading = adminLoading || permissionsLoading || !user
 
@@ -668,6 +671,30 @@ export default function ChatPage() {
     }
   }
 
+  const handleResolveHuman = async () => {
+    if (!selectedWaConv || resolvingHuman) return
+    setResolvingHuman(true)
+    try {
+      const res = await fetch(`/api/chat/conversations/${selectedWaConv.id}/resolve-human`, {
+        method: 'POST',
+      })
+      const data = await res.json()
+      if (data.success) {
+        const updated = {
+          ...selectedWaConv,
+          needs_human: false,
+          needs_human_reason: null,
+        }
+        setSelectedWaConv(updated)
+        setWaConversations(prev => prev.map(c => c.id === updated.id ? { ...c, ...updated } : c))
+      }
+    } catch (error) {
+      console.error('Error resolving human escalation:', error)
+    } finally {
+      setResolvingHuman(false)
+    }
+  }
+
   // ============================================================
   // Messenger actions
   // ============================================================
@@ -1033,11 +1060,21 @@ export default function ChatPage() {
                             </span>
                           )}
                         </div>
-                        {conv.unread_count > 0 && (
-                          <span className="bg-green-500 text-white text-xs font-bold min-w-[20px] h-5 px-1.5 rounded-full flex items-center justify-center flex-shrink-0 ml-2">
-                            {conv.unread_count}
-                          </span>
-                        )}
+                        <div className="flex items-center gap-1.5 flex-shrink-0 ml-2">
+                          {conv.needs_human && (
+                            <span
+                              className="flex items-center gap-1 bg-orange-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full animate-pulse"
+                              title={conv.needs_human_reason || (t('admin.chat.needs_human') || 'Needs human')}
+                            >
+                              <HandHelping className="w-3 h-3" />
+                            </span>
+                          )}
+                          {conv.unread_count > 0 && (
+                            <span className="bg-green-500 text-white text-xs font-bold min-w-[20px] h-5 px-1.5 rounded-full flex items-center justify-center">
+                              {conv.unread_count}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -1218,6 +1255,27 @@ export default function ChatPage() {
                     )}
                   </div>
                 </div>
+                {/* Human escalation badge */}
+                {selectedWaConv.needs_human && (
+                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-orange-500/20 ring-1 ring-orange-500/40">
+                    <HandHelping className="w-4 h-4 text-orange-400 animate-pulse" />
+                    <span className="text-xs text-orange-300 max-w-[150px] truncate" title={selectedWaConv.needs_human_reason || ''}>
+                      {selectedWaConv.needs_human_reason || (t('admin.chat.needs_human') || 'Needs human')}
+                    </span>
+                    <button
+                      onClick={handleResolveHuman}
+                      disabled={resolvingHuman}
+                      className="p-1 rounded-full hover:bg-orange-500/30 text-orange-300 hover:text-white transition-colors disabled:opacity-50"
+                      title={t('admin.chat.resolve_human') || 'Mark as resolved'}
+                    >
+                      {resolvingHuman ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <CheckCircle className="w-3.5 h-3.5" />
+                      )}
+                    </button>
+                  </div>
+                )}
                 {/* Clara AI toggle */}
                 <button
                   onClick={handleToggleClara}
