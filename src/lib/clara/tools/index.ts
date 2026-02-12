@@ -381,8 +381,8 @@ This tool will tell you if the slot is really available or not, and suggest alte
           maxOccupancy = Math.max(maxOccupancy, existingParticipants)
 
           if (totalParticipants > maxPlayers) {
-            // Trouver des alternatives
-            const alternatives = await findAlternativeSlots(branchId, date, participants, 'ACTIVE', settings)
+            // Trouver des alternatives via le vrai availability-checker
+            const alternatives = await findAlternativeSlots(branchId, date, time, participants, gameArea || 'ACTIVE', numGames)
             return {
               available: false,
               reason: 'capacity_exceeded',
@@ -450,7 +450,7 @@ This tool will tell you if the slot is really available or not, and suggest alte
             })
 
             if (!allocation || allocation.roomIds.length === 0) {
-              const alternatives = await findAlternativeSlots(branchId, date, participants, 'LASER', settings)
+              const alternatives = await findAlternativeSlots(branchId, date, time, participants, gameArea || 'LASER', numGames)
               return {
                 available: false,
                 reason: 'laser_room_unavailable',
@@ -646,32 +646,40 @@ function getNextOpenDays(fromDate: string, openingHours: Record<string, { open: 
   return result
 }
 
-// Helper: trouver des créneaux alternatifs
+// Helper: trouver des créneaux alternatifs (utilise le vrai availability-checker)
 async function findAlternativeSlots(
   branchId: string,
   date: string,
+  time: string,
   participants: number,
-  gameArea: 'ACTIVE' | 'LASER',
-  settings: Record<string, unknown>
-): Promise<string[]> {
-  const alternatives: string[] = []
-  const testTimes = ['10:00', '11:00', '12:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00']
+  gameArea: 'ACTIVE' | 'LASER' | 'MIX',
+  numberOfGames: number
+): Promise<{
+  beforeSlot: string | null
+  afterSlot: string | null
+  sameTimeOtherDays: Array<{ date: string; dayName: string }>
+}> {
+  try {
+    const { checkAvailability: realCheck } = await import('@/lib/availability-checker')
+    const result = await realCheck({
+      branchId,
+      date,
+      time,
+      participants,
+      type: 'GAME',
+      gameArea: gameArea as 'ACTIVE' | 'LASER' | 'MIX',
+      numberOfGames
+    })
 
-  // Pour simplifier, retourner quelques suggestions
-  // Une vraie implémentation testerait chaque créneau
-  const openingHours = settings.opening_hours as Record<string, { open: string; close: string }> | null
-  const dayOfWeek = new Date(date).toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase()
-  const dayHours = openingHours?.[dayOfWeek]
-
-  if (dayHours) {
-    for (const t of testTimes) {
-      if (t >= dayHours.open && t < dayHours.close && alternatives.length < 3) {
-        alternatives.push(t)
-      }
+    // Si le vrai checker a trouvé des alternatives, les retourner
+    if (result.alternatives) {
+      return result.alternatives
     }
+  } catch (err) {
+    console.error('[findAlternativeSlots] Error calling availability-checker:', err)
   }
 
-  return alternatives
+  return { beforeSlot: null, afterSlot: null, sameTimeOtherDays: [] }
 }
 
 /**
