@@ -10,6 +10,15 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
+import {
+  getClaraSettings,
+  getOrCreatePublicConversation,
+  getPublicMessages,
+  addPublicMessage,
+  getPublicSystemPrompt,
+} from '@/lib/clara/service'
+import { streamLLMResponse, convertToAIMessages, truncateHistory, createLLMOptionsFromSettings } from '@/lib/clara/llm-provider'
+import { publicTools } from '@/lib/clara/tools'
 
 // Normalize phone: 972XXXXXXXXX -> 0XXXXXXXXX (Israeli format)
 function normalizePhone(phone: string): string {
@@ -367,13 +376,15 @@ export async function POST(request: NextRequest) {
             status: 'delivered',
           })
 
-        // 3. Onboarding flow / auto-reply
+        // 3. Onboarding flow / auto-reply / Clara AI
+        const claraWhatsAppConfig = msSettings?.settings?.whatsapp_clara
         try {
           if (hasEnabledSteps) {
             await handleOnboarding(
               supabase, conversation, senderPhone, isNewConversation,
               messageText, buttonReplyId, onboardingConfig, onboardingLang
             )
+            // After onboarding just completed, Clara does NOT reply yet (welcome message was just sent)
           } else if (isNewConversation && legacyAutoReply?.enabled && legacyAutoReply?.message) {
             // Legacy auto-reply fallback (plain text)
             let replyText = ''
@@ -390,6 +401,23 @@ export async function POST(request: NextRequest) {
           }
         } catch (onboardingError) {
           console.error('[WHATSAPP] Onboarding/auto-reply error:', onboardingError)
+        }
+
+        // 4. Clara AI — responds after onboarding is completed
+        // Re-read conversation to get the latest onboarding_status (it may have changed during handleOnboarding)
+        const currentStatus = conversation.onboarding_status
+        const isOnboardingDone = !hasEnabledSteps || currentStatus === 'completed' || currentStatus === null
+        const isNotWaiting = !currentStatus?.startsWith('waiting:')
+
+        if (claraWhatsAppConfig?.enabled && isOnboardingDone && isNotWaiting && !isNewConversation && messageText && messageText !== `[${messageType}]`) {
+          try {
+            await handleClaraWhatsApp(
+              supabase, conversation, senderPhone, messageText,
+              claraWhatsAppConfig, onboardingLang
+            )
+          } catch (claraErr) {
+            console.error('[WHATSAPP] Clara error (non-blocking):', claraErr)
+          }
         }
       }
     }
@@ -557,5 +585,129 @@ async function handleOnboarding(
     return
   }
 
-  // --- COMPLETED or NULL: no onboarding action ---
+  // --- COMPLETED or NULL: Clara AI handles conversation ---
+}
+
+// ============================================================
+// Clara AI for WhatsApp
+// ============================================================
+async function handleClaraWhatsApp(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: any,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  conversation: any,
+  senderPhone: string,
+  messageText: string,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  claraConfig: any,
+  language: string
+) {
+  console.log('[WHATSAPP CLARA] Processing message from', senderPhone, ':', messageText.substring(0, 100))
+
+  // Get Clara settings (global)
+  const globalSettings = await getClaraSettings()
+  if (!globalSettings.enabled) {
+    console.log('[WHATSAPP CLARA] Clara globally disabled, skipping')
+    return
+  }
+
+  // Use WhatsApp-specific model/temperature if set, otherwise global
+  const model = claraConfig.model || globalSettings.model
+  const temperature = claraConfig.temperature ?? globalSettings.temperature
+  const provider = model.startsWith('gpt') ? 'openai' : model.startsWith('claude') ? 'anthropic' : 'gemini'
+
+  // Get or create Clara conversation for this WhatsApp thread
+  // Use whatsapp conversation ID as session to keep context
+  const claraConv = await getOrCreatePublicConversation(
+    `whatsapp:${conversation.id}`,
+    conversation.branch_id || undefined,
+    { locale: language }
+  )
+
+  // Save user message to Clara conversation
+  await addPublicMessage(claraConv.id, 'user', messageText)
+
+  // Get conversation history
+  const messages = await getPublicMessages(claraConv.id, 150)
+  const aiMessages = convertToAIMessages(messages)
+  const truncatedMessages = truncateHistory(aiMessages, 50000)
+
+  // Build system prompt
+  let systemPrompt = ''
+  if (claraConfig.prompt && claraConfig.prompt.trim()) {
+    // Custom WhatsApp prompt
+    systemPrompt = claraConfig.prompt
+  } else {
+    // Default Clara public prompt
+    systemPrompt = await getPublicSystemPrompt()
+  }
+
+  // Add WhatsApp-specific instructions
+  systemPrompt += `\n\n## WHATSAPP CONTEXT
+- This is a WhatsApp conversation. Keep responses concise (max 300 words).
+- Do NOT use markdown formatting (no **, no #, no bullet points with *). Use plain text only.
+- Use line breaks for readability.
+- The user's language is: ${language === 'he' ? 'Hebrew' : language === 'fr' ? 'French' : 'English'}.
+- Respond in the same language as the user's message.`
+
+  // Load FAQ if enabled
+  if (claraConfig.faq_enabled) {
+    try {
+      const { data: faqs } = await supabase
+        .from('messenger_faq')
+        .select('question, answer')
+        .eq('is_active', true)
+        .order('order_index')
+
+      if (faqs && faqs.length > 0) {
+        systemPrompt += '\n\n## FAQ\n'
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        faqs.forEach((faq: any) => {
+          const q = faq.question?.[language] || faq.question?.he || faq.question?.fr || faq.question?.en || ''
+          const a = faq.answer?.[language] || faq.answer?.he || faq.answer?.fr || faq.answer?.en || ''
+          if (q && a) {
+            systemPrompt += `Q: ${q}\nA: ${a}\n\n`
+          }
+        })
+      }
+    } catch (faqErr) {
+      console.error('[WHATSAPP CLARA] FAQ load error (non-blocking):', faqErr)
+    }
+  }
+
+  // Call LLM
+  const result = await streamLLMResponse({
+    messages: truncatedMessages,
+    systemPrompt,
+    provider: provider as 'gemini' | 'openai' | 'anthropic',
+    model,
+    maxTokens: globalSettings.max_tokens || 4096,
+    temperature,
+    tools: publicTools,
+  })
+
+  // Collect full response (no streaming for WhatsApp — we send the complete message)
+  let fullResponse = ''
+  for await (const part of result.fullStream) {
+    if (part.type === 'text-delta') {
+      const textContent = (part as { text?: string }).text
+      if (textContent) {
+        fullResponse += textContent
+      }
+    } else if (part.type === 'tool-call') {
+      console.log('[WHATSAPP CLARA] Tool call:', (part as { toolName?: string }).toolName)
+    }
+  }
+
+  if (fullResponse.trim()) {
+    // Save assistant response to Clara conversation
+    await addPublicMessage(claraConv.id, 'assistant', fullResponse)
+
+    // Send via WhatsApp
+    const waId = await sendTextMessage(senderPhone, fullResponse)
+    await storeOutboundMessage(supabase, conversation.id, fullResponse, 'text', waId)
+    console.log('[WHATSAPP CLARA] Reply sent to', senderPhone, ':', fullResponse.substring(0, 100))
+  } else {
+    console.warn('[WHATSAPP CLARA] Empty response from LLM for message:', messageText)
+  }
 }

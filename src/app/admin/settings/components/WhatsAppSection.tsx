@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useTranslation } from '@/contexts/LanguageContext'
 import { useAdmin } from '@/contexts/AdminContext'
 import {
-  Loader2, Save, Plus, Trash2, MessageCircle, ChevronUp, ChevronDown
+  Loader2, Save, Plus, Trash2, MessageCircle, ChevronUp, ChevronDown, Sparkles, BookOpen
 } from 'lucide-react'
 import type { MessengerSettings } from '@/types/messenger'
 
@@ -41,6 +41,32 @@ interface WhatsAppOnboardingConfig {
   welcome_message_enabled: boolean
   welcome_message: MultilingualText
 }
+
+interface WhatsAppClaraConfig {
+  enabled: boolean
+  prompt: string
+  temperature: number
+  model: string
+  faq_enabled: boolean
+}
+
+const DEFAULT_CLARA_CONFIG: WhatsAppClaraConfig = {
+  enabled: false,
+  prompt: '',
+  temperature: 0.7,
+  model: 'gemini-2.0-flash-lite',
+  faq_enabled: false,
+}
+
+const AVAILABLE_MODELS = [
+  { id: 'gemini-2.0-flash-lite', name: 'Gemini 2.0 Flash Lite', provider: 'Google' },
+  { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash', provider: 'Google' },
+  { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro', provider: 'Google' },
+  { id: 'gpt-4o-mini', name: 'GPT-4o Mini', provider: 'OpenAI' },
+  { id: 'gpt-4o', name: 'GPT-4o', provider: 'OpenAI' },
+  { id: 'claude-3-5-haiku-latest', name: 'Claude 3.5 Haiku', provider: 'Anthropic' },
+  { id: 'claude-sonnet-4-20250514', name: 'Claude Sonnet 4', provider: 'Anthropic' },
+]
 
 const emptyMultilingual = (): MultilingualText => ({ fr: '', en: '', he: '' })
 
@@ -131,6 +157,7 @@ export function WhatsAppSection({ isDark }: WhatsAppSectionProps) {
   const [saving, setSaving] = useState(false)
   const [settings, setSettings] = useState<MessengerSettings | null>(null)
   const [config, setConfig] = useState<WhatsAppOnboardingConfig>(DEFAULT_CONFIG)
+  const [claraConfig, setClaraConfig] = useState<WhatsAppClaraConfig>(DEFAULT_CLARA_CONFIG)
   const [activeLocale, setActiveLocale] = useState<Locale>((locale as Locale) || 'fr')
 
   useEffect(() => {
@@ -146,6 +173,10 @@ export function WhatsAppSection({ isDark }: WhatsAppSectionProps) {
         const saved = data.data.settings?.whatsapp_onboarding
         if (saved) {
           setConfig(migrateConfig(saved))
+        }
+        const savedClara = data.data.settings?.whatsapp_clara
+        if (savedClara) {
+          setClaraConfig({ ...DEFAULT_CLARA_CONFIG, ...savedClara })
         }
       }
     } catch (error) {
@@ -164,6 +195,7 @@ export function WhatsAppSection({ isDark }: WhatsAppSectionProps) {
         settings: {
           ...settings.settings,
           whatsapp_onboarding: config,
+          whatsapp_clara: claraConfig,
         }
       }
       const res = await fetch('/api/admin/messenger/settings', {
@@ -699,6 +731,143 @@ export function WhatsAppSection({ isDark }: WhatsAppSectionProps) {
           </div>
         </>
       )}
+
+      {/* ============================================================ */}
+      {/* Clara AI Section */}
+      {/* ============================================================ */}
+      <div className={`mt-8 pt-8 border-t ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
+        <div className="flex items-center gap-3 mb-6">
+          <Sparkles className={`w-6 h-6 ${isDark ? 'text-purple-400' : 'text-purple-600'}`} />
+          <div>
+            <h2 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+              Clara AI
+            </h2>
+            <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+              {t('whatsapp.clara.subtitle') || "Assistant IA qui repond automatiquement sur WhatsApp apres l'onboarding"}
+            </p>
+          </div>
+        </div>
+
+        {/* Toggle Clara */}
+        <div className="p-6 rounded-lg border" style={cardStyle}>
+          <div className="flex items-center justify-between">
+            <div>
+              <label className={`block font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                {t('whatsapp.clara.enabled') || "Activer Clara sur WhatsApp"}
+              </label>
+              <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                {t('whatsapp.clara.enabled_help') || "Clara repond automatiquement aux messages apres le onboarding"}
+              </p>
+            </div>
+            <button
+              onClick={() => setClaraConfig(prev => ({ ...prev, enabled: !prev.enabled }))}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                claraConfig.enabled ? 'bg-purple-600' : isDark ? 'bg-gray-700' : 'bg-gray-200'
+              }`}
+            >
+              <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                claraConfig.enabled ? 'translate-x-6' : 'translate-x-1'
+              }`} />
+            </button>
+          </div>
+        </div>
+
+        {claraConfig.enabled && (
+          <div className="space-y-4 mt-4">
+            {/* Model & Temperature */}
+            <div className="p-6 rounded-lg border" style={cardStyle}>
+              <h3 className={`font-semibold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                {t('whatsapp.clara.model_settings') || "Modele IA"}
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Model selector */}
+                <div>
+                  <label className={`block text-sm font-medium mb-1 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                    {t('whatsapp.clara.model') || "Modele"}
+                  </label>
+                  <select
+                    value={claraConfig.model}
+                    onChange={(e) => setClaraConfig(prev => ({ ...prev, model: e.target.value }))}
+                    className="w-full px-3 py-2 rounded-lg border text-sm"
+                    style={inputStyle}
+                  >
+                    {AVAILABLE_MODELS.map(m => (
+                      <option key={m.id} value={m.id}>
+                        {m.name} ({m.provider})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Temperature */}
+                <div>
+                  <label className={`block text-sm font-medium mb-1 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                    {t('whatsapp.clara.temperature') || "Temperature"} : {claraConfig.temperature}
+                  </label>
+                  <input
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.1"
+                    value={claraConfig.temperature}
+                    onChange={(e) => setClaraConfig(prev => ({ ...prev, temperature: parseFloat(e.target.value) }))}
+                    className="w-full accent-purple-600"
+                  />
+                  <div className={`flex justify-between text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                    <span>{t('whatsapp.clara.precise') || "Precis"}</span>
+                    <span>{t('whatsapp.clara.creative') || "Creatif"}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* FAQ Toggle */}
+            <div className="p-6 rounded-lg border" style={cardStyle}>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <BookOpen className={`w-5 h-5 ${isDark ? 'text-blue-400' : 'text-blue-600'}`} />
+                  <div>
+                    <label className={`block font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                      {t('whatsapp.clara.faq_enabled') || "Activer la FAQ"}
+                    </label>
+                    <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                      {t('whatsapp.clara.faq_help') || "Clara utilise la meme FAQ que le Messenger pour repondre aux questions"}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setClaraConfig(prev => ({ ...prev, faq_enabled: !prev.faq_enabled }))}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                    claraConfig.faq_enabled ? 'bg-blue-600' : isDark ? 'bg-gray-700' : 'bg-gray-200'
+                  }`}
+                >
+                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    claraConfig.faq_enabled ? 'translate-x-6' : 'translate-x-1'
+                  }`} />
+                </button>
+              </div>
+            </div>
+
+            {/* Custom Prompt */}
+            <div className="p-6 rounded-lg border" style={cardStyle}>
+              <h3 className={`font-semibold mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                {t('whatsapp.clara.prompt_title') || "Prompt systeme"}
+              </h3>
+              <p className={`text-sm mb-3 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                {t('whatsapp.clara.prompt_help') || "Instructions personnalisees pour Clara sur WhatsApp. Laissez vide pour utiliser le prompt par defaut."}
+              </p>
+              <textarea
+                rows={8}
+                value={claraConfig.prompt}
+                onChange={(e) => setClaraConfig(prev => ({ ...prev, prompt: e.target.value }))}
+                placeholder={t('whatsapp.clara.prompt_placeholder') || "Ex: Tu es Clara, assistante d'Active Games sur WhatsApp. Tu reponds aux questions des clients et les aides a reserver..."}
+                className="w-full px-3 py-2 rounded-lg border resize-none text-sm font-mono"
+                style={inputStyle}
+              />
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Save button */}
       <button

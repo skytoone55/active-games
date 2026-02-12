@@ -2771,6 +2771,21 @@
       "welcome_placeholder": "Merci ! Un conseiller va vous repondre rapidement.",
       "save": "Enregistrer",
       "saved": "Configuration sauvegardee"
+    },
+    "clara": {
+      "subtitle": "Assistante IA qui repond automatiquement aux messages WhatsApp apres l'onboarding",
+      "enabled": "Activer Clara sur WhatsApp",
+      "enabled_help": "Clara repond automatiquement aux messages apres le flux d'onboarding",
+      "model_settings": "Parametres du modele",
+      "model": "Modele IA",
+      "temperature": "Temperature",
+      "precise": "Precis",
+      "creative": "Creatif",
+      "faq_enabled": "Activer l'acces a la FAQ",
+      "faq_help": "Clara utilisera la FAQ Messenger pour repondre aux questions frequentes",
+      "prompt_title": "Prompt personnalise",
+      "prompt_help": "Laissez vide pour utiliser le prompt par defaut de Clara",
+      "prompt_placeholder": "Entrez un prompt personnalise pour Clara sur WhatsApp..."
     }
   }
 }

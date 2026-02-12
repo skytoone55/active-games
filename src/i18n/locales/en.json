@@ -2707,6 +2707,21 @@
       "welcome_placeholder": "Thanks! A team member will respond shortly.",
       "save": "Save",
       "saved": "Configuration saved"
+    },
+    "clara": {
+      "subtitle": "AI assistant that automatically replies to WhatsApp messages after onboarding",
+      "enabled": "Enable Clara on WhatsApp",
+      "enabled_help": "Clara automatically responds to messages after the onboarding flow",
+      "model_settings": "Model settings",
+      "model": "AI Model",
+      "temperature": "Temperature",
+      "precise": "Precise",
+      "creative": "Creative",
+      "faq_enabled": "Enable FAQ access",
+      "faq_help": "Clara will use the Messenger FAQ to answer common questions",
+      "prompt_title": "Custom prompt",
+      "prompt_help": "Leave empty to use Clara's default prompt",
+      "prompt_placeholder": "Enter a custom prompt for Clara on WhatsApp..."
     }
   }
 }
