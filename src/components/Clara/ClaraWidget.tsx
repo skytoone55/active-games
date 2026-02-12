@@ -3,6 +3,14 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { X, Send, Loader2, ChevronDown, Plus, Minus, RefreshCw, ExternalLink } from 'lucide-react'
+import { createClient } from '@supabase/supabase-js'
+
+// Supabase client for realtime (public anon key)
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+const supabaseClient = supabaseUrl && supabaseAnonKey
+  ? createClient(supabaseUrl, supabaseAnonKey)
+  : null
 
 interface ChatMessage {
   id: string
@@ -387,6 +395,7 @@ export function ClaraWidget({
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [conversationId, setConversationId] = useState<string | null>(null)
+  const [isDisabled, setIsDisabled] = useState(false) // messenger disabled by admin
 
   const chatContainerRef = useRef<HTMLDivElement>(null)
   const chatEndRef = useRef<HTMLDivElement>(null)
@@ -410,6 +419,18 @@ export function ClaraWidget({
     } catch (error) {
       console.error('[Clara] Error loading conversation history:', error)
     }
+  }, [])
+
+  // Check if messenger is enabled on mount
+  useEffect(() => {
+    fetch('/api/public/messenger/status')
+      .then(res => res.json())
+      .then(data => {
+        if (data.active === false) {
+          setIsDisabled(true)
+        }
+      })
+      .catch(() => { /* ignore errors, show widget by default */ })
   }, [])
 
   // Initialiser le session ID et la taille de police côté client
@@ -478,6 +499,9 @@ export function ClaraWidget({
           }
         ])
         console.log('[Clara] First message set:', data.firstMessage)
+      } else if (data.error === 'messenger_disabled') {
+        console.log('[Clara] Messenger is disabled by admin')
+        setIsDisabled(true)
       } else {
         console.error('[Clara] API returned error:', data.error)
       }
@@ -584,6 +608,44 @@ export function ClaraWidget({
     }
   }, [isOpen, sessionId, conversationId, startConversation])
 
+  // Realtime subscription for agent messages (so user sees agent replies immediately)
+  useEffect(() => {
+    if (!conversationId || !supabaseClient) return
+
+    const channel = supabaseClient
+      .channel(`messenger_agent_${conversationId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'messenger_messages',
+          filter: `conversation_id=eq.${conversationId}`,
+        },
+        (payload) => {
+          const newMsg = payload.new as { id: string; role: string; content: string; metadata?: Record<string, unknown> }
+          // Only process agent-sent assistant messages (to avoid duplicating engine-sent messages)
+          if (newMsg.role === 'assistant' && newMsg.metadata && (newMsg.metadata as Record<string, unknown>).sent_by === 'agent') {
+            setMessages((prev) => {
+              // Avoid duplicates
+              if (prev.some(m => m.id === newMsg.id)) return prev
+              return [...prev, {
+                id: newMsg.id,
+                role: 'assistant' as const,
+                content: newMsg.content,
+                isStreaming: false,
+              }]
+            })
+          }
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabaseClient.removeChannel(channel)
+    }
+  }, [conversationId])
+
   // Direction RTL pour l'hébreu
   const isRTL = locale === 'he'
 
@@ -656,6 +718,9 @@ export function ClaraWidget({
     setShowQuickReplies(true)
     setInput('')
   }, [resetChat])
+
+  // Don't render the widget if messenger is disabled by admin
+  if (isDisabled) return null
 
   return (
     <>

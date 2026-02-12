@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { startConversation } from '@/lib/messenger/engine'
+import { createServiceRoleClient } from '@/lib/supabase/service-role'
 
 /**
  * POST /api/messenger/start
@@ -15,6 +16,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { success: false, error: 'sessionId is required' },
         { status: 400 }
+      )
+    }
+
+    // Check if messenger is active
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const supabase = createServiceRoleClient() as any
+    const { data: msSettings } = await supabase
+      .from('messenger_settings')
+      .select('is_active')
+      .single()
+
+    if (msSettings && msSettings.is_active === false) {
+      return NextResponse.json(
+        { success: false, error: 'messenger_disabled' },
+        { status: 403 }
       )
     }
 

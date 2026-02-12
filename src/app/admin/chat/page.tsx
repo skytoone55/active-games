@@ -199,6 +199,9 @@ export default function ChatPage() {
   const [resolvingHuman, setResolvingHuman] = useState(false)
   const [togglingMsClara, setTogglingMsClara] = useState(false)
   const [resolvingMsHuman, setResolvingMsHuman] = useState(false)
+  const [newMsMessage, setNewMsMessage] = useState('')
+  const [msSending, setMsSending] = useState(false)
+  const msInputRef = useRef<HTMLTextAreaElement>(null)
 
   const isLoading = adminLoading || permissionsLoading || !user
 
@@ -740,6 +743,33 @@ export default function ChatPage() {
       console.error('Error resolving Messenger human escalation:', error)
     } finally {
       setResolvingMsHuman(false)
+    }
+  }
+
+  // Send message to Messenger conversation (agent reply)
+  const handleSendMsMessage = async () => {
+    if (!newMsMessage.trim() || !selectedMsConv || msSending) return
+    setMsSending(true)
+    try {
+      const res = await fetch('/api/chat/messenger-conversations/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          conversationId: selectedMsConv.id,
+          message: newMsMessage.trim(),
+        }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        setNewMsMessage('')
+        if (msInputRef.current) msInputRef.current.style.height = 'auto'
+        fetchMsMessages(selectedMsConv.id)
+        msInputRef.current?.focus()
+      }
+    } catch (error) {
+      console.error('Error sending Messenger message:', error)
+    } finally {
+      setMsSending(false)
     }
   }
 
@@ -1695,11 +1725,49 @@ export default function ChatPage() {
                 <div ref={messagesEndRef} />
               </div>
 
-              {/* Read-only notice for site conversations */}
-              <div className={`px-4 py-3 border-t text-center text-sm ${
-                isDark ? 'border-gray-700 bg-gray-800 text-gray-500' : 'border-gray-200 bg-gray-50 text-gray-400'
-              }`}>
-                {t('admin.chat.site_read_only') || 'Site conversations are read-only'}
+              {/* Message input for Messenger conversations */}
+              <div className={`px-3 py-2 border-t ${isDark ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-white'}`}>
+                <div className="flex items-end gap-2">
+                  <textarea
+                    ref={msInputRef}
+                    value={newMsMessage}
+                    onChange={(e) => {
+                      setNewMsMessage(e.target.value)
+                      const textarea = e.target
+                      textarea.style.height = 'auto'
+                      textarea.style.height = `${Math.min(textarea.scrollHeight, 160)}px`
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault()
+                        handleSendMsMessage()
+                      }
+                    }}
+                    placeholder={t('admin.chat.type_message') || 'Type a message...'}
+                    rows={1}
+                    className={`flex-1 px-4 py-2.5 rounded-2xl text-sm resize-none overflow-y-auto ${
+                      isDark
+                        ? 'bg-gray-700 text-white placeholder-gray-400 border-gray-600'
+                        : 'bg-gray-100 text-gray-900 placeholder-gray-400 border-gray-200'
+                    } border focus:outline-none focus:ring-2 focus:ring-blue-500/50`}
+                    style={{ minHeight: '42px', maxHeight: '160px' }}
+                  />
+                  <button
+                    onClick={handleSendMsMessage}
+                    disabled={!newMsMessage.trim() || msSending}
+                    className={`flex-shrink-0 p-2.5 rounded-full transition-colors mb-0.5 ${
+                      newMsMessage.trim() && !msSending
+                        ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                        : isDark ? 'bg-gray-700 text-gray-500' : 'bg-gray-200 text-gray-400'
+                    }`}
+                  >
+                    {msSending ? (
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                    ) : (
+                      <Send className="w-5 h-5" />
+                    )}
+                  </button>
+                </div>
               </div>
             </>
           ) : null}
