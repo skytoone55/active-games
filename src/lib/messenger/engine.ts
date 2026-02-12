@@ -564,13 +564,13 @@ export async function processUserMessage(
         // If not complete, return Clara's message + buttons (if any)
         if (!claraResponse.is_complete) {
           // Safety net: if Clara answered but forgot to re-ask the module question, append it
+          // Use detectedLang (user's language) instead of locale (site language) to avoid mixing languages
           let finalReply = personalizedReply
           if (finalReply && module.content) {
-            const moduleQuestion = module.content[locale] || module.content.he || module.content.fr || module.content.en || ''
-            const questionWords = moduleQuestion.replace(/[?؟]/g, '').trim().split(/\s+/).filter((w: string) => w.length > 2)
-            const replyLower = finalReply.toLowerCase()
-            const containsQuestion = questionWords.length > 0 && questionWords.filter((w: string) => replyLower.includes(w.toLowerCase())).length >= Math.ceil(questionWords.length * 0.5)
-            if (!containsQuestion && moduleQuestion) {
+            const moduleQuestion = module.content[detectedLang] || module.content[locale] || module.content.he || module.content.fr || module.content.en || ''
+            // Check if Clara's reply ends with a question (? or ؟) — if so, she likely already re-asked
+            const endsWithQuestion = /[?؟]\s*$/.test(finalReply.trim())
+            if (!endsWithQuestion && moduleQuestion) {
               finalReply = `${finalReply}\n\n${moduleQuestion}`
             }
           }
