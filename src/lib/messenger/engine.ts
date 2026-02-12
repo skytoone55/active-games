@@ -514,16 +514,6 @@ export async function processUserMessage(
         // Replace variables in Clara's reply ({{firstName}}, {{branch}}, etc.)
         const personalizedReply = claraResponse.reply ? replaceDynamicVariables(claraResponse.reply, updatedData) : ''
 
-        // Enregistrer la réponse de Clara (seulement si non vide)
-        if (personalizedReply) {
-          await supabase.from('messenger_messages').insert({
-            conversation_id: conversationId,
-            role: 'assistant',
-            content: personalizedReply,
-            step_ref: currentStep.step_ref
-          })
-        }
-
         // If Clara wants to show buttons, prepare them
         const claraChoices = claraResponse.show_buttons
           ? claraResponse.show_buttons.map((btn: any, index: number) => ({
@@ -535,13 +525,45 @@ export async function processUserMessage(
 
         // If not complete, return Clara's message + buttons (if any)
         if (!claraResponse.is_complete) {
+          // Safety net: if Clara answered but forgot to re-ask the module question, append it
+          let finalReply = personalizedReply
+          if (finalReply && module.content) {
+            const moduleQuestion = module.content[locale] || module.content.he || module.content.fr || module.content.en || ''
+            const questionWords = moduleQuestion.replace(/[?؟]/g, '').trim().split(/\s+/).filter((w: string) => w.length > 2)
+            const replyLower = finalReply.toLowerCase()
+            const containsQuestion = questionWords.length > 0 && questionWords.filter((w: string) => replyLower.includes(w.toLowerCase())).length >= Math.ceil(questionWords.length * 0.5)
+            if (!containsQuestion && moduleQuestion) {
+              finalReply = `${finalReply}\n\n${moduleQuestion}`
+            }
+          }
+
+          // Save the final reply (with module question appended if needed)
+          if (finalReply) {
+            await supabase.from('messenger_messages').insert({
+              conversation_id: conversationId,
+              role: 'assistant',
+              content: finalReply,
+              step_ref: currentStep.step_ref
+            })
+          }
+
           return {
             success: true,
-            message: personalizedReply,
+            message: finalReply,
             nextStepRef: currentStep.step_ref,
             moduleType: module.module_type,
             choices: claraChoices
           }
+        }
+
+        // Step is complete — save the original Clara reply (no module question needed)
+        if (personalizedReply) {
+          await supabase.from('messenger_messages').insert({
+            conversation_id: conversationId,
+            role: 'assistant',
+            content: personalizedReply,
+            step_ref: currentStep.step_ref
+          })
         }
 
         // Si Clara indique que la collecte est complète, VALIDER d'abord les formats
