@@ -12,6 +12,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { verifyApiPermission } from '@/lib/permissions'
 import { validateBookingPrice } from '@/lib/booking-validation'
+import { extractIsraelDate, extractIsraelTime } from '@/lib/dates'
 import { logBookingAction, logContactAction, logOrderAction, getClientIpFromHeaders } from '@/lib/activity-logger'
 import { sendBookingConfirmationEmail } from '@/lib/email-sender'
 import { calculateBookingPrice } from '@/lib/price-calculator'
@@ -416,8 +417,8 @@ export async function POST(request: NextRequest) {
         .update({
           booking_id: newBooking.id,
           status: 'manually_confirmed',
-          requested_date: bookingDate.toISOString().split('T')[0],
-          requested_time: bookingDate.toTimeString().slice(0, 5),
+          requested_date: extractIsraelDate(bookingDate.toISOString()),
+          requested_time: extractIsraelTime(bookingDate.toISOString()),
           participants_count: body.participants_count,
           customer_first_name: body.customer_first_name || 'Client',
           customer_last_name: body.customer_last_name || '',
@@ -448,8 +449,8 @@ export async function POST(request: NextRequest) {
           order_type: body.type,
           game_area: calculateGameArea(body.game_sessions),
           number_of_games: body.game_sessions?.length || 1,
-          requested_date: bookingDate.toISOString().split('T')[0],
-          requested_time: bookingDate.toTimeString().slice(0, 5),
+          requested_date: extractIsraelDate(bookingDate.toISOString()),
+          requested_time: extractIsraelTime(bookingDate.toISOString()),
           participants_count: body.participants_count,
           customer_first_name: body.customer_first_name || 'Client',
           customer_last_name: body.customer_last_name || '',

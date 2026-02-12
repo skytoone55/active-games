@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { verifyApiPermission } from '@/lib/permissions'
 import { logBookingAction, logOrderAction, getClientIpFromHeaders } from '@/lib/activity-logger'
+import { extractIsraelDate, extractIsraelTime } from '@/lib/dates'
 // iCount offers removed - no more offer cancellation needed
 import type { UserRole, Booking, BookingSlot, GameSession } from '@/lib/supabase/types'
 
@@ -318,8 +319,8 @@ export async function PUT(
 
     if (updateData.start_datetime) {
       const bookingDate = new Date(updateData.start_datetime)
-      orderUpdateData.requested_date = bookingDate.toISOString().split('T')[0]
-      orderUpdateData.requested_time = bookingDate.toTimeString().slice(0, 5)
+      orderUpdateData.requested_date = extractIsraelDate(bookingDate.toISOString())
+      orderUpdateData.requested_time = extractIsraelTime(bookingDate.toISOString())
     }
     if (updateData.participants_count !== undefined) {
       orderUpdateData.participants_count = updateData.participants_count

@@ -1512,7 +1512,7 @@ export function BookingModal({
             sessionEnd.setMinutes(sessionEnd.getMinutes() + gameDuration)
             
             // Pause après ce jeu (sauf pour le dernier)
-            const pauseAfter = i < numberOfGames - 1 ? (gamePauses[i] || 30) : 0
+            const pauseAfter = i < numberOfGames - 1 ? (gamePauses[i] || 0) : 0
             
             // Trouver la meilleure salle laser pour cette session
             let allocatedRoomIds: string[] = []
@@ -3647,7 +3647,7 @@ export function BookingModal({
                               type="number"
                               min="0"
                               step="15"
-                              value={gamePauses[i] || (gameArea === 'LASER' ? 30 : 0)}
+                              value={gamePauses[i] || 0}
                               onChange={(e) => {
                                 const newPauses = [...gamePauses]
                                 newPauses[i] = parseInt(e.target.value, 10) || 0

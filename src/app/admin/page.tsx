@@ -502,8 +502,8 @@ export default function AdminPage() {
             // Ne prendre en compte que les sessions ACTIVE pour la grille Active
             if (session.game_area !== 'ACTIVE') continue
             
-            const sessionStart = new Date(session.start_datetime)
-            const sessionEnd = new Date(session.end_datetime)
+            const sessionStart = toIL(new Date(session.start_datetime))
+            const sessionEnd = toIL(new Date(session.end_datetime))
             
             // Vérifier si cette session est active sur cette tranche
             if (sessionStart < timeSlotEnd && sessionEnd > timeSlotStart) {
@@ -513,8 +513,8 @@ export default function AdminPage() {
           }
         } else {
           // Fallback pour anciens bookings sans game_sessions : utiliser game_start_datetime/end_datetime
-          const bookingStart = booking.game_start_datetime ? new Date(booking.game_start_datetime) : new Date(booking.start_datetime)
-          const bookingEnd = booking.game_end_datetime ? new Date(booking.game_end_datetime) : new Date(booking.end_datetime)
+          const bookingStart = toIL(booking.game_start_datetime ? new Date(booking.game_start_datetime) : new Date(booking.start_datetime))
+          const bookingEnd = toIL(booking.game_end_datetime ? new Date(booking.game_end_datetime) : new Date(booking.end_datetime))
           
           // Vérifier si ce booking est actif sur cette tranche
           if (bookingStart < timeSlotEnd && bookingEnd > timeSlotStart) {
@@ -568,15 +568,15 @@ export default function AdminPage() {
           if (b.game_sessions && b.game_sessions.length > 0) {
             return b.game_sessions.some(session => {
               if (session.game_area !== 'ACTIVE') return false
-              const sessionStart = new Date(session.start_datetime)
-              const sessionEnd = new Date(session.end_datetime)
+              const sessionStart = toIL(new Date(session.start_datetime))
+              const sessionEnd = toIL(new Date(session.end_datetime))
               return sessionStart < timeSlotEnd && sessionEnd > timeSlotStart
             })
           }
           
           // Fallback pour anciens bookings sans game_sessions
-          const bookingStart = b.game_start_datetime ? new Date(b.game_start_datetime) : new Date(b.start_datetime)
-          const bookingEnd = b.game_end_datetime ? new Date(b.game_end_datetime) : new Date(b.end_datetime)
+          const bookingStart = toIL(b.game_start_datetime ? new Date(b.game_start_datetime) : new Date(b.start_datetime))
+          const bookingEnd = toIL(b.game_end_datetime ? new Date(b.game_end_datetime) : new Date(b.end_datetime))
           return bookingStart < timeSlotEnd && bookingEnd > timeSlotStart
         })
         .sort((a, b) => {
@@ -616,8 +616,8 @@ export default function AdminPage() {
         const activeSessions = booking.game_sessions.filter(s => s.game_area === 'ACTIVE')
         
         for (const session of activeSessions) {
-          const gameStartTime = new Date(session.start_datetime)
-          const gameEndTime = new Date(session.end_datetime)
+          const gameStartTime = toIL(new Date(session.start_datetime))
+          const gameEndTime = toIL(new Date(session.end_datetime))
 
           // Trouver les tranches de 15 minutes couvertes
           // Découper par tranche de 15 min : un segment par tranche
@@ -666,8 +666,8 @@ export default function AdminPage() {
         }
       } else {
         // Fallback pour anciens bookings sans game_sessions : utiliser game_start_datetime/end_datetime
-        const gameStartTime = booking.game_start_datetime ? new Date(booking.game_start_datetime) : new Date(booking.start_datetime)
-        const gameEndTime = booking.game_end_datetime ? new Date(booking.game_end_datetime) : new Date(booking.end_datetime)
+        const gameStartTime = toIL(booking.game_start_datetime ? new Date(booking.game_start_datetime) : new Date(booking.start_datetime))
+        const gameEndTime = toIL(booking.game_end_datetime ? new Date(booking.game_end_datetime) : new Date(booking.end_datetime))
 
         // Trouver les tranches de 15 minutes couvertes
         for (let i = 0; i < timeSlotDates.length; i++) {
@@ -1411,8 +1411,8 @@ export default function AdminPage() {
         
         // Ne vérifier que les événements qui utilisent cette salle
         if (booking.type === 'EVENT' && booking.event_room_id === room.id) {
-          const bookingStart = new Date(booking.start_datetime)
-          const bookingEnd = new Date(booking.end_datetime)
+          const bookingStart = toIL(new Date(booking.start_datetime))
+          const bookingEnd = toIL(new Date(booking.end_datetime))
 
           // Vérifier s'il y a un chevauchement
           if (
@@ -1476,8 +1476,8 @@ export default function AdminPage() {
         if (excludeBookingId && booking.id === excludeBookingId) continue
         
         if (booking.type === 'EVENT' && booking.event_room_id === roomId) {
-          const bookingStart = new Date(booking.start_datetime)
-          const bookingEnd = new Date(booking.end_datetime)
+          const bookingStart = toIL(new Date(booking.start_datetime))
+          const bookingEnd = toIL(new Date(booking.end_datetime))
 
           if (
             (startDateTime >= bookingStart && startDateTime < bookingEnd) ||
@@ -1584,8 +1584,8 @@ export default function AdminPage() {
             // Ne prendre en compte que les sessions ACTIVE pour l'overbooking
             if (session.game_area !== 'ACTIVE') continue
 
-            const sessionStart = new Date(session.start_datetime)
-            const sessionEnd = new Date(session.end_datetime)
+            const sessionStart = toIL(new Date(session.start_datetime))
+            const sessionEnd = toIL(new Date(session.end_datetime))
 
             // Vérifier si cette session est active sur cette tranche
             if (sessionStart < timeSlotEnd && sessionEnd > timeSlotStart) {
@@ -1599,8 +1599,8 @@ export default function AdminPage() {
           const bookingGameArea = (booking as any).game_area
           if (bookingGameArea === 'LASER') continue // Exclure les bookings LASER
 
-          const bookingStart = booking.game_start_datetime ? new Date(booking.game_start_datetime) : new Date(booking.start_datetime)
-          const bookingEnd = booking.game_end_datetime ? new Date(booking.game_end_datetime) : new Date(booking.end_datetime)
+          const bookingStart = toIL(booking.game_start_datetime ? new Date(booking.game_start_datetime) : new Date(booking.start_datetime))
+          const bookingEnd = toIL(booking.game_end_datetime ? new Date(booking.game_end_datetime) : new Date(booking.end_datetime))
 
           if (bookingStart < timeSlotEnd && bookingEnd > timeSlotStart) {
             totalParticipants += booking.participants_count
@@ -1688,8 +1688,8 @@ export default function AdminPage() {
         // Chercher uniquement les sessions LASER qui chevauchent le créneau demandé
         return b.game_sessions.some(s => {
           if (s.game_area !== 'LASER') return false
-          const sessionStart = new Date(s.start_datetime)
-          const sessionEnd = new Date(s.end_datetime)
+          const sessionStart = toIL(new Date(s.start_datetime))
+          const sessionEnd = toIL(new Date(s.end_datetime))
           return sessionStart < endDateTime && sessionEnd > startDateTime
         })
       })
@@ -1947,8 +1947,8 @@ export default function AdminPage() {
         // Vérifier que la session est sur la date sélectionnée
         if (sessionDate !== dateStr) return false
         // Vérifier que la session chevauche le créneau de la cellule
-        const sessionStart = new Date(s.start_datetime)
-        const sessionEnd = new Date(s.end_datetime)
+        const sessionStart = toIL(new Date(s.start_datetime))
+        const sessionEnd = toIL(new Date(s.end_datetime))
         return sessionStart < cellDateEnd && sessionEnd > cellDate
       })
       
@@ -1961,8 +1961,8 @@ export default function AdminPage() {
         // Trouver toutes les sessions LASER de ce booking qui chevauchent ce créneau
         const overlappingSessions = booking.game_sessions.filter(session => {
           if (session.game_area !== 'LASER') return false
-          const sessionStart = new Date(session.start_datetime)
-          const sessionEnd = new Date(session.end_datetime)
+          const sessionStart = toIL(new Date(session.start_datetime))
+          const sessionEnd = toIL(new Date(session.end_datetime))
           return sessionStart < cellDateEnd && sessionEnd > cellDate
         })
         
@@ -1986,8 +1986,8 @@ export default function AdminPage() {
         
         // IMPORTANT: Utiliser les dates de la session spécifique, pas une fusion
         // Cela permet d'afficher chaque jeu (session_order) séparément
-        const sessionStart = new Date(sessionForThisRoom.start_datetime)
-        const sessionEnd = new Date(sessionForThisRoom.end_datetime)
+        const sessionStart = toIL(new Date(sessionForThisRoom.start_datetime))
+        const sessionEnd = toIL(new Date(sessionForThisRoom.end_datetime))
         
         // Créer le segment avec un ID unique incluant session_order pour différencier les jeux
         const segment: UISegment = {
