@@ -561,33 +561,22 @@ export async function processUserMessage(
             }))
           : null
 
-        // If not complete, return Clara's message + buttons (if any)
+        // If not complete, return Clara's message as-is
+        // Clara already has the module question in her prompt and will re-ask naturally
+        // Module validation handles ensuring correct format on the next user reply
         if (!claraResponse.is_complete) {
-          // Safety net: if Clara answered but forgot to re-ask the module question, append it
-          // Use detectedLang (user's language) instead of locale (site language) to avoid mixing languages
-          let finalReply = personalizedReply
-          if (finalReply && module.content) {
-            const moduleQuestion = module.content[detectedLang] || module.content[locale] || module.content.he || module.content.fr || module.content.en || ''
-            // Check if Clara's reply ends with a question (? or ؟) — if so, she likely already re-asked
-            const endsWithQuestion = /[?؟]\s*$/.test(finalReply.trim())
-            if (!endsWithQuestion && moduleQuestion) {
-              finalReply = `${finalReply}\n\n${moduleQuestion}`
-            }
-          }
-
-          // Save the final reply (with module question appended if needed)
-          if (finalReply) {
+          if (personalizedReply) {
             await supabase.from('messenger_messages').insert({
               conversation_id: conversationId,
               role: 'assistant',
-              content: finalReply,
+              content: personalizedReply,
               step_ref: currentStep.step_ref
             })
           }
 
           return {
             success: true,
-            message: finalReply,
+            message: personalizedReply,
             nextStepRef: currentStep.step_ref,
             moduleType: module.module_type,
             choices: claraChoices
