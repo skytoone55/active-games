@@ -9,6 +9,7 @@ import OpenAI from 'openai'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { parseDate, parseTime, formatDateForDisplay, formatTimeForDisplay } from './date-time-parser'
 import { processWithClara, validateCriticalFormats } from './clara-service'
+import { detectMessageLanguage } from './language-detect'
 import type {
   Workflow,
   WorkflowStep,
@@ -390,7 +391,7 @@ export async function processUserMessage(
     let claraPrompt = module.clara_prompt
 
     if (!claraPrompt) {
-      console.log('[Engine] No module prompt, loading global Clara prompt from workflow')
+      console.log('[Engine] No module prompt, loading global Clara prompt from current workflow')
       const { data: workflow } = await supabase
         .from('messenger_workflows')
         .select('clara_default_prompt')
@@ -400,9 +401,23 @@ export async function processUserMessage(
       claraPrompt = workflow?.clara_default_prompt
     }
 
+    // Fallback: if current workflow has no prompt, load from any active workflow that has one
+    if (!claraPrompt) {
+      console.log('[Engine] No prompt in current workflow, loading from active workflow with prompt')
+      const { data: activeWorkflow } = await supabase
+        .from('messenger_workflows')
+        .select('clara_default_prompt')
+        .eq('is_active', true)
+        .not('clara_default_prompt', 'is', null)
+        .limit(1)
+        .single()
+
+      claraPrompt = activeWorkflow?.clara_default_prompt
+    }
+
     // Si toujours pas de prompt, skip Clara
     if (!claraPrompt) {
-      console.warn('[Engine] Clara enabled but no prompt configured (module or global)')
+      console.warn('[Engine] Clara enabled but no prompt configured anywhere')
     } else {
       try {
         // Récupérer TOUT l'historique de conversation (messages courts, pas besoin de limiter)
@@ -449,13 +464,7 @@ export async function processUserMessage(
               return userWords.some((word: string) => allText.includes(word))
             }).slice(0, 3) // Max 3 FAQ pertinentes
 
-            // Detect user language for FAQ content
-            const faqDetectLang = (text: string): string => {
-              if (/[\u0590-\u05FF]/.test(text)) return 'he'
-              if (/[àâçéèêëîïôùûüÿœæ]/i.test(text) || /\b(je|tu|nous|vous|merci|bonjour|oui|non)\b/i.test(text)) return 'fr'
-              return 'en'
-            }
-            const faqLang = faqDetectLang(userMessage)
+            const faqLang = detectMessageLanguage(userMessage)
             faqItems = matchedFaqs.map((f: any) => ({
               question: f.question[faqLang] || f.question[locale] || f.question.he || f.question.fr || f.question.en || '',
               answer: f.answer[faqLang] || f.answer[locale] || f.answer.he || f.answer.fr || f.answer.en || ''
@@ -790,13 +799,7 @@ export async function processUserMessage(
 
       if (looksLikeQuestion) {
         console.log('[Engine] Clara failed but message is a question - trying FAQ fallback')
-        // Detect message language
-        const detectMsgLang = (text: string): string => {
-          if (/[\u0590-\u05FF]/.test(text)) return 'he'
-          if (/[àâçéèêëîïôùûüÿœæ]/i.test(text) || /\b(je|tu|nous|vous|merci|bonjour|oui|non)\b/i.test(text)) return 'fr'
-          return 'en'
-        }
-        const msgLang = detectMsgLang(userMessage)
+        const msgLang = detectMessageLanguage(userMessage)
 
         // Try to find a matching FAQ answer to include in fallback
         let faqAnswer = ''
@@ -1369,7 +1372,7 @@ export async function processUserMessage(
 
       if (!claraResult.success) {
         isValid = false
-        errorMessage = claraResult.error || 'Erreur Clara LLM'
+        errorMessage = claraResult.error || 'Clara LLM error'
         console.log('[Engine] Clara failed, errorMessage:', errorMessage)
       } else {
         // Si Clara a décidé de naviguer vers un workflow
@@ -1538,7 +1541,7 @@ export async function processUserMessage(
               last_name: lastName,
               phone,
               email,
-              notes_client: 'Contact créé depuis messenger chatbot (order aborted)',
+              notes_client: 'Contact created from messenger chatbot (order aborted)',
               source: 'website'
             })
             .select('id')
@@ -1873,7 +1876,7 @@ export async function processUserMessage(
 
     return {
       success: true,
-      message: 'Conversation terminée',
+      message: 'Conversation completed',
       conversationStatus: 'completed'
     }
   }
@@ -2156,15 +2159,8 @@ async function processClaraLLM(
 
     const conversationHistory = messages || []
 
-    // Detect user language from their message (declared early — used for FAQ + prompt)
-    const detectLang = (text: string): string => {
-      if (/[\u0590-\u05FF]/.test(text)) return 'he'
-      if (/[àâçéèêëîïôùûüÿœæ]/i.test(text) || /\b(je|tu|il|nous|vous|merci|bonjour|oui|non|est|les|des|une|pour)\b/i.test(text)) return 'fr'
-      return 'en'
-    }
-
     // Build FAQ context if enabled — use detected user language, not site locale
-    const userLangForFaq = detectLang(userMessage)
+    const userLangForFaq = detectMessageLanguage(userMessage)
     let faqContext = ''
     if (module.llm_config?.use_faq_context) {
       const { data: faqs } = await supabase
@@ -2234,7 +2230,7 @@ async function processClaraLLM(
       }
     }
 
-    const userLang = detectLang(userMessage)
+    const userLang = detectMessageLanguage(userMessage)
     const langInstruction = userLang === 'he' ? 'עברית' : userLang === 'fr' ? 'français' : 'English'
 
     // Construire le prompt système

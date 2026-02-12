@@ -6,6 +6,7 @@
 import OpenAI from 'openai'
 import Anthropic from '@anthropic-ai/sdk'
 import { GoogleGenerativeAI } from '@google/generative-ai'
+import { detectMessageLanguage } from './language-detect'
 
 // Type definitions
 export interface ClaraConfig {
@@ -174,7 +175,7 @@ async function callAnthropic(
       system: systemPrompt,
       messages: claudeMessages,
       temperature
-    })
+    }, { signal: controller.signal })
 
     clearTimeout(timeoutId)
 
@@ -223,9 +224,6 @@ async function callGemini(
     const lastUserMessage = history[history.length - 1]?.parts[0]?.text || ''
     const chatHistory = history.slice(0, -1)
 
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
-
     const chat = geminiModel.startChat({
       history: chatHistory,
       generationConfig: {
@@ -234,11 +232,17 @@ async function callGemini(
       }
     })
 
-    const result = await chat.sendMessage(
-      systemPrompt ? `${systemPrompt}\n\n${lastUserMessage}` : lastUserMessage
+    // Gemini SDK does not support AbortController — use Promise.race with a timeout
+    const timeoutPromise = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('Gemini timeout')), timeoutMs)
     )
 
-    clearTimeout(timeoutId)
+    const result = await Promise.race([
+      chat.sendMessage(
+        systemPrompt ? `${systemPrompt}\n\n${lastUserMessage}` : lastUserMessage
+      ),
+      timeoutPromise
+    ])
 
     const response = result.response.text()
     const parsed = parseJsonResponse(response)
@@ -270,12 +274,7 @@ export async function processWithClara(request: ClaraRequest): Promise<ClaraResp
   }
 
   // Detect user language from their actual message (not locale which is site language)
-  const detectLang = (text: string): string => {
-    if (/[\u0590-\u05FF]/.test(text)) return 'he'
-    if (/[àâçéèêëîïôùûüÿœæ]/i.test(text) || /\b(je|tu|il|nous|vous|merci|bonjour|oui|non|est|les|des|une|pour|quel|quoi|comment|combien)\b/i.test(text)) return 'fr'
-    return 'en'
-  }
-  const detectedLang = detectLang(userMessage)
+  const detectedLang = detectMessageLanguage(userMessage)
   const langMap: Record<string, string> = { fr: 'français', en: 'English', he: 'עברית' }
   const userLang = langMap[detectedLang] || langMap[locale || 'he'] || 'עברית'
 
@@ -299,7 +298,7 @@ export async function processWithClara(request: ClaraRequest): Promise<ClaraResp
 
   // Module context
   if (moduleContext) {
-    enhancedPrompt += `\n\n## MODULE ACTUEL: "${moduleContext.content}"`
+    enhancedPrompt += `\n\n## CURRENT MODULE: "${moduleContext.content}"`
 
     if (moduleContext.choices && moduleContext.choices.length > 0) {
       enhancedPrompt += `\nOptions:`
@@ -335,13 +334,19 @@ export async function processWithClara(request: ClaraRequest): Promise<ClaraResp
   }
 
   // Build messages array
+  // Note: conversationHistory already includes the current user message (inserted in engine.ts before calling Clara)
+  // So we do NOT add userMessage again to avoid duplication
+  const lastMsg = conversationHistory[conversationHistory.length - 1]
+  const historyAlreadyHasCurrentMsg = lastMsg && lastMsg.role === 'user' && lastMsg.content === userMessage
+
   const messages = [
     {
       role: 'system',
       content: enhancedPrompt
     },
-    ...conversationHistory, // Full conversation history
-    { role: 'user', content: userMessage }
+    ...conversationHistory,
+    // Only add userMessage if it's not already the last message in history
+    ...(!historyAlreadyHasCurrentMsg ? [{ role: 'user', content: userMessage }] : [])
   ]
 
   // Route to appropriate AI provider
@@ -374,20 +379,8 @@ export function validateCriticalFormats(collectedData: Record<string, any>): {
 } {
   const invalidFields: Array<{ field: string; issue: string }> = []
 
-  // WELCOME (branch) - MUST be exact (supports EN/FR/HE labels)
-  if (collectedData.WELCOME || collectedData.branch) {
-    const branch = collectedData.WELCOME || collectedData.branch
-    const validBranches = [
-      'Rishon Lezion', 'Petach Tikva', 'Petah Tikva', 'Glilot',
-      'ראשון לציון', 'פתח תקווה', 'גלילות'
-    ]
-    if (!validBranches.includes(branch)) {
-      invalidFields.push({
-        field: 'branch',
-        issue: `Must be a valid branch name, got: "${branch}"`
-      })
-    }
-  }
+  // WELCOME (branch) - no hardcoded validation; branches come from DB choices
+  // The user selects from workflow buttons, so the value is always valid
 
   // NUMBER (phone) - MUST be exactly 10 digits starting with 0
   if (collectedData.NUMBER || collectedData.phone) {
