@@ -409,7 +409,23 @@ export async function POST(request: NextRequest) {
         const isOnboardingDone = !hasEnabledSteps || currentStatus === 'completed' || currentStatus === null
         const isNotWaiting = !currentStatus?.startsWith('waiting:')
 
-        if (claraWhatsAppConfig?.enabled && isOnboardingDone && isNotWaiting && !isNewConversation && messageText && messageText !== `[${messageType}]`) {
+        // Check Clara pause status (human takeover)
+        let claraPaused = conversation.clara_paused === true
+        if (claraPaused && conversation.clara_paused_until) {
+          const pauseExpiry = new Date(conversation.clara_paused_until)
+          if (pauseExpiry <= new Date()) {
+            // Pause expired → auto-resume Clara
+            claraPaused = false
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            await (supabase as any)
+              .from('whatsapp_conversations')
+              .update({ clara_paused: false, clara_paused_until: null })
+              .eq('id', conversation.id)
+            console.log('[WHATSAPP CLARA] Auto-resumed after timeout for conversation', conversation.id)
+          }
+        }
+
+        if (claraWhatsAppConfig?.enabled && isOnboardingDone && isNotWaiting && !claraPaused && !isNewConversation && messageText && messageText !== `[${messageType}]`) {
           try {
             await handleClaraWhatsApp(
               supabase, conversation, senderPhone, messageText,

@@ -48,6 +48,7 @@ interface WhatsAppClaraConfig {
   temperature: number
   model: string
   faq_enabled: boolean
+  auto_resume_minutes: number
 }
 
 const DEFAULT_CLARA_CONFIG: WhatsAppClaraConfig = {
@@ -56,6 +57,7 @@ const DEFAULT_CLARA_CONFIG: WhatsAppClaraConfig = {
   temperature: 0.7,
   model: 'gemini-2.0-flash-lite',
   faq_enabled: false,
+  auto_resume_minutes: 5,
 }
 
 const AVAILABLE_MODELS = [
@@ -845,6 +847,32 @@ export function WhatsAppSection({ isDark }: WhatsAppSectionProps) {
                     claraConfig.faq_enabled ? 'translate-x-6' : 'translate-x-1'
                   }`} />
                 </button>
+              </div>
+            </div>
+
+            {/* Auto-resume timeout */}
+            <div className="p-6 rounded-lg border" style={cardStyle}>
+              <div className="flex items-center justify-between">
+                <div>
+                  <label className={`block font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                    {t('whatsapp.clara.auto_resume') || "Reprise automatique"}
+                  </label>
+                  <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                    {t('whatsapp.clara.auto_resume_help') || "Clara reprend automatiquement apres ce delai si un admin prend la main"}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    min={1}
+                    max={60}
+                    value={claraConfig.auto_resume_minutes}
+                    onChange={(e) => setClaraConfig(prev => ({ ...prev, auto_resume_minutes: Math.max(1, Math.min(60, parseInt(e.target.value) || 5)) }))}
+                    className="w-16 px-2 py-1.5 rounded-lg border text-sm text-center"
+                    style={inputStyle}
+                  />
+                  <span className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>min</span>
+                </div>
               </div>
             </div>
 

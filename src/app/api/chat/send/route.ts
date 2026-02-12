@@ -83,13 +83,29 @@ export async function POST(request: NextRequest) {
       console.error('[CHAT SEND] DB error:', msgError)
     }
 
-    // Update conversation last_message_at
+    // Update conversation last_message_at + auto-pause Clara (human takeover)
+    // Get Clara auto-resume timeout from settings
+    let autoResumeMinutes = 5 // default 5 minutes
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: msSettings } = await (supabase as any)
+        .from('messenger_settings')
+        .select('settings')
+        .single()
+      const claraTimeout = msSettings?.settings?.whatsapp_clara?.auto_resume_minutes
+      if (claraTimeout && claraTimeout > 0) autoResumeMinutes = claraTimeout
+    } catch { /* use default */ }
+
+    const pausedUntil = new Date(Date.now() + autoResumeMinutes * 60 * 1000).toISOString()
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await (supabase as any)
       .from('whatsapp_conversations')
       .update({
         last_message_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
+        clara_paused: true,
+        clara_paused_until: pausedUntil,
       })
       .eq('id', conversationId)
 

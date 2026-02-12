@@ -2131,6 +2131,8 @@
       "unassigned": "Unassigned",
       "new_contact": "New",
       "create_contact": "Create contact",
+      "clara_activate": "Activate Clara AI",
+      "clara_pause": "Pause Clara AI",
       "quick_contact": {
         "title": "Create Contact",
         "branch": "Branch",
@@ -2721,7 +2723,9 @@
       "faq_help": "Clara will use the Messenger FAQ to answer common questions",
       "prompt_title": "Custom prompt",
       "prompt_help": "Leave empty to use Clara's default prompt",
-      "prompt_placeholder": "Enter a custom prompt for Clara on WhatsApp..."
+      "prompt_placeholder": "Enter a custom prompt for Clara on WhatsApp...",
+      "auto_resume": "Auto-resume",
+      "auto_resume_help": "Clara automatically resumes after this delay when an admin takes over"
     }
   }
 }

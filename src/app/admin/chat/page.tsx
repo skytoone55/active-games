@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback, useTransition } from 'react'
-import { MessageCircle, Send, Search, Phone, User, ArrowLeft, Loader2, Filter, UserPlus, Globe, Bot, Archive, X, Smile, Trash2, EyeOff, Plus, Zap, Settings2 } from 'lucide-react'
+import { MessageCircle, Send, Search, Phone, User, ArrowLeft, Loader2, Filter, UserPlus, Globe, Bot, Archive, X, Smile, Trash2, EyeOff, Plus, Zap, Settings2, Sparkles } from 'lucide-react'
 import dynamic from 'next/dynamic'
 import { Theme as EmojiTheme } from 'emoji-picker-react'
 
@@ -29,6 +29,8 @@ interface WhatsAppConversation {
   activity: string | null
   onboarding_status: string | null
   onboarding_data: Record<string, string> | null
+  clara_paused: boolean | null
+  clara_paused_until: string | null
   status: string
   last_message_at: string
   unread_count: number
@@ -188,6 +190,7 @@ export default function ChatPage() {
   const [shortcutForm, setShortcutForm] = useState({ label: '', message: '', emoji: '' })
   const [savingShortcut, setSavingShortcut] = useState(false)
   const [editingShortcutId, setEditingShortcutId] = useState<string | null>(null)
+  const [togglingClara, setTogglingClara] = useState(false)
 
   const isLoading = adminLoading || permissionsLoading || !user
 
@@ -636,6 +639,33 @@ export default function ChatPage() {
       console.error('Error linking contact:', error)
     }
     fetchWaConversations()
+  }
+
+  const handleToggleClara = async () => {
+    if (!selectedWaConv || togglingClara) return
+    setTogglingClara(true)
+    try {
+      const newPaused = !selectedWaConv.clara_paused
+      const res = await fetch(`/api/chat/conversations/${selectedWaConv.id}/clara-toggle`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ paused: newPaused }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        const updated = {
+          ...selectedWaConv,
+          clara_paused: data.conversation.clara_paused,
+          clara_paused_until: data.conversation.clara_paused_until,
+        }
+        setSelectedWaConv(updated)
+        setWaConversations(prev => prev.map(c => c.id === updated.id ? { ...c, ...updated } : c))
+      }
+    } catch (error) {
+      console.error('Error toggling Clara:', error)
+    } finally {
+      setTogglingClara(false)
+    }
   }
 
   // ============================================================
@@ -1188,6 +1218,27 @@ export default function ChatPage() {
                     )}
                   </div>
                 </div>
+                {/* Clara AI toggle */}
+                <button
+                  onClick={handleToggleClara}
+                  disabled={togglingClara}
+                  className={`px-2.5 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-all ${
+                    selectedWaConv.clara_paused
+                      ? isDark ? 'bg-gray-700 text-gray-400 hover:bg-gray-600' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                      : 'bg-purple-600/20 text-purple-400 hover:bg-purple-600/30 ring-1 ring-purple-500/30'
+                  } disabled:opacity-50`}
+                  title={selectedWaConv.clara_paused
+                    ? (t('admin.chat.clara_activate') || 'Activate Clara AI')
+                    : (t('admin.chat.clara_pause') || 'Pause Clara AI')
+                  }
+                >
+                  {togglingClara ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Sparkles className={`w-3.5 h-3.5 ${selectedWaConv.clara_paused ? '' : 'animate-pulse'}`} />
+                  )}
+                  <span>Clara {selectedWaConv.clara_paused ? 'OFF' : 'ON'}</span>
+                </button>
                 {!selectedWaConv.contact_id && (
                   <button
                     onClick={() => setShowQuickContact(true)}
