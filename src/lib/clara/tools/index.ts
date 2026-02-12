@@ -769,9 +769,8 @@ export const generateBookingLink = tool({
     lastName: z.string().optional().describe('Customer last name'),
     phone: z.string().describe('Customer phone number (REQUIRED)'),
     email: z.string().optional().describe('Customer email (required for EVENT bookings)'),
-    eventType: z.string().optional().describe('Event type (for event bookings): birthday, bar_mitzvah, corporate, party, other'),
   }),
-  execute: async ({ branchSlug, type, players, gameArea, numberOfGames, date, time, firstName, lastName, phone, email, eventType }) => {
+  execute: async ({ branchSlug, type, players, gameArea, numberOfGames, date, time, firstName, lastName, phone, email }) => {
     console.log('[Tool:generateBookingLink] Generating link with:', { branchSlug, type, players, gameArea, numberOfGames, date, time })
 
     // VALIDATION: firstName and phone are required
@@ -821,8 +820,6 @@ export const generateBookingLink = tool({
     if (type === 'game') {
       if (gameArea) params.set('gameArea', gameArea)
       if (numberOfGames) params.set('games', String(numberOfGames))
-    } else if (type === 'event' && eventType) {
-      params.set('eventType', eventType)
     }
 
     params.set('date', date)
@@ -903,7 +900,7 @@ export const generateBookingLink = tool({
             participants_count: players,
             game_area: gameArea || null,
             number_of_games: numberOfGames || null,
-            event_type: eventType || null,
+            event_type: null,
             requested_date: date,
             requested_time: time,
             customer_first_name: firstName || null,
