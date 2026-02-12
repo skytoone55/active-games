@@ -572,6 +572,23 @@ export default function ChatPage() {
     fetchWaMessages(conv.id)
     setWaConversations(prev => prev.map(c => c.id === conv.id ? { ...c, unread_count: 0 } : c))
     fetch(`/api/chat/conversations/${conv.id}/read`, { method: 'POST' }).catch(() => {})
+
+    // Auto-link: si pas de contact lié et branche sélectionnée, créer/lier automatiquement
+    if (!conv.contact_id && selectedBranch) {
+      fetch(`/api/chat/conversations/${conv.id}/auto-link`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ branchId: selectedBranch.id }),
+      })
+        .then(res => res.json())
+        .then(data => {
+          if (data.success && data.conversation) {
+            setSelectedWaConv(data.conversation)
+            setWaConversations(prev => prev.map(c => c.id === data.conversation.id ? data.conversation : c))
+          }
+        })
+        .catch(err => console.error('Auto-link error:', err))
+    }
   }
 
   const handleSendMessage = async () => {
