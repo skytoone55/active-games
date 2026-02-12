@@ -56,22 +56,24 @@ export function useNeedsHumanCount(branches: { id: string }[]) {
   const fetchCount = useCallback(async () => {
     let total = 0
     try {
-      // WhatsApp conversations
-      const waParams = new URLSearchParams({ status: 'active', pageSize: '200' })
-      waParams.set('branchId', 'all')
+      // Use countOnly mode — returns just { count: N } instead of 200 full objects
+      const baseParams = new URLSearchParams({
+        countOnly: 'true',
+        countFilter: 'needs_human',
+        branchId: 'all',
+        includeUnassigned: 'true',
+      })
       if (branches.length > 0) {
-        waParams.set('allowedBranches', branches.map(b => b.id).join(','))
-      }
-      waParams.set('includeUnassigned', 'true')
-
-      // Messenger conversations
-      const msParams = new URLSearchParams({ status: 'all', pageSize: '200' })
-      msParams.set('branchId', 'all')
-      if (branches.length > 0) {
-        msParams.set('allowedBranches', branches.map(b => b.id).join(','))
+        baseParams.set('allowedBranches', branches.map(b => b.id).join(','))
       }
 
-      // Fetch both in parallel
+      const waParams = new URLSearchParams(baseParams)
+      waParams.set('status', 'active')
+
+      const msParams = new URLSearchParams(baseParams)
+      msParams.set('status', 'all')
+
+      // Fetch both counts in parallel
       const [waRes, msRes] = await Promise.all([
         fetch(`/api/chat/conversations?${waParams}`),
         fetch(`/api/chat/messenger-conversations?${msParams}`)
@@ -79,17 +81,7 @@ export function useNeedsHumanCount(branches: { id: string }[]) {
 
       const [waData, msData] = await Promise.all([waRes.json(), msRes.json()])
 
-      if (waData.conversations) {
-        total += waData.conversations.filter(
-          (c: { needs_human: boolean | null }) => c.needs_human === true
-        ).length
-      }
-
-      if (msData.conversations) {
-        total += msData.conversations.filter(
-          (c: { needs_human: boolean | null }) => c.needs_human === true
-        ).length
-      }
+      total = (waData.count || 0) + (msData.count || 0)
     } catch (error) {
       console.error('[useNeedsHumanCount] Error:', error)
     }

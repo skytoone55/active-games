@@ -1673,6 +1673,33 @@ export async function GET(request: NextRequest) {
       )
     }
 
+    const countOnly = searchParams.get('countOnly') === 'true'
+
+    // ─── countOnly mode: return just counts, no full data (for header badges) ───
+    if (countOnly) {
+      const [pendingResult, abortedResult] = await Promise.all([
+        supabase
+          .from('orders')
+          .select('*', { count: 'exact', head: true })
+          .eq('branch_id', branchId)
+          .eq('status', 'pending'),
+        supabase
+          .from('orders')
+          .select('*', { count: 'exact', head: true })
+          .eq('branch_id', branchId)
+          .eq('status', 'aborted')
+          .is('aborted_seen_at', null)
+      ])
+
+      return NextResponse.json({
+        success: true,
+        orders: [],
+        pending_count: pendingResult.count || 0,
+        unseen_aborted_count: abortedResult.count || 0,
+      })
+    }
+
+    // ─── Normal mode: return full data ───
     let query = supabase
       .from('orders')
       .select(`

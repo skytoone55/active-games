@@ -219,7 +219,7 @@ export default function AdminPage() {
     deleteBooking,
     deleteAllBookings,
     refresh: refreshAllBookings
-  } = useBookings(selectedBranchId, undefined) // undefined = pas de filtre par date, on charge tout
+  } = useBookings(selectedBranchId, dateString) // Filtrer par date côté serveur — charge uniquement le jour affiché
 
   // refreshBranches est maintenant fourni par useAdmin() (AdminContext)
 
@@ -2486,8 +2486,8 @@ export default function AdminPage() {
           width: '100%',
           maxWidth: '100%'
         }}>
-          {/* Loader sur la grille */}
-          {bookingsLoading && (
+          {/* Loader sur la grille — seulement au chargement initial (pas de données encore) */}
+          {bookingsLoading && allBookings.length === 0 && (
             <div className="absolute inset-0 bg-gray-900/50 flex items-center justify-center z-10">
               <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
             </div>

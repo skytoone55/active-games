@@ -97,13 +97,22 @@ export function useBookings(branchId: string | null, date?: string) {
       return
     }
 
-    // Éviter les appels concurrents
+    // Éviter les appels concurrents — but auto-release after 15s to prevent infinite lock
     if (isFetchingRef.current && !force) {
       return
     }
 
     const supabase = getClient()
     isFetchingRef.current = true
+
+    // Safety: auto-release lock after 15 seconds to prevent infinite spinner
+    const lockTimeout = setTimeout(() => {
+      if (isFetchingRef.current) {
+        console.warn('[useBookings] Fetch lock auto-released after 15s timeout')
+        isFetchingRef.current = false
+        setLoading(false)
+      }
+    }, 15000)
 
     // Ne montrer le loading que si pas de cache
     const cached = date ? getCachedBookings(branchId, date) : null
@@ -261,6 +270,7 @@ export function useBookings(branchId: string | null, date?: string) {
       console.error('Error fetching bookings:', err)
       setError('Erreur lors du chargement des réservations')
     } finally {
+      clearTimeout(lockTimeout)
       setLoading(false)
       isFetchingRef.current = false
     }

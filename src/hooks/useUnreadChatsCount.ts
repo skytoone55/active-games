@@ -8,7 +8,7 @@ import { useRealtimeSubscription } from './useRealtimeSubscription'
  * Returns the total number of WhatsApp + Messenger conversations that have unread_count > 0
  * Always fetches ALL branches (the badge should show unread across ALL branches)
  *
- * Optimized: debounces realtime events to avoid cascading API calls
+ * Optimized: uses countOnly API mode + debounces realtime events
  */
 export function useUnreadChatsCount(branches: { id: string }[]) {
   const [waCount, setWaCount] = useState(0)
@@ -17,33 +17,27 @@ export function useUnreadChatsCount(branches: { id: string }[]) {
 
   const fetchCounts = useCallback(async () => {
     try {
-      const params = new URLSearchParams({ status: 'active', pageSize: '200' })
-      // Always fetch all branches for the badge
-      params.set('branchId', 'all')
+      const baseParams = new URLSearchParams({
+        status: 'active',
+        countOnly: 'true',
+        countFilter: 'unread',
+        branchId: 'all',
+        includeUnassigned: 'true',
+      })
       if (branches.length > 0) {
-        params.set('allowedBranches', branches.map(b => b.id).join(','))
+        baseParams.set('allowedBranches', branches.map(b => b.id).join(','))
       }
-      params.set('includeUnassigned', 'true')
 
-      // Fetch both in parallel
+      // Fetch both counts in parallel — countOnly returns just { count: N }
       const [waRes, msRes] = await Promise.all([
-        fetch(`/api/chat/conversations?${params}`),
-        fetch(`/api/chat/messenger-conversations?${params}`)
+        fetch(`/api/chat/conversations?${baseParams}`),
+        fetch(`/api/chat/messenger-conversations?${baseParams}`)
       ])
 
       const [waData, msData] = await Promise.all([waRes.json(), msRes.json()])
 
-      if (waData.conversations) {
-        setWaCount(waData.conversations.filter(
-          (c: { unread_count: number }) => c.unread_count > 0
-        ).length)
-      }
-
-      if (msData.conversations) {
-        setMsCount(msData.conversations.filter(
-          (c: { unread_count: number }) => c.unread_count > 0
-        ).length)
-      }
+      setWaCount(waData.count || 0)
+      setMsCount(msData.count || 0)
     } catch (error) {
       console.error('[useUnreadChatsCount] Error:', error)
     }

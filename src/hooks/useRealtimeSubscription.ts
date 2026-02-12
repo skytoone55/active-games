@@ -172,13 +172,16 @@ export function useRealtimeRefresh(
   )
 
   // Subscriptions additionnelles (ex: game_sessions pour bookings)
+  // Debounced to 500ms to avoid cascading refreshes from bulk operations
+  const additionalDebounceRef = useRef<NodeJS.Timeout | null>(null)
+
   useEffect(() => {
     if (!branchId || !additionalTables?.length) return
 
     const supabase = getClient()
     const channels: RealtimeChannel[] = []
 
-    additionalTables.forEach((additionalTable, index) => {
+    additionalTables.forEach((additionalTable) => {
       const channelId = ++channelCounter
       const channelName = `rt_${additionalTable}_related_${channelId}`
 
@@ -192,8 +195,13 @@ export function useRealtimeRefresh(
             table: additionalTable,
           },
           () => {
-            console.log(`[Realtime] Change detected in ${additionalTable}, refreshing ${table}...`)
-            onRefreshRef.current()
+            // Debounce: wait 500ms before refreshing to batch rapid changes
+            if (additionalDebounceRef.current) {
+              clearTimeout(additionalDebounceRef.current)
+            }
+            additionalDebounceRef.current = setTimeout(() => {
+              onRefreshRef.current()
+            }, 500)
           }
         )
         .subscribe()
@@ -202,6 +210,9 @@ export function useRealtimeRefresh(
     })
 
     return () => {
+      if (additionalDebounceRef.current) {
+        clearTimeout(additionalDebounceRef.current)
+      }
       channels.forEach(channel => {
         supabase.removeChannel(channel)
       })

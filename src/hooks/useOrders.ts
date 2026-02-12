@@ -120,10 +120,10 @@ export function useOrders(branchId: string | null) {
   }
 }
 
-// Hook for pending orders count (badge)
+// Hook for pending orders count (badge) — uses countOnly for performance
 export function usePendingOrdersCount(branchId: string | null) {
   const swrKey = branchId
-    ? `/api/orders?branch_id=${branchId}&status=pending`
+    ? `/api/orders?branch_id=${branchId}&countOnly=true`
     : null
 
   const { data, mutate } = useSWR<{
@@ -143,16 +143,17 @@ export function usePendingOrdersCount(branchId: string | null) {
 
   useRealtimeRefresh('orders', branchId, handleRealtimeRefresh)
 
-  return data?.pending_count || data?.orders?.length || 0
+  return data?.pending_count || 0
 }
 
 /**
  * Hook for unseen aborted orders count (header badge)
+ * Uses countOnly for performance — no full order data loaded
  * Listens to 'aborted-orders-changed' event for instant updates
  */
 export function useUnseenAbortedOrdersCount(branchId: string | null) {
   const swrKey = branchId
-    ? `/api/orders?branch_id=${branchId}&status=aborted`
+    ? `/api/orders?branch_id=${branchId}&countOnly=true`
     : null
 
   const { data, mutate } = useSWR<{
