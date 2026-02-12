@@ -757,14 +757,42 @@ export const generateBookingLink = tool({
       IMPORTANT: Active Games uses 30min blocks. 2 games = 1h, 3 games = 1h30, 4 games = 2h.`),
     date: z.string().describe('Date in YYYY-MM-DD format'),
     time: z.string().describe('Time in HH:MM format'),
-    firstName: z.string().optional().describe('Customer first name'),
+    firstName: z.string().describe('Customer first name (REQUIRED)'),
     lastName: z.string().optional().describe('Customer last name'),
-    phone: z.string().optional().describe('Customer phone number'),
-    email: z.string().optional().describe('Customer email (ALWAYS ask for it)'),
+    phone: z.string().describe('Customer phone number (REQUIRED)'),
+    email: z.string().optional().describe('Customer email (required for EVENT bookings)'),
     eventType: z.string().optional().describe('Event type (for event bookings): birthday, bar_mitzvah, corporate, party, other'),
   }),
   execute: async ({ branchSlug, type, players, gameArea, numberOfGames, date, time, firstName, lastName, phone, email, eventType }) => {
     console.log('[Tool:generateBookingLink] Generating link with:', { branchSlug, type, players, gameArea, numberOfGames, date, time })
+
+    // VALIDATION: firstName and phone are required
+    if (!firstName || !firstName.trim()) {
+      return {
+        success: false,
+        error: 'firstName is required. Ask the customer for their first name before generating the link.',
+        bookingUrl: null,
+        summary: null
+      }
+    }
+    if (!phone || !phone.trim()) {
+      return {
+        success: false,
+        error: 'phone is required. For WhatsApp conversations the phone is auto-injected. For other channels, ask the customer.',
+        bookingUrl: null,
+        summary: null
+      }
+    }
+
+    // VALIDATION: numberOfGames is required for GAME type
+    if (type === 'game' && !numberOfGames) {
+      return {
+        success: false,
+        error: 'numberOfGames is required for game bookings. Ask the customer how long they want to play: ACTIVE (2=1h, 3=1h30, 4=2h), LASER (1, 2, or 3 parties), MIX (always 1).',
+        bookingUrl: null,
+        summary: null
+      }
+    }
 
     // VALIDATION CRITIQUE : EVENT nécessite minimum 15 personnes
     if (type === 'event' && players < 15) {
