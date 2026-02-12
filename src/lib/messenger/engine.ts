@@ -564,6 +564,23 @@ export async function processUserMessage(
             }))
           : null
 
+        // FORCE complete for choix_multiples: if user message matches a choice, override Clara's is_complete
+        // Clara sometimes returns is_complete=false even when user clearly selected a choice
+        if (!claraResponse.is_complete && module.module_type === 'choix_multiples' && module.choices) {
+          const userInput = userMessage.toLowerCase().trim()
+          const forcedMatch = module.choices.find((choice: any) => {
+            const labels = [choice.label?.he, choice.label?.fr, choice.label?.en]
+              .filter(Boolean)
+              .map((l: string) => l.toLowerCase().trim())
+            return labels.includes(userInput) || labels.some((l: string) => l.includes(userInput) || userInput.includes(l))
+          })
+          if (forcedMatch) {
+            console.log('[Engine] FORCE COMPLETE: choix_multiples user input matches choice:', forcedMatch.id, '- overriding Clara is_complete=false')
+            claraResponse.is_complete = true
+            claraResponse.collected_data = { ...claraResponse.collected_data, [currentStep.step_ref]: forcedMatch.label[locale] || forcedMatch.label.he || forcedMatch.label.fr }
+          }
+        }
+
         // If not complete, return Clara's message as-is
         // Clara already has the module question in her prompt and will re-ask naturally
         // Module validation handles ensuring correct format on the next user reply
