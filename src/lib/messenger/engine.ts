@@ -607,12 +607,15 @@ export async function processUserMessage(
           if (!validation.isValid) {
             console.error('[Engine] Clara validation failed:', validation.invalidFields)
 
+            const valLang = detectMessageLanguage(userMessage)
             const errorMessages: Record<string, string> = {
               fr: 'Il y a un problème avec les données fournies. Pourriez-vous réessayer ?',
               en: 'There is an issue with the provided data. Could you please try again?',
-              he: 'יש בעיה עם הנתונים. אנא נסה שוב.'
+              he: 'יש בעיה עם הנתונים. אנא נסה שוב.',
+              ar: 'هناك مشكلة في البيانات المقدمة. هل يمكنك المحاولة مرة أخرى؟',
+              ru: 'Возникла проблема с предоставленными данными. Не могли бы вы попробовать снова?'
             }
-            const errorMessage = errorMessages[locale] || errorMessages.fr
+            const errorMessage = errorMessages[valLang] || errorMessages[locale] || errorMessages.fr
 
             await supabase.from('messenger_messages').insert({
               conversation_id: conversationId,
@@ -898,14 +901,27 @@ export async function processUserMessage(
           }
           fallbackMsg = templates[msgLang] || templates.he
         } else {
-          // No FAQ — generic "can't answer" + re-ask
+          // No FAQ — generic "can't answer" + re-ask + escalate to human
           const templates: Record<string, string> = {
-            fr: `Je ne peux pas répondre à cette question pour le moment. ${moduleContent}`,
-            en: `I can't answer that question right now. ${moduleContent}`,
-            he: `אני לא יכולה לענות על השאלה הזו כרגע. ${moduleContent}`
+            fr: `Je ne suis pas en mesure de répondre à cette question. Un membre de notre équipe va prendre le relais très bientôt. En attendant, n'hésitez pas à continuer.\n\n${moduleContent}`,
+            en: `I'm not able to answer this question. A team member will follow up with you shortly. In the meantime, feel free to continue.\n\n${moduleContent}`,
+            he: `אני לא מצליחה לענות על השאלה הזו. חבר צוות ייצור איתך קשר בהקדם. בינתיים, אפשר להמשיך.\n\n${moduleContent}`,
+            ar: `لا أستطيع الإجابة على هذا السؤال. سيتواصل معك أحد أعضاء الفريق قريبًا. في هذه الأثناء، يمكنك المتابعة.\n\n${moduleContent}`,
+            ru: `Я не могу ответить на этот вопрос. Член нашей команды свяжется с вами в ближайшее время. А пока вы можете продолжить.\n\n${moduleContent}`
           }
           fallbackMsg = templates[msgLang] || templates[locale] || templates.he
         }
+
+        // Auto-escalate to human when fallback is triggered
+        console.log('[Engine] Fallback triggered - auto-escalating to human')
+        await supabase
+          .from('messenger_conversations')
+          .update({
+            needs_human: true,
+            needs_human_reason: `Clara fallback: could not answer user question "${userMessage.substring(0, 100)}"`,
+            clara_paused: true,
+          })
+          .eq('id', conversationId)
 
         await supabase.from('messenger_messages').insert({
           conversation_id: conversationId,
@@ -924,16 +940,83 @@ export async function processUserMessage(
       }
 
       if (claraResponse.timeout) {
-        console.log('[Engine] Clara timeout - falling back to MANUAL workflow processing')
+        console.log('[Engine] Clara timeout - falling back to MANUAL workflow processing + auto-escalation')
       } else {
-        console.log('[Engine] Clara failed:', claraResponse.error, '- falling back to MANUAL workflow processing')
+        console.log('[Engine] Clara failed:', claraResponse.error, '- falling back to MANUAL workflow processing + auto-escalation')
       }
-      // Ne PAS afficher de message d'erreur — on continue avec le traitement normal du module
-      // Le code continue vers le switch/case standard plus bas
+
+      // Auto-escalate to human when Clara fails completely
+      const failLang = detectMessageLanguage(userMessage)
+      const failTemplates: Record<string, string> = {
+        fr: 'Un petit souci technique de mon côté. Un membre de notre équipe va vous répondre très bientôt !',
+        en: 'I\'m having a small technical issue. A team member will get back to you very shortly!',
+        he: 'יש לי תקלה טכנית קטנה. חבר צוות ייצור איתך קשר בהקדם!',
+        ar: 'لدي مشكلة تقنية صغيرة. سيتواصل معك أحد أعضاء الفريق قريبًا!',
+        ru: 'У меня небольшая техническая проблема. Член команды свяжется с вами очень скоро!'
+      }
+      const failMsg = failTemplates[failLang] || failTemplates[locale] || failTemplates.he
+
+      await supabase
+        .from('messenger_conversations')
+        .update({
+          needs_human: true,
+          needs_human_reason: `Clara ${claraResponse.timeout ? 'timeout' : 'error'}: ${claraResponse.error || 'unknown'}`,
+          clara_paused: true,
+        })
+        .eq('id', conversationId)
+
+      await supabase.from('messenger_messages').insert({
+        conversation_id: conversationId,
+        role: 'assistant',
+        content: failMsg,
+        step_ref: currentStep.step_ref
+      })
+
+      return {
+        success: true,
+        message: failMsg,
+        nextStepRef: currentStep.step_ref,
+        moduleType: module.module_type,
+        choices: null
+      }
 
       } catch (error) {
         console.error('[Engine] Clara processing error:', error)
-        // Continue avec workflow manuel en cas d'erreur
+
+        // Auto-escalate on crash too
+        const crashLang = detectMessageLanguage(userMessage)
+        const crashTemplates: Record<string, string> = {
+          fr: 'Un petit souci technique de mon côté. Un membre de notre équipe va vous répondre très bientôt !',
+          en: 'I\'m having a small technical issue. A team member will get back to you very shortly!',
+          he: 'יש לי תקלה טכנית קטנה. חבר צוות ייצור איתך קשר בהקדם!',
+          ar: 'لدي مشكلة تقنية صغيرة. سيتواصل معك أحد أعضاء الفريق قريبًا!',
+          ru: 'У меня небольшая техническая проблема. Член команды свяжется с вами очень скоро!'
+        }
+        const crashMsg = crashTemplates[crashLang] || crashTemplates[locale] || crashTemplates.he
+
+        await supabase
+          .from('messenger_conversations')
+          .update({
+            needs_human: true,
+            needs_human_reason: `Clara crash: ${error instanceof Error ? error.message : 'unknown error'}`,
+            clara_paused: true,
+          })
+          .eq('id', conversationId)
+
+        await supabase.from('messenger_messages').insert({
+          conversation_id: conversationId,
+          role: 'assistant',
+          content: crashMsg,
+          step_ref: currentStep.step_ref
+        })
+
+        return {
+          success: true,
+          message: crashMsg,
+          nextStepRef: currentStep.step_ref,
+          moduleType: module.module_type,
+          choices: null
+        }
       }
     }
   }
