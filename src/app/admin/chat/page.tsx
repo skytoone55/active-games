@@ -173,7 +173,7 @@ export default function ChatPage() {
   const sidebarRef = useRef<HTMLDivElement>(null)
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
-  const inputRef = useRef<HTMLInputElement>(null)
+  const inputRef = useRef<HTMLTextAreaElement>(null)
   const selectedWaConvIdRef = useRef<string | null>(null)
   const selectedMsConvIdRef = useRef<string | null>(null)
   const activeChannelRef = useRef<ChatChannel>('whatsapp')
@@ -582,6 +582,8 @@ export default function ChatPage() {
       const data = await res.json()
       if (data.success) {
         setNewMessage('')
+        // Reset textarea height after send
+        if (inputRef.current) inputRef.current.style.height = 'auto'
         fetchWaMessages(selectedWaConv.id, true)
         inputRef.current?.focus()
       }
@@ -1265,9 +1267,9 @@ export default function ChatPage() {
                   </div>
                 )}
 
-                <div className="flex items-center gap-3 relative">
+                <div className="flex items-end gap-3 relative">
                   {/* Emoji picker */}
-                  <div className="relative" ref={emojiPickerRef}>
+                  <div className="relative flex-shrink-0 pb-0.5" ref={emojiPickerRef}>
                     <button
                       type="button"
                       onClick={() => setShowEmojiPicker(!showEmojiPicker)}
@@ -1296,11 +1298,15 @@ export default function ChatPage() {
                     )}
                   </div>
 
-                  <input
+                  <textarea
                     ref={inputRef}
-                    type="text"
                     value={newMessage}
-                    onChange={(e) => setNewMessage(e.target.value)}
+                    onChange={(e) => {
+                      setNewMessage(e.target.value)
+                      // Auto-resize: reset then grow
+                      e.target.style.height = 'auto'
+                      e.target.style.height = Math.min(e.target.scrollHeight, 160) + 'px'
+                    }}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' && !e.shiftKey) {
                         e.preventDefault()
@@ -1308,16 +1314,18 @@ export default function ChatPage() {
                       }
                     }}
                     placeholder={t('admin.chat.type_message') || 'Type a message...'}
-                    className={`flex-1 px-4 py-2.5 rounded-full text-sm ${
+                    rows={1}
+                    className={`flex-1 px-4 py-2.5 rounded-2xl text-sm resize-none overflow-y-auto ${
                       isDark
                         ? 'bg-gray-700 text-white placeholder-gray-500 border-gray-600'
                         : 'bg-gray-100 text-gray-900 placeholder-gray-400 border-gray-200'
                     } border focus:outline-none focus:ring-2 focus:ring-green-500/50`}
+                    style={{ minHeight: '42px', maxHeight: '160px' }}
                   />
                   <button
                     onClick={handleSendMessage}
                     disabled={!newMessage.trim() || sending}
-                    className={`p-2.5 rounded-full transition-colors ${
+                    className={`flex-shrink-0 p-2.5 rounded-full transition-colors mb-0.5 ${
                       newMessage.trim() && !sending
                         ? 'bg-green-600 hover:bg-green-700 text-white'
                         : isDark ? 'bg-gray-700 text-gray-500' : 'bg-gray-200 text-gray-400'
