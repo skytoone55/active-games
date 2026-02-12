@@ -182,14 +182,7 @@ export function OrderDetailModal({
       if (order.game_area === 'ACTIVE' || order.event_type === 'event_active') return 'Événement Active Games'
       if (order.game_area === 'LASER' || order.event_type === 'event_laser') return 'Événement Laser City'
       if (order.event_type === 'event_mix') return 'Événement Mix'
-      // Anciens types (compatibilité)
-      switch (order.event_type) {
-        case 'birthday': return 'Anniversaire'
-        case 'bar_mitzvah': return 'Bar/Bat Mitzvah'
-        case 'corporate': return 'Team Building'
-        case 'other': return 'Événement privé'
-        default: return 'Événement'
-      }
+      return 'Événement'
     }
     if (order.game_area === 'LASER') return 'Laser City'
     return 'Active Games'

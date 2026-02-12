@@ -18,7 +18,7 @@ export interface Reservation {
   phone: string
   email: string | null
   specialRequest: string | null
-  eventType: string | null // "birthday", "bar_mitzvah", "corporate", "party", "other"
+  eventType: string | null
   eventAge: number | null
   reservationNumber: string
   createdAt: string

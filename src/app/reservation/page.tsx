@@ -27,8 +27,8 @@ interface BookingData {
   specialRequest: string | null
   termsAccepted: boolean
   // Event specific fields
-  eventType: string | null // e.g., "birthday", "bar_mitzvah", "corporate", "party", "other"
-  eventAge: number | null // Age for birthday or bar/bat mitzvah (optional)
+  eventType: string | null
+  eventAge: number | null
 }
 
 function ReservationContent() {
