@@ -914,23 +914,24 @@ export default function AdminPage() {
   // Charger les données utilisateur
   // Note: L'auth est gérée par le layout parent, pas besoin de rediriger ici
   useEffect(() => {
-    // Timeout de sécurité : si le chargement prend plus de 10s, arrêter le spinner
-    const safetyTimeout = setTimeout(() => {
-      if (loading) {
-        console.warn('[Agenda] Safety timeout: loading took >10s, forcing stop')
-        setLoading(false)
-      }
-    }, 10000)
+    let cancelled = false
 
-    const loadUserData = async () => {
+    const loadUserData = async (retryCount = 0) => {
       const supabase = getClient()
 
       try {
         const { data: { user } } = await supabase.auth.getUser()
 
         if (!user) {
+          // Session peut être en cours de refresh après navigation
+          // Retry jusqu'à 3 fois avec délai croissant avant d'abandonner
+          if (retryCount < 3 && !cancelled) {
+            console.log(`[Agenda] getUser() returned null, retry ${retryCount + 1}/3...`)
+            await new Promise(resolve => setTimeout(resolve, 500 * (retryCount + 1)))
+            return loadUserData(retryCount + 1)
+          }
           // Ne pas rediriger - le layout gère l'auth
-          setLoading(false)
+          if (!cancelled) setLoading(false)
           return
         }
 
@@ -970,13 +971,15 @@ export default function AdminPage() {
           }
         }
 
-        setUserData({
-          id: user.id,
-          email: user.email || '',
-          profile,
-          branches,
-          role: profile?.role || 'agent'
-        })
+        if (!cancelled) {
+          setUserData({
+            id: user.id,
+            email: user.email || '',
+            profile,
+            branches,
+            role: profile?.role || 'agent'
+          })
+        }
 
         // NE PAS forcer la sélection de branche ici
         // useBranches gère déjà la sélection initiale (Rishon LeZion par défaut au premier chargement)
@@ -984,13 +987,13 @@ export default function AdminPage() {
       } catch (error) {
         console.error('Error loading user data:', error)
       } finally {
-        setLoading(false)
+        if (!cancelled) setLoading(false)
       }
     }
 
     loadUserData()
 
-    return () => clearTimeout(safetyTimeout)
+    return () => { cancelled = true }
   }, [])
 
   const formatDate = (date: Date) => {
@@ -2158,9 +2161,16 @@ export default function AdminPage() {
     )
   }
 
-  // Not authenticated
+  // Not authenticated — retry loading instead of blank screen
   if (!userData) {
-    return null
+    return (
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 text-blue-500 animate-spin mx-auto mb-4" />
+          <p className="text-gray-400">{t('admin.common.loading')}</p>
+        </div>
+      </div>
+    )
   }
 
   const selectedBranchFromUserData = userData.branches.find(b => b.id === selectedBranchId)
