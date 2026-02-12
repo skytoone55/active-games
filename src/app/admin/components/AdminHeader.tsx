@@ -184,12 +184,15 @@ function AdminHeaderComponent({
           </Link>
         </div>
 
-        {/* Navigation - Agenda, Clients, Commandes - Se rapproche du logo quand on réduit */}
-        <div className="hidden min-[900px]:flex items-center gap-3 flex-1 justify-center min-w-0">
+        {/* Navigation - Agenda, Clients, Commandes
+             900px-1100px : icônes seules (compact) avec tooltip
+             1100px+      : icônes + labels */}
+        <div className="hidden min-[900px]:flex items-center gap-1 min-[1100px]:gap-3 flex-1 justify-center min-w-0">
           {hasPermission('agenda', 'can_view') && (
             <Link
               href="/admin"
-              className={`px-4 py-2 rounded-lg transition-colors flex items-center gap-2 relative ${
+              title={t('admin.header.agenda')}
+              className={`px-3 min-[1100px]:px-4 py-2 rounded-lg transition-colors flex items-center gap-2 relative ${
                 pathname === '/admin'
                   ? 'bg-blue-600 text-white'
                   : theme === 'dark'
@@ -198,7 +201,7 @@ function AdminHeaderComponent({
               }`}
             >
               <Calendar className="w-4 h-4" />
-              <span>{t('admin.header.agenda')}</span>
+              <span className="hidden min-[1100px]:inline">{t('admin.header.agenda')}</span>
               {/* Pastille rouge critique pour commandes en attente */}
               {hasPendingOrders && pathname !== '/admin/orders' && (
                 <span className="absolute -top-1 -right-1 bg-red-600 text-white text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center animate-pulse shadow-lg">
@@ -210,7 +213,8 @@ function AdminHeaderComponent({
           {hasPermission('clients', 'can_view') && (
             <Link
               href="/admin/clients"
-              className={`px-4 py-2 rounded-lg transition-colors flex items-center gap-2 relative ${
+              title={t('admin.header.clients')}
+              className={`px-3 min-[1100px]:px-4 py-2 rounded-lg transition-colors flex items-center gap-2 relative ${
                 pathname === '/admin/clients'
                   ? 'bg-blue-600 text-white'
                   : theme === 'dark'
@@ -219,7 +223,7 @@ function AdminHeaderComponent({
               }`}
             >
               <Users className="w-4 h-4" />
-              <span>{t('admin.header.clients')}</span>
+              <span className="hidden min-[1100px]:inline">{t('admin.header.clients')}</span>
               {/* Pastille rouge pour demandes de contact non traitées */}
               {hasUnreadRequests && (
                 <span className="absolute -top-1.5 -right-1.5 bg-red-600 text-white text-[10px] font-bold min-w-[20px] h-5 px-1 rounded-full flex items-center justify-center animate-pulse shadow-lg">
@@ -231,7 +235,8 @@ function AdminHeaderComponent({
           {hasPermission('orders', 'can_view') && (
             <Link
               href="/admin/orders"
-              className={`px-4 py-2 rounded-lg transition-colors flex items-center gap-2 relative ${
+              title={t('admin.header.orders')}
+              className={`px-3 min-[1100px]:px-4 py-2 rounded-lg transition-colors flex items-center gap-2 relative ${
                 pathname === '/admin/orders'
                   ? 'bg-blue-600 text-white'
                   : theme === 'dark'
@@ -240,7 +245,7 @@ function AdminHeaderComponent({
               }`}
             >
               <ShoppingCart className="w-4 h-4" />
-              <span>{t('admin.header.orders')}</span>
+              <span className="hidden min-[1100px]:inline">{t('admin.header.orders')}</span>
               {/* Pastille rouge critique pour commandes en attente */}
               {hasPendingOrders && (
                 <span className="absolute -top-1 -right-1 bg-red-600 text-white text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center animate-pulse shadow-lg">
@@ -263,7 +268,8 @@ function AdminHeaderComponent({
           {hasPermission('chat', 'can_view') && (
             <Link
               href="/admin/chat"
-              className={`relative px-4 py-2 rounded-lg transition-colors flex items-center gap-2 ${
+              title={t('admin.header.chat')}
+              className={`relative px-3 min-[1100px]:px-4 py-2 rounded-lg transition-colors flex items-center gap-2 ${
                 pathname === '/admin/chat'
                   ? 'bg-blue-600 text-white'
                   : theme === 'dark'
@@ -272,7 +278,7 @@ function AdminHeaderComponent({
               }`}
             >
               <MessageCircle className="w-4 h-4" />
-              <span>{t('admin.header.chat')}</span>
+              <span className="hidden min-[1100px]:inline">{t('admin.header.chat')}</span>
               {hasUnreadChats && (
                 <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold min-w-[20px] h-5 px-1 rounded-full flex items-center justify-center animate-pulse shadow-lg">
                   {unreadChatsCount > 9 ? '9+' : unreadChatsCount}
@@ -289,7 +295,8 @@ function AdminHeaderComponent({
           {hasPermission('calls', 'can_view') && (
             <Link
               href="/admin/calls"
-              className={`px-4 py-2 rounded-lg transition-colors flex items-center gap-2 ${
+              title={t('admin.header.calls') || 'Appels'}
+              className={`px-3 min-[1100px]:px-4 py-2 rounded-lg transition-colors flex items-center gap-2 ${
                 pathname === '/admin/calls'
                   ? 'bg-blue-600 text-white'
                   : theme === 'dark'
@@ -298,7 +305,7 @@ function AdminHeaderComponent({
               }`}
             >
               <Phone className="w-4 h-4" />
-              <span>{t('admin.header.calls') || 'Appels'}</span>
+              <span className="hidden min-[1100px]:inline">{t('admin.header.calls') || 'Appels'}</span>
             </Link>
           )}
         </div>
@@ -324,9 +331,9 @@ function AdminHeaderComponent({
               }`}
               title={t('admin.layout.language')}
             >
-              <Globe className="w-4 h-4" />
+              <Globe className="w-4 h-4 min-[1100px]:hidden" />
               <span>{languageFlags[locale].flag}</span>
-              <ChevronDown className={`w-3 h-3 transition-transform ${showLanguageMenu ? 'rotate-180' : ''}`} />
+              <ChevronDown className={`w-3 h-3 transition-transform hidden min-[1100px]:block ${showLanguageMenu ? 'rotate-180' : ''}`} />
             </button>
 
             {mounted && showLanguageMenu && (
@@ -360,22 +367,6 @@ function AdminHeaderComponent({
             )}
           </div>
 
-          {/* Toggle thème */}
-          <button
-            onClick={onToggleTheme}
-            className={`p-2 rounded-lg transition-colors ${
-              theme === 'dark'
-                ? 'text-gray-400 hover:text-white hover:bg-gray-800'
-                : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-            }`}
-          >
-            {theme === 'light' ? (
-              <Moon className="w-5 h-5" />
-            ) : (
-              <Sun className="w-5 h-5" />
-            )}
-          </button>
-
           {/* Menu utilisateur */}
           <div ref={menuRef} className="relative">
             <button
@@ -389,7 +380,7 @@ function AdminHeaderComponent({
               <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
                 <User className="w-4 h-4 text-white" />
               </div>
-              <div className="text-left hidden min-[900px]:block">
+              <div className="text-left hidden min-[1100px]:block">
                 <div className={`text-sm font-medium ${
                   theme === 'dark' ? 'text-white' : 'text-gray-900'
                 }`}>
@@ -528,6 +519,24 @@ function AdminHeaderComponent({
                 )}
 
                 <div className="py-2">
+                  {/* Toggle thème */}
+                  <button
+                    onClick={() => {
+                      onToggleTheme()
+                    }}
+                    className={`w-full px-4 py-2 text-left flex items-center gap-2 transition-colors ${
+                      theme === 'dark'
+                        ? 'text-gray-300 hover:bg-gray-700'
+                        : 'text-gray-700 hover:bg-gray-100'
+                    }`}
+                  >
+                    {theme === 'light' ? (
+                      <Moon className="w-4 h-4" />
+                    ) : (
+                      <Sun className="w-4 h-4" />
+                    )}
+                    {theme === 'light' ? t('admin.header.dark_mode') || 'Mode sombre' : t('admin.header.light_mode') || 'Mode clair'}
+                  </button>
                   <button
                     onClick={() => {
                       setShowUserMenu(false)
