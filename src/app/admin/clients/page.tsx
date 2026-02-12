@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, startTransition } from 'react'
+import { useState, useEffect, useCallback, startTransition, useRef } from 'react'
 import { Search, Edit2, Archive, User, Loader2, Eye, ChevronLeft, ChevronRight, Plus, Download, ArrowUpDown, ArrowUp, ArrowDown, GitMerge, Settings, X, MessageSquare } from 'lucide-react'
 import { useContacts, type SearchContactsResult } from '@/hooks/useContacts'
 import { useAdmin } from '@/contexts/AdminContext'
@@ -36,6 +36,8 @@ export default function ClientsPage() {
   const [includeArchived, setIncludeArchived] = useState(false)
   const [contacts, setContacts] = useState<Contact[]>([])
   const [loading, setLoading] = useState(false)
+  const [refreshing, setRefreshing] = useState(false)
+  const hasDataRef = useRef(false)
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
   const [total, setTotal] = useState(0)
@@ -77,7 +79,12 @@ export default function ClientsPage() {
     const branchToUse = selectedBranch || (branches.length > 0 ? branches[0] : null)
     if (!branchToUse?.id) return
 
-    setLoading(true)
+    // Stale-while-revalidate: si on a déjà des données, ne pas bloquer avec le spinner
+    if (!hasDataRef.current) {
+      setLoading(true)
+    } else {
+      setRefreshing(true)
+    }
     try {
       const branchToUse = selectedBranch || (branches.length > 0 ? branches[0] : null)
       if (!branchToUse) return
@@ -111,12 +118,14 @@ export default function ClientsPage() {
       }
 
       setContacts(sortedContacts)
+      hasDataRef.current = sortedContacts.length > 0
       setTotalPages(result.totalPages)
       setTotal(result.total)
     } catch (error) {
       console.error('Error searching contacts:', error)
     } finally {
       setLoading(false)
+      setRefreshing(false)
     }
   }, [searchQuery, includeArchived, page, selectedBranch?.id, branches, sortField, sortDirection, filterStatus, filterSource])
 
@@ -488,6 +497,15 @@ export default function ClientsPage() {
 
       {/* Tableau */}
       <div className="px-6 py-4">
+        {/* Indicateur discret de rafraîchissement (stale-while-revalidate) */}
+        {refreshing && (
+          <div className="flex items-center gap-2 mb-3">
+            <Loader2 className={`w-4 h-4 animate-spin ${isDark ? 'text-blue-400' : 'text-blue-600'}`} />
+            <span className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+              {t('admin.common.refreshing') || 'Mise à jour...'}
+            </span>
+          </div>
+        )}
         {loading ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="w-8 h-8 animate-spin text-blue-400" />
