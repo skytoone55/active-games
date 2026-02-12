@@ -439,14 +439,17 @@ export async function processUserMessage(
           .eq('is_active', true)
         const branchNames = branches?.map((b: any) => b.name) || []
 
+        // Detect user language for consistent language handling
+        const detectedLang = detectMessageLanguage(userMessage)
+
         // Recherche FAQ intelligente : seulement si le message ressemble à une question
         // On cherche les FAQ pertinentes par mots-clés au lieu d'injecter les 43
         let faqItems: Array<{ question: string; answer: string }> = []
-        const userWords = userMessage.toLowerCase().split(/\s+/).filter((w: string) => w.length > 2)
+        // Filter out very common/short words that cause false positives
+        const stopWords = new Set(['the', 'are', 'you', 'can', 'how', 'what', 'when', 'where', 'who', 'why', 'does', 'this', 'that', 'for', 'with', 'from', 'your', 'אני', 'את', 'של', 'מה', 'איך', 'זה', 'לא', 'כן', 'est', 'les', 'des', 'une', 'que', 'pour'])
+        const userWords = userMessage.toLowerCase().split(/\s+/).filter((w: string) => w.length > 2 && !stopWords.has(w))
 
         if (userWords.length > 0) {
-          // Chercher les FAQ qui matchent les mots-clés du message
-          const searchPattern = userWords.join('|')
           const { data: faqs } = await supabase
             .from('messenger_faq')
             .select('question, answer, category')
@@ -454,20 +457,23 @@ export async function processUserMessage(
             .order('order_index')
 
           if (faqs && faqs.length > 0) {
-            // Filtrer côté client : chercher dans question ET answer dans toutes les langues
-            const matchedFaqs = faqs.filter((f: any) => {
+            // Score-based matching: count how many keywords match per FAQ
+            const scoredFaqs = faqs.map((f: any) => {
               const allText = [
                 f.question?.fr, f.question?.en, f.question?.he,
                 f.answer?.fr, f.answer?.en, f.answer?.he,
                 f.category
               ].filter(Boolean).join(' ').toLowerCase()
-              return userWords.some((word: string) => allText.includes(word))
-            }).slice(0, 3) // Max 3 FAQ pertinentes
+              const score = userWords.reduce((s: number, word: string) => s + (allText.includes(word) ? 1 : 0), 0)
+              return { faq: f, score }
+            })
+            .filter((item: { faq: any; score: number }) => item.score > 0)
+            .sort((a: { score: number }, b: { score: number }) => b.score - a.score)
+            .slice(0, 3) // Max 3 FAQ pertinentes
 
-            const faqLang = detectMessageLanguage(userMessage)
-            faqItems = matchedFaqs.map((f: any) => ({
-              question: f.question[faqLang] || f.question[locale] || f.question.he || f.question.fr || f.question.en || '',
-              answer: f.answer[faqLang] || f.answer[locale] || f.answer.he || f.answer.fr || f.answer.en || ''
+            faqItems = scoredFaqs.map(({ faq: f }: { faq: any }) => ({
+              question: f.question[detectedLang] || f.question[locale] || f.question.he || f.question.fr || f.question.en || '',
+              answer: f.answer[detectedLang] || f.answer[locale] || f.answer.he || f.answer.fr || f.answer.en || ''
             }))
           }
         }
@@ -486,7 +492,7 @@ export async function processUserMessage(
             timeout_ms: module.clara_timeout_ms ?? 8000
           },
         moduleContext: {
-          content: module.content[locale] || module.content.he || module.content.fr || '',
+          content: module.content[detectedLang] || module.content[locale] || module.content.he || module.content.fr || '',
           choices: module.choices || undefined,
           validationFormat: module.validation_format_code || undefined
         },
@@ -826,7 +832,8 @@ export async function processUserMessage(
         // Try to find a matching FAQ answer to include in fallback
         let faqAnswer = ''
         try {
-          const faqWords = userMessage.toLowerCase().split(/\s+/).filter((w: string) => w.length > 2)
+          const fallbackStopWords = new Set(['the', 'are', 'you', 'can', 'how', 'what', 'when', 'where', 'who', 'why', 'does', 'this', 'that', 'for', 'with', 'from', 'your', 'אני', 'את', 'של', 'מה', 'איך', 'זה', 'לא', 'כן', 'est', 'les', 'des', 'une', 'que', 'pour'])
+          const faqWords = userMessage.toLowerCase().split(/\s+/).filter((w: string) => w.length > 2 && !fallbackStopWords.has(w))
           if (faqWords.length > 0) {
             const { data: faqs } = await supabase
               .from('messenger_faq')
@@ -834,17 +841,21 @@ export async function processUserMessage(
               .eq('is_active', true)
 
             if (faqs && faqs.length > 0) {
-              const matched = faqs.filter((f: any) => {
+              // Score-based matching for better results
+              const scored = faqs.map((f: any) => {
                 const allText = [
                   f.question?.fr, f.question?.en, f.question?.he,
                   f.answer?.fr, f.answer?.en, f.answer?.he,
                   f.category
                 ].filter(Boolean).join(' ').toLowerCase()
-                return faqWords.some((word: string) => allText.includes(word))
-              }).slice(0, 1) // Best match only
+                const score = faqWords.reduce((s: number, word: string) => s + (allText.includes(word) ? 1 : 0), 0)
+                return { faq: f, score }
+              })
+              .filter((item: { faq: any; score: number }) => item.score > 0)
+              .sort((a: { score: number }, b: { score: number }) => b.score - a.score)
 
-              if (matched.length > 0) {
-                faqAnswer = matched[0].answer[msgLang] || matched[0].answer[locale] || matched[0].answer.he || matched[0].answer.fr || matched[0].answer.en || ''
+              if (scored.length > 0) {
+                faqAnswer = scored[0].faq.answer[msgLang] || scored[0].faq.answer[locale] || scored[0].faq.answer.he || scored[0].faq.answer.fr || scored[0].faq.answer.en || ''
               }
             }
           }

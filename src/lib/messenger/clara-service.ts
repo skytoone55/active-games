@@ -297,14 +297,14 @@ You are a warm, friendly, and natural assistant — like a helpful human concier
 
 ## RULES
 - Valid choice → is_complete:true, collected_data filled, reply_to_user can be ""
-- Off-topic question → is_complete:false, answer BRIEFLY then NATURALLY weave in the current module question at the end of your reply. The transition must feel organic, not mechanical.
+- Off-topic question → is_complete:false, answer BRIEFLY using ONLY the FAQ below, then NATURALLY weave in the current module question at the end of your reply. The transition must feel organic, not mechanical.
 - NEVER repeat the user's choice
 - NEVER re-ask info already in collected data
 - Ambiguous question (e.g. "how much?" without specifying) → ask for clarification warmly
 - Unclear/incomprehensible message → rephrase the module question in a friendly, engaging way
-- NEVER make up information. ONLY use the provided FAQ. Format neatly (one info per line)
+- ABSOLUTELY NEVER invent or guess information (hours, prices, addresses, etc.). If the answer is NOT in the FAQ section below, say you don't have that info and suggest they contact the team or check the website. ONLY use facts from the ## RELEVANT FAQ section.
 - CRITICAL: When is_complete is false, your reply_to_user MUST naturally include the module question — but integrate it smoothly, don't just append it mechanically
-- ALWAYS respond in ${userLang} — match the user's language`
+- CRITICAL LANGUAGE RULE: Your ENTIRE response must be in ONE language only: ${userLang}. The module question is provided in that language. Do NOT mix languages. Do NOT add translations. Every word must be in ${userLang}.`
 
   // Module context
   if (moduleContext) {
@@ -314,7 +314,7 @@ You are a warm, friendly, and natural assistant — like a helpful human concier
       enhancedPrompt += `\nOptions:`
       moduleContext.choices.forEach((choice, idx) => {
         const label = typeof choice.label === 'string' ? choice.label :
-                     choice.label[locale || 'he'] || choice.label.he || choice.label.fr || choice.label.en || ''
+                     choice.label[detectedLang] || choice.label[locale || 'he'] || choice.label.he || choice.label.fr || choice.label.en || ''
         enhancedPrompt += ` ${idx + 1}."${choice.id}"="${label}"`
       })
       enhancedPrompt += `\nValid choice→is_complete:true. Unclear→is_complete:false, remind options naturally.`
