@@ -801,7 +801,7 @@ async function handleClaraWhatsApp(
     model,
     maxTokens: globalSettings.max_tokens || 4096,
     temperature,
-    tools: createWhatsAppTools(conversation.id),
+    tools: createWhatsAppTools(conversation.id, senderPhone, conversation.contact_name),
   })
 
   // Collect full response + track tool calls for funnel analytics

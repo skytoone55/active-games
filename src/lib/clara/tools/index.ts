@@ -1160,11 +1160,39 @@ export const publicTools = {
 }
 
 /**
- * Create WhatsApp-specific tools that include escalateToHuman with conversation context.
+ * Create a WhatsApp-wrapped version of generateBookingLink that auto-injects
+ * the customer's phone number and name from the WhatsApp contact.
  */
-export function createWhatsAppTools(conversationId: string) {
+function createWhatsAppBookingLink(senderPhone?: string, contactName?: string) {
+  return tool({
+    description: generateBookingLink.description,
+    inputSchema: generateBookingLink.inputSchema,
+    execute: async (params, options) => {
+      // Auto-inject phone from WhatsApp if LLM didn't provide it
+      if (!params.phone && senderPhone) {
+        params.phone = senderPhone
+      }
+      // Auto-inject name from WhatsApp contact if LLM didn't provide it
+      if (!params.firstName && contactName) {
+        const nameParts = contactName.trim().split(/\s+/)
+        params.firstName = nameParts[0]
+        if (!params.lastName && nameParts.length > 1) {
+          params.lastName = nameParts.slice(1).join(' ')
+        }
+      }
+      return generateBookingLink.execute!(params, options)
+    },
+  })
+}
+
+/**
+ * Create WhatsApp-specific tools that include escalateToHuman with conversation context
+ * and auto-inject customer phone/name into booking link.
+ */
+export function createWhatsAppTools(conversationId: string, senderPhone?: string, contactName?: string) {
   return {
     ...publicTools,
+    generateBookingLink: createWhatsAppBookingLink(senderPhone, contactName),
     escalateToHuman: createEscalateToHumanTool(conversationId),
   }
 }
