@@ -288,7 +288,7 @@ export async function POST(request: NextRequest) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         let { data: conversation } = await (supabase as any)
           .from('whatsapp_conversations')
-          .select('id, contact_id, onboarding_status, activity, branch_id, onboarding_data')
+          .select('id, contact_id, contact_name, onboarding_status, activity, branch_id, onboarding_data')
           .eq('phone', senderPhone)
           .eq('status', 'active')
           .order('created_at', { ascending: false })
@@ -455,7 +455,61 @@ async function handleOnboarding(
       if (currentStep.type === 'activity') {
         updateFields.activity = matched.id
       } else if (currentStep.type === 'branch') {
-        updateFields.branch_id = matched.branch_id || matched.id
+        const selectedBranchId = matched.branch_id || matched.id
+        updateFields.branch_id = selectedBranchId
+
+        // Auto-create/link contact when branch is selected (if not already linked)
+        if (!conversation.contact_id) {
+          try {
+            const normalizedPhone = normalizePhone(senderPhone)
+
+            // Check if contact with this phone already exists in the branch
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const { data: existingContacts } = await (supabase as any)
+              .from('contacts')
+              .select('id')
+              .eq('branch_id_main', selectedBranchId)
+              .eq('phone', normalizedPhone)
+              .eq('status', 'active')
+              .limit(1)
+
+            if (existingContacts && existingContacts.length > 0) {
+              // Contact exists → link it
+              updateFields.contact_id = existingContacts[0].id
+              console.log('[WHATSAPP] Auto-linked existing contact', existingContacts[0].id, 'for', senderPhone)
+            } else {
+              // Create new contact from WhatsApp info
+              const contactName = conversation.contact_name || ''
+              const nameParts = contactName.trim().split(/\s+/)
+              const firstName = nameParts[0] || normalizedPhone
+              const lastName = nameParts.slice(1).join(' ') || null
+
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              const { data: newContact, error: createErr } = await (supabase as any)
+                .from('contacts')
+                .insert({
+                  branch_id_main: selectedBranchId,
+                  first_name: firstName,
+                  last_name: lastName,
+                  phone: normalizedPhone,
+                  source: 'whatsapp',
+                  client_type: 'individual',
+                  status: 'active',
+                })
+                .select('id')
+                .single()
+
+              if (newContact && !createErr) {
+                updateFields.contact_id = newContact.id
+                console.log('[WHATSAPP] Auto-created contact', newContact.id, 'for', senderPhone)
+              } else {
+                console.error('[WHATSAPP] Failed to auto-create contact:', createErr)
+              }
+            }
+          } catch (autoLinkErr) {
+            console.error('[WHATSAPP] Auto-link error (non-blocking):', autoLinkErr)
+          }
+        }
       } else {
         // Custom step → store in onboarding_data JSONB
         const existingData = conversation.onboarding_data || {}
