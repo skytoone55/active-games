@@ -56,7 +56,9 @@ export function EditUserModal({
     return getAssignableRoles(currentUserLevel)
   }, [getAssignableRoles, currentUserLevel])
 
-  // Initialiser avec les données de l'utilisateur
+  // Initialiser avec les données de l'utilisateur — only when modal opens
+  // getRoleByName excluded from deps: it's unstable (changes on SWR revalidation)
+  // and would reset password to '' on every re-render
   useEffect(() => {
     if (isOpen && user) {
       setFirstName(user.first_name)
@@ -73,7 +75,8 @@ export function EditUserModal({
       setError(null)
       setValidationErrors({})
     }
-  }, [isOpen, user, getRoleByName])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, user])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
