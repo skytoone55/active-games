@@ -13,13 +13,12 @@ import { SettingsModal } from './components/SettingsModal'
 import { AgendaStats } from './components/AgendaStats'
 import { GridSettingsPopup } from './components/GridSettingsPopup'
 import { AgendaSearch } from './components/AgendaSearch'
-import { useAuth } from '@/hooks/useAuth'
 import { useUserPermissions } from '@/hooks/useUserPermissions'
 import { useLaserRooms } from '@/hooks/useLaserRooms'
 import { useTranslation } from '@/contexts/LanguageContext'
 import { useAdmin } from '@/contexts/AdminContext'
 import { toIsraelLocalDate } from '@/lib/dates'
-import type { Profile, UserBranch, GameArea, GameSession, UserRole, ResourceType, BookingContact, BookingSlot, Contact } from '@/lib/supabase/types'
+import type { GameArea, GameSession, UserRole, ResourceType, BookingContact, BookingSlot, Contact } from '@/lib/supabase/types'
 
 // Helper: convertit un ISO datetime en Date "Israel-local" pour que .getHours()/.getMinutes() retournent l'heure d'Israël
 const toIL = (d: Date) => toIsraelLocalDate(d)
@@ -45,13 +44,20 @@ export default function AdminPage() {
       default: return 'fr-FR'
     }
   }
-  const [loading, setLoading] = useState(true)
-  const [userData, setUserData] = useState<UserData | null>(null)
-  // Utiliser useBranches pour partager la branche sélectionnée avec le CRM
-  // Utiliser le contexte AdminContext pour les branches (partagé avec le header/sidebar)
-  // IMPORTANT: Ne pas utiliser useBranches() localement car c'est une instance séparée
-  // qui ne se met pas à jour quand l'utilisateur change de branche via le header
-  const { branches, selectedBranchId: adminSelectedBranchId, selectBranch: adminSelectBranch, refreshBranches, isDark } = useAdmin()
+  // Utiliser le contexte AdminContext pour les données utilisateur (partagé avec le header/sidebar)
+  // IMPORTANT: Ne PAS dupliquer le chargement user ici — AdminContext persiste entre les navigations
+  // et évite le bug d'écran noir / roue infinie quand getUser() est lent au retour sur la page
+  const { user: adminUser, loading: adminLoading, branches, selectedBranchId: adminSelectedBranchId, selectBranch: adminSelectBranch, refreshBranches, isDark } = useAdmin()
+
+  // Adapter adminUser au format attendu par le reste du composant
+  const loading = adminLoading
+  const userData = adminUser ? {
+    id: adminUser.id,
+    email: adminUser.email,
+    profile: adminUser.profile ? { id: adminUser.profile.id, role: adminUser.profile.role, full_name: adminUser.profile.full_name } : null,
+    branches: adminUser.branches.map(b => ({ id: b.id, name: b.name, slug: b.slug })),
+    role: adminUser.role || 'agent'
+  } : null
 
   // Permissions pour l'agenda - Hook appelé tôt pour respecter l'ordre des hooks
   const { hasPermission, loading: permissionsLoading } = useUserPermissions(userData?.role as UserRole || null)
@@ -911,90 +917,8 @@ export default function AdminPage() {
     })
   }
 
-  // Charger les données utilisateur
-  // Note: L'auth est gérée par le layout parent, pas besoin de rediriger ici
-  useEffect(() => {
-    let cancelled = false
-
-    const loadUserData = async (retryCount = 0) => {
-      const supabase = getClient()
-
-      try {
-        const { data: { user } } = await supabase.auth.getUser()
-
-        if (!user) {
-          // Session peut être en cours de refresh après navigation
-          // Retry jusqu'à 3 fois avec délai croissant avant d'abandonner
-          if (retryCount < 3 && !cancelled) {
-            console.log(`[Agenda] getUser() returned null, retry ${retryCount + 1}/3...`)
-            await new Promise(resolve => setTimeout(resolve, 500 * (retryCount + 1)))
-            return loadUserData(retryCount + 1)
-          }
-          // Ne pas rediriger - le layout gère l'auth
-          if (!cancelled) setLoading(false)
-          return
-        }
-
-        // Récupérer le profil
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', user.id)
-          .single<Profile>()
-
-        // Récupérer les branches
-        let branches: Array<{ id: string; name: string; slug: string }> = []
-
-        if (profile?.role === 'super_admin') {
-          const { data } = await supabase
-            .from('branches')
-            .select('id, name, slug')
-            .eq('is_active', true)
-            .order('name')
-          branches = data || []
-        } else {
-          const { data: userBranches } = await supabase
-            .from('user_branches')
-            .select('branch_id')
-            .eq('user_id', user.id)
-            .returns<UserBranch[]>()
-
-          if (userBranches && userBranches.length > 0) {
-            const branchIds = userBranches.map(ub => ub.branch_id)
-            const { data } = await supabase
-              .from('branches')
-              .select('id, name, slug')
-              .in('id', branchIds)
-              .eq('is_active', true)
-              .order('name')
-            branches = data || []
-          }
-        }
-
-        if (!cancelled) {
-          setUserData({
-            id: user.id,
-            email: user.email || '',
-            profile,
-            branches,
-            role: profile?.role || 'agent'
-          })
-        }
-
-        // NE PAS forcer la sélection de branche ici
-        // useBranches gère déjà la sélection initiale (Rishon LeZion par défaut au premier chargement)
-        // et la persistance via localStorage pour conserver la branche entre les pages
-      } catch (error) {
-        console.error('Error loading user data:', error)
-      } finally {
-        if (!cancelled) setLoading(false)
-      }
-    }
-
-    loadUserData()
-
-    return () => { cancelled = true }
-  }, [])
+  // Les données utilisateur viennent désormais de AdminContext (useAdmin)
+  // Plus besoin de loadUserData local — le contexte persiste entre les navigations
 
   const formatDate = (date: Date) => {
     return date.toLocaleDateString(getDateLocale(), {
@@ -2173,8 +2097,7 @@ export default function AdminPage() {
     )
   }
 
-  const selectedBranchFromUserData = userData.branches.find(b => b.id === selectedBranchId)
-  // Récupérer le Branch complet depuis useBranches
+  // Récupérer le Branch complet depuis AdminContext
   const selectedBranch = branches.find(b => b.id === selectedBranchId) || (branches.length > 0 ? branches[0] : null)
   // Récupérer les salles et settings de la branche sélectionnée
   const branchWithDetails = branches.find(b => b.id === selectedBranchId)
