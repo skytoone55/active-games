@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback, useTransition } from 'react'
-import { MessageCircle, Send, Search, Phone, User, ArrowLeft, Loader2, Filter, UserPlus, Globe, Bot, Archive, X, Smile, Trash2, EyeOff } from 'lucide-react'
+import { MessageCircle, Send, Search, Phone, User, ArrowLeft, Loader2, Filter, UserPlus, Globe, Bot, Archive, X, Smile, Trash2, EyeOff, Plus, Zap, Settings2 } from 'lucide-react'
 import dynamic from 'next/dynamic'
 import { Theme as EmojiTheme } from 'emoji-picker-react'
 
@@ -95,6 +95,14 @@ interface MessengerMessage {
   created_at: string
 }
 
+interface ChatShortcut {
+  id: string
+  label: string
+  message: string
+  emoji: string
+  order_index: number
+}
+
 // Fixed branch colors
 const BRANCH_COLOR_MAP: Record<string, string> = {
   '5e3b466e-0327-4ef6-ad5a-02a8ed4b367e': 'bg-blue-500',    // Rishon LeZion
@@ -172,6 +180,15 @@ export default function ChatPage() {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false)
   const emojiPickerRef = useRef<HTMLDivElement>(null)
 
+  // ============================================================
+  // Chat shortcuts state
+  // ============================================================
+  const [shortcuts, setShortcuts] = useState<ChatShortcut[]>([])
+  const [showShortcutModal, setShowShortcutModal] = useState(false)
+  const [shortcutForm, setShortcutForm] = useState({ label: '', message: '', emoji: '' })
+  const [savingShortcut, setSavingShortcut] = useState(false)
+  const [editingShortcutId, setEditingShortcutId] = useState<string | null>(null)
+
   const isLoading = adminLoading || permissionsLoading || !user
 
   // Close emoji picker on outside click
@@ -210,6 +227,73 @@ export default function ChatPage() {
       await fetch(`/api/chat/conversations/${convId}/unread`, { method: 'POST' })
     } catch (error) {
       console.error('Error marking as unread:', error)
+    }
+  }
+
+  // ============================================================
+  // Chat shortcuts: fetch, create, delete
+  // ============================================================
+  const fetchShortcuts = useCallback(async () => {
+    if (!user?.id) return
+    try {
+      const res = await fetch(`/api/chat/shortcuts?userId=${user.id}`)
+      const json = await res.json()
+      if (json.success) setShortcuts(json.data || [])
+    } catch (err) {
+      console.error('Error fetching shortcuts:', err)
+    }
+  }, [user?.id])
+
+  useEffect(() => {
+    fetchShortcuts()
+  }, [fetchShortcuts])
+
+  const handleShortcutClick = (shortcut: ChatShortcut) => {
+    setNewMessage(prev => {
+      if (!prev.trim()) return shortcut.message
+      return prev + ' ' + shortcut.message
+    })
+    inputRef.current?.focus()
+  }
+
+  const handleSaveShortcut = async () => {
+    if (!user?.id || !shortcutForm.label.trim() || !shortcutForm.message.trim()) return
+    setSavingShortcut(true)
+    try {
+      const method = editingShortcutId ? 'PUT' : 'POST'
+      const body = editingShortcutId
+        ? { id: editingShortcutId, userId: user.id, ...shortcutForm }
+        : { userId: user.id, ...shortcutForm }
+
+      const res = await fetch('/api/chat/shortcuts', {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      const json = await res.json()
+      if (json.success) {
+        await fetchShortcuts()
+        setShortcutForm({ label: '', message: '', emoji: '' })
+        setEditingShortcutId(null)
+      }
+    } catch (err) {
+      console.error('Error saving shortcut:', err)
+    } finally {
+      setSavingShortcut(false)
+    }
+  }
+
+  const handleDeleteShortcut = async (shortcutId: string) => {
+    if (!user?.id) return
+    try {
+      await fetch('/api/chat/shortcuts', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: shortcutId, userId: user.id }),
+      })
+      await fetchShortcuts()
+    } catch (err) {
+      console.error('Error deleting shortcut:', err)
     }
   }
 
@@ -1148,6 +1232,39 @@ export default function ChatPage() {
 
               {/* Message input */}
               <div className={`p-4 border-t ${isDark ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-white'}`}>
+                {/* Shortcuts pills bar */}
+                {(shortcuts.length > 0 || true) && (
+                  <div className="flex items-center gap-2 mb-2 overflow-x-auto scrollbar-hide pb-1">
+                    {shortcuts.map(sc => (
+                      <button
+                        key={sc.id}
+                        onClick={() => handleShortcutClick(sc)}
+                        className={`flex-shrink-0 flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                          isDark
+                            ? 'bg-gray-700 hover:bg-gray-600 text-gray-200 border border-gray-600'
+                            : 'bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-200'
+                        }`}
+                        title={sc.message}
+                      >
+                        {sc.emoji && <span>{sc.emoji}</span>}
+                        <span>{sc.label}</span>
+                      </button>
+                    ))}
+                    <button
+                      onClick={() => setShowShortcutModal(true)}
+                      className={`flex-shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-full text-xs transition-colors ${
+                        isDark
+                          ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-700 border border-gray-600 border-dashed'
+                          : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100 border border-gray-300 border-dashed'
+                      }`}
+                      title={t('admin.chat.manage_shortcuts') || 'Manage shortcuts'}
+                    >
+                      {shortcuts.length === 0 ? <Zap className="w-3.5 h-3.5" /> : <Settings2 className="w-3.5 h-3.5" />}
+                      <span>{shortcuts.length === 0 ? (t('admin.chat.shortcuts') || 'Shortcuts') : ''}</span>
+                    </button>
+                  </div>
+                )}
+
                 <div className="flex items-center gap-3 relative">
                   {/* Emoji picker */}
                   <div className="relative" ref={emojiPickerRef}>
@@ -1401,6 +1518,123 @@ export default function ChatPage() {
             <EyeOff className="w-4 h-4" />
             {t('admin.chat.mark_unread') || 'Mark as unread'}
           </button>
+        </div>
+      )}
+
+      {/* Shortcuts management modal */}
+      {showShortcutModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowShortcutModal(false)}>
+          <div
+            className={`w-full max-w-md mx-4 rounded-xl shadow-xl ${isDark ? 'bg-gray-800' : 'bg-white'} max-h-[80vh] flex flex-col`}
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className={`flex items-center justify-between p-4 border-b ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
+              <h3 className={`font-semibold text-lg ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                <Zap className="w-5 h-5 inline-block mr-2 text-yellow-500" />
+                {t('admin.chat.manage_shortcuts') || 'Manage shortcuts'}
+              </h3>
+              <button onClick={() => setShowShortcutModal(false)} className={`p-1 rounded-lg ${isDark ? 'hover:bg-gray-700 text-gray-400' : 'hover:bg-gray-100 text-gray-500'}`}>
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* List */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-2">
+              {shortcuts.length === 0 && (
+                <p className={`text-sm text-center py-4 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                  {t('admin.chat.no_shortcuts') || 'No shortcuts'}
+                </p>
+              )}
+              {shortcuts.map(sc => (
+                <div
+                  key={sc.id}
+                  className={`flex items-center gap-3 p-3 rounded-lg ${isDark ? 'bg-gray-700/50' : 'bg-gray-50'}`}
+                >
+                  <span className="text-lg flex-shrink-0">{sc.emoji || '⚡'}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className={`font-medium text-sm ${isDark ? 'text-white' : 'text-gray-900'}`}>{sc.label}</div>
+                    <div className={`text-xs truncate ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{sc.message}</div>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setEditingShortcutId(sc.id)
+                      setShortcutForm({ label: sc.label, message: sc.message, emoji: sc.emoji })
+                    }}
+                    className={`p-1.5 rounded-lg transition-colors ${isDark ? 'hover:bg-gray-600 text-gray-400' : 'hover:bg-gray-200 text-gray-400'}`}
+                  >
+                    <Settings2 className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => handleDeleteShortcut(sc.id)}
+                    className="p-1.5 rounded-lg text-red-400 hover:bg-red-500/10 transition-colors"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            {/* Add/Edit form */}
+            <div className={`p-4 border-t ${isDark ? 'border-gray-700' : 'border-gray-200'} space-y-3`}>
+              <div className={`text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                {editingShortcutId ? '✏️' : '➕'} {editingShortcutId ? (t('admin.chat.shortcuts') || 'Edit') : (t('admin.chat.add_shortcut') || 'Add shortcut')}
+              </div>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={shortcutForm.emoji}
+                  onChange={e => setShortcutForm(f => ({ ...f, emoji: e.target.value }))}
+                  placeholder={t('admin.chat.shortcut_emoji') || '😊'}
+                  className={`w-14 px-2 py-2 rounded-lg text-center text-sm border ${
+                    isDark ? 'bg-gray-700 text-white border-gray-600' : 'bg-gray-50 text-gray-900 border-gray-200'
+                  } focus:outline-none focus:ring-2 focus:ring-green-500/50`}
+                  maxLength={4}
+                />
+                <input
+                  type="text"
+                  value={shortcutForm.label}
+                  onChange={e => setShortcutForm(f => ({ ...f, label: e.target.value }))}
+                  placeholder={t('admin.chat.shortcut_label_placeholder') || 'Button name'}
+                  className={`flex-1 px-3 py-2 rounded-lg text-sm border ${
+                    isDark ? 'bg-gray-700 text-white border-gray-600 placeholder-gray-500' : 'bg-gray-50 text-gray-900 border-gray-200 placeholder-gray-400'
+                  } focus:outline-none focus:ring-2 focus:ring-green-500/50`}
+                />
+              </div>
+              <textarea
+                value={shortcutForm.message}
+                onChange={e => setShortcutForm(f => ({ ...f, message: e.target.value }))}
+                placeholder={t('admin.chat.shortcut_message_placeholder') || 'Message content...'}
+                rows={3}
+                className={`w-full px-3 py-2 rounded-lg text-sm border resize-none ${
+                  isDark ? 'bg-gray-700 text-white border-gray-600 placeholder-gray-500' : 'bg-gray-50 text-gray-900 border-gray-200 placeholder-gray-400'
+                } focus:outline-none focus:ring-2 focus:ring-green-500/50`}
+              />
+              <div className="flex gap-2">
+                {editingShortcutId && (
+                  <button
+                    onClick={() => { setEditingShortcutId(null); setShortcutForm({ label: '', message: '', emoji: '' }) }}
+                    className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      isDark ? 'bg-gray-700 hover:bg-gray-600 text-gray-300' : 'bg-gray-100 hover:bg-gray-200 text-gray-600'
+                    }`}
+                  >
+                    {t('common.cancel') || 'Cancel'}
+                  </button>
+                )}
+                <button
+                  onClick={handleSaveShortcut}
+                  disabled={!shortcutForm.label.trim() || !shortcutForm.message.trim() || savingShortcut}
+                  className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    shortcutForm.label.trim() && shortcutForm.message.trim() && !savingShortcut
+                      ? 'bg-green-600 hover:bg-green-700 text-white'
+                      : isDark ? 'bg-gray-700 text-gray-500' : 'bg-gray-200 text-gray-400'
+                  }`}
+                >
+                  {savingShortcut ? '...' : (t('admin.chat.save_shortcut') || 'Save')}
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 

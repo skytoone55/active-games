@@ -2213,7 +2213,18 @@
       "hide_archived": "Masquer archivees",
       "archived": "Archivee",
       "search_emoji": "Rechercher un emoji...",
-      "mark_unread": "Marquer comme non lu"
+      "mark_unread": "Marquer comme non lu",
+      "shortcuts": "Raccourcis",
+      "add_shortcut": "Ajouter un raccourci",
+      "shortcut_label": "Nom du bouton",
+      "shortcut_message": "Message",
+      "shortcut_emoji": "Emoji",
+      "manage_shortcuts": "Gerer les raccourcis",
+      "delete_shortcut": "Supprimer",
+      "no_shortcuts": "Aucun raccourci. Cliquez + pour en creer.",
+      "save_shortcut": "Enregistrer",
+      "shortcut_label_placeholder": "Ex: Prix, Horaires...",
+      "shortcut_message_placeholder": "Le message qui sera insere..."
     },
     "chat_stats": {
       "error_loading": "Erreur lors du chargement des statistiques chat",

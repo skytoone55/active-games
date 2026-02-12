@@ -2150,7 +2150,18 @@
       "hide_archived": "Hide archived",
       "archived": "Archived",
       "search_emoji": "Search emoji...",
-      "mark_unread": "Mark as unread"
+      "mark_unread": "Mark as unread",
+      "shortcuts": "Shortcuts",
+      "add_shortcut": "Add shortcut",
+      "shortcut_label": "Button name",
+      "shortcut_message": "Message",
+      "shortcut_emoji": "Emoji",
+      "manage_shortcuts": "Manage shortcuts",
+      "delete_shortcut": "Delete",
+      "no_shortcuts": "No shortcuts. Click + to create one.",
+      "save_shortcut": "Save",
+      "shortcut_label_placeholder": "E.g.: Prices, Hours...",
+      "shortcut_message_placeholder": "The message that will be inserted..."
     },
     "chat_stats": {
       "error_loading": "Error loading chat statistics",
