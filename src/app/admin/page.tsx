@@ -19,7 +19,7 @@ import { useUserPermissions } from '@/hooks/useUserPermissions'
 import { useLaserRooms } from '@/hooks/useLaserRooms'
 import { useTranslation } from '@/contexts/LanguageContext'
 import { useAdmin } from '@/contexts/AdminContext'
-import type { Profile, UserBranch, GameArea, GameSession, UserRole, BookingContact, BookingSlot, Contact } from '@/lib/supabase/types'
+import type { Profile, UserBranch, GameArea, GameSession, UserRole, ResourceType, BookingContact, BookingSlot, Contact } from '@/lib/supabase/types'
 
 interface UserData {
   id: string
@@ -50,11 +50,32 @@ export default function AdminPage() {
   const selectedBranchIdFromHook = branchesHook.selectedBranchId
 
   // Permissions pour l'agenda - Hook appelé tôt pour respecter l'ordre des hooks
-  const { hasPermission } = useUserPermissions(userData?.role as UserRole || null)
+  const { hasPermission, loading: permissionsLoading } = useUserPermissions(userData?.role as UserRole || null)
   const canViewAgenda = hasPermission('agenda', 'can_view')
   const canCreateAgenda = hasPermission('agenda', 'can_create')
   const canEditAgenda = hasPermission('agenda', 'can_edit')
   const canDeleteAgenda = hasPermission('agenda', 'can_delete')
+
+  // Redirect to first authorized page if user can't view agenda
+  useEffect(() => {
+    if (permissionsLoading || !userData) return
+    if (canViewAgenda) return
+
+    const pages: Array<{ resource: ResourceType; path: string }> = [
+      { resource: 'clients', path: '/admin/clients' },
+      { resource: 'orders', path: '/admin/orders' },
+      { resource: 'chat', path: '/admin/chat' },
+      { resource: 'calls', path: '/admin/calls' },
+      { resource: 'users', path: '/admin/users' },
+      { resource: 'logs', path: '/admin/logs' },
+      { resource: 'settings', path: '/admin/settings' },
+    ]
+
+    const firstAllowed = pages.find(p => hasPermission(p.resource, 'can_view'))
+    if (firstAllowed) {
+      router.replace(firstAllowed.path)
+    }
+  }, [permissionsLoading, canViewAgenda, userData, hasPermission, router])
 
   // Calculer effectiveSelectedBranchId AVANT useBookings pour éviter les problèmes de timing
   // Si selectedBranchId n'est pas défini, utiliser la première branche disponible
