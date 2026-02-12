@@ -10,6 +10,10 @@ import {
   AlertCircle,
   Loader2,
   Users,
+  Bot,
+  TrendingUp,
+  Link2,
+  HandHelping,
 } from 'lucide-react'
 import { useTranslation } from '@/contexts/LanguageContext'
 import {
@@ -32,6 +36,42 @@ interface ChatStatsTabProps {
   dateRange: string
   customStartDate: string
   customEndDate: string
+}
+
+interface ClaraFunnelData {
+  funnel: {
+    conversations: number
+    simulateCalled: number
+    simulateSuccess: number
+    simulateError: number
+    linkGenerated: number
+    linkSuccess: number
+    escalated: number
+  }
+  rates: {
+    simulateRate: number
+    simulateSuccessRate: number
+    linkRate: number
+    escalateRate: number
+  }
+  branchBreakdown: {
+    branchId: string
+    conversations: number
+    simulateCalled: number
+    simulateSuccess: number
+    linkGenerated: number
+    linkSuccess: number
+    escalated: number
+  }[]
+  dailyTrend: {
+    date: string
+    conversations: number
+    simulations: number
+    links: number
+    escalations: number
+  }[]
+  escaladeReasons: Record<string, number>
+  totalEvents: number
 }
 
 interface ChatStatsData {
@@ -129,6 +169,23 @@ export function ChatStatsTab({
   )
 
   const stats = data?.data
+
+  // Clara WhatsApp funnel stats (separate SWR)
+  const claraSwrKey = useMemo(() => {
+    let url = `/api/admin/statistics/clara-whatsapp?range=${dateRange}&branch=${selectedBranchId}`
+    if (dateRange === 'custom' && customStartDate && customEndDate) {
+      url += `&startDate=${customStartDate}&endDate=${customEndDate}`
+    }
+    return url
+  }, [dateRange, selectedBranchId, customStartDate, customEndDate])
+
+  const { data: claraData } = useSWR<{ success: boolean; data: ClaraFunnelData }>(
+    claraSwrKey,
+    swrFetcher,
+    { revalidateOnFocus: false, dedupingInterval: 30000, keepPreviousData: true }
+  )
+  const claraStats = claraData?.data
+
   const colors = isDark ? CHART_COLORS.dark : CHART_COLORS.light
   const distColors = isDark ? DISTRIBUTION_COLORS.dark : DISTRIBUTION_COLORS.light
 
@@ -407,6 +464,178 @@ export function ChatStatsTab({
           </div>
         </div>
       )}
+
+      {/* Clara WhatsApp Funnel */}
+      {claraStats && claraStats.totalEvents > 0 && (
+        <div className="space-y-4">
+          <h2 className={`text-xl font-bold flex items-center gap-2 mt-8 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+            <Bot className="w-6 h-6 text-cyan-500" />
+            {t('admin.chat_stats.clara_funnel_title')}
+          </h2>
+
+          {/* Clara Funnel KPIs */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <KPICard
+              title={t('admin.chat_stats.clara_conversations')}
+              value={claraStats.funnel.conversations.toString()}
+              subtitle={t('admin.chat_stats.clara_total_events', { count: claraStats.totalEvents })}
+              icon={MessageCircle}
+              isDark={isDark}
+              color="blue"
+            />
+            <KPICard
+              title={t('admin.chat_stats.clara_simulations')}
+              value={claraStats.funnel.simulateCalled.toString()}
+              subtitle={`${claraStats.rates.simulateRate}% ${t('admin.chat_stats.clara_of_conversations')}`}
+              icon={TrendingUp}
+              isDark={isDark}
+              color="green"
+            />
+            <KPICard
+              title={t('admin.chat_stats.clara_links')}
+              value={claraStats.funnel.linkGenerated.toString()}
+              subtitle={`${claraStats.rates.linkRate}% ${t('admin.chat_stats.clara_of_simulations')}`}
+              icon={Link2}
+              isDark={isDark}
+              color="purple"
+            />
+            <KPICard
+              title={t('admin.chat_stats.clara_escalations')}
+              value={claraStats.funnel.escalated.toString()}
+              subtitle={`${claraStats.rates.escalateRate}% ${t('admin.chat_stats.clara_of_conversations')}`}
+              icon={HandHelping}
+              isDark={isDark}
+              color="orange"
+            />
+          </div>
+
+          {/* Clara Funnel Visualization */}
+          <div className={`rounded-xl p-5 border ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
+            <h3 className={`text-lg font-semibold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+              {t('admin.chat_stats.clara_funnel_visual')}
+            </h3>
+            <div className="space-y-3">
+              <FunnelStep
+                label={t('admin.chat_stats.clara_step_conversations')}
+                value={claraStats.funnel.conversations}
+                maxValue={claraStats.funnel.conversations}
+                color="bg-cyan-500"
+                isDark={isDark}
+              />
+              <FunnelStep
+                label={t('admin.chat_stats.clara_step_simulate')}
+                value={claraStats.funnel.simulateCalled}
+                maxValue={claraStats.funnel.conversations}
+                color="bg-blue-500"
+                isDark={isDark}
+                rate={claraStats.rates.simulateRate}
+              />
+              <FunnelStep
+                label={t('admin.chat_stats.clara_step_simulate_ok')}
+                value={claraStats.funnel.simulateSuccess}
+                maxValue={claraStats.funnel.conversations}
+                color="bg-green-500"
+                isDark={isDark}
+                rate={claraStats.funnel.simulateCalled > 0
+                  ? Math.round((claraStats.funnel.simulateSuccess / claraStats.funnel.simulateCalled) * 100) : 0}
+              />
+              <FunnelStep
+                label={t('admin.chat_stats.clara_step_link')}
+                value={claraStats.funnel.linkGenerated}
+                maxValue={claraStats.funnel.conversations}
+                color="bg-purple-500"
+                isDark={isDark}
+                rate={claraStats.rates.linkRate}
+              />
+              <FunnelStep
+                label={t('admin.chat_stats.clara_step_escalated')}
+                value={claraStats.funnel.escalated}
+                maxValue={claraStats.funnel.conversations}
+                color="bg-orange-500"
+                isDark={isDark}
+                rate={claraStats.rates.escalateRate}
+              />
+            </div>
+          </div>
+
+          {/* Clara Daily Trend */}
+          {claraStats.dailyTrend.length > 1 && (
+            <ChartCard title={t('admin.chat_stats.clara_daily_trend')} isDark={isDark}>
+              <ResponsiveContainer width="100%" height={260}>
+                <BarChart data={claraStats.dailyTrend}>
+                  <CartesianGrid strokeDasharray="3 3" stroke={isDark ? '#374151' : '#e5e7eb'} />
+                  <XAxis dataKey="date" stroke={isDark ? '#9ca3af' : '#6b7280'} fontSize={11}
+                    tickFormatter={(v) => v.slice(5)} />
+                  <YAxis stroke={isDark ? '#9ca3af' : '#6b7280'} fontSize={12} />
+                  <Tooltip contentStyle={tooltipStyle} />
+                  <Bar dataKey="conversations" name={t('admin.chat_stats.clara_conversations')} fill={colors[6]} radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="simulations" name={t('admin.chat_stats.clara_simulations')} fill={colors[0]} radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="links" name={t('admin.chat_stats.clara_links')} fill={colors[3]} radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </ChartCard>
+          )}
+
+          {/* Clara Branch Breakdown */}
+          {claraStats.branchBreakdown.length > 0 && (
+            <div className={`rounded-xl p-5 border ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
+              <h3 className={`text-lg font-semibold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                {t('admin.chat_stats.clara_by_branch')}
+              </h3>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className={`border-b ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
+                      <th className={`text-left py-3 px-4 font-medium text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                        {t('admin.chat_stats.clara_col_branch')}
+                      </th>
+                      <th className={`text-center py-3 px-4 font-medium text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                        {t('admin.chat_stats.clara_conversations')}
+                      </th>
+                      <th className={`text-center py-3 px-4 font-medium text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                        {t('admin.chat_stats.clara_simulations')}
+                      </th>
+                      <th className={`text-center py-3 px-4 font-medium text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                        {t('admin.chat_stats.clara_links')}
+                      </th>
+                      <th className={`text-center py-3 px-4 font-medium text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                        {t('admin.chat_stats.clara_escalations')}
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {claraStats.branchBreakdown.map((row) => {
+                      const branch = branches.find(b => b.id === row.branchId)
+                      return (
+                        <tr
+                          key={row.branchId}
+                          className={`border-b ${isDark ? 'border-gray-700/50 hover:bg-gray-700/50' : 'border-gray-100 hover:bg-gray-50'}`}
+                        >
+                          <td className={`py-3 px-4 font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                            {branch?.name || row.branchId.slice(0, 8)}
+                          </td>
+                          <td className={`py-3 px-4 text-center ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
+                            {row.conversations}
+                          </td>
+                          <td className={`py-3 px-4 text-center ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
+                            {row.simulateCalled}
+                          </td>
+                          <td className={`py-3 px-4 text-center ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
+                            {row.linkGenerated}
+                          </td>
+                          <td className={`py-3 px-4 text-center ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
+                            {row.escalated}
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }
@@ -481,6 +710,49 @@ function EmptyChart({ isDark, message = '-' }: { isDark: boolean; message?: stri
   return (
     <div className={`flex items-center justify-center h-[220px] ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
       <p className="text-sm">{message}</p>
+    </div>
+  )
+}
+
+function FunnelStep({
+  label,
+  value,
+  maxValue,
+  color,
+  isDark,
+  rate,
+}: {
+  label: string
+  value: number
+  maxValue: number
+  color: string
+  isDark: boolean
+  rate?: number
+}) {
+  const width = maxValue > 0 ? Math.max((value / maxValue) * 100, 2) : 0
+
+  return (
+    <div className="flex items-center gap-3">
+      <div className={`w-40 text-sm font-medium truncate ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
+        {label}
+      </div>
+      <div className="flex-1 flex items-center gap-2">
+        <div className={`h-7 rounded-md flex items-center ${isDark ? 'bg-gray-700' : 'bg-gray-100'}`} style={{ width: '100%' }}>
+          <div
+            className={`h-full rounded-md ${color} transition-all duration-300 flex items-center justify-end pr-2`}
+            style={{ width: `${width}%`, minWidth: value > 0 ? '2rem' : 0 }}
+          >
+            {value > 0 && (
+              <span className="text-xs font-bold text-white">{value}</span>
+            )}
+          </div>
+        </div>
+        {rate !== undefined && (
+          <span className={`text-xs font-medium w-12 text-right ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+            {rate}%
+          </span>
+        )}
+      </div>
     </div>
   )
 }

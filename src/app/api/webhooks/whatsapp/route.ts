@@ -634,6 +634,27 @@ async function handleOnboarding(
 // ============================================================
 // Clara AI for WhatsApp
 // ============================================================
+// Helper: track Clara WhatsApp funnel event
+async function trackClaraEvent(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: any,
+  conversationId: string,
+  branchId: string | null,
+  eventType: string,
+  metadata: Record<string, unknown> = {}
+) {
+  try {
+    await supabase.from('clara_whatsapp_events').insert({
+      conversation_id: conversationId,
+      branch_id: branchId,
+      event_type: eventType,
+      metadata,
+    })
+  } catch (err) {
+    console.error('[CLARA TRACKING] Error tracking event:', eventType, err)
+  }
+}
+
 async function handleClaraWhatsApp(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   supabase: any,
@@ -653,6 +674,12 @@ async function handleClaraWhatsApp(
     console.log('[WHATSAPP CLARA] Clara globally disabled, skipping')
     return
   }
+
+  // Track conversation started (only once per conversation — use upsert-like check)
+  await trackClaraEvent(supabase, conversation.id, conversation.branch_id, 'conversation_started', {
+    phone: senderPhone,
+    language,
+  })
 
   // Use WhatsApp-specific model/temperature if set, otherwise global
   const model = claraConfig.model || globalSettings.model
@@ -729,8 +756,10 @@ async function handleClaraWhatsApp(
     tools: createWhatsAppTools(conversation.id),
   })
 
-  // Collect full response (no streaming for WhatsApp — we send the complete message)
+  // Collect full response + track tool calls for funnel analytics
   let fullResponse = ''
+  let consecutiveToolErrors = 0
+
   for await (const part of result.fullStream) {
     if (part.type === 'text-delta') {
       const textContent = (part as { text?: string }).text
@@ -738,7 +767,70 @@ async function handleClaraWhatsApp(
         fullResponse += textContent
       }
     } else if (part.type === 'tool-call') {
-      console.log('[WHATSAPP CLARA] Tool call:', (part as { toolName?: string }).toolName)
+      const toolName = (part as { toolName?: string }).toolName
+      console.log('[WHATSAPP CLARA] Tool call:', toolName)
+
+      // Track tool calls for funnel
+      if (toolName === 'simulateBooking') {
+        await trackClaraEvent(supabase, conversation.id, conversation.branch_id, 'simulate_booking_called', {
+          args: (part as { args?: unknown }).args,
+        })
+      } else if (toolName === 'generateBookingLink') {
+        await trackClaraEvent(supabase, conversation.id, conversation.branch_id, 'generate_link_called', {
+          args: (part as { args?: unknown }).args,
+        })
+      } else if (toolName === 'escalateToHuman') {
+        await trackClaraEvent(supabase, conversation.id, conversation.branch_id, 'escalated_to_human', {
+          reason: 'user_requested',
+        })
+      }
+    } else if (part.type === 'tool-result') {
+      const toolResult = part as { toolName?: string; result?: unknown }
+      const toolResultData = toolResult.result as { error?: string; available?: boolean; url?: string } | undefined
+
+      // Track tool results for funnel
+      if (toolResult.toolName === 'simulateBooking') {
+        if (toolResultData?.error) {
+          await trackClaraEvent(supabase, conversation.id, conversation.branch_id, 'simulate_booking_error', {
+            error: toolResultData.error,
+          })
+          consecutiveToolErrors++
+        } else {
+          await trackClaraEvent(supabase, conversation.id, conversation.branch_id, 'simulate_booking_success', {
+            available: toolResultData?.available,
+          })
+          consecutiveToolErrors = 0
+        }
+      } else if (toolResult.toolName === 'generateBookingLink') {
+        if (toolResultData?.url) {
+          await trackClaraEvent(supabase, conversation.id, conversation.branch_id, 'generate_link_success', {
+            url: toolResultData.url,
+          })
+          consecutiveToolErrors = 0
+        } else if (toolResultData?.error) {
+          await trackClaraEvent(supabase, conversation.id, conversation.branch_id, 'tool_error', {
+            tool: 'generateBookingLink',
+            error: toolResultData.error,
+          })
+          consecutiveToolErrors++
+        }
+      }
+
+      // Auto-escalate after 2 consecutive tool errors
+      if (consecutiveToolErrors >= 2) {
+        console.warn('[WHATSAPP CLARA] Auto-escalating after', consecutiveToolErrors, 'consecutive tool errors')
+        await trackClaraEvent(supabase, conversation.id, conversation.branch_id, 'escalated_to_human', {
+          reason: 'auto_tool_errors',
+          consecutiveErrors: consecutiveToolErrors,
+        })
+        // Set needs_human flag
+        await supabase
+          .from('whatsapp_conversations')
+          .update({ needs_human: true })
+          .eq('id', conversation.id)
+        // Reset counter
+        consecutiveToolErrors = 0
+      }
     }
   }
 

@@ -127,23 +127,96 @@ IMPORTANT: You must collect ALL required information BEFORE calling this tool:
 This tool will tell you if the slot is really available or not, and suggest alternatives if not.`,
   inputSchema: z.object({
     branchId: z.string().describe('Branch ID (UUID). REQUIRED!'),
-    date: z.string().describe('Date in YYYY-MM-DD format'),
-    time: z.string().describe('Time in HH:MM format'),
-    participants: z.number().min(1).describe('Number of participants'),
+    date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format').describe('Date in YYYY-MM-DD format'),
+    time: z.string().regex(/^\d{2}:\d{2}$/, 'Time must be in HH:MM format').describe('Time in HH:MM format'),
+    participants: z.number().int().min(1).max(300).describe('Number of participants'),
     type: z.enum(['GAME', 'EVENT']).describe('Booking type'),
     gameArea: z.enum(['ACTIVE', 'LASER', 'MIX']).optional().describe('Game area (required for GAME type)'),
-    numberOfGames: z.number().min(1).max(4).optional().describe('Number of games (required for GAME type, usually 1-3)'),
+    numberOfGames: z.number().int().min(1).max(4).optional().describe('Number of games (required for GAME type, usually 1-3)'),
     eventType: z.enum(['event_active', 'event_laser', 'event_mix']).optional().describe('Event type (required for EVENT type)'),
   }),
   execute: async ({ branchId, date, time, participants, type, gameArea, numberOfGames, eventType }) => {
     console.log('[Tool:simulateBooking] Called with:', { branchId, date, time, participants, type, gameArea, numberOfGames, eventType })
 
-    // Valider le branchId
+    // === VALIDATION STRICTE ===
+
+    // Valider le branchId (UUID format)
     if (!branchId || branchId.length < 10) {
       return {
         available: false,
         error: 'Branch not specified. Please ask the customer which branch they prefer.',
         missingInfo: ['branch']
+      }
+    }
+
+    // Valider le format de date YYYY-MM-DD (runtime double-check)
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      console.warn('[Tool:simulateBooking] Invalid date format:', date)
+      return {
+        available: false,
+        error: `Invalid date format "${date}". Must be YYYY-MM-DD (e.g. 2025-03-15). Ask the customer for the date again.`,
+        missingInfo: ['date']
+      }
+    }
+
+    // Valider que la date est une date réelle (pas 2025-02-30)
+    const parsedDate = new Date(date + 'T00:00:00')
+    if (isNaN(parsedDate.getTime())) {
+      console.warn('[Tool:simulateBooking] Invalid date value:', date)
+      return {
+        available: false,
+        error: `"${date}" is not a valid date. Please check and try again.`,
+        missingInfo: ['date']
+      }
+    }
+    // Vérifier que la recomposition correspond (attrape des cas comme 2025-02-31 → 2025-03-03)
+    const [y, m, d] = date.split('-').map(Number)
+    if (parsedDate.getFullYear() !== y || parsedDate.getMonth() + 1 !== m || parsedDate.getDate() !== d) {
+      console.warn('[Tool:simulateBooking] Date normalization mismatch:', date, '→', parsedDate.toISOString().slice(0, 10))
+      return {
+        available: false,
+        error: `"${date}" is not a valid calendar date. Did you mean ${parsedDate.toISOString().slice(0, 10)}? Please confirm with the customer.`,
+        missingInfo: ['date']
+      }
+    }
+
+    // Vérifier que la date n'est pas dans le passé (timezone Israel)
+    const israelNow = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Jerusalem' }))
+    const todayStr = israelNow.toISOString().slice(0, 10)
+    if (date < todayStr) {
+      return {
+        available: false,
+        error: `The date ${date} is in the past. Today is ${todayStr}. Please ask for a future date.`,
+        missingInfo: ['date']
+      }
+    }
+
+    // Valider le format de l'heure HH:MM (runtime double-check)
+    if (!/^\d{2}:\d{2}$/.test(time)) {
+      console.warn('[Tool:simulateBooking] Invalid time format:', time)
+      return {
+        available: false,
+        error: `Invalid time format "${time}". Must be HH:MM (e.g. 14:30). Ask the customer for the time again.`,
+        missingInfo: ['time']
+      }
+    }
+    // Valider les valeurs de l'heure
+    const [hour, minute] = time.split(':').map(Number)
+    if (hour < 0 || hour > 23 || minute < 0 || minute > 59) {
+      console.warn('[Tool:simulateBooking] Invalid time values:', time)
+      return {
+        available: false,
+        error: `Invalid time "${time}". Hour must be 00-23, minute must be 00-59.`,
+        missingInfo: ['time']
+      }
+    }
+
+    // Valider participants (runtime double-check)
+    if (!Number.isInteger(participants) || participants < 1) {
+      return {
+        available: false,
+        error: `Invalid number of participants: ${participants}. Must be at least 1.`,
+        missingInfo: ['participants']
       }
     }
 
