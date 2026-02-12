@@ -350,6 +350,7 @@ export function EditUserModal({
                 }
                 setValidationErrors(newErrors)
               }}
+              autoComplete="new-password"
               className={`w-full px-3 py-2 rounded-lg border ${
                 validationErrors.password
                   ? 'border-red-500'
