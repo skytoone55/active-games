@@ -181,25 +181,27 @@ function AdminHeaderComponent({
 
         {/* Navigation - Agenda, Clients, Commandes - Se rapproche du logo quand on réduit */}
         <div className="hidden min-[900px]:flex items-center gap-3 flex-1 justify-center min-w-0">
-          <Link
-            href="/admin"
-            className={`px-4 py-2 rounded-lg transition-colors flex items-center gap-2 relative ${
-              pathname === '/admin'
-                ? 'bg-blue-600 text-white'
-                : theme === 'dark'
-                  ? 'bg-gray-800 hover:bg-gray-700 text-gray-300'
-                  : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-            }`}
-          >
-            <Calendar className="w-4 h-4" />
-            <span>{t('admin.header.agenda')}</span>
-            {/* Pastille rouge critique pour commandes en attente */}
-            {hasPendingOrders && pathname !== '/admin/orders' && (
-              <span className="absolute -top-1 -right-1 bg-red-600 text-white text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center animate-pulse shadow-lg">
-                !
-              </span>
-            )}
-          </Link>
+          {hasPermission('agenda', 'can_view') && (
+            <Link
+              href="/admin"
+              className={`px-4 py-2 rounded-lg transition-colors flex items-center gap-2 relative ${
+                pathname === '/admin'
+                  ? 'bg-blue-600 text-white'
+                  : theme === 'dark'
+                    ? 'bg-gray-800 hover:bg-gray-700 text-gray-300'
+                    : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+              }`}
+            >
+              <Calendar className="w-4 h-4" />
+              <span>{t('admin.header.agenda')}</span>
+              {/* Pastille rouge critique pour commandes en attente */}
+              {hasPendingOrders && pathname !== '/admin/orders' && (
+                <span className="absolute -top-1 -right-1 bg-red-600 text-white text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center animate-pulse shadow-lg">
+                  !
+                </span>
+              )}
+            </Link>
+          )}
           {hasPermission('clients', 'can_view') && (
             <Link
               href="/admin/clients"
@@ -575,25 +577,27 @@ function AdminHeaderComponent({
 
             {/* Navigation mobile */}
             <div className="space-y-2">
-              <Link
-                href="/admin"
-                onClick={closeMobileMenu}
-                className={`flex items-center gap-3 px-4 py-2 rounded-lg transition-colors relative ${
-                  pathname === '/admin'
-                    ? 'bg-blue-600 text-white'
-                    : theme === 'dark'
-                      ? 'bg-gray-800 hover:bg-gray-700 text-gray-300'
-                      : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-                }`}
-              >
-                <Calendar className="w-4 h-4" />
-                <span>{t('admin.header.agenda')}</span>
-                {hasPendingOrders && pathname !== '/admin/orders' && (
-                  <span className="bg-red-600 text-white text-xs font-bold px-1.5 py-0.5 rounded-full ml-auto animate-pulse">
-                    !
-                  </span>
-                )}
-              </Link>
+              {hasPermission('agenda', 'can_view') && (
+                <Link
+                  href="/admin"
+                  onClick={closeMobileMenu}
+                  className={`flex items-center gap-3 px-4 py-2 rounded-lg transition-colors relative ${
+                    pathname === '/admin'
+                      ? 'bg-blue-600 text-white'
+                      : theme === 'dark'
+                        ? 'bg-gray-800 hover:bg-gray-700 text-gray-300'
+                        : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                  }`}
+                >
+                  <Calendar className="w-4 h-4" />
+                  <span>{t('admin.header.agenda')}</span>
+                  {hasPendingOrders && pathname !== '/admin/orders' && (
+                    <span className="bg-red-600 text-white text-xs font-bold px-1.5 py-0.5 rounded-full ml-auto animate-pulse">
+                      !
+                    </span>
+                  )}
+                </Link>
+              )}
               {hasPermission('clients', 'can_view') && (
                 <Link
                   href="/admin/clients"

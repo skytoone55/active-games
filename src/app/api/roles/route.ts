@@ -196,7 +196,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Créer les permissions par défaut pour ce nouveau rôle (toutes à false)
-    const resources = ['agenda', 'orders', 'clients', 'users', 'logs', 'settings', 'permissions']
+    // MUST match RESOURCE_ORDER in usePermissions.ts
+    const resources = ['agenda', 'orders', 'chat', 'clients', 'calls', 'users', 'logs', 'settings', 'permissions', 'messenger', 'chat_stats']
     const permissionsToInsert = resources.map(resource => ({
       role: createdRole.name,
       role_id: createdRole.id,
