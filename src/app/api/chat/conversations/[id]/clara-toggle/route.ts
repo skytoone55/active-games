@@ -20,29 +20,14 @@ export async function POST(
 
     const supabase = createServiceRoleClient()
 
-    let pausedUntil: string | null = null
-
-    if (paused) {
-      // When manually pausing, get auto-resume timeout from settings
-      try {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const { data: msSettings } = await (supabase as any)
-          .from('messenger_settings')
-          .select('settings')
-          .single()
-        const autoResumeMinutes = msSettings?.settings?.whatsapp_clara?.auto_resume_minutes || 5
-        pausedUntil = new Date(Date.now() + autoResumeMinutes * 60 * 1000).toISOString()
-      } catch {
-        pausedUntil = new Date(Date.now() + 5 * 60 * 1000).toISOString()
-      }
-    }
-
+    // Manual toggle: no auto-resume timeout (permanent pause until manually re-enabled)
+    // Auto-resume timeout only applies when a human agent sends a message (see /api/chat/send)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data, error } = await (supabase as any)
       .from('whatsapp_conversations')
       .update({
         clara_paused: paused,
-        clara_paused_until: paused ? pausedUntil : null,
+        clara_paused_until: null,
       })
       .eq('id', conversationId)
       .select('id, clara_paused, clara_paused_until')

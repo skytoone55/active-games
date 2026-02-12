@@ -329,7 +329,7 @@ export async function POST(request: NextRequest) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         let { data: conversation } = await (supabase as any)
           .from('whatsapp_conversations')
-          .select('id, contact_id, contact_name, onboarding_status, activity, branch_id, onboarding_data')
+          .select('id, contact_id, contact_name, onboarding_status, activity, branch_id, onboarding_data, clara_paused, clara_paused_until')
           .eq('phone', senderPhone)
           .eq('status', 'active')
           .order('created_at', { ascending: false })
