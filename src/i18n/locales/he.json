@@ -1998,7 +1998,8 @@
         "credentials": "פרטי תשלום",
         "credentials_desc": "הגדרות API של iCount לכל סניף",
         "whatsapp": "WhatsApp",
-        "whatsapp_desc": "אונבורדינג והודעות אוטומטיות"
+        "whatsapp_desc": "אונבורדינג והודעות אוטומטיות",
+        "clara_desc": "הגדרות גלובליות של העוזר הדיגיטלי"
       },
       "templates_tabs": {
         "emails": "תבניות אימייל",
@@ -2754,6 +2755,11 @@
     "statement": "הצהרת נגישות"
   },
   "whatsapp": {
+    "subtitle": "הגדרות WhatsApp Business",
+    "tabs": {
+      "onboarding": "אונבורדינג",
+      "clara": "Clara AI"
+    },
     "onboarding": {
       "subtitle": "הגדרת תהליך האונבורדינג בוואטסאפ",
       "enabled": "הפעל אונבורדינג אינטראקטיבי",

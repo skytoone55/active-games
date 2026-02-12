@@ -184,6 +184,7 @@ export function WhatsAppSection({ isDark }: WhatsAppSectionProps) {
   const [config, setConfig] = useState<WhatsAppOnboardingConfig>(DEFAULT_CONFIG)
   const [claraConfig, setClaraConfig] = useState<WhatsAppClaraConfig>(DEFAULT_CLARA_CONFIG)
   const [claraTab, setClaraTab] = useState<ClaraTab>('general')
+  const [activeTab, setActiveTab] = useState<'onboarding' | 'clara'>('onboarding')
   const [activeLocale, setActiveLocale] = useState<Locale>((locale as Locale) || 'fr')
 
   useEffect(() => {
@@ -422,9 +423,39 @@ export function WhatsAppSection({ isDark }: WhatsAppSectionProps) {
           WhatsApp
         </h2>
         <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-          {t('whatsapp.onboarding.subtitle') || "Configuration du flux d'onboarding WhatsApp"}
+          {t('whatsapp.subtitle') || "Configuration WhatsApp Business"}
         </p>
       </div>
+
+      {/* Root Tabs (like Messenger) */}
+      <div className="flex space-x-1 border-b" style={{ borderColor: isDark ? '#374151' : '#E5E7EB' }}>
+        {[
+          { key: 'onboarding' as const, label: t('whatsapp.tabs.onboarding') || 'Onboarding' },
+          { key: 'clara' as const, label: t('whatsapp.tabs.clara') || 'Clara AI' },
+        ].map((tab) => (
+          <button
+            key={tab.key}
+            onClick={() => setActiveTab(tab.key)}
+            className={`px-4 py-2 font-medium transition-colors ${
+              activeTab === tab.key
+                ? isDark
+                  ? 'text-blue-400 border-b-2 border-blue-400'
+                  : 'text-blue-600 border-b-2 border-blue-600'
+                : isDark
+                ? 'text-gray-400 hover:text-gray-300'
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* ============================================================ */}
+      {/* TAB: Onboarding */}
+      {/* ============================================================ */}
+      {activeTab === 'onboarding' && (
+        <div className="space-y-6">
 
       {/* Toggle global */}
       <div className="p-6 rounded-lg border" style={cardStyle}>
@@ -758,14 +789,20 @@ export function WhatsAppSection({ isDark }: WhatsAppSectionProps) {
         </>
       )}
 
+        </div>
+      )}
+
       {/* ============================================================ */}
-      {/* Clara AI Section */}
+      {/* TAB: Clara AI */}
       {/* ============================================================ */}
-      <div className={`mt-8 pt-8 border-t ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
+      {activeTab === 'clara' && (
+        <div className="space-y-6">
+
+      <div>
         <div className="flex items-center gap-3 mb-6">
           <Sparkles className={`w-6 h-6 ${isDark ? 'text-purple-400' : 'text-purple-600'}`} />
           <div>
-            <h2 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+            <h2 className={`text-xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
               Clara AI
             </h2>
             <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
@@ -1147,6 +1184,9 @@ export function WhatsAppSection({ isDark }: WhatsAppSectionProps) {
           </div>
         )}
       </div>
+
+        </div>
+      )}
 
       {/* Save button */}
       <button

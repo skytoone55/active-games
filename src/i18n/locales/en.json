@@ -1940,7 +1940,8 @@
         "credentials": "Payment Credentials",
         "credentials_desc": "iCount API settings per branch",
         "whatsapp": "WhatsApp",
-        "whatsapp_desc": "Onboarding and automated messages"
+        "whatsapp_desc": "Onboarding and automated messages",
+        "clara_desc": "Global AI assistant settings"
       },
       "templates_tabs": {
         "emails": "Email Templates",
@@ -2696,6 +2697,11 @@
     "statement": "Accessibility Statement"
   },
   "whatsapp": {
+    "subtitle": "WhatsApp Business configuration",
+    "tabs": {
+      "onboarding": "Onboarding",
+      "clara": "Clara AI"
+    },
     "onboarding": {
       "subtitle": "WhatsApp onboarding flow configuration",
       "enabled": "Enable interactive onboarding",

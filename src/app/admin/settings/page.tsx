@@ -100,7 +100,7 @@ export default function SettingsPage() {
       id: 'clara',
       icon: Sparkles,
       label: 'Clara AI',
-      description: 'Assistant virtuel (désactivé)',
+      description: t('admin.settings.sections.clara_desc'),
       requiredPermission: 'settings'
     }
   ]

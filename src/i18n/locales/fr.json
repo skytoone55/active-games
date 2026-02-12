@@ -2003,7 +2003,8 @@
         "credentials": "Identifiants de paiement",
         "credentials_desc": "Configuration API iCount par branche",
         "whatsapp": "WhatsApp",
-        "whatsapp_desc": "Onboarding et messages automatiques"
+        "whatsapp_desc": "Onboarding et messages automatiques",
+        "clara_desc": "Parametres globaux de l'assistant IA"
       },
       "templates_tabs": {
         "emails": "Templates d'emails",
@@ -2760,6 +2761,11 @@
     "statement": "Déclaration d'accessibilité"
   },
   "whatsapp": {
+    "subtitle": "Configuration WhatsApp Business",
+    "tabs": {
+      "onboarding": "Onboarding",
+      "clara": "Clara AI"
+    },
     "onboarding": {
       "subtitle": "Configuration du flux d'onboarding WhatsApp",
       "enabled": "Activer l'onboarding interactif",
