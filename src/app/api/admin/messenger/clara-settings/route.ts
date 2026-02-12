@@ -9,7 +9,7 @@ interface WorkflowClaraSettings {
   clara_model_global: string | null
   clara_temperature_global: number | null
   clara_fallback_action: 'escalate' | 'retry' | 'abort' | null
-  clara_fallback_message: string | null
+  clara_fallback_message: { fr: string; en: string; he: string } | null
 }
 
 // Default personality
@@ -81,7 +81,11 @@ export async function GET(request: NextRequest) {
       clara_model_global: workflow?.clara_model_global || 'gpt-4o-mini',
       clara_temperature_global: workflow?.clara_temperature_global ?? 0.7,
       clara_fallback_action: workflow?.clara_fallback_action || 'escalate' as const,
-      clara_fallback_message: workflow?.clara_fallback_message || 'אני נתקל בבעיה טכנית. אחד הנציגים שלנו יחזור אליך בהקדם לסיום ההזמנה. 📞'
+      clara_fallback_message: workflow?.clara_fallback_message || {
+        fr: 'Je rencontre un problème technique. Un de nos agents vous recontactera rapidement. 📞',
+        en: 'I\'m experiencing a technical issue. One of our agents will get back to you shortly. 📞',
+        he: 'אני נתקל בבעיה טכנית. אחד הנציגים שלנו יחזור אליך בהקדם לסיום ההזמנה. 📞'
+      }
     }
 
     return NextResponse.json({

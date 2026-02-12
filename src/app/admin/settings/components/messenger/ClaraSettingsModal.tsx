@@ -17,7 +17,7 @@ interface ClaraSettings {
   clara_model_global: string
   clara_temperature_global: number
   clara_fallback_action: 'escalate' | 'retry' | 'abort'
-  clara_fallback_message: string
+  clara_fallback_message: { fr: string; en: string; he: string }
 }
 
 interface Defaults {
@@ -43,7 +43,7 @@ export function ClaraSettingsModal({ isDark, onClose, workflowId }: ClaraSetting
     clara_model_global: 'gpt-4o-mini',
     clara_temperature_global: 0.7,
     clara_fallback_action: 'escalate',
-    clara_fallback_message: ''
+    clara_fallback_message: { fr: '', en: '', he: '' }
   })
 
   const [defaults, setDefaults] = useState<Defaults>({
@@ -67,7 +67,16 @@ export function ClaraSettingsModal({ isDark, onClose, workflowId }: ClaraSetting
       const data = await res.json()
 
       if (data.success) {
-        if (data.settings) setSettings(data.settings)
+        if (data.settings) {
+          // Safety: handle old string format for fallback_message (before migration)
+          const fm = data.settings.clara_fallback_message
+          if (typeof fm === 'string') {
+            data.settings.clara_fallback_message = { fr: '', en: '', he: fm }
+          } else if (!fm || typeof fm !== 'object') {
+            data.settings.clara_fallback_message = { fr: '', en: '', he: '' }
+          }
+          setSettings(data.settings)
+        }
         if (data.defaults) setDefaults(data.defaults)
       }
     } catch (err) {
@@ -423,16 +432,44 @@ Already collected: {"firstName": "...", ...}`
                     </select>
                   </div>
 
-                  <div>
-                    <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                  <div className="space-y-3">
+                    <label className={`block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
                       Message de fallback
                     </label>
-                    <textarea
-                      value={settings.clara_fallback_message}
-                      onChange={(e) => setSettings({ ...settings, clara_fallback_message: e.target.value })}
-                      rows={3}
-                      className={inputClass}
-                    />
+                    <div>
+                      <label className={`block text-xs mb-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                        🇫🇷 Français
+                      </label>
+                      <textarea
+                        value={settings.clara_fallback_message.fr}
+                        onChange={(e) => setSettings({ ...settings, clara_fallback_message: { ...settings.clara_fallback_message, fr: e.target.value } })}
+                        rows={2}
+                        className={inputClass}
+                      />
+                    </div>
+                    <div>
+                      <label className={`block text-xs mb-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                        🇬🇧 English
+                      </label>
+                      <textarea
+                        value={settings.clara_fallback_message.en}
+                        onChange={(e) => setSettings({ ...settings, clara_fallback_message: { ...settings.clara_fallback_message, en: e.target.value } })}
+                        rows={2}
+                        className={inputClass}
+                      />
+                    </div>
+                    <div>
+                      <label className={`block text-xs mb-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                        🇮🇱 עברית
+                      </label>
+                      <textarea
+                        value={settings.clara_fallback_message.he}
+                        onChange={(e) => setSettings({ ...settings, clara_fallback_message: { ...settings.clara_fallback_message, he: e.target.value } })}
+                        rows={2}
+                        dir="rtl"
+                        className={inputClass}
+                      />
+                    </div>
                   </div>
                 </div>
               )}
