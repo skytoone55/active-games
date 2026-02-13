@@ -135,9 +135,8 @@ export async function uploadAndSendMedia(
 
   try {
     // Step 1: Upload to Supabase Storage
-    const ext = getExtensionFromMime(mimeType)
-    const storagePath = `outbound/${Date.now()}_${filename.replace(/[^a-zA-Z0-9._-]/g, '_')}${ext ? '' : ''}` // keep original name
-    const finalPath = ext && !filename.endsWith(ext) ? `outbound/${Date.now()}_${filename}${ext}` : `outbound/${Date.now()}_${filename}`
+    const safeName = filename.replace(/[^a-zA-Z0-9._-]/g, '_')
+    const finalPath = `outbound/${Date.now()}_${safeName}`
 
     const supabase = createServiceRoleClient()
     const { error: uploadError } = await supabase.storage
@@ -156,6 +155,8 @@ export async function uploadAndSendMedia(
       .from('whatsapp-media')
       .getPublicUrl(finalPath)
 
+    console.log('[WA MEDIA] Uploaded to:', finalPath, '| publicUrl:', publicUrl)
+
     // Step 2: Determine WhatsApp media type from MIME
     const waType = getWhatsAppMediaType(mimeType)
 
@@ -169,6 +170,16 @@ export async function uploadAndSendMedia(
       mediaPayload.filename = filename
     }
 
+    const waBody = {
+      messaging_product: 'whatsapp',
+      recipient_type: 'individual',
+      to: recipientPhone,
+      type: waType,
+      [waType]: mediaPayload,
+    }
+
+    console.log('[WA MEDIA] Sending to WhatsApp:', JSON.stringify(waBody))
+
     const waRes = await fetch(
       `https://graph.facebook.com/v21.0/${phoneNumberId}/messages`,
       {
@@ -177,25 +188,19 @@ export async function uploadAndSendMedia(
           'Authorization': `Bearer ${accessToken}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          messaging_product: 'whatsapp',
-          recipient_type: 'individual',
-          to: recipientPhone,
-          type: waType,
-          [waType]: mediaPayload,
-        }),
+        body: JSON.stringify(waBody),
       }
     )
 
     const waResult = await waRes.json()
 
     if (!waRes.ok) {
-      console.error('[WA MEDIA] WhatsApp send error:', waResult)
+      console.error('[WA MEDIA] WhatsApp API error:', waRes.status, JSON.stringify(waResult))
       return null
     }
 
     const waMessageId = waResult.messages?.[0]?.id || null
-    console.log('[WA MEDIA] Sent outbound:', waType, '→', recipientPhone)
+    console.log('[WA MEDIA] Sent outbound:', waType, '→', recipientPhone, '| msgId:', waMessageId)
 
     // FIFO cleanup (non-blocking) — 50 Mo limit
     cleanupOldMedia(supabase, 'outbound').catch(() => {})
@@ -261,6 +266,7 @@ function getExtensionFromMime(mimeType: string): string {
     'image/webp': '.webp',
     'image/gif': '.gif',
     'audio/ogg': '.ogg',
+    'audio/webm': '.webm',
     'audio/mpeg': '.mp3',
     'audio/aac': '.aac',
     'audio/amr': '.amr',

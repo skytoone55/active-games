@@ -83,12 +83,15 @@ export async function POST(request: NextRequest) {
       const mimeType = file.type || 'application/octet-stream'
       const filename = file.name || 'file'
 
+      console.log('[CHAT SEND] Media send:', { mimeType, filename, phone: conversation.phone, fileSize: fileBuffer.length })
+
       const result = await uploadAndSendMedia(
         fileBuffer, mimeType, filename, conversation.phone, caption
       )
 
       if (!result) {
-        return NextResponse.json({ error: 'Failed to send media' }, { status: 500 })
+        console.error('[CHAT SEND] uploadAndSendMedia returned null for', { mimeType, filename })
+        return NextResponse.json({ error: 'Failed to send media — check server logs' }, { status: 500 })
       }
 
       waMessageId = result.waMessageId

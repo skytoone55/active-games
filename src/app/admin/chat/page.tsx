@@ -657,6 +657,9 @@ export default function ChatPage() {
       const data = await res.json()
       if (data.success) {
         fetchWaMessages(selectedWaConv.id, true)
+      } else {
+        console.error('Media send failed:', data.error)
+        alert('Échec envoi média: ' + (data.error || 'Erreur inconnue'))
       }
     } catch (error) {
       console.error('Error sending file:', error)
@@ -670,7 +673,13 @@ export default function ChatPage() {
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      const mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm;codecs=opus' })
+      // Use ogg/opus (WhatsApp native format) with fallbacks
+      const recordMime = MediaRecorder.isTypeSupported('audio/ogg;codecs=opus')
+        ? 'audio/ogg;codecs=opus'
+        : MediaRecorder.isTypeSupported('audio/mp4')
+          ? 'audio/mp4'
+          : 'audio/webm;codecs=opus'
+      const mediaRecorder = new MediaRecorder(stream, { mimeType: recordMime })
       mediaRecorderRef.current = mediaRecorder
       audioChunksRef.current = []
 
@@ -683,20 +692,24 @@ export default function ChatPage() {
         if (recordingTimerRef.current) clearInterval(recordingTimerRef.current)
         setRecordingDuration(0)
 
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm;codecs=opus' })
+        const audioBlob = new Blob(audioChunksRef.current, { type: recordMime })
         if (audioBlob.size < 1000) return // Skip if too short
 
+        const ext = recordMime.includes('ogg') ? '.ogg' : recordMime.includes('mp4') ? '.m4a' : '.webm'
         if (!selectedWaConv) return
         setSending(true)
         try {
           const formData = new FormData()
-          formData.append('file', audioBlob, `audio_${Date.now()}.webm`)
+          formData.append('file', audioBlob, `audio_${Date.now()}${ext}`)
           formData.append('conversationId', selectedWaConv.id)
           formData.append('userId', user?.id || '')
           const res = await fetch('/api/chat/send', { method: 'POST', body: formData })
           const data = await res.json()
           if (data.success) {
             fetchWaMessages(selectedWaConv.id, true)
+          } else {
+            console.error('Media send failed:', data.error)
+            alert('Échec envoi audio: ' + (data.error || 'Erreur inconnue'))
           }
         } catch (error) {
           console.error('Error sending audio:', error)
