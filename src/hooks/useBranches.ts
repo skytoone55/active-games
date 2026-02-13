@@ -184,7 +184,7 @@ export function useBranches(authUserData?: { id: string; role: string | null; br
     } finally {
       setLoading(false)
     }
-  }, [authUserData]) // Recharger quand l'user change (login, etc.)
+  }, [authUserData?.id, authUserData?.role]) // Dépendances primitives pour éviter les re-créations inutiles
 
   useEffect(() => {
     // Attendre que l'user soit chargé avant de fetch les branches
