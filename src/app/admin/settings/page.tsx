@@ -5,7 +5,7 @@ import {
   Loader2,
   AlertCircle,
   Settings,
-  FileText,
+  Mail,
   ChevronRight,
   CreditCard,
   Package,
@@ -16,21 +16,21 @@ import {
 import { useAdmin } from '@/contexts/AdminContext'
 import { useUserPermissions } from '@/hooks/useUserPermissions'
 import { useTranslation } from '@/contexts/LanguageContext'
-import { TemplatesSection } from './components/TemplatesSection'
+import { MailSection } from './components/MailSection'
 import { CredentialsSection } from './components/CredentialsSection'
 import { ICountCatalogSection } from './components/ICountCatalogSection'
 import { ClaraSection } from './components/ClaraSection'
 import { MessengerSection } from './components/MessengerSection'
 import { WhatsAppSection } from './components/WhatsAppSection'
 
-type SettingsSection = 'templates' | 'credentials' | 'catalog' | 'messenger' | 'whatsapp' | 'clara'
+type SettingsSection = 'mail' | 'credentials' | 'catalog' | 'messenger' | 'whatsapp' | 'clara'
 
 export default function SettingsPage() {
   const { t } = useTranslation()
   const { user, branches, selectedBranch, isDark } = useAdmin()
   const { hasPermission, loading: permissionsLoading } = useUserPermissions(user?.role || 'agent')
 
-  const [activeSection, setActiveSection] = useState<SettingsSection>('templates')
+  const [activeSection, setActiveSection] = useState<SettingsSection>('mail')
 
   // Check permissions for settings access
   const canViewSettings = user && hasPermission('settings', 'can_view')
@@ -60,12 +60,12 @@ export default function SettingsPage() {
     )
   }
 
-  const allSections: { id: SettingsSection; icon: typeof FileText; label: string; description: string; requiredPermission?: 'settings' | 'messenger' }[] = [
+  const allSections: { id: SettingsSection; icon: typeof Mail; label: string; description: string; requiredPermission?: 'settings' | 'messenger' }[] = [
     {
-      id: 'templates',
-      icon: FileText,
-      label: t('admin.settings.sections.templates'),
-      description: t('admin.settings.sections.templates_desc'),
+      id: 'mail',
+      icon: Mail,
+      label: 'Mail',
+      description: 'Templates, automatisations, CGV',
       requiredPermission: 'settings'
     },
     {
@@ -179,8 +179,8 @@ export default function SettingsPage() {
 
         {/* Content area */}
         <div className="flex-1 p-6">
-          {activeSection === 'templates' && (
-            <TemplatesSection isDark={isDark} />
+          {activeSection === 'mail' && (
+            <MailSection isDark={isDark} />
           )}
           {activeSection === 'credentials' && (
             <CredentialsSection isDark={isDark} />
