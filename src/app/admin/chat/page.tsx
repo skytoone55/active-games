@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback, useTransition } from 'react'
-import { MessageCircle, Send, Search, Phone, User, ArrowLeft, Loader2, Filter, UserPlus, Globe, Bot, Archive, X, Smile, Trash2, EyeOff, Plus, Zap, Settings2, Sparkles, HandHelping, CheckCircle } from 'lucide-react'
+import { MessageCircle, Send, Search, Phone, User, ArrowLeft, Loader2, Filter, UserPlus, Globe, Bot, Archive, X, Smile, Trash2, EyeOff, Plus, Zap, Settings2, Sparkles, HandHelping, CheckCircle, Paperclip, Mic, MicOff, FileText, Play, Square } from 'lucide-react'
 import dynamic from 'next/dynamic'
 import { Theme as EmojiTheme } from 'emoji-picker-react'
 
@@ -59,6 +59,10 @@ interface WhatsAppMessage {
   status: string
   created_at: string
   sent_by: string | null
+  media_url: string | null
+  media_type: string | null
+  media_mime_type: string | null
+  media_filename: string | null
 }
 
 interface MessengerConversation {
@@ -141,6 +145,12 @@ export default function ChatPage() {
   const [waLoading, setWaLoading] = useState(true)
   const [waLoadingMessages, setWaLoadingMessages] = useState(false)
   const [sending, setSending] = useState(false)
+  const [isRecording, setIsRecording] = useState(false)
+  const [recordingDuration, setRecordingDuration] = useState(0)
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
+  const audioChunksRef = useRef<Blob[]>([])
+  const recordingTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   // ============================================================
   // Messenger (Site) state
@@ -631,6 +641,106 @@ export default function ChatPage() {
     } finally {
       setSending(false)
     }
+  }
+
+  // ---- Media send (file attachment) ----
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file || !selectedWaConv || sending) return
+    setSending(true)
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('conversationId', selectedWaConv.id)
+      formData.append('userId', user?.id || '')
+      const res = await fetch('/api/chat/send', { method: 'POST', body: formData })
+      const data = await res.json()
+      if (data.success) {
+        fetchWaMessages(selectedWaConv.id, true)
+      }
+    } catch (error) {
+      console.error('Error sending file:', error)
+    } finally {
+      setSending(false)
+      if (fileInputRef.current) fileInputRef.current.value = ''
+    }
+  }
+
+  // ---- Audio recording ----
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      const mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm;codecs=opus' })
+      mediaRecorderRef.current = mediaRecorder
+      audioChunksRef.current = []
+
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) audioChunksRef.current.push(e.data)
+      }
+
+      mediaRecorder.onstop = async () => {
+        stream.getTracks().forEach(track => track.stop())
+        if (recordingTimerRef.current) clearInterval(recordingTimerRef.current)
+        setRecordingDuration(0)
+
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm;codecs=opus' })
+        if (audioBlob.size < 1000) return // Skip if too short
+
+        if (!selectedWaConv) return
+        setSending(true)
+        try {
+          const formData = new FormData()
+          formData.append('file', audioBlob, `audio_${Date.now()}.webm`)
+          formData.append('conversationId', selectedWaConv.id)
+          formData.append('userId', user?.id || '')
+          const res = await fetch('/api/chat/send', { method: 'POST', body: formData })
+          const data = await res.json()
+          if (data.success) {
+            fetchWaMessages(selectedWaConv.id, true)
+          }
+        } catch (error) {
+          console.error('Error sending audio:', error)
+        } finally {
+          setSending(false)
+        }
+      }
+
+      mediaRecorder.start()
+      setIsRecording(true)
+      setRecordingDuration(0)
+      recordingTimerRef.current = setInterval(() => {
+        setRecordingDuration(prev => prev + 1)
+      }, 1000)
+    } catch (error) {
+      console.error('Microphone access denied:', error)
+    }
+  }
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop()
+    }
+    setIsRecording(false)
+  }
+
+  const cancelRecording = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.ondataavailable = null
+      mediaRecorderRef.current.onstop = () => {
+        mediaRecorderRef.current?.stream?.getTracks().forEach(track => track.stop())
+      }
+      mediaRecorderRef.current.stop()
+    }
+    if (recordingTimerRef.current) clearInterval(recordingTimerRef.current)
+    audioChunksRef.current = []
+    setIsRecording(false)
+    setRecordingDuration(0)
+  }
+
+  const formatRecordingTime = (seconds: number) => {
+    const m = Math.floor(seconds / 60)
+    const s = seconds % 60
+    return `${m}:${s.toString().padStart(2, '0')}`
   }
 
   const handleContactCreated = async (contact: Contact) => {
@@ -1432,7 +1542,45 @@ export default function ChatPage() {
                             ? 'bg-gray-800 text-white rounded-bl-md'
                             : 'bg-white text-gray-900 rounded-bl-md shadow-sm'
                       }`}>
-                        <p className="text-sm whitespace-pre-wrap break-words">{msg.content}</p>
+                        {/* Image */}
+                        {msg.media_url && msg.media_type === 'image' && (
+                          <a href={msg.media_url} target="_blank" rel="noopener noreferrer" className="block mb-1">
+                            <img src={msg.media_url} alt={msg.content || 'Image'} className="rounded-lg max-w-full max-h-64 object-cover cursor-pointer" loading="lazy" />
+                          </a>
+                        )}
+                        {/* Audio */}
+                        {msg.media_url && msg.media_type === 'audio' && (
+                          <audio controls className="max-w-full mb-1 h-10" preload="metadata">
+                            <source src={msg.media_url} type={msg.media_mime_type?.split(';')[0] || 'audio/ogg'} />
+                          </audio>
+                        )}
+                        {/* Video */}
+                        {msg.media_url && msg.media_type === 'video' && (
+                          <video controls className="rounded-lg max-w-full max-h-64 mb-1" preload="metadata">
+                            <source src={msg.media_url} type={msg.media_mime_type?.split(';')[0] || 'video/mp4'} />
+                          </video>
+                        )}
+                        {/* Document */}
+                        {msg.media_url && msg.media_type === 'document' && (
+                          <a href={msg.media_url} target="_blank" rel="noopener noreferrer"
+                            className={`flex items-center gap-2 p-2 rounded-lg mb-1 ${
+                              msg.direction === 'outbound'
+                                ? 'bg-green-700/50 hover:bg-green-700/70'
+                                : isDark ? 'bg-gray-700/50 hover:bg-gray-700/70' : 'bg-gray-100 hover:bg-gray-200'
+                            }`}>
+                            <FileText className="w-6 h-6 flex-shrink-0" />
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium truncate">{msg.media_filename || 'Document'}</p>
+                              <p className={`text-xs ${msg.direction === 'outbound' ? 'text-green-200' : isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                                {msg.media_mime_type?.split(';')[0]?.split('/')[1]?.toUpperCase() || 'FILE'}
+                              </p>
+                            </div>
+                          </a>
+                        )}
+                        {/* Text content — show if no media, or if caption exists */}
+                        {(!msg.media_url || (msg.content && !msg.content.startsWith('[') && msg.content !== `[${msg.media_type}]`)) && (
+                          <p className="text-sm whitespace-pre-wrap break-words">{msg.content}</p>
+                        )}
                         <div className={`text-[10px] mt-1 text-right ${
                           msg.direction === 'outbound'
                             ? 'text-green-200'
@@ -1487,68 +1635,129 @@ export default function ChatPage() {
                   </div>
                 )}
 
-                <div className="flex items-end gap-3 relative">
-                  {/* Emoji picker */}
-                  <div className="relative flex-shrink-0 pb-0.5" ref={emojiPickerRef}>
+                {/* Hidden file input */}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.txt"
+                  onChange={handleFileSelect}
+                  className="hidden"
+                />
+
+                {isRecording ? (
+                  /* Recording mode */
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={cancelRecording}
+                      className={`p-2 rounded-full transition-colors ${isDark ? 'text-gray-400 hover:text-red-400 hover:bg-gray-700' : 'text-gray-500 hover:text-red-500 hover:bg-gray-100'}`}
+                      title="Cancel"
+                    >
+                      <Trash2 className="w-5 h-5" />
+                    </button>
+                    <div className={`flex-1 flex items-center gap-2 px-4 py-2.5 rounded-2xl ${isDark ? 'bg-gray-700' : 'bg-gray-100'}`}>
+                      <div className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse" />
+                      <span className={`text-sm font-mono ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                        {formatRecordingTime(recordingDuration)}
+                      </span>
+                    </div>
+                    <button
+                      onClick={stopRecording}
+                      className="flex-shrink-0 p-2.5 rounded-full bg-green-600 hover:bg-green-700 text-white transition-colors"
+                      title="Send audio"
+                    >
+                      {sending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
+                    </button>
+                  </div>
+                ) : (
+                  /* Normal mode */
+                  <div className="flex items-end gap-2 relative">
+                    {/* Emoji picker */}
+                    <div className="relative flex-shrink-0 pb-0.5" ref={emojiPickerRef}>
+                      <button
+                        type="button"
+                        onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                        className={`p-2 rounded-full transition-colors ${
+                          showEmojiPicker
+                            ? 'bg-green-600 text-white'
+                            : isDark ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-700' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                        }`}
+                      >
+                        <Smile className="w-5 h-5" />
+                      </button>
+                      {showEmojiPicker && (
+                        <div className="absolute bottom-full mb-2 left-0 z-50">
+                          <EmojiPicker
+                            theme={isDark ? EmojiTheme.DARK : EmojiTheme.LIGHT}
+                            onEmojiClick={(emojiData) => {
+                              setNewMessage(prev => prev + emojiData.emoji)
+                              inputRef.current?.focus()
+                            }}
+                            width={350}
+                            height={400}
+                            searchPlaceHolder={t('admin.chat.search_emoji') || 'Search emoji...'}
+                            previewConfig={{ showPreview: false }}
+                          />
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Attach file */}
                     <button
                       type="button"
-                      onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                      className={`p-2 rounded-full transition-colors ${
-                        showEmojiPicker
-                          ? 'bg-green-600 text-white'
-                          : isDark ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-700' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={sending}
+                      className={`flex-shrink-0 p-2 rounded-full transition-colors pb-0.5 ${
+                        isDark ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-700' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
                       }`}
+                      title={t('admin.chat.attach_file') || 'Attach file'}
                     >
-                      <Smile className="w-5 h-5" />
+                      <Paperclip className="w-5 h-5" />
                     </button>
-                    {showEmojiPicker && (
-                      <div className="absolute bottom-full mb-2 left-0 z-50">
-                        <EmojiPicker
-                          theme={isDark ? EmojiTheme.DARK : EmojiTheme.LIGHT}
-                          onEmojiClick={(emojiData) => {
-                            setNewMessage(prev => prev + emojiData.emoji)
-                            inputRef.current?.focus()
-                          }}
-                          width={350}
-                          height={400}
-                          searchPlaceHolder={t('admin.chat.search_emoji') || 'Search emoji...'}
-                          previewConfig={{ showPreview: false }}
-                        />
-                      </div>
+
+                    <textarea
+                      ref={inputRef}
+                      value={newMessage}
+                      onChange={(e) => setNewMessage(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                          e.preventDefault()
+                          handleSendMessage()
+                        }
+                      }}
+                      placeholder={t('admin.chat.type_message') || 'Type a message...'}
+                      rows={1}
+                      className={`flex-1 px-4 py-2.5 rounded-2xl text-sm resize-none overflow-y-auto ${
+                        isDark
+                          ? 'bg-gray-700 text-white placeholder-gray-500 border-gray-600'
+                          : 'bg-gray-100 text-gray-900 placeholder-gray-400 border-gray-200'
+                      } border focus:outline-none focus:ring-2 focus:ring-green-500/50`}
+                      style={{ minHeight: '42px', maxHeight: '160px' }}
+                    />
+
+                    {newMessage.trim() ? (
+                      /* Send text */
+                      <button
+                        onClick={handleSendMessage}
+                        disabled={sending}
+                        className="flex-shrink-0 p-2.5 rounded-full bg-green-600 hover:bg-green-700 text-white transition-colors mb-0.5"
+                      >
+                        {sending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
+                      </button>
+                    ) : (
+                      /* Mic button (when no text) */
+                      <button
+                        onClick={startRecording}
+                        disabled={sending}
+                        className={`flex-shrink-0 p-2.5 rounded-full transition-colors mb-0.5 ${
+                          isDark ? 'text-gray-400 hover:text-white hover:bg-gray-700' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                        }`}
+                        title={t('admin.chat.record_audio') || 'Record audio'}
+                      >
+                        <Mic className="w-5 h-5" />
+                      </button>
                     )}
                   </div>
-
-                  <textarea
-                    ref={inputRef}
-                    value={newMessage}
-                    onChange={(e) => setNewMessage(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && !e.shiftKey) {
-                        e.preventDefault()
-                        handleSendMessage()
-                      }
-                    }}
-                    placeholder={t('admin.chat.type_message') || 'Type a message...'}
-                    rows={1}
-                    className={`flex-1 px-4 py-2.5 rounded-2xl text-sm resize-none overflow-y-auto ${
-                      isDark
-                        ? 'bg-gray-700 text-white placeholder-gray-500 border-gray-600'
-                        : 'bg-gray-100 text-gray-900 placeholder-gray-400 border-gray-200'
-                    } border focus:outline-none focus:ring-2 focus:ring-green-500/50`}
-                    style={{ minHeight: '42px', maxHeight: '160px' }}
-                  />
-                  <button
-                    onClick={handleSendMessage}
-                    disabled={!newMessage.trim() || sending}
-                    className={`flex-shrink-0 p-2.5 rounded-full transition-colors mb-0.5 ${
-                      newMessage.trim() && !sending
-                        ? 'bg-green-600 hover:bg-green-700 text-white'
-                        : isDark ? 'bg-gray-700 text-gray-500' : 'bg-gray-200 text-gray-400'
-                    }`}
-                  >
-                    {sending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
-                  </button>
-                </div>
+                )}
               </div>
             </>
           ) : activeChannel === 'site' && selectedMsConv ? (

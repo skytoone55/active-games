@@ -17,6 +17,7 @@ import {
   trackClaraEvent,
   handleClaraWhatsAppResponse,
 } from '@/lib/clara/whatsapp-handler'
+import { downloadAndStoreMedia } from '@/lib/whatsapp/media'
 
 /**
  * Verify Meta webhook signature (X-Hub-Signature-256)
@@ -289,6 +290,7 @@ export async function POST(request: NextRequest) {
 
         let messageText = ''
         let buttonReplyId: string | null = null
+        let mediaInfo: { mediaId: string; mimeType: string; filename?: string } | null = null
 
         switch (messageType) {
           case 'text':
@@ -303,6 +305,21 @@ export async function POST(request: NextRequest) {
           case 'button':
             messageText = message.button?.text || ''
             break
+          case 'image':
+          case 'audio':
+          case 'video':
+          case 'document': {
+            const mediaPayload = message[messageType]
+            if (mediaPayload?.id) {
+              mediaInfo = {
+                mediaId: mediaPayload.id,
+                mimeType: mediaPayload.mime_type || '',
+                filename: mediaPayload.filename || undefined,
+              }
+            }
+            messageText = mediaPayload?.caption || mediaPayload?.filename || `[${messageType}]`
+            break
+          }
           default:
             messageText = `[${messageType}]`
         }
@@ -383,7 +400,27 @@ export async function POST(request: NextRequest) {
           continue
         }
 
-        // 2. Store the inbound message
+        // 2. Download media if present (non-blocking on failure)
+        let mediaUrl: string | null = null
+        let mediaType: string | null = null
+        let mediaMimeType: string | null = null
+        let mediaFilename: string | null = null
+
+        if (mediaInfo) {
+          try {
+            const stored = await downloadAndStoreMedia(mediaInfo)
+            if (stored) {
+              mediaUrl = stored.publicUrl
+              mediaType = messageType
+              mediaMimeType = mediaInfo.mimeType
+              mediaFilename = mediaInfo.filename || null
+            }
+          } catch (mediaErr) {
+            console.error('[WHATSAPP] Media download error (non-blocking):', mediaErr)
+          }
+        }
+
+        // 3. Store the inbound message
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         await (supabase as any)
           .from('whatsapp_messages')
@@ -394,6 +431,10 @@ export async function POST(request: NextRequest) {
             content: messageText,
             whatsapp_message_id: messageId,
             status: 'delivered',
+            media_url: mediaUrl,
+            media_type: mediaType,
+            media_mime_type: mediaMimeType,
+            media_filename: mediaFilename,
           })
 
         // 3. Onboarding flow / auto-reply / Clara AI

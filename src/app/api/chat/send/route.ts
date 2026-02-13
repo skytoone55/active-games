@@ -1,21 +1,52 @@
 /**
  * Chat Send API
- * POST - Send a WhatsApp message from admin
+ * POST - Send a WhatsApp message from admin (text or media)
+ *
+ * Text:  JSON body { conversationId, message, userId }
+ * Media: FormData { conversationId, userId, file, caption? }
  */
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { verifyApiPermission } from '@/lib/permissions'
+import { uploadAndSendMedia, getWhatsAppMediaType } from '@/lib/whatsapp/media'
 
 export async function POST(request: NextRequest) {
   try {
     const { success, errorResponse } = await verifyApiPermission('chat', 'create')
     if (!success) return errorResponse!
 
-    const { conversationId, message, userId } = await request.json()
+    const contentType = request.headers.get('content-type') || ''
+    const isFormData = contentType.includes('multipart/form-data')
 
-    if (!conversationId || !message) {
-      return NextResponse.json({ error: 'conversationId and message required' }, { status: 400 })
+    let conversationId: string
+    let userId: string | null
+    let messageText: string
+    let file: File | null = null
+    let caption: string | undefined
+
+    if (isFormData) {
+      // Media upload
+      const formData = await request.formData()
+      conversationId = formData.get('conversationId') as string
+      userId = (formData.get('userId') as string) || null
+      caption = (formData.get('caption') as string) || undefined
+      messageText = caption || ''
+      file = formData.get('file') as File | null
+
+      if (!conversationId || !file) {
+        return NextResponse.json({ error: 'conversationId and file required' }, { status: 400 })
+      }
+    } else {
+      // Text message
+      const body = await request.json()
+      conversationId = body.conversationId
+      userId = body.userId || null
+      messageText = body.message || ''
+
+      if (!conversationId || !messageText) {
+        return NextResponse.json({ error: 'conversationId and message required' }, { status: 400 })
+      }
     }
 
     const supabase = createServiceRoleClient()
@@ -32,7 +63,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Conversation not found' }, { status: 404 })
     }
 
-    // Send via WhatsApp API
     const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID
     const accessToken = process.env.WHATSAPP_ACCESS_TOKEN
 
@@ -40,32 +70,63 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'WhatsApp not configured' }, { status: 500 })
     }
 
-    const waResponse = await fetch(
-      `https://graph.facebook.com/v21.0/${phoneNumberId}/messages`,
-      {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          messaging_product: 'whatsapp',
-          recipient_type: 'individual',
-          to: conversation.phone,
-          type: 'text',
-          text: { body: message },
-        }),
+    let waMessageId: string | null = null
+    let mediaUrl: string | null = null
+    let mediaType: string | null = null
+    let mediaMimeType: string | null = null
+    let mediaFilename: string | null = null
+    let msgType = 'text'
+
+    if (file) {
+      // ---- Media send ----
+      const fileBuffer = Buffer.from(await file.arrayBuffer())
+      const mimeType = file.type || 'application/octet-stream'
+      const filename = file.name || 'file'
+
+      const result = await uploadAndSendMedia(
+        fileBuffer, mimeType, filename, conversation.phone, caption
+      )
+
+      if (!result) {
+        return NextResponse.json({ error: 'Failed to send media' }, { status: 500 })
       }
-    )
 
-    const waResult = await waResponse.json()
+      waMessageId = result.waMessageId
+      mediaUrl = result.stored.publicUrl
+      mediaType = getWhatsAppMediaType(mimeType)
+      mediaMimeType = mimeType
+      mediaFilename = filename
+      msgType = mediaType
+      if (!messageText) messageText = `[${mediaType}]`
+    } else {
+      // ---- Text send ----
+      const waResponse = await fetch(
+        `https://graph.facebook.com/v21.0/${phoneNumberId}/messages`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            messaging_product: 'whatsapp',
+            recipient_type: 'individual',
+            to: conversation.phone,
+            type: 'text',
+            text: { body: messageText },
+          }),
+        }
+      )
 
-    if (!waResponse.ok) {
-      console.error('[CHAT SEND] WhatsApp API error:', waResult)
-      return NextResponse.json({ error: 'Failed to send message', details: waResult }, { status: 500 })
+      const waResult = await waResponse.json()
+
+      if (!waResponse.ok) {
+        console.error('[CHAT SEND] WhatsApp API error:', waResult)
+        return NextResponse.json({ error: 'Failed to send message', details: waResult }, { status: 500 })
+      }
+
+      waMessageId = waResult.messages?.[0]?.id || null
     }
-
-    const waMessageId = waResult.messages?.[0]?.id || null
 
     // Store outbound message in DB
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -74,11 +135,15 @@ export async function POST(request: NextRequest) {
       .insert({
         conversation_id: conversationId,
         direction: 'outbound',
-        message_type: 'text',
-        content: message,
+        message_type: msgType,
+        content: messageText,
         whatsapp_message_id: waMessageId,
         status: 'sent',
         sent_by: userId || null,
+        media_url: mediaUrl,
+        media_type: mediaType,
+        media_mime_type: mediaMimeType,
+        media_filename: mediaFilename,
       })
       .select()
       .single()
@@ -88,8 +153,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Update conversation last_message_at + auto-pause Clara (human takeover)
-    // Get Clara auto-resume timeout from settings
-    let autoResumeMinutes = 5 // default 5 minutes
+    let autoResumeMinutes = 5
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data: msSettings } = await (supabase as any)
@@ -110,7 +174,7 @@ export async function POST(request: NextRequest) {
         updated_at: new Date().toISOString(),
         clara_paused: true,
         clara_paused_until: pausedUntil,
-        clara_auto_activate_at: null, // Cancel auto-activate timer when human responds
+        clara_auto_activate_at: null,
       })
       .eq('id', conversationId)
 
