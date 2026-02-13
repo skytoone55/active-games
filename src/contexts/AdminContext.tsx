@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useCallback, useState, useEffect, useMemo } from 'react'
+import { createContext, useContext, useCallback, useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { getClient } from '@/lib/supabase/client'
 import { useAuth, type AuthUser } from '@/hooks/useAuth'
@@ -33,14 +33,7 @@ export function AdminProvider({ children, theme, toggleTheme }: {
   toggleTheme: () => void
 }) {
   const { user, loading: authLoading, signOut, refreshUser } = useAuth()
-
-  // Passer les données d'auth à useBranches pour éviter un getUser() + profiles redondant
-  // IMPORTANT: useMemo pour éviter de recréer l'objet à chaque render (sinon boucle infinie dans useBranches)
-  const authUserData = useMemo(() =>
-    user ? { id: user.id, role: user.role, branches: user.branches.map(b => ({ id: b.id })) } : null,
-    [user?.id, user?.role, user?.branches]
-  )
-  const { branches, selectedBranch, selectedBranchId, selectBranch, loading: branchesLoading, refresh: refreshBranches } = useBranches(authUserData)
+  const { branches, selectedBranch, selectedBranchId, selectBranch, loading: branchesLoading, refresh: refreshBranches } = useBranches()
 
   // Clara Codex human-presence heartbeat (no-op for super admin)
   useEffect(() => {

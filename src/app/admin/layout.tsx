@@ -78,14 +78,41 @@ function AdminLayoutContent({
   // Maintenir la session active en arrière-plan
   useSessionPersistence()
 
-  // Le middleware vérifie déjà l'auth côté serveur.
-  // Si on arrive dans ce layout, c'est que le middleware a validé la session.
-  // Pas besoin de refaire getUser() côté client (économise 300ms-3s réseau).
-  // L'auth listener ci-dessous gère les cas de déconnexion en temps réel.
+  // Vérification initiale - UNE SEULE FOIS au montage
   useEffect(() => {
-    setIsAuthenticated(true)
-    hasCheckedRef.current = true
-    setIsChecking(false)
+    // Skip si page login
+    if (isLoginPage) {
+      setIsAuthenticated(true)
+      setIsChecking(false)
+      return
+    }
+
+    // Skip si déjà vérifié
+    if (hasCheckedRef.current) {
+      setIsChecking(false)
+      return
+    }
+
+    const checkAuth = async () => {
+      const supabase = getClient()
+
+      try {
+        const { data: { user }, error } = await supabase.auth.getUser()
+
+        if (error || !user) {
+          setIsAuthenticated(false)
+        } else {
+          setIsAuthenticated(true)
+          hasCheckedRef.current = true
+        }
+      } catch {
+        setIsAuthenticated(false)
+      } finally {
+        setIsChecking(false)
+      }
+    }
+
+    checkAuth()
   }, [isLoginPage])
 
   // Écouter les changements d'authentification (login/logout) - UNE SEULE FOIS
