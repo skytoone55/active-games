@@ -50,6 +50,13 @@ export interface ClaraCodexSettingsRecord {
   settings: ClaraCodexWhatsAppSettings
 }
 
+export interface ClaraCodexToolCatalogItem {
+  id: string
+  label: string
+  purpose: string
+  trigger: string
+}
+
 export const CODEX_AVAILABLE_MODELS = [
   { id: 'gemini-2.0-flash-lite', name: 'Gemini 2.0 Flash Lite', provider: 'Google' },
   { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash', provider: 'Google' },
@@ -62,6 +69,39 @@ export const CODEX_AVAILABLE_MODELS = [
   { id: 'claude-3-5-sonnet-20241022', name: 'Claude 3.5 Sonnet', provider: 'Anthropic' },
   { id: 'claude-3-opus-20240229', name: 'Claude 3 Opus', provider: 'Anthropic' },
 ] as const
+
+export const CODEX_WHATSAPP_TOOL_CATALOG: ClaraCodexToolCatalogItem[] = [
+  {
+    id: 'getBranchInfo',
+    label: 'Get Branch Info',
+    purpose: 'Read branch details (name, slug, phone, address, status).',
+    trigger: 'Used when customer asks where/which branch, contact details, or location info.',
+  },
+  {
+    id: 'getPricing',
+    label: 'Get Pricing',
+    purpose: 'Read active game/event pricing and event formulas.',
+    trigger: 'Used when customer asks prices or package cost by activity/branch.',
+  },
+  {
+    id: 'simulateBooking',
+    label: 'Simulate Booking',
+    purpose: 'Check real slot availability for GAME or EVENT and return alternatives.',
+    trigger: 'Used before any booking confirmation or booking link generation.',
+  },
+  {
+    id: 'generateBookingLink',
+    label: 'Generate Booking Link',
+    purpose: 'Create a prefilled booking URL only after required data is complete.',
+    trigger: 'Used only when slot is available and required fields are confirmed (email required).',
+  },
+  {
+    id: 'escalateToHuman',
+    label: 'Escalate To Human',
+    purpose: 'Flag conversation for human takeover and log escalation context.',
+    trigger: 'Used for complaints, uncertainty, tool failure, or explicit request for a human.',
+  },
+]
 
 const defaultScheduleDay = (): CodexDaySchedule => ({
   enabled: true,
