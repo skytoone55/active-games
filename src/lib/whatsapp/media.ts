@@ -159,10 +159,41 @@ export async function uploadAndSendMedia(
 
     // Step 2: Determine WhatsApp media type from MIME
     const waType = getWhatsAppMediaType(mimeType)
+    const cleanMime = mimeType.split(';')[0].trim()
 
-    // Step 3: Send via WhatsApp API
+    // Step 3: Upload file directly to WhatsApp Media API (more reliable than link-based)
+    const formDataWa = new FormData()
+    formDataWa.append('messaging_product', 'whatsapp')
+    formDataWa.append('type', cleanMime)
+    const fileBlob = new Blob([new Uint8Array(fileBuffer)], { type: cleanMime })
+    formDataWa.append('file', fileBlob, filename)
+
+    console.log('[WA MEDIA] Uploading to WhatsApp Media API:', { type: cleanMime, filename, size: fileBuffer.length })
+
+    const uploadRes = await fetch(
+      `https://graph.facebook.com/v21.0/${phoneNumberId}/media`,
+      {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${accessToken}` },
+        body: formDataWa,
+      }
+    )
+
+    const uploadResult = await uploadRes.json()
+
+    if (!uploadRes.ok || !uploadResult.id) {
+      console.error('[WA MEDIA] WhatsApp media upload error:', uploadRes.status, JSON.stringify(uploadResult))
+      // Fallback: try link-based approach
+      console.log('[WA MEDIA] Falling back to link-based send...')
+      return await sendViaLink(publicUrl, waType, recipientPhone, phoneNumberId, accessToken, filename, caption, finalPath)
+    }
+
+    const waMediaId = uploadResult.id
+    console.log('[WA MEDIA] WhatsApp media uploaded, id:', waMediaId)
+
+    // Step 4: Send message with uploaded media ID
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const mediaPayload: any = { link: publicUrl }
+    const mediaPayload: any = { id: waMediaId }
     if (caption && (waType === 'image' || waType === 'video' || waType === 'document')) {
       mediaPayload.caption = caption
     }
@@ -178,7 +209,7 @@ export async function uploadAndSendMedia(
       [waType]: mediaPayload,
     }
 
-    console.log('[WA MEDIA] Sending to WhatsApp:', JSON.stringify(waBody))
+    console.log('[WA MEDIA] Sending message with media id:', waMediaId)
 
     const waRes = await fetch(
       `https://graph.facebook.com/v21.0/${phoneNumberId}/messages`,
@@ -195,7 +226,7 @@ export async function uploadAndSendMedia(
     const waResult = await waRes.json()
 
     if (!waRes.ok) {
-      console.error('[WA MEDIA] WhatsApp API error:', waRes.status, JSON.stringify(waResult))
+      console.error('[WA MEDIA] WhatsApp send error:', waRes.status, JSON.stringify(waResult))
       return null
     }
 
@@ -212,6 +243,62 @@ export async function uploadAndSendMedia(
   } catch (error) {
     console.error('[WA MEDIA] Send error:', error)
     return null
+  }
+}
+
+// ============================================================
+// Fallback: send via link URL (used if direct upload fails)
+// ============================================================
+async function sendViaLink(
+  publicUrl: string,
+  waType: string,
+  recipientPhone: string,
+  phoneNumberId: string,
+  accessToken: string,
+  filename: string,
+  caption?: string,
+  storagePath?: string,
+): Promise<{ stored: StoredMedia; waMessageId: string | null } | null> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const mediaPayload: any = { link: publicUrl }
+  if (caption && (waType === 'image' || waType === 'video' || waType === 'document')) {
+    mediaPayload.caption = caption
+  }
+  if (waType === 'document') {
+    mediaPayload.filename = filename
+  }
+
+  const waBody = {
+    messaging_product: 'whatsapp',
+    recipient_type: 'individual',
+    to: recipientPhone,
+    type: waType,
+    [waType]: mediaPayload,
+  }
+
+  const waRes = await fetch(
+    `https://graph.facebook.com/v21.0/${phoneNumberId}/messages`,
+    {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(waBody),
+    }
+  )
+
+  const waResult = await waRes.json()
+  if (!waRes.ok) {
+    console.error('[WA MEDIA] Link fallback also failed:', waRes.status, JSON.stringify(waResult))
+    return null
+  }
+
+  const waMessageId = waResult.messages?.[0]?.id || null
+  console.log('[WA MEDIA] Sent via link fallback:', waType, '→', recipientPhone, '| msgId:', waMessageId)
+  return {
+    stored: { publicUrl, storagePath: storagePath || '' },
+    waMessageId,
   }
 }
 
