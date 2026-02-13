@@ -11,7 +11,8 @@ import {
   Package,
   Sparkles,
   MessageSquare,
-  Phone
+  Phone,
+  Bot
 } from 'lucide-react'
 import { useAdmin } from '@/contexts/AdminContext'
 import { useUserPermissions } from '@/hooks/useUserPermissions'
@@ -22,8 +23,9 @@ import { ICountCatalogSection } from './components/ICountCatalogSection'
 import { ClaraSection } from './components/ClaraSection'
 import { MessengerSection } from './components/MessengerSection'
 import { WhatsAppSection } from './components/WhatsAppSection'
+import { ClaraCodexSection } from './components/ClaraCodexSection'
 
-type SettingsSection = 'mail' | 'credentials' | 'catalog' | 'messenger' | 'whatsapp' | 'clara'
+type SettingsSection = 'mail' | 'credentials' | 'catalog' | 'messenger' | 'whatsapp' | 'clara' | 'clara_codex'
 
 export default function SettingsPage() {
   const { t } = useTranslation()
@@ -101,6 +103,13 @@ export default function SettingsPage() {
       icon: Sparkles,
       label: 'Clara AI',
       description: t('admin.settings.sections.clara_desc'),
+      requiredPermission: 'settings'
+    },
+    {
+      id: 'clara_codex',
+      icon: Bot,
+      label: 'Clara Codex',
+      description: 'WhatsApp AI isolée',
       requiredPermission: 'settings'
     }
   ]
@@ -180,7 +189,7 @@ export default function SettingsPage() {
         {/* Content area */}
         <div className="flex-1 p-6">
           {activeSection === 'mail' && (
-            <MailSection isDark={isDark} />
+            <MailSection isDark={isDark} branchId={selectedBranch?.id} />
           )}
           {activeSection === 'credentials' && (
             <CredentialsSection isDark={isDark} />
@@ -196,6 +205,9 @@ export default function SettingsPage() {
           )}
           {activeSection === 'clara' && (
             <ClaraSection isDark={isDark} />
+          )}
+          {activeSection === 'clara_codex' && (
+            <ClaraCodexSection isDark={isDark} />
           )}
         </div>
       </div>

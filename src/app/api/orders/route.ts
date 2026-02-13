@@ -22,7 +22,7 @@ import { createIsraelDateTime } from '@/lib/dates'
 import { validateIsraeliPhone, formatIsraeliPhone } from '@/lib/validation'
 import { validateBookingPrice } from '@/lib/booking-validation'
 import { logOrderAction, logBookingAction, logContactAction, getClientIpFromHeaders } from '@/lib/activity-logger'
-import { sendBookingConfirmationEmail } from '@/lib/email-sender'
+import { triggerEmailAutomation } from '@/lib/email-automation-service'
 import { syncContactToICountBackground } from '@/lib/icount-sync'
 import { calculateBookingPrice } from '@/lib/price-calculator'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limiter'
@@ -1012,14 +1012,15 @@ export async function POST(request: NextRequest) {
         console.log('[ORDER API EVENT] Branch fetch result - name:', branch?.name, 'error:', branchError?.message)
 
         if (branch) {
-          console.log('[ORDER API EVENT] Calling sendBookingConfirmationEmail with locale:', locale, 'cgvToken:', order.cgv_token)
-          // Envoyer l'email (attendre pour que le status soit mis à jour)
+          console.log('[ORDER API EVENT] Calling triggerEmailAutomation with locale:', locale, 'cgvToken:', order.cgv_token)
+          // Envoyer l'email via automation engine (fallback direct si pas d'automation)
           try {
-            const emailResult = await sendBookingConfirmationEmail({
+            const emailResult = await triggerEmailAutomation('booking_confirmed', {
               booking: eventBookingData,
               branch: branch as Branch,
               locale,
-              cgvToken: order.cgv_token
+              cgvToken: order.cgv_token,
+              metadata: { source: 'website' }
             })
             console.log('[ORDER API EVENT] Email result:', emailResult)
           } catch (err) {
@@ -1599,14 +1600,15 @@ export async function POST(request: NextRequest) {
           icount_invrec_id: null
         }
 
-        console.log('[ORDER API GAME] Calling sendBookingConfirmationEmail with locale:', locale, 'cgvToken:', order.cgv_token)
-        // Envoyer l'email (attendre pour que le status soit mis à jour)
+        console.log('[ORDER API GAME] Calling triggerEmailAutomation with locale:', locale, 'cgvToken:', order.cgv_token)
+        // Envoyer l'email via automation engine (fallback direct si pas d'automation)
         try {
-          const emailResult = await sendBookingConfirmationEmail({
+          const emailResult = await triggerEmailAutomation('booking_confirmed', {
             booking: bookingForEmail,
             branch: branch as Branch,
             locale,
-            cgvToken: order.cgv_token
+            cgvToken: order.cgv_token,
+            metadata: { source: 'website' }
           })
           console.log('[ORDER API GAME] Email result:', emailResult)
         } catch (err) {

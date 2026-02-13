@@ -35,6 +35,31 @@ export function AdminProvider({ children, theme, toggleTheme }: {
   const { user, loading: authLoading, signOut, refreshUser } = useAuth()
   const { branches, selectedBranch, selectedBranchId, selectBranch, loading: branchesLoading, refresh: refreshBranches } = useBranches()
 
+  // Clara Codex human-presence heartbeat (no-op for super admin)
+  useEffect(() => {
+    if (!user || user.role === 'super_admin') return
+
+    let isMounted = true
+    let interval: NodeJS.Timeout | null = null
+
+    const sendHeartbeat = async () => {
+      if (!isMounted) return
+      try {
+        await fetch('/api/admin/clara-codex/presence', { method: 'POST' })
+      } catch {
+        // Non-blocking
+      }
+    }
+
+    void sendHeartbeat()
+    interval = setInterval(sendHeartbeat, 45 * 1000)
+
+    return () => {
+      isMounted = false
+      if (interval) clearInterval(interval)
+    }
+  }, [user?.id, user?.role])
+
   const value: AdminContextValue = {
     user,
     loading: authLoading, // Only block on auth, not branches — pages can render while branches load

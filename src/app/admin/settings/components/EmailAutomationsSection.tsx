@@ -18,6 +18,7 @@ import { useEmailAutomations, type EmailAutomation } from '@/hooks/useEmailAutom
 
 interface EmailAutomationsSectionProps {
   isDark: boolean
+  branchId?: string
 }
 
 // Labels lisibles pour les événements trigger
@@ -73,8 +74,13 @@ function formatDelay(minutes: number): string {
   return h > 0 ? `${d}j ${h}h` : `${d}j`
 }
 
-export function EmailAutomationsSection({ isDark }: EmailAutomationsSectionProps) {
-  const { automations, loading, error, createAutomation, updateAutomation, deleteAutomation, toggleAutomation } = useEmailAutomations()
+export function EmailAutomationsSection({ isDark, branchId }: EmailAutomationsSectionProps) {
+  const { automations: allAutomations, loading, error, createAutomation, updateAutomation, deleteAutomation, toggleAutomation } = useEmailAutomations()
+
+  // Filtrer les automations par branche (afficher celles sans branche + celles de la branche sélectionnée)
+  const automations = allAutomations.filter(a =>
+    !a.branch_id || !branchId || a.branch_id === branchId
+  )
   const [editingId, setEditingId] = useState<string | null>(null)
   const [showCreate, setShowCreate] = useState(false)
   const [saving, setSaving] = useState(false)

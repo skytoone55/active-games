@@ -11,7 +11,6 @@ import {
   FileText
 } from 'lucide-react'
 import { useTranslation } from '@/contexts/LanguageContext'
-import { getClient } from '@/lib/supabase/client'
 import type { EmailTemplate } from '@/lib/supabase/types'
 
 interface TermsConditionsSectionProps {
@@ -61,26 +60,30 @@ export function TermsConditionsSection({ isDark }: TermsConditionsSectionProps) 
     body_template: ''
   })
 
-  const supabase = getClient()
-
   const fetchTemplates = async () => {
     setLoading(true)
     setError(null)
 
     try {
+      // Utiliser l'API route avec permissions au lieu de Supabase client direct
+      const response = await fetch('/api/email-templates')
+      const result = await response.json()
+
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to fetch templates')
+      }
+
+      // Filtrer côté client pour ne garder que les templates terms_*
       const allCodes = [
         ...Object.values(TERMS_CODES.game),
         ...Object.values(TERMS_CODES.event)
       ]
 
-      const { data, error: fetchError } = await supabase
-        .from('email_templates')
-        .select('*')
-        .in('code', allCodes)
+      const termsTemplates = (result.data || []).filter(
+        (t: EmailTemplate) => allCodes.includes(t.code)
+      )
 
-      if (fetchError) throw fetchError
-
-      setTemplates(data || [])
+      setTemplates(termsTemplates)
     } catch (err) {
       console.error('Error fetching terms templates:', err)
       setError(t('admin.settings.terms.fetch_error'))
@@ -111,16 +114,20 @@ export function TermsConditionsSection({ isDark }: TermsConditionsSectionProps) 
     setSaving(true)
 
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { error: updateError } = await (supabase as any)
-        .from('email_templates')
-        .update({
+      // Utiliser l'API route avec permissions
+      const response = await fetch(`/api/email-templates/${editingTemplate.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           body_template: formData.body_template,
-          updated_at: new Date().toISOString()
         })
-        .eq('id', editingTemplate.id)
+      })
 
-      if (updateError) throw updateError
+      const result = await response.json()
+
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to save template')
+      }
 
       // Refresh templates
       await fetchTemplates()
@@ -135,16 +142,20 @@ export function TermsConditionsSection({ isDark }: TermsConditionsSectionProps) 
 
   const handleToggleActive = async (template: EmailTemplate) => {
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { error: updateError } = await (supabase as any)
-        .from('email_templates')
-        .update({
+      // Utiliser l'API route avec permissions
+      const response = await fetch(`/api/email-templates/${template.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           is_active: !template.is_active,
-          updated_at: new Date().toISOString()
         })
-        .eq('id', template.id)
+      })
 
-      if (updateError) throw updateError
+      const result = await response.json()
+
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to toggle template')
+      }
 
       await fetchTemplates()
     } catch (err) {

@@ -8,11 +8,14 @@
  *   await triggerEmailAutomation('booking_confirmed', {
  *     booking, branch, locale, triggeredBy, cgvToken
  *   })
+ *
+ * Si aucune automation active trouvée pour booking_confirmed,
+ * on fall back sur l'envoi direct (backward compatible).
  */
 
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { sendBookingConfirmationEmail, sendEmail, replaceTemplateVariables } from '@/lib/email-sender'
-import type { Booking, Branch } from '@/lib/supabase/types'
+import type { Branch } from '@/lib/supabase/types'
 
 const getAdminSupabase = () => {
   return createSupabaseClient(
@@ -23,8 +26,9 @@ const getAdminSupabase = () => {
 
 // Context passé lors du déclenchement d'une automation
 export interface AutomationContext {
-  // Booking-related
-  booking?: Booking
+  // Booking-related (booking est un objet partiel car les routes construisent des objets ad-hoc)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  booking?: any
   branch?: Branch
   locale?: string
   triggeredBy?: string
@@ -56,20 +60,31 @@ interface AutomationRecord {
   branch_id: string | null
 }
 
+interface AutomationResult {
+  sent: number
+  skipped: number
+  errors: string[]
+  /** ID du log email (pour le premier envoi immédiat) */
+  emailLogId?: string
+  /** Si au moins un envoi a réussi */
+  success: boolean
+}
+
 /**
  * Déclenche les automatisations pour un événement donné.
  * Cherche en DB les automations actives, vérifie les conditions, et envoie.
  *
- * Pour delay_minutes > 0, les emails ne sont PAS envoyés ici (géré par le cron).
- * Seuls les envois immédiats (delay = 0) sont traités.
+ * Pour booking_confirmed: si aucune automation en DB, fall back sur envoi direct.
+ * Pour delay_minutes > 0: enregistre une entrée dans scheduled_emails (si table existe)
+ * ou les CGV reminders sont gérés par le cron qui lit email_automations.
  */
 export async function triggerEmailAutomation(
   triggerEvent: string,
   context: AutomationContext
-): Promise<{ sent: number; skipped: number; errors: string[] }> {
+): Promise<AutomationResult> {
   const supabase = getAdminSupabase()
 
-  const result = { sent: 0, skipped: 0, errors: [] as string[] }
+  const result: AutomationResult = { sent: 0, skipped: 0, errors: [], success: false }
 
   try {
     // Chercher les automations actives pour cet événement
@@ -83,12 +98,20 @@ export async function triggerEmailAutomation(
 
     if (error) {
       console.error(`[EMAIL AUTOMATION] Error fetching automations for ${triggerEvent}:`, error)
+      // Fallback: envoyer directement pour booking_confirmed
+      if (triggerEvent === 'booking_confirmed') {
+        return await fallbackDirectSend(context, result)
+      }
       result.errors.push(`DB error: ${error.message}`)
       return result
     }
 
     if (!automations || automations.length === 0) {
       console.log(`[EMAIL AUTOMATION] No active automations for trigger: ${triggerEvent}`)
+      // Fallback: envoyer directement pour booking_confirmed (backward compatible)
+      if (triggerEvent === 'booking_confirmed') {
+        return await fallbackDirectSend(context, result)
+      }
       return result
     }
 
@@ -99,6 +122,10 @@ export async function triggerEmailAutomation(
       return true
     })
 
+    if (filteredAutomations.length === 0 && triggerEvent === 'booking_confirmed') {
+      return await fallbackDirectSend(context, result)
+    }
+
     for (const automation of filteredAutomations) {
       try {
         // Vérifier les conditions
@@ -108,9 +135,11 @@ export async function triggerEmailAutomation(
           continue
         }
 
-        // Pour les envois différés, on ne fait rien ici (géré par le cron CGV reminders ou futur email queue)
+        // Pour les envois différés (delay > 0), on ne les envoie pas maintenant.
+        // Les CGV reminders sont gérés par le cron /api/cron/cgv-reminders
+        // qui consulte la table email_automations pour savoir si c'est activé.
         if (automation.delay_minutes > 0) {
-          console.log(`[EMAIL AUTOMATION] "${automation.name}" has delay=${automation.delay_minutes}min, skipping (handled by cron)`)
+          console.log(`[EMAIL AUTOMATION] "${automation.name}" has delay=${automation.delay_minutes}min — deferred to cron`)
           result.skipped++
           continue
         }
@@ -120,8 +149,12 @@ export async function triggerEmailAutomation(
         const resolvedTemplateCode = automation.template_code.replace('{{locale}}', locale)
 
         // Exécuter l'envoi selon le type de trigger
-        await executeAutomation(automation, resolvedTemplateCode, context)
+        const emailLogId = await executeAutomation(automation, resolvedTemplateCode, context)
         result.sent++
+        result.success = true
+        if (emailLogId && !result.emailLogId) {
+          result.emailLogId = emailLogId
+        }
 
         console.log(`[EMAIL AUTOMATION] "${automation.name}" sent successfully (template: ${resolvedTemplateCode})`)
       } catch (err) {
@@ -134,6 +167,51 @@ export async function triggerEmailAutomation(
     const errMsg = err instanceof Error ? err.message : String(err)
     console.error(`[EMAIL AUTOMATION] Fatal error for trigger ${triggerEvent}:`, errMsg)
     result.errors.push(errMsg)
+    // Fallback for booking_confirmed
+    if (triggerEvent === 'booking_confirmed') {
+      return await fallbackDirectSend(context, result)
+    }
+  }
+
+  result.success = result.sent > 0
+  return result
+}
+
+/**
+ * Fallback: envoi direct sans passer par les automations DB.
+ * Utilisé quand aucune automation n'est configurée ou en cas d'erreur DB.
+ * Garantit la backward compatibility — l'email part toujours.
+ */
+async function fallbackDirectSend(
+  context: AutomationContext,
+  result: AutomationResult
+): Promise<AutomationResult> {
+  console.log('[EMAIL AUTOMATION] Fallback: direct send for booking_confirmed')
+
+  if (!context.booking || !context.branch) {
+    result.errors.push('Fallback failed: missing booking or branch')
+    return result
+  }
+
+  try {
+    const emailResult = await sendBookingConfirmationEmail({
+      booking: context.booking,
+      branch: context.branch,
+      triggeredBy: context.triggeredBy,
+      locale: context.locale,
+      cgvToken: context.cgvToken,
+    })
+
+    result.success = emailResult.success
+    result.emailLogId = emailResult.emailLogId
+    if (emailResult.success) {
+      result.sent = 1
+    } else {
+      result.errors.push(emailResult.error || 'Direct send failed')
+    }
+  } catch (err) {
+    const errMsg = err instanceof Error ? err.message : String(err)
+    result.errors.push(`Fallback exception: ${errMsg}`)
   }
 
   return result
@@ -174,13 +252,14 @@ function checkConditions(
 }
 
 /**
- * Exécute l'envoi d'un email pour une automation
+ * Exécute l'envoi d'un email pour une automation.
+ * Retourne l'emailLogId si disponible.
  */
 async function executeAutomation(
   automation: AutomationRecord,
   templateCode: string,
   context: AutomationContext
-): Promise<void> {
+): Promise<string | undefined> {
   // Pour booking_confirmed, on utilise la fonction existante qui gère
   // toute la logique (variables, CGV, terms, etc.)
   if (automation.trigger_event === 'booking_confirmed') {
@@ -188,14 +267,18 @@ async function executeAutomation(
       throw new Error('booking_confirmed requires booking and branch in context')
     }
 
-    await sendBookingConfirmationEmail({
+    const emailResult = await sendBookingConfirmationEmail({
       booking: context.booking,
       branch: context.branch,
       triggeredBy: context.triggeredBy,
       locale: context.locale,
       cgvToken: context.cgvToken,
     })
-    return
+
+    if (!emailResult.success) {
+      throw new Error(emailResult.error || 'sendBookingConfirmationEmail failed')
+    }
+    return emailResult.emailLogId
   }
 
   // Pour les autres triggers, on fait un envoi générique via template DB
@@ -241,7 +324,7 @@ async function executeTemplatedEmail(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   template: any,
   context: AutomationContext
-): Promise<void> {
+): Promise<string | undefined> {
   const recipientEmail = context.customerEmail || context.booking?.customer_email
   if (!recipientEmail) {
     throw new Error('No recipient email in context')
@@ -287,7 +370,7 @@ async function executeTemplatedEmail(
   const html = replaceTemplateVariables(template.body_template, variables)
 
   // Envoyer
-  const result = await sendEmail({
+  const emailResult = await sendEmail({
     to: recipientEmail,
     toName: recipientName,
     subject,
@@ -305,7 +388,9 @@ async function executeTemplatedEmail(
     },
   })
 
-  if (!result.success) {
-    throw new Error(result.error || 'sendEmail failed')
+  if (!emailResult.success) {
+    throw new Error(emailResult.error || 'sendEmail failed')
   }
+
+  return emailResult.emailLogId
 }

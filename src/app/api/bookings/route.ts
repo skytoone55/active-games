@@ -14,7 +14,7 @@ import { verifyApiPermission } from '@/lib/permissions'
 import { validateBookingPrice } from '@/lib/booking-validation'
 import { extractIsraelDate, extractIsraelTime } from '@/lib/dates'
 import { logBookingAction, logContactAction, logOrderAction, getClientIpFromHeaders } from '@/lib/activity-logger'
-import { sendBookingConfirmationEmail } from '@/lib/email-sender'
+import { triggerEmailAutomation } from '@/lib/email-automation-service'
 import { calculateBookingPrice } from '@/lib/price-calculator'
 import type { ICountProduct, ICountEventFormula, ICountRoom } from '@/hooks/usePricingData'
 // iCount offers removed - invoice+receipt created only at order close
@@ -519,19 +519,20 @@ export async function POST(request: NextRequest) {
 
       if (branch) {
         try {
-          const emailResult = await sendBookingConfirmationEmail({
+          const emailResult = await triggerEmailAutomation('booking_confirmed', {
             booking: newBooking,
             branch,
             triggeredBy: user.id,
             locale: body.locale || 'he',
-            cgvToken: orderCgvToken // Lien de validation CGV pour les orders admin
+            cgvToken: orderCgvToken,
+            metadata: { source: 'admin_agenda' }
           })
 
           emailSent = emailResult.success
           emailLogId = emailResult.emailLogId
 
           if (!emailResult.success) {
-            console.error('Email send failed:', emailResult.error)
+            console.error('Email send failed:', emailResult.errors)
           }
         } catch (emailErr) {
           console.error('Email send exception:', emailErr)

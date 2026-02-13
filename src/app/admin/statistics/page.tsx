@@ -21,7 +21,8 @@ import {
   ArrowDownRight,
   Percent,
   Download,
-  MessageCircle
+  MessageCircle,
+  Bot
 } from 'lucide-react'
 import {
   BarChart,
@@ -44,6 +45,7 @@ import { useAdmin } from '@/contexts/AdminContext'
 import { useTranslation } from '@/contexts/LanguageContext'
 import { useUserPermissions } from '@/hooks/useUserPermissions'
 import { ChatStatsTab } from './components/ChatStatsTab'
+import { ClaraCodexStatsTab } from './components/ClaraCodexStatsTab'
 import { getClient } from '@/lib/supabase/client'
 import type { UserRole } from '@/lib/supabase/types'
 
@@ -93,11 +95,12 @@ export default function StatisticsPage() {
   const [customStartDate, setCustomStartDate] = useState('')
   const [customEndDate, setCustomEndDate] = useState('')
   const [selectedBranchId, setSelectedBranchId] = useState<string>('all')
-  const [activeTab, setActiveTab] = useState<'overview' | 'orders' | 'clients' | 'revenue' | 'team' | 'chat'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'orders' | 'clients' | 'revenue' | 'team' | 'chat' | 'codex'>('overview')
 
   // Permission check for chat stats
   const { hasPermission } = useUserPermissions(user?.role as UserRole || null)
   const canViewChatStats = hasPermission('chat_stats', 'can_view')
+  const canViewCodexStats = user?.role === 'super_admin'
 
   const colors = isDark ? CHART_COLORS.dark : CHART_COLORS.light
 
@@ -344,6 +347,7 @@ export default function StatisticsPage() {
             { id: 'clients', label: t('admin.stats.tabs.clients'), icon: Users },
             { id: 'team', label: t('admin.stats.tabs.team'), icon: UserCheck },
             ...(canViewChatStats ? [{ id: 'chat', label: 'Chat', icon: MessageCircle }] : []),
+            ...(canViewCodexStats ? [{ id: 'codex', label: 'Clara Codex', icon: Bot }] : []),
           ].map(tab => (
             <button
               key={tab.id}
@@ -715,6 +719,16 @@ export default function StatisticsPage() {
               <ChatStatsTab
                 isDark={isDark}
                 branches={branches}
+                selectedBranchId={selectedBranchId}
+                dateRange={dateRange}
+                customStartDate={customStartDate}
+                customEndDate={customEndDate}
+              />
+            )}
+
+            {activeTab === 'codex' && canViewCodexStats && (
+              <ClaraCodexStatsTab
+                isDark={isDark}
                 selectedBranchId={selectedBranchId}
                 dateRange={dateRange}
                 customStartDate={customStartDate}

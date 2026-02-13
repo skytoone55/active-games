@@ -9,11 +9,12 @@ import { TermsConditionsSection } from './TermsConditionsSection'
 
 interface MailSectionProps {
   isDark: boolean
+  branchId?: string
 }
 
 type SubTab = 'templates' | 'automations' | 'terms'
 
-export function MailSection({ isDark }: MailSectionProps) {
+export function MailSection({ isDark, branchId }: MailSectionProps) {
   const { t } = useTranslation()
   const [activeTab, setActiveTab] = useState<SubTab>('templates')
 
@@ -65,7 +66,7 @@ export function MailSection({ isDark }: MailSectionProps) {
 
       {/* Content */}
       {activeTab === 'templates' && <EmailTemplatesEditor isDark={isDark} />}
-      {activeTab === 'automations' && <EmailAutomationsSection isDark={isDark} />}
+      {activeTab === 'automations' && <EmailAutomationsSection isDark={isDark} branchId={branchId} />}
       {activeTab === 'terms' && <TermsConditionsSection isDark={isDark} />}
     </div>
   )

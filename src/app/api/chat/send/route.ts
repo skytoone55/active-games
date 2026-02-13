@@ -10,6 +10,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { verifyApiPermission } from '@/lib/permissions'
 import { uploadAndSendMedia, getWhatsAppMediaType } from '@/lib/whatsapp/media'
+import { getClaraCodexSettings } from '@/lib/clara-codex'
 
 export async function POST(request: NextRequest) {
   try {
@@ -158,13 +159,19 @@ export async function POST(request: NextRequest) {
     // Update conversation last_message_at + auto-pause Clara (human takeover)
     let autoResumeMinutes = 5
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: msSettings } = await (supabase as any)
-        .from('messenger_settings')
-        .select('settings')
-        .single()
-      const claraTimeout = msSettings?.settings?.whatsapp_clara?.auto_resume_minutes
-      if (claraTimeout && claraTimeout > 0) autoResumeMinutes = claraTimeout
+      const codex = await getClaraCodexSettings()
+      const codexEnabled = codex.is_active && codex.settings.enabled
+      if (codexEnabled && codex.settings.auto_resume_minutes > 0) {
+        autoResumeMinutes = codex.settings.auto_resume_minutes
+      } else {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { data: msSettings } = await (supabase as any)
+          .from('messenger_settings')
+          .select('settings')
+          .single()
+        const legacyTimeout = msSettings?.settings?.whatsapp_clara?.auto_resume_minutes
+        if (legacyTimeout && legacyTimeout > 0) autoResumeMinutes = legacyTimeout
+      }
     } catch { /* use default */ }
 
     const pausedUntil = new Date(Date.now() + autoResumeMinutes * 60 * 1000).toISOString()
