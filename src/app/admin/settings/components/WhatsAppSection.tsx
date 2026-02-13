@@ -86,14 +86,18 @@ const DEFAULT_CLARA_CONFIG: WhatsAppClaraConfig = {
   schedule: DEFAULT_SCHEDULE,
 }
 
+// Models aligned with Clara global settings (src/app/api/admin/clara/settings/route.ts)
 const AVAILABLE_MODELS = [
   { id: 'gemini-2.0-flash-lite', name: 'Gemini 2.0 Flash Lite', provider: 'Google' },
   { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash', provider: 'Google' },
+  { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash', provider: 'Google' },
   { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro', provider: 'Google' },
   { id: 'gpt-4o-mini', name: 'GPT-4o Mini', provider: 'OpenAI' },
   { id: 'gpt-4o', name: 'GPT-4o', provider: 'OpenAI' },
-  { id: 'claude-3-5-haiku-latest', name: 'Claude 3.5 Haiku', provider: 'Anthropic' },
-  { id: 'claude-sonnet-4-20250514', name: 'Claude Sonnet 4', provider: 'Anthropic' },
+  { id: 'gpt-4-turbo', name: 'GPT-4 Turbo', provider: 'OpenAI' },
+  { id: 'claude-3-haiku-20240307', name: 'Claude 3 Haiku', provider: 'Anthropic' },
+  { id: 'claude-3-5-sonnet-20241022', name: 'Claude 3.5 Sonnet', provider: 'Anthropic' },
+  { id: 'claude-3-opus-20240229', name: 'Claude 3 Opus', provider: 'Anthropic' },
 ]
 
 const emptyMultilingual = (): MultilingualText => ({ fr: '', en: '', he: '' })

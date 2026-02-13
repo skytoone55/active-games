@@ -7,6 +7,7 @@ import OpenAI from 'openai'
 import Anthropic from '@anthropic-ai/sdk'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { detectMessageLanguage } from './language-detect'
+import { parseDate, parseTime } from './date-time-parser'
 
 // Type definitions
 export interface ClaraConfig {
@@ -402,27 +403,39 @@ export function validateCriticalFormats(collectedData: Record<string, any>): {
     }
   }
 
-  // DATE - MUST be YYYY-MM-DD format
+  // DATE - normalize to YYYY-MM-DD (parse if needed)
   if (collectedData.DATE || collectedData.date) {
-    const date = collectedData.DATE || collectedData.date
-    const dateRegex = /^\d{4}-\d{2}-\d{2}$/
-    if (!dateRegex.test(date)) {
-      invalidFields.push({
-        field: 'date',
-        issue: `Must be YYYY-MM-DD format, got: "${date}"`
-      })
+    const dateKey = collectedData.DATE ? 'DATE' : 'date'
+    const date = collectedData[dateKey]
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      // Not in ISO format — try to parse (DD/MM/YYYY, "5 février", "demain", etc.)
+      const parsed = parseDate(date)
+      if (parsed) {
+        collectedData[dateKey] = parsed.date // Normalize to YYYY-MM-DD
+      } else {
+        invalidFields.push({
+          field: 'date',
+          issue: `Date not recognized: "${date}"`
+        })
+      }
     }
   }
 
-  // TIME - MUST be HH:MM format (24h)
+  // TIME - normalize to HH:MM format (24h) (parse if needed)
   if (collectedData.TIME || collectedData.time) {
-    const time = collectedData.TIME || collectedData.time
-    const timeRegex = /^([0-1][0-9]|2[0-3]):[0-5][0-9]$/
-    if (!timeRegex.test(time)) {
-      invalidFields.push({
-        field: 'time',
-        issue: `Must be HH:MM format (24h), got: "${time}"`
-      })
+    const timeKey = collectedData.TIME ? 'TIME' : 'time'
+    const time = collectedData[timeKey]
+    if (!/^([0-1][0-9]|2[0-3]):[0-5][0-9]$/.test(time)) {
+      // Not in HH:MM format — try to parse ("14h30", "2pm", "15h", etc.)
+      const parsed = parseTime(time)
+      if (parsed) {
+        collectedData[timeKey] = parsed.time // Normalize to HH:MM
+      } else {
+        invalidFields.push({
+          field: 'time',
+          issue: `Time not recognized: "${time}"`
+        })
+      }
     }
   }
 

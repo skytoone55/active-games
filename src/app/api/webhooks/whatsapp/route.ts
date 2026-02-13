@@ -10,12 +10,31 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
+import { createHmac } from 'crypto'
 import {
   sendWhatsAppText,
   storeOutboundMessage,
   trackClaraEvent,
   handleClaraWhatsAppResponse,
 } from '@/lib/clara/whatsapp-handler'
+
+/**
+ * Verify Meta webhook signature (X-Hub-Signature-256)
+ * https://developers.facebook.com/docs/graph-api/webhooks/getting-started#verification-requests
+ */
+function verifyMetaSignature(rawBody: string, signatureHeader: string | null): boolean {
+  const appSecret = process.env.WHATSAPP_APP_SECRET
+  if (!appSecret) {
+    // If no secret configured, log warning but allow (backward compatible)
+    console.warn('[WHATSAPP WEBHOOK] WHATSAPP_APP_SECRET not configured — skipping signature verification')
+    return true
+  }
+  if (!signatureHeader) {
+    return false
+  }
+  const expectedSignature = 'sha256=' + createHmac('sha256', appSecret).update(rawBody).digest('hex')
+  return signatureHeader === expectedSignature
+}
 
 // Normalize phone: 972XXXXXXXXX -> 0XXXXXXXXX (Israeli format)
 function normalizePhone(phone: string): string {
@@ -212,7 +231,16 @@ export async function GET(request: NextRequest) {
 // ============================================================
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
+    // Read raw body for signature verification, then parse
+    const rawBody = await request.text()
+    const signature = request.headers.get('x-hub-signature-256')
+
+    if (!verifyMetaSignature(rawBody, signature)) {
+      console.error('[WHATSAPP WEBHOOK] Invalid signature — rejecting request')
+      return NextResponse.json({ error: 'Invalid signature' }, { status: 403 })
+    }
+
+    const body = JSON.parse(rawBody)
     const entry = body?.entry?.[0]
     const changes = entry?.changes?.[0]
     const value = changes?.value

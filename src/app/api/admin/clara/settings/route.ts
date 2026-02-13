@@ -5,8 +5,8 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
+import { verifyApiPermission } from '@/lib/permissions'
 import { generatePublicSystemPrompt } from '@/lib/clara/prompts'
 
 // Type for system_settings table (not in generated types)
@@ -74,40 +74,14 @@ const DEFAULT_CLARA_SETTINGS = {
 // Utilise le vrai prompt depuis prompts.ts (pas de duplication)
 const DEFAULT_PUBLIC_PROMPT = generatePublicSystemPrompt()
 
-// Vérifier que l'utilisateur est super_admin
-async function checkSuperAdmin(): Promise<{ authorized: boolean; userId?: string }> {
-  const supabase = await createClient()
-
-  const { data: { user }, error: authError } = await supabase.auth.getUser()
-
-  if (authError || !user) {
-    return { authorized: false }
-  }
-
-  // Vérifier le rôle dans la table profiles
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', user.id)
-    .single<{ role: string }>()
-
-  if (!profile || profile.role !== 'super_admin') {
-    return { authorized: false }
-  }
-
-  return { authorized: true, userId: user.id }
-}
-
 /**
  * GET /api/admin/clara/settings
  * Récupère tous les settings Clara
  */
 export async function GET(request: NextRequest) {
   try {
-    const auth = await checkSuperAdmin()
-    if (!auth.authorized) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    const { success, errorResponse } = await verifyApiPermission('settings', 'view')
+    if (!success) return errorResponse!
 
     const supabase = createServiceRoleClient()
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -174,10 +148,8 @@ export async function GET(request: NextRequest) {
  */
 export async function PUT(request: NextRequest) {
   try {
-    const auth = await checkSuperAdmin()
-    if (!auth.authorized) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    const { success, errorResponse } = await verifyApiPermission('settings', 'edit')
+    if (!success) return errorResponse!
 
     const body = await request.json()
     const { settings, customPrompt, resetPrompt, resetSettings } = body

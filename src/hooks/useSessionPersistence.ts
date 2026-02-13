@@ -8,8 +8,9 @@
  * - Le token est rafraîchi silencieusement en arrière-plan
  * - L'utilisateur reste connecté tant qu'il utilise l'app
  *
- * Coordonné avec useInactivityTimeout via localStorage LAST_ACTIVITY_KEY
- * Removed the 30s check interval to reduce unnecessary API calls.
+ * Pas de déconnexion automatique pour inactivité — les employés ont besoin
+ * que leur session reste ouverte. Supabase autoRefreshToken gère le gros
+ * du travail, ce hook est un filet de sécurité.
  */
 
 import { useEffect, useRef, useCallback } from 'react'
@@ -17,10 +18,6 @@ import { getClient } from '@/lib/supabase/client'
 
 // Intervalle de rafraîchissement du token (toutes les 10 minutes)
 const REFRESH_INTERVAL = 10 * 60 * 1000 // 10 minutes
-
-// Clé partagée avec useInactivityTimeout
-const LAST_ACTIVITY_KEY = 'last_activity_timestamp'
-const INACTIVITY_TIMEOUT = 5 * 60 * 1000 // 5 minutes — same as useInactivityTimeout
 
 export function useSessionPersistence() {
   const lastActivityRef = useRef(Date.now())
@@ -31,25 +28,8 @@ export function useSessionPersistence() {
     lastActivityRef.current = Date.now()
   }, [])
 
-  // Check if user is still active (not timed out by inactivity)
-  const isUserActive = useCallback(() => {
-    const lastActivity = localStorage.getItem(LAST_ACTIVITY_KEY)
-    if (lastActivity) {
-      const elapsed = Date.now() - parseInt(lastActivity, 10)
-      if (elapsed > INACTIVITY_TIMEOUT) {
-        return false // User is inactive, don't refresh
-      }
-    }
-    return true
-  }, [])
-
   // Rafraîchit le token silencieusement
   const refreshSession = useCallback(async () => {
-    // Don't refresh if user is considered inactive — let useInactivityTimeout handle logout
-    if (!isUserActive()) {
-      return false
-    }
-
     const supabase = getClient()
 
     try {
@@ -76,7 +56,7 @@ export function useSessionPersistence() {
     }
 
     return false
-  }, [isUserActive])
+  }, [])
 
   // Configurer les listeners d'activité utilisateur
   useEffect(() => {
@@ -105,12 +85,12 @@ export function useSessionPersistence() {
     }
   }, [updateActivity])
 
-  // Configurer le rafraîchissement périodique du token (every 10 min, no more 30s check)
+  // Configurer le rafraîchissement périodique du token (every 10 min)
   useEffect(() => {
-    // Rafraîchir le token toutes les 10 minutes (only if user is active)
+    // Rafraîchir le token toutes les 10 minutes si activité récente (< 1h)
     refreshTimerRef.current = setInterval(async () => {
       const timeSinceActivity = Date.now() - lastActivityRef.current
-      if (timeSinceActivity < 30 * 60 * 1000 && isUserActive()) {
+      if (timeSinceActivity < 60 * 60 * 1000) {
         await refreshSession()
       }
     }, REFRESH_INTERVAL)
@@ -123,7 +103,7 @@ export function useSessionPersistence() {
         clearInterval(refreshTimerRef.current)
       }
     }
-  }, [refreshSession, isUserActive])
+  }, [refreshSession])
 
   // Gérer la visibilité de la page (quand l'utilisateur revient sur l'onglet)
   // Note: autoRefreshToken: true dans la config Supabase gère déjà le refresh des tokens.

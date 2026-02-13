@@ -5,20 +5,23 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
-import { verifyApiPermission } from '@/lib/permissions'
+import { verifyApiPermission, getUserAuthorizedBranches } from '@/lib/permissions'
 
 export async function GET(request: NextRequest) {
   try {
-    const { success, errorResponse } = await verifyApiPermission('chat', 'view')
-    if (!success) return errorResponse!
+    const { success, errorResponse, user } = await verifyApiPermission('chat', 'view')
+    if (!success || !user) return errorResponse!
 
     const supabase = createServiceRoleClient()
     const { searchParams } = request.nextUrl
 
     const status = searchParams.get('status') || 'active'
     const branchId = searchParams.get('branchId')
-    const allowedBranches = searchParams.get('allowedBranches') // comma-separated branch IDs
     const includeUnassigned = searchParams.get('includeUnassigned') === 'true'
+
+    // Server-side: determine allowed branches from user's actual permissions (not from URL params)
+    const authorizedBranches = await getUserAuthorizedBranches(user.id, user.role)
+    const allowedBranchIds = authorizedBranches.map(b => b.id)
     const search = searchParams.get('search')
     const page = parseInt(searchParams.get('page') || '1')
     const pageSize = parseInt(searchParams.get('pageSize') || '50')
@@ -34,15 +37,18 @@ export async function GET(request: NextRequest) {
         .select('*', { count: 'exact', head: true })
         .eq('status', status)
 
-      // Apply branch filter
+      // Apply branch filter (server-validated)
       if (branchId === 'unassigned') {
         countQuery = countQuery.is('branch_id', null)
-      } else if (branchId === 'all' && allowedBranches) {
-        const branchIds = allowedBranches.split(',').filter(Boolean)
-        const orParts = branchIds.map((id: string) => `branch_id.eq.${id}`)
+      } else if (branchId === 'all' && allowedBranchIds.length > 0) {
+        const orParts = allowedBranchIds.map((id: string) => `branch_id.eq.${id}`)
         if (includeUnassigned) orParts.push('branch_id.is.null')
         countQuery = countQuery.or(orParts.join(','))
       } else if (branchId && branchId !== 'all') {
+        // Verify the requested branch is in user's allowed list
+        if (allowedBranchIds.length > 0 && !allowedBranchIds.includes(branchId)) {
+          return NextResponse.json({ count: 0 })
+        }
         countQuery = countQuery.eq('branch_id', branchId)
       }
 
@@ -72,19 +78,21 @@ export async function GET(request: NextRequest) {
     if (branchId === 'unassigned') {
       // Show only conversations with no branch assigned
       query = query.is('branch_id', null)
-    } else if (branchId === 'all' && allowedBranches) {
-      // "All" but scoped to user's allowed branches
-      const branchIds = allowedBranches.split(',').filter(Boolean)
-      const orParts = branchIds.map((id: string) => `branch_id.eq.${id}`)
+    } else if (branchId === 'all' && allowedBranchIds.length > 0) {
+      // "All" but scoped to user's server-validated branches
+      const orParts = allowedBranchIds.map((id: string) => `branch_id.eq.${id}`)
       if (includeUnassigned) {
         orParts.push('branch_id.is.null')
       }
       query = query.or(orParts.join(','))
     } else if (branchId && branchId !== 'all') {
-      // Show only conversations for this specific branch (no unassigned)
+      // Verify the requested branch is in user's allowed list
+      if (allowedBranchIds.length > 0 && !allowedBranchIds.includes(branchId)) {
+        return NextResponse.json({ conversations: [], total: 0, page, pageSize })
+      }
       query = query.eq('branch_id', branchId)
     }
-    // When branchId is 'all' without allowedBranches, show everything (super_admin)
+    // When branchId is 'all' with no allowedBranchIds, user is super_admin — show everything
 
     if (search) {
       query = query.or(`phone.ilike.%${search}%,contact_name.ilike.%${search}%`)

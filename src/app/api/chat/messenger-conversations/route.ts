@@ -6,20 +6,23 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
-import { verifyApiPermission } from '@/lib/permissions'
+import { verifyApiPermission, getUserAuthorizedBranches } from '@/lib/permissions'
 
 export async function GET(request: NextRequest) {
   try {
-    const { success, errorResponse } = await verifyApiPermission('chat', 'view')
-    if (!success) return errorResponse!
+    const { success, errorResponse, user } = await verifyApiPermission('chat', 'view')
+    if (!success || !user) return errorResponse!
 
     const supabase = createServiceRoleClient()
     const { searchParams } = request.nextUrl
 
     const status = searchParams.get('status') // 'active', 'completed', 'abandoned' or null for all
     const branchId = searchParams.get('branchId')
-    const allowedBranches = searchParams.get('allowedBranches') // comma-separated branch IDs
     const search = searchParams.get('search')
+
+    // Server-side: determine allowed branches from user's actual permissions
+    const authorizedBranches = await getUserAuthorizedBranches(user.id, user.role)
+    const allowedBranchIds = authorizedBranches.map(b => b.id)
     const page = parseInt(searchParams.get('page') || '1')
     const pageSize = parseInt(searchParams.get('pageSize') || '50')
     const offset = (page - 1) * pageSize
@@ -38,21 +41,23 @@ export async function GET(request: NextRequest) {
         q = q.eq('status', 'active')
       }
 
-      // Intake filter
+      // Intake filter — only require WELCOME (first step), show incomplete conversations too
       q = q.not('collected_data->WELCOME', 'is', null)
-      q = q.not('collected_data->NAME', 'is', null)
-      q = q.not('collected_data->NUMBER', 'is', null)
 
-      // Branch filter
+      // Branch filter (server-validated)
       if (branchId === 'unassigned') {
         q = q.is('branch_id', null)
-      } else if (branchId === 'all' && allowedBranches) {
-        const branchIds = allowedBranches.split(',').filter(Boolean)
-        const orParts = branchIds.map((id: string) => `branch_id.eq.${id}`)
+      } else if (branchId === 'all' && allowedBranchIds.length > 0) {
+        const orParts = allowedBranchIds.map((id: string) => `branch_id.eq.${id}`)
         orParts.push('branch_id.is.null')
         q = q.or(orParts.join(','))
       } else if (branchId && branchId !== 'all') {
-        q = q.or(`branch_id.eq.${branchId},branch_id.is.null`)
+        // Verify branch is in user's allowed list
+        if (allowedBranchIds.length > 0 && !allowedBranchIds.includes(branchId)) {
+          q = q.eq('branch_id', 'DENIED') // Will match nothing
+        } else {
+          q = q.or(`branch_id.eq.${branchId},branch_id.is.null`)
+        }
       }
 
       return q
