@@ -198,6 +198,24 @@ export async function handleClaraCodexWhatsAppResponse(
     humanAvailable: humanStatus.available,
   })
 
+  if (!systemPrompt.trim()) {
+    await triggerCodexTechnicalFallback({
+      supabase,
+      conversation,
+      senderPhone,
+      locale: normalizedLocale,
+      settings,
+      metadata: {
+        reason: 'empty_primary_prompt',
+      },
+    })
+    return {
+      success: false,
+      usedEscalationTool: true,
+      toolErrors: 0,
+    }
+  }
+
   const provider = getModelProvider(settings.model)
   const tools = createCodexWhatsAppTools({
     conversationId: conversation.id,

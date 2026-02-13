@@ -29,6 +29,7 @@ export interface ClaraCodexWhatsAppSettings {
   temperature: number
   max_tokens: number
   faq_enabled: boolean
+  primary_prompt: string
   custom_prompt: string
   auto_resume_minutes: number
   auto_activate_delay_minutes: number
@@ -86,6 +87,7 @@ export const DEFAULT_CLARA_CODEX_SETTINGS: ClaraCodexWhatsAppSettings = {
   temperature: 0.2,
   max_tokens: 2048,
   faq_enabled: true,
+  primary_prompt: '',
   custom_prompt: '',
   auto_resume_minutes: 5,
   auto_activate_delay_minutes: 0,
@@ -150,6 +152,9 @@ export function normalizeClaraCodexSettings(raw: unknown): ClaraCodexWhatsAppSet
     temperature: typeof input.temperature === 'number' ? input.temperature : DEFAULT_CLARA_CODEX_SETTINGS.temperature,
     max_tokens: typeof input.max_tokens === 'number' ? input.max_tokens : DEFAULT_CLARA_CODEX_SETTINGS.max_tokens,
     faq_enabled: typeof input.faq_enabled === 'boolean' ? input.faq_enabled : DEFAULT_CLARA_CODEX_SETTINGS.faq_enabled,
+    primary_prompt: typeof input.primary_prompt === 'string'
+      ? input.primary_prompt
+      : DEFAULT_CLARA_CODEX_SETTINGS.primary_prompt,
     custom_prompt: typeof input.custom_prompt === 'string' ? input.custom_prompt : DEFAULT_CLARA_CODEX_SETTINGS.custom_prompt,
     auto_resume_minutes: typeof input.auto_resume_minutes === 'number'
       ? input.auto_resume_minutes

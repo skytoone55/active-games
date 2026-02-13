@@ -26,6 +26,9 @@ const DAYS: Array<{ key: keyof ReturnType<typeof buildDefaultSchedule>; label: s
   { key: 'saturday', label: 'Saturday' },
 ]
 
+const UNLOCK_PRIMARY_PROMPT_PHRASE = 'UNLOCK PRIMARY PROMPT'
+const CONFIRM_PRIMARY_PROMPT_SAVE_PHRASE = 'CONFIRM PRIMARY PROMPT CHANGE'
+
 function classNames(...items: Array<string | false | null | undefined>) {
   return items.filter(Boolean).join(' ')
 }
@@ -41,6 +44,10 @@ export function ClaraCodexSection({ isDark }: ClaraCodexSectionProps) {
   const [isActive, setIsActive] = useState(false)
   const [settings, setSettings] = useState<ClaraCodexWhatsAppSettings>(normalizeClaraCodexSettings({}))
   const [models, setModels] = useState<typeof CODEX_AVAILABLE_MODELS>(CODEX_AVAILABLE_MODELS)
+  const [originalPrimaryPrompt, setOriginalPrimaryPrompt] = useState('')
+  const [unlockPrimaryPromptChecked, setUnlockPrimaryPromptChecked] = useState(false)
+  const [unlockPrimaryPromptPhrase, setUnlockPrimaryPromptPhrase] = useState('')
+  const [confirmPrimaryPromptSavePhrase, setConfirmPrimaryPromptSavePhrase] = useState('')
 
   useEffect(() => {
     void load()
@@ -54,6 +61,10 @@ export function ClaraCodexSection({ isDark }: ClaraCodexSectionProps) {
     }, {})
   }, [models])
 
+  const primaryPromptChanged = settings.primary_prompt.trim() !== originalPrimaryPrompt.trim()
+  const primaryPromptUnlocked = unlockPrimaryPromptChecked
+    && unlockPrimaryPromptPhrase.trim() === UNLOCK_PRIMARY_PROMPT_PHRASE
+
   async function load() {
     try {
       setLoading(true)
@@ -65,9 +76,14 @@ export function ClaraCodexSection({ isDark }: ClaraCodexSectionProps) {
       }
 
       const payload = json.data as SettingsResponse
+      const normalizedSettings = normalizeClaraCodexSettings(payload.settings)
       setSettingsId(payload.id)
       setIsActive(payload.is_active)
-      setSettings(normalizeClaraCodexSettings(payload.settings))
+      setSettings(normalizedSettings)
+      setOriginalPrimaryPrompt(normalizedSettings.primary_prompt || '')
+      setUnlockPrimaryPromptChecked(false)
+      setUnlockPrimaryPromptPhrase('')
+      setConfirmPrimaryPromptSavePhrase('')
       if (Array.isArray(payload.models) && payload.models.length > 0) {
         setModels(payload.models)
       }
@@ -83,6 +99,18 @@ export function ClaraCodexSection({ isDark }: ClaraCodexSectionProps) {
       setSaving(true)
       setError(null)
       setSuccess(null)
+
+      if (isActive && !settings.primary_prompt.trim()) {
+        throw new Error('Primary prompt is required before activating Clara Codex.')
+      }
+
+      if (primaryPromptChanged && !primaryPromptUnlocked) {
+        throw new Error(`To edit primary prompt, unlock it first with checkbox + phrase: "${UNLOCK_PRIMARY_PROMPT_PHRASE}".`)
+      }
+
+      if (primaryPromptChanged && confirmPrimaryPromptSavePhrase.trim() !== CONFIRM_PRIMARY_PROMPT_SAVE_PHRASE) {
+        throw new Error(`Please type "${CONFIRM_PRIMARY_PROMPT_SAVE_PHRASE}" to confirm primary prompt change.`)
+      }
 
       const payload = {
         id: settingsId,
@@ -100,6 +128,8 @@ export function ClaraCodexSection({ isDark }: ClaraCodexSectionProps) {
         throw new Error(json.error || 'Failed to save settings')
       }
 
+      setOriginalPrimaryPrompt(settings.primary_prompt || '')
+      setConfirmPrimaryPromptSavePhrase('')
       setSuccess('Clara Codex settings saved')
       setTimeout(() => setSuccess(null), 3000)
     } catch (e) {
@@ -372,6 +402,70 @@ export function ClaraCodexSection({ isDark }: ClaraCodexSectionProps) {
         isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
       )}>
         <h4 className={classNames('font-semibold', isDark ? 'text-white' : 'text-gray-900')}>Prompt & Keywords</h4>
+
+        <div className={classNames(
+          'rounded-lg border p-3 space-y-2 text-sm',
+          isDark ? 'bg-gray-900/40 border-gray-700 text-gray-300' : 'bg-gray-50 border-gray-200 text-gray-700'
+        )}>
+          <p className="font-medium">Placeholders available in Primary prompt:</p>
+          <p><code>{'{{NOW_ISRAEL}}'}</code> <code>{'{{TODAY_ISO}}'}</code> <code>{'{{HUMAN_AVAILABLE}}'}</code></p>
+          <p><code>{'{{EMAIL_REQUIRED_FOR_LINK}}'}</code> <code>{'{{SILENT_HUMAN_ESCALATION}}'}</code></p>
+          <p><code>{'{{EVENT_KEYWORDS}}'}</code> <code>{'{{FAQ_BLOCK}}'}</code></p>
+        </div>
+
+        <div className={classNames(
+          'rounded-lg border p-3 space-y-3',
+          isDark ? 'bg-gray-900/40 border-gray-700' : 'bg-gray-50 border-gray-200'
+        )}>
+          <p className={classNames('text-sm font-medium', isDark ? 'text-gray-200' : 'text-gray-800')}>
+            Double verification before editing primary prompt
+          </p>
+          <label className="inline-flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={unlockPrimaryPromptChecked}
+              onChange={(e) => setUnlockPrimaryPromptChecked(e.target.checked)}
+            />
+            <span className={isDark ? 'text-gray-300' : 'text-gray-700'}>
+              I understand this prompt controls Clara Codex core behavior.
+            </span>
+          </label>
+          <label className="space-y-1 block">
+            <span className={classNames('text-xs', isDark ? 'text-gray-400' : 'text-gray-600')}>
+              Type exactly: <code>{UNLOCK_PRIMARY_PROMPT_PHRASE}</code>
+            </span>
+            <input
+              value={unlockPrimaryPromptPhrase}
+              onChange={(e) => setUnlockPrimaryPromptPhrase(e.target.value)}
+              className={classNames(
+                'w-full rounded-lg border px-3 py-2 text-sm',
+                isDark ? 'bg-gray-900 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'
+              )}
+            />
+          </label>
+        </div>
+
+        <label className="space-y-1 block">
+          <span className={classNames('text-sm font-medium', isDark ? 'text-gray-300' : 'text-gray-700')}>Primary prompt</span>
+          <textarea
+            value={settings.primary_prompt}
+            onChange={(e) => setSettings(prev => ({ ...prev, primary_prompt: e.target.value }))}
+            rows={16}
+            disabled={!primaryPromptUnlocked}
+            placeholder="Write the full Clara Codex system prompt here. Nothing is hidden in code."
+            className={classNames(
+              'w-full rounded-lg border px-3 py-2 text-sm',
+              isDark ? 'bg-gray-900 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900',
+              !primaryPromptUnlocked && 'opacity-60 cursor-not-allowed'
+            )}
+          />
+          {!primaryPromptUnlocked && (
+            <p className={classNames('text-xs', isDark ? 'text-yellow-300' : 'text-yellow-700')}>
+              Primary prompt is locked until both unlock checks are completed.
+            </p>
+          )}
+        </label>
+
         <label className="space-y-1 block">
           <span className={classNames('text-sm', isDark ? 'text-gray-300' : 'text-gray-700')}>Event keywords (comma separated)</span>
           <input
@@ -388,7 +482,7 @@ export function ClaraCodexSection({ isDark }: ClaraCodexSectionProps) {
         </label>
 
         <label className="space-y-1 block">
-          <span className={classNames('text-sm', isDark ? 'text-gray-300' : 'text-gray-700')}>Custom directive</span>
+          <span className={classNames('text-sm', isDark ? 'text-gray-300' : 'text-gray-700')}>Additional directive (optional)</span>
           <textarea
             value={settings.custom_prompt}
             onChange={(e) => setSettings(prev => ({ ...prev, custom_prompt: e.target.value }))}
@@ -399,6 +493,25 @@ export function ClaraCodexSection({ isDark }: ClaraCodexSectionProps) {
             )}
           />
         </label>
+
+        {primaryPromptChanged && (
+          <label className="space-y-1 block">
+            <span className={classNames('text-sm font-medium', isDark ? 'text-orange-300' : 'text-orange-700')}>
+              Final confirmation required
+            </span>
+            <span className={classNames('text-xs', isDark ? 'text-gray-400' : 'text-gray-600')}>
+              Type exactly: <code>{CONFIRM_PRIMARY_PROMPT_SAVE_PHRASE}</code>
+            </span>
+            <input
+              value={confirmPrimaryPromptSavePhrase}
+              onChange={(e) => setConfirmPrimaryPromptSavePhrase(e.target.value)}
+              className={classNames(
+                'w-full rounded-lg border px-3 py-2 text-sm',
+                isDark ? 'bg-gray-900 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'
+              )}
+            />
+          </label>
+        )}
       </div>
 
       <div className={classNames(
