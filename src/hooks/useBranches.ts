@@ -187,8 +187,9 @@ export function useBranches(authUserData?: { id: string; role: string | null; br
   }, [authUserData]) // Recharger quand l'user change (login, etc.)
 
   useEffect(() => {
-    // Si authUserData est passé, attendre qu'il soit disponible avant de charger
-    if (authUserData === undefined) return // hook pas encore prêt
+    // Attendre que l'user soit chargé avant de fetch les branches
+    // authUserData === null signifie que useAuth n'a pas encore fini de charger
+    if (authUserData !== undefined && !authUserData?.id) return
     fetchBranches()
   }, [fetchBranches])
 
