@@ -372,7 +372,10 @@ function getExtensionFromMime(mimeType: string): string {
 export function getWhatsAppMediaType(mimeType: string): 'image' | 'audio' | 'video' | 'document' {
   const base = mimeType.split(';')[0].trim().toLowerCase()
   if (base.startsWith('image/')) return 'image'
-  if (base.startsWith('audio/')) return 'audio'
+  // Only ogg/opus is reliably supported as WhatsApp voice message
+  // Other audio formats (mp4, webm, m4a) are sent as document to avoid rejection
+  if (base === 'audio/ogg') return 'audio'
+  if (base.startsWith('audio/')) return 'document'
   if (base.startsWith('video/')) return 'video'
   return 'document'
 }

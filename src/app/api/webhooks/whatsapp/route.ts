@@ -257,14 +257,21 @@ export async function POST(request: NextRequest) {
 
     const supabase = createServiceRoleClient()
 
-    // ---- Status updates (sent, delivered, read) ----
+    // ---- Status updates (sent, delivered, read, failed) ----
     if (value.statuses) {
       for (const status of value.statuses) {
         if (status.id) {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const updateData: any = { status: status.status }
+          // Capture WhatsApp error details for failed messages
+          if (status.status === 'failed' && status.errors) {
+            updateData.metadata = { errors: status.errors }
+            console.error('[WHATSAPP WEBHOOK] Message failed:', status.id, JSON.stringify(status.errors))
+          }
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           await (supabase as any)
             .from('whatsapp_messages')
-            .update({ status: status.status })
+            .update(updateData)
             .eq('whatsapp_message_id', status.id)
         }
       }
