@@ -32,6 +32,7 @@ export async function POST(
       .update({
         clara_paused: paused,
         clara_paused_until: null,
+        clara_auto_activate_at: null, // Cancel auto-activate timer on manual toggle
       })
       .eq('id', conversationId)
       .select('id, clara_paused, clara_paused_until')

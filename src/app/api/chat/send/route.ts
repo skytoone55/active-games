@@ -110,6 +110,7 @@ export async function POST(request: NextRequest) {
         updated_at: new Date().toISOString(),
         clara_paused: true,
         clara_paused_until: pausedUntil,
+        clara_auto_activate_at: null, // Cancel auto-activate timer when human responds
       })
       .eq('id', conversationId)
 

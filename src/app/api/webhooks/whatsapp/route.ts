@@ -11,14 +11,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import {
-  getClaraSettings,
-  getOrCreatePublicConversation,
-  getPublicMessages,
-  addPublicMessage,
-  getPublicSystemPrompt,
-} from '@/lib/clara/service'
-import { streamLLMResponse, convertToAIMessages, truncateHistory, createLLMOptionsFromSettings } from '@/lib/clara/llm-provider'
-import { createWhatsAppTools } from '@/lib/clara/tools'
+  sendWhatsAppText,
+  storeOutboundMessage,
+  trackClaraEvent,
+  handleClaraWhatsAppResponse,
+} from '@/lib/clara/whatsapp-handler'
 
 // Normalize phone: 972XXXXXXXXX -> 0XXXXXXXXX (Israeli format)
 function normalizePhone(phone: string): string {
@@ -32,31 +29,10 @@ function normalizePhone(phone: string): string {
 // WhatsApp API Helpers
 // ============================================================
 
-async function sendTextMessage(to: string, text: string): Promise<string | null> {
-  const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID
-  const accessToken = process.env.WHATSAPP_ACCESS_TOKEN
-  if (!phoneNumberId || !accessToken || !text.trim()) return null
-
-  const res = await fetch(
-    `https://graph.facebook.com/v21.0/${phoneNumberId}/messages`,
-    {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        messaging_product: 'whatsapp',
-        recipient_type: 'individual',
-        to,
-        type: 'text',
-        text: { body: text },
-      }),
-    }
-  )
-  const result = await res.json()
-  return result.messages?.[0]?.id || null
-}
+// sendTextMessage → imported as sendWhatsAppText from whatsapp-handler
+// storeOutboundMessage → imported from whatsapp-handler
+// trackClaraEvent → imported from whatsapp-handler
+// handleClaraWhatsApp → imported as handleClaraWhatsAppResponse from whatsapp-handler
 
 async function sendInteractiveButtons(
   to: string,
@@ -127,22 +103,6 @@ async function sendTypingIndicator(messageId: string): Promise<void> {
     // Non-blocking — don't fail if typing indicator fails
     console.error('[WHATSAPP] Typing indicator error:', err)
   }
-}
-
-// Store an outbound message in DB
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function storeOutboundMessage(supabase: any, conversationId: string, content: string, msgType: string, waMessageId: string | null) {
-  await supabase
-    .from('whatsapp_messages')
-    .insert({
-      conversation_id: conversationId,
-      direction: 'outbound',
-      message_type: msgType,
-      content,
-      whatsapp_message_id: waMessageId,
-      status: 'sent',
-      sent_by: null, // null = automated message
-    })
 }
 
 // Get multilingual text by language key
@@ -429,7 +389,7 @@ export async function POST(request: NextRequest) {
               replyText = legacyAutoReply.message.fr || legacyAutoReply.message.he || legacyAutoReply.message.en || ''
             }
             if (replyText.trim()) {
-              const waId = await sendTextMessage(senderPhone, replyText)
+              const waId = await sendWhatsAppText(senderPhone, replyText)
               await storeOutboundMessage(supabase, conversation.id, replyText, 'text', waId)
               console.log('[WHATSAPP] Legacy auto-reply sent to', senderPhone)
             }
@@ -487,11 +447,17 @@ export async function POST(request: NextRequest) {
           }
         }
 
-        if (claraWhatsAppConfig?.enabled && isOnboardingDone && isNotWaiting && !claraPaused && !outsideSchedule && !branchInactive && !isNewConversation && messageText && messageText !== `[${messageType}]`) {
+        const claraDidRespond = !!(
+          claraWhatsAppConfig?.enabled && isOnboardingDone && isNotWaiting &&
+          !claraPaused && !outsideSchedule && !branchInactive &&
+          !isNewConversation && messageText && messageText !== `[${messageType}]`
+        )
+
+        if (claraDidRespond) {
           // Show "typing..." indicator to user while Clara processes
           await sendTypingIndicator(messageId)
           try {
-            await handleClaraWhatsApp(
+            await handleClaraWhatsAppResponse(
               supabase, conversation, senderPhone, messageText,
               claraWhatsAppConfig, onboardingLang
             )
@@ -499,8 +465,26 @@ export async function POST(request: NextRequest) {
             console.error('[WHATSAPP] Clara error (non-blocking):', claraErr)
           }
         }
+
+        // 5. Auto-activate timer — set if Clara did NOT respond and feature is enabled
+        const autoActivateDelay = claraWhatsAppConfig?.auto_activate_delay_minutes
+        if (autoActivateDelay && autoActivateDelay > 0 && !claraDidRespond && isOnboardingDone && isNotWaiting) {
+          const activateAt = new Date(Date.now() + autoActivateDelay * 60 * 1000).toISOString()
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          await (supabase as any)
+            .from('whatsapp_conversations')
+            .update({ clara_auto_activate_at: activateAt })
+            .eq('id', conversation.id)
+          console.log('[WHATSAPP] Auto-activate timer set for', conversation.id, 'at', activateAt)
+        }
       }
     }
+
+    // 6. Piggyback: process any expired auto-activate timers (non-blocking)
+    // Since Vercel Hobby doesn't support per-minute crons, we check on every webhook call
+    processExpiredAutoActivateTimers(supabase, msSettings?.settings).catch(err =>
+      console.error('[WHATSAPP] Auto-activate check error (non-blocking):', err)
+    )
 
     return NextResponse.json({ received: true })
 
@@ -652,7 +636,7 @@ async function handleOnboarding(
         if (config.welcome_message_enabled && config.welcome_message) {
           const welcomeText = getLocalizedText(config.welcome_message, language)
           if (welcomeText.trim()) {
-            const waId = await sendTextMessage(senderPhone, welcomeText)
+            const waId = await sendWhatsAppText(senderPhone, welcomeText)
             await storeOutboundMessage(supabase, conversation.id, welcomeText, 'text', waId)
             console.log('[WHATSAPP] Welcome message sent to', senderPhone)
           }
@@ -669,228 +653,93 @@ async function handleOnboarding(
 }
 
 // ============================================================
-// Clara AI for WhatsApp
+// Auto-activate expired timers (piggyback on webhook)
 // ============================================================
-// Helper: track Clara WhatsApp funnel event
-async function trackClaraEvent(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  supabase: any,
-  conversationId: string,
-  branchId: string | null,
-  eventType: string,
-  metadata: Record<string, unknown> = {}
-) {
-  try {
-    await supabase.from('clara_whatsapp_events').insert({
-      conversation_id: conversationId,
-      branch_id: branchId,
-      event_type: eventType,
-      metadata,
-    })
-  } catch (err) {
-    console.error('[CLARA TRACKING] Error tracking event:', eventType, err)
-  }
-}
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function processExpiredAutoActivateTimers(supabase: any, settings: any) {
+  const claraConfig = settings?.whatsapp_clara
+  if (!claraConfig?.enabled) return
+  if (!claraConfig?.auto_activate_delay_minutes || claraConfig.auto_activate_delay_minutes <= 0) return
 
-async function handleClaraWhatsApp(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  supabase: any,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  conversation: any,
-  senderPhone: string,
-  messageText: string,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  claraConfig: any,
-  language: string
-) {
-  console.log('[WHATSAPP CLARA] Processing message from', senderPhone, ':', messageText.substring(0, 100))
+  // Check Clara schedule (Israel timezone)
+  if (claraConfig?.schedule_enabled && claraConfig?.schedule) {
+    const israelNow = new Date().toLocaleString('en-US', { timeZone: 'Asia/Jerusalem' })
+    const israelDate = new Date(israelNow)
+    const dayName = israelDate.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase()
+    const currentTime = israelDate.toTimeString().slice(0, 5)
+    const daySchedule = claraConfig.schedule[dayName]
 
-  // Get Clara settings (global)
-  const globalSettings = await getClaraSettings()
-  if (!globalSettings.enabled) {
-    console.log('[WHATSAPP CLARA] Clara globally disabled, skipping')
-    return
+    if (!daySchedule?.enabled || currentTime < daySchedule.start || currentTime >= daySchedule.end) {
+      return // Outside schedule — keep timers for next check
+    }
   }
 
-  // Track conversation started (only once per conversation — use upsert-like check)
-  await trackClaraEvent(supabase, conversation.id, conversation.branch_id, 'conversation_started', {
-    phone: senderPhone,
-    language,
-  })
+  const now = new Date().toISOString()
+  const { data: conversations } = await supabase
+    .from('whatsapp_conversations')
+    .select('id, phone, contact_name, branch_id')
+    .lte('clara_auto_activate_at', now)
+    .eq('status', 'active')
+    .limit(5)
 
-  // Use WhatsApp-specific model/temperature if set, otherwise global
-  const model = claraConfig.model || globalSettings.model
-  const temperature = claraConfig.temperature ?? globalSettings.temperature
-  const provider = model.startsWith('gpt') ? 'openai' : model.startsWith('claude') ? 'anthropic' : 'gemini'
+  if (!conversations || conversations.length === 0) return
 
-  // Get or create Clara conversation for this WhatsApp thread
-  // Use whatsapp conversation ID as session to keep context
-  const claraConv = await getOrCreatePublicConversation(
-    `whatsapp:${conversation.id}`,
-    conversation.branch_id || undefined,
-    { locale: language }
-  )
+  console.log(`[WHATSAPP AUTO-ACTIVATE] Processing ${conversations.length} expired timer(s)`)
 
-  // Save user message to Clara conversation
-  await addPublicMessage(claraConv.id, 'user', messageText)
+  const language = settings?.whatsapp_onboarding?.language || 'he'
 
-  // Get conversation history
-  const messages = await getPublicMessages(claraConv.id, 150)
-  const aiMessages = convertToAIMessages(messages)
-  const truncatedMessages = truncateHistory(aiMessages, 50000)
-
-  // Build system prompt
-  let systemPrompt = ''
-  if (claraConfig.prompt && claraConfig.prompt.trim()) {
-    // Custom WhatsApp prompt — inject current date/time
-    const now = new Date()
-    const israelTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Jerusalem' }))
-    const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
-    const y = israelTime.getFullYear()
-    const m = String(israelTime.getMonth() + 1).padStart(2, '0')
-    const d = String(israelTime.getDate()).padStart(2, '0')
-    const h = String(israelTime.getHours()).padStart(2, '0')
-    const min = String(israelTime.getMinutes()).padStart(2, '0')
-    const dateStr = `${y}-${m}-${d}`
-    const dayName = dayNames[israelTime.getDay()]
-
-    systemPrompt = claraConfig.prompt
-    systemPrompt += `\n\n## CURRENT DATE & TIME (Israel)\nToday: ${dayName} ${d}/${m}/${y} (${dateStr}), ${h}:${min}\nUse this to convert relative dates: "tomorrow" = day after ${dateStr}, etc.`
-  } else {
-    // Default Clara public prompt (already includes date + knowledge)
-    systemPrompt = await getPublicSystemPrompt()
-  }
-
-  // Add WhatsApp technical context
-  systemPrompt += `\n\n## WHATSAPP CONTEXT
-- This is a WhatsApp conversation.
-- LANGUAGE: Detect the language of each user message and ALWAYS respond in that SAME language. Never say you can only respond in one language.
-- LINKS: When sending a booking link, paste the FULL URL as plain text. Never use markdown link format like [text](url) — WhatsApp does not render it.`
-
-  // Load FAQ if enabled
-  if (claraConfig.faq_enabled) {
+  for (const conv of conversations) {
     try {
-      const { data: faqs } = await supabase
-        .from('messenger_faq')
-        .select('question, answer')
-        .eq('is_active', true)
-        .order('order_index')
+      // Safety: check last message is inbound (no human responded)
+      const { data: lastMsgs } = await supabase
+        .from('whatsapp_messages')
+        .select('direction, content')
+        .eq('conversation_id', conv.id)
+        .order('created_at', { ascending: false })
+        .limit(3)
 
-      if (faqs && faqs.length > 0) {
-        systemPrompt += '\n\n## FAQ (translate answers to match user language)\n'
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        faqs.forEach((faq: any) => {
-          // Load Hebrew first (primary), fallback to other languages
-          const q = faq.question?.he || faq.question?.fr || faq.question?.en || ''
-          const a = faq.answer?.he || faq.answer?.fr || faq.answer?.en || ''
-          if (q && a) {
-            systemPrompt += `Q: ${q}\nA: ${a}\n\n`
-          }
-        })
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const lastInbound = lastMsgs?.find((m: any) => m.direction === 'inbound')
+      if (!lastInbound || (lastMsgs?.[0]?.direction === 'outbound')) {
+        // Human already responded or no inbound → clear timer
+        await supabase.from('whatsapp_conversations')
+          .update({ clara_auto_activate_at: null })
+          .eq('id', conv.id)
+        continue
       }
-    } catch (faqErr) {
-      console.error('[WHATSAPP CLARA] FAQ load error (non-blocking):', faqErr)
-    }
-  }
 
-  // Call LLM
-  const result = await streamLLMResponse({
-    messages: truncatedMessages,
-    systemPrompt,
-    provider: provider as 'gemini' | 'openai' | 'anthropic',
-    model,
-    maxTokens: globalSettings.max_tokens || 4096,
-    temperature,
-    tools: createWhatsAppTools(conversation.id, senderPhone, conversation.contact_name),
-  })
-
-  // Collect full response + track tool calls for funnel analytics
-  let fullResponse = ''
-  let consecutiveToolErrors = 0
-
-  for await (const part of result.fullStream) {
-    if (part.type === 'text-delta') {
-      const textContent = (part as { text?: string }).text
-      if (textContent) {
-        fullResponse += textContent
-      }
-    } else if (part.type === 'tool-call') {
-      const toolName = (part as { toolName?: string }).toolName
-      console.log('[WHATSAPP CLARA] Tool call:', toolName)
-
-      // Track tool calls for funnel
-      if (toolName === 'simulateBooking') {
-        await trackClaraEvent(supabase, conversation.id, conversation.branch_id, 'simulate_booking_called', {
-          args: (part as { args?: unknown }).args,
-        })
-      } else if (toolName === 'generateBookingLink') {
-        await trackClaraEvent(supabase, conversation.id, conversation.branch_id, 'generate_link_called', {
-          args: (part as { args?: unknown }).args,
-        })
-      } else if (toolName === 'escalateToHuman') {
-        await trackClaraEvent(supabase, conversation.id, conversation.branch_id, 'escalated_to_human', {
-          reason: 'user_requested',
-        })
-      }
-    } else if (part.type === 'tool-result') {
-      const toolResult = part as { toolName?: string; result?: unknown }
-      const toolResultData = toolResult.result as { error?: string; available?: boolean; url?: string } | undefined
-
-      // Track tool results for funnel
-      if (toolResult.toolName === 'simulateBooking') {
-        if (toolResultData?.error) {
-          await trackClaraEvent(supabase, conversation.id, conversation.branch_id, 'simulate_booking_error', {
-            error: toolResultData.error,
-          })
-          consecutiveToolErrors++
-        } else {
-          await trackClaraEvent(supabase, conversation.id, conversation.branch_id, 'simulate_booking_success', {
-            available: toolResultData?.available,
-          })
-          consecutiveToolErrors = 0
-        }
-      } else if (toolResult.toolName === 'generateBookingLink') {
-        if (toolResultData?.url) {
-          await trackClaraEvent(supabase, conversation.id, conversation.branch_id, 'generate_link_success', {
-            url: toolResultData.url,
-          })
-          consecutiveToolErrors = 0
-        } else if (toolResultData?.error) {
-          await trackClaraEvent(supabase, conversation.id, conversation.branch_id, 'tool_error', {
-            tool: 'generateBookingLink',
-            error: toolResultData.error,
-          })
-          consecutiveToolErrors++
+      // Check active branches
+      if (claraConfig?.active_branches?.length > 0 && conv.branch_id) {
+        if (!claraConfig.active_branches.includes(conv.branch_id)) {
+          await supabase.from('whatsapp_conversations')
+            .update({ clara_auto_activate_at: null })
+            .eq('id', conv.id)
+          continue
         }
       }
 
-      // Auto-escalate after 2 consecutive tool errors
-      if (consecutiveToolErrors >= 2) {
-        console.warn('[WHATSAPP CLARA] Auto-escalating after', consecutiveToolErrors, 'consecutive tool errors')
-        await trackClaraEvent(supabase, conversation.id, conversation.branch_id, 'escalated_to_human', {
-          reason: 'auto_tool_errors',
-          consecutiveErrors: consecutiveToolErrors,
-        })
-        // Set needs_human flag
-        await supabase
-          .from('whatsapp_conversations')
-          .update({ needs_human: true })
-          .eq('id', conversation.id)
-        // Reset counter
-        consecutiveToolErrors = 0
-      }
+      // Clear timer + unpause Clara
+      await supabase.from('whatsapp_conversations')
+        .update({ clara_auto_activate_at: null, clara_paused: false, clara_paused_until: null })
+        .eq('id', conv.id)
+
+      // Trigger Clara
+      await handleClaraWhatsAppResponse(
+        supabase,
+        { id: conv.id, branch_id: conv.branch_id, contact_name: conv.contact_name },
+        conv.phone,
+        lastInbound.content || '',
+        claraConfig,
+        language
+      )
+      console.log(`[WHATSAPP AUTO-ACTIVATE] Clara activated for ${conv.id} (${conv.phone})`)
+    } catch (err) {
+      console.error(`[WHATSAPP AUTO-ACTIVATE] Error for ${conv.id}:`, err)
+      await supabase.from('whatsapp_conversations')
+        .update({ clara_auto_activate_at: null })
+        .eq('id', conv.id)
     }
-  }
-
-  if (fullResponse.trim()) {
-    // Save assistant response to Clara conversation
-    await addPublicMessage(claraConv.id, 'assistant', fullResponse)
-
-    // Send via WhatsApp
-    const waId = await sendTextMessage(senderPhone, fullResponse)
-    await storeOutboundMessage(supabase, conversation.id, fullResponse, 'text', waId)
-    console.log('[WHATSAPP CLARA] Reply sent to', senderPhone, ':', fullResponse.substring(0, 100))
-  } else {
-    console.warn('[WHATSAPP CLARA] Empty response from LLM for message:', messageText)
   }
 }
+
+// Clara AI for WhatsApp — see @/lib/clara/whatsapp-handler

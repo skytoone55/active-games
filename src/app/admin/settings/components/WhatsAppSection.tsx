@@ -57,6 +57,7 @@ interface WhatsAppClaraConfig {
   model: string
   faq_enabled: boolean
   auto_resume_minutes: number
+  auto_activate_delay_minutes: number
   active_branches: string[]
   schedule_enabled: boolean
   schedule: Record<string, DaySchedule>
@@ -79,6 +80,7 @@ const DEFAULT_CLARA_CONFIG: WhatsAppClaraConfig = {
   model: 'gemini-2.0-flash-lite',
   faq_enabled: false,
   auto_resume_minutes: 5,
+  auto_activate_delay_minutes: 0,
   active_branches: [],
   schedule_enabled: false,
   schedule: DEFAULT_SCHEDULE,
@@ -967,6 +969,32 @@ export function WhatsAppSection({ isDark }: WhatsAppSectionProps) {
                         max={60}
                         value={claraConfig.auto_resume_minutes}
                         onChange={(e) => setClaraConfig(prev => ({ ...prev, auto_resume_minutes: Math.max(1, Math.min(60, parseInt(e.target.value) || 5)) }))}
+                        className="w-16 px-2 py-1.5 rounded-lg border text-sm text-center"
+                        style={inputStyle}
+                      />
+                      <span className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>min</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Auto-activate delay */}
+                <div className="p-6 rounded-lg border" style={cardStyle}>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <label className={`block font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                        {t('whatsapp.clara.auto_activate') || "Activation automatique"}
+                      </label>
+                      <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                        {t('whatsapp.clara.auto_activate_help') || "Clara s'active si aucun agent ne repond dans ce delai (0 = desactive)"}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="number"
+                        min={0}
+                        max={30}
+                        value={claraConfig.auto_activate_delay_minutes}
+                        onChange={(e) => setClaraConfig(prev => ({ ...prev, auto_activate_delay_minutes: Math.max(0, Math.min(30, parseInt(e.target.value) || 0)) }))}
                         className="w-16 px-2 py-1.5 rounded-lg border text-sm text-center"
                         style={inputStyle}
                       />
