@@ -10,7 +10,9 @@ import {
   AlertTriangle,
   ChevronLeft,
   ChevronRight,
-  Eye
+  Eye,
+  RefreshCw,
+  Loader2
 } from 'lucide-react'
 import { useTranslation } from '@/contexts/LanguageContext'
 import type { EmailLog } from '@/lib/supabase/types'
@@ -199,9 +201,27 @@ export function EmailsTable({
                           ? 'hover:bg-gray-600 text-gray-400 hover:text-white'
                           : 'hover:bg-gray-100 text-gray-500 hover:text-gray-700'
                       }`}
-                      title={t('admin.emails.view_details')}
+                      title={t('admin.emails.view_details') || 'Voir'}
                     >
                       <Eye className="w-4 h-4" />
+                    </button>
+
+                    {/* Resend */}
+                    <button
+                      onClick={() => handleResend(email.id)}
+                      disabled={resending === email.id}
+                      className={`p-1.5 rounded transition-colors ${
+                        isDark
+                          ? 'hover:bg-blue-600/50 text-blue-400 hover:text-blue-300 disabled:opacity-50'
+                          : 'hover:bg-blue-100 text-blue-500 hover:text-blue-700 disabled:opacity-50'
+                      }`}
+                      title={t('admin.emails.resend') || 'Renvoyer'}
+                    >
+                      {resending === email.id ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <RefreshCw className="w-4 h-4" />
+                      )}
                     </button>
 
                     {/* Delete (super_admin only) */}

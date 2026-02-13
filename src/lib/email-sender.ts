@@ -507,35 +507,11 @@ export async function resendEmail(emailLogId: string, triggeredBy?: string): Pro
     return { success: false, error: 'Original email log not found' }
   }
 
-  // Si on a un template, le récupérer pour avoir le body complet
-  let html = ''
-
-  if (originalLog.template_id) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: template } = await (supabase as any)
-      .from('email_templates')
-      .select('*')
-      .eq('id', originalLog.template_id)
-      .single() as { data: EmailTemplate | null }
-
-    if (template) {
-      // On devrait stocker les variables originales dans metadata pour pouvoir régénérer
-      // Pour l'instant, on utilise le body_preview (pas idéal)
-      html = template.body_template
-
-      // Si on a des metadata avec les variables, les utiliser
-      if (originalLog.metadata && typeof originalLog.metadata === 'object') {
-        const metadata = originalLog.metadata as Record<string, unknown>
-        for (const [key, value] of Object.entries(metadata)) {
-          const regex = new RegExp(`{{${key}}}`, 'g')
-          html = html.replace(regex, String(value))
-        }
-      }
-    }
-  }
+  // Utiliser le body_html stocké dans le log original (contient déjà les variables résolues)
+  const html = originalLog.body_html
 
   if (!html) {
-    return { success: false, error: 'Cannot regenerate email content' }
+    return { success: false, error: 'Cannot resend: original email body not available' }
   }
 
   // Créer un nouveau log et envoyer

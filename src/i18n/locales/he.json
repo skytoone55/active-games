@@ -676,7 +676,11 @@
       "pending_orders": "הזמנות ממתינות",
       "notifications": "התראות",
       "statistics": "סטטיסטיקות",
-      "user": "משתמש"
+      "user": "משתמש",
+      "sign_out": "התנתק",
+      "theme_light": "מצב בהיר",
+      "theme_dark": "מצב כהה",
+      "language": "שפה"
     },
     "data_management": {
       "title": "ניהול נתונים",
@@ -2004,6 +2008,11 @@
       "templates_tabs": {
         "emails": "תבניות אימייל",
         "terms": "תנאים והגבלות"
+      },
+      "mail_tabs": {
+        "templates": "תבניות",
+        "automations": "אוטומציות",
+        "terms": "תנאים"
       },
       "email_templates": {
         "title": "תבניות אימייל",

@@ -1947,6 +1947,11 @@
         "emails": "Email Templates",
         "terms": "Terms & Conditions"
       },
+      "mail_tabs": {
+        "templates": "Templates",
+        "automations": "Automations",
+        "terms": "T&C"
+      },
       "email_templates": {
         "title": "Email Templates",
         "subtitle": "Manage email templates for automatic notifications",

@@ -535,7 +535,7 @@ function AdminHeaderComponent({
                     ) : (
                       <Sun className="w-4 h-4" />
                     )}
-                    {theme === 'light' ? t('admin.header.dark_mode') || 'Mode sombre' : t('admin.header.light_mode') || 'Mode clair'}
+                    {theme === 'light' ? t('admin.header.theme_dark') || 'Mode sombre' : t('admin.header.theme_light') || 'Mode clair'}
                   </button>
                   <button
                     onClick={() => {

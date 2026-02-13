@@ -2010,6 +2010,11 @@
         "emails": "Templates d'emails",
         "terms": "Conditions Generales"
       },
+      "mail_tabs": {
+        "templates": "Templates",
+        "automations": "Automatisations",
+        "terms": "CGV"
+      },
       "email_templates": {
         "title": "Templates d'emails",
         "subtitle": "Gerez les templates d'emails pour les notifications automatiques",
