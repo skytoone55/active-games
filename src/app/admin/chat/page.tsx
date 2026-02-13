@@ -1550,15 +1550,11 @@ export default function ChatPage() {
                         )}
                         {/* Audio */}
                         {msg.media_url && msg.media_type === 'audio' && (
-                          <audio controls className="max-w-full mb-1 h-10" preload="metadata">
-                            <source src={msg.media_url} type={msg.media_mime_type?.split(';')[0] || 'audio/ogg'} />
-                          </audio>
+                          <audio controls className="max-w-full mb-1 h-10" preload="metadata" src={msg.media_url} />
                         )}
                         {/* Video */}
                         {msg.media_url && msg.media_type === 'video' && (
-                          <video controls className="rounded-lg max-w-full max-h-64 mb-1" preload="metadata">
-                            <source src={msg.media_url} type={msg.media_mime_type?.split(';')[0] || 'video/mp4'} />
-                          </video>
+                          <video controls className="rounded-lg max-w-full max-h-64 mb-1" preload="metadata" src={msg.media_url} />
                         )}
                         {/* Document */}
                         {msg.media_url && msg.media_type === 'document' && (
@@ -1734,28 +1730,32 @@ export default function ChatPage() {
                       style={{ minHeight: '42px', maxHeight: '160px' }}
                     />
 
-                    {newMessage.trim() ? (
-                      /* Send text */
-                      <button
-                        onClick={handleSendMessage}
-                        disabled={sending}
-                        className="flex-shrink-0 p-2.5 rounded-full bg-green-600 hover:bg-green-700 text-white transition-colors mb-0.5"
-                      >
-                        {sending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
-                      </button>
-                    ) : (
-                      /* Mic button (when no text) */
-                      <button
-                        onClick={startRecording}
-                        disabled={sending}
-                        className={`flex-shrink-0 p-2.5 rounded-full transition-colors mb-0.5 ${
-                          isDark ? 'text-gray-400 hover:text-white hover:bg-gray-700' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
-                        }`}
-                        title={t('admin.chat.record_audio') || 'Record audio'}
-                      >
-                        <Mic className="w-5 h-5" />
-                      </button>
-                    )}
+                    {/* Mic button */}
+                    <button
+                      onClick={startRecording}
+                      disabled={sending}
+                      className={`flex-shrink-0 p-2 rounded-full transition-colors mb-0.5 ${
+                        isDark ? 'text-gray-400 hover:text-white hover:bg-gray-700' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                      }`}
+                      title={t('admin.chat.record_audio') || 'Record audio'}
+                    >
+                      <Mic className="w-5 h-5" />
+                    </button>
+
+                    {/* Send button — always visible */}
+                    <button
+                      onClick={handleSendMessage}
+                      disabled={sending || !newMessage.trim()}
+                      className={`flex-shrink-0 p-2.5 rounded-full transition-colors mb-0.5 ${
+                        newMessage.trim()
+                          ? 'bg-green-600 hover:bg-green-700 text-white'
+                          : isDark
+                            ? 'bg-gray-700 text-gray-500 cursor-not-allowed'
+                            : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                      }`}
+                    >
+                      {sending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
+                    </button>
                   </div>
                 )}
               </div>
