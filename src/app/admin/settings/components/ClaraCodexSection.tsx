@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Loader2, Save, Bot, Clock, Building2, AlertCircle } from 'lucide-react'
 import { useAdmin } from '@/contexts/AdminContext'
-import { buildDefaultSchedule, ClaraCodexWhatsAppSettings, CODEX_AVAILABLE_MODELS, normalizeClaraCodexSettings } from '@/lib/clara-codex'
+import { buildDefaultSchedule, ClaraCodexWhatsAppSettings, CODEX_AVAILABLE_MODELS, normalizeClaraCodexSettings } from '@/lib/clara-codex/config'
 
 interface ClaraCodexSectionProps {
   isDark: boolean
