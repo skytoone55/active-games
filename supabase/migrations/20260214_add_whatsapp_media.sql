@@ -13,20 +13,5 @@ COMMENT ON COLUMN whatsapp_messages.media_type IS 'Media type: image, audio, vid
 COMMENT ON COLUMN whatsapp_messages.media_mime_type IS 'MIME type: image/jpeg, audio/ogg, video/mp4, etc.';
 COMMENT ON COLUMN whatsapp_messages.media_filename IS 'Original filename (documents only)';
 
--- 2. Create storage bucket for WhatsApp media
-INSERT INTO storage.buckets (id, name, public)
-VALUES ('whatsapp-media', 'whatsapp-media', true)
-ON CONFLICT (id) DO NOTHING;
-
--- 3. Storage policies
--- Service role can upload (webhook + admin API run server-side)
-CREATE POLICY "Service role can upload whatsapp media"
-ON storage.objects FOR INSERT
-TO service_role
-WITH CHECK (bucket_id = 'whatsapp-media');
-
--- Public read access (admin chat loads media client-side, URLs are unguessable UUIDs)
-CREATE POLICY "Public read access for whatsapp media"
-ON storage.objects FOR SELECT
-TO public
-USING (bucket_id = 'whatsapp-media');
+-- Bucket 'whatsapp-media' is created manually via Supabase dashboard
+-- Access: service_role for upload (server-side), public read (bucket is public)

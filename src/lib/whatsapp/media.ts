@@ -95,6 +95,10 @@ export async function downloadAndStoreMedia(media: MediaDownloadInfo): Promise<S
       .getPublicUrl(storagePath)
 
     console.log('[WA MEDIA] Stored inbound:', storagePath)
+
+    // FIFO cleanup (non-blocking) — 50 Mo limit
+    cleanupOldMedia(supabase, 'inbound').catch(() => {})
+
     return { publicUrl, storagePath }
   } catch (error) {
     console.error('[WA MEDIA] Download error:', error)
@@ -193,6 +197,9 @@ export async function uploadAndSendMedia(
     const waMessageId = waResult.messages?.[0]?.id || null
     console.log('[WA MEDIA] Sent outbound:', waType, '→', recipientPhone)
 
+    // FIFO cleanup (non-blocking) — 50 Mo limit
+    cleanupOldMedia(supabase, 'outbound').catch(() => {})
+
     return {
       stored: { publicUrl, storagePath: finalPath },
       waMessageId,
@@ -200,6 +207,45 @@ export async function uploadAndSendMedia(
   } catch (error) {
     console.error('[WA MEDIA] Send error:', error)
     return null
+  }
+}
+
+// ============================================================
+// FIFO Cleanup — Keep storage under 50 Mo
+// ============================================================
+
+const MAX_FILES_PER_FOLDER = 80 // ~50 Mo budget split across inbound/outbound
+
+/**
+ * Delete oldest files in a storage folder to stay under the limit.
+ * Called after each upload. Non-blocking — errors are silently ignored.
+ * Pattern: same as src/app/api/cron/backup/route.ts cleanup.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function cleanupOldMedia(supabase: any, folder: 'inbound' | 'outbound') {
+  try {
+    const { data: files } = await supabase.storage
+      .from('whatsapp-media')
+      .list(folder, {
+        limit: 500,
+        sortBy: { column: 'created_at', order: 'desc' },
+      })
+
+    if (files && files.length > MAX_FILES_PER_FOLDER) {
+      const filesToDelete = files
+        .slice(MAX_FILES_PER_FOLDER)
+        .map((f: { name: string }) => `${folder}/${f.name}`)
+
+      const { error } = await supabase.storage
+        .from('whatsapp-media')
+        .remove(filesToDelete)
+
+      if (!error) {
+        console.log(`[WA MEDIA] Cleanup: deleted ${filesToDelete.length} old files from ${folder}/`)
+      }
+    }
+  } catch {
+    // Silent — cleanup is best-effort
   }
 }
 
