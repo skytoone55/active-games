@@ -33,7 +33,10 @@ export function AdminProvider({ children, theme, toggleTheme }: {
   toggleTheme: () => void
 }) {
   const { user, loading: authLoading, signOut, refreshUser } = useAuth()
-  const { branches, selectedBranch, selectedBranchId, selectBranch, loading: branchesLoading, refresh: refreshBranches } = useBranches()
+
+  // Passer les données d'auth à useBranches pour éviter un getUser() + profiles redondant
+  const authUserData = user ? { id: user.id, role: user.role, branches: user.branches.map(b => ({ id: b.id })) } : null
+  const { branches, selectedBranch, selectedBranchId, selectBranch, loading: branchesLoading, refresh: refreshBranches } = useBranches(authUserData)
 
   // Clara Codex human-presence heartbeat (no-op for super admin)
   useEffect(() => {

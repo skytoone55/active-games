@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import { useRouter } from 'next/navigation'
 import {
   BarChart3,
   TrendingUp,
@@ -46,7 +45,6 @@ import { useTranslation } from '@/contexts/LanguageContext'
 import { useUserPermissions } from '@/hooks/useUserPermissions'
 import { ChatStatsTab } from './components/ChatStatsTab'
 import { ClaraCodexStatsTab } from './components/ClaraCodexStatsTab'
-import { getClient } from '@/lib/supabase/client'
 import type { UserRole } from '@/lib/supabase/types'
 
 // Types
@@ -85,7 +83,6 @@ const CHART_COLORS = {
 // STATUS_COLORS sera défini dans le component pour utiliser t()
 
 export default function StatisticsPage() {
-  const router = useRouter()
   const { user, branches, selectedBranch, isDark } = useAdmin()
   const { t } = useTranslation()
 
@@ -142,19 +139,10 @@ export default function StatisticsPage() {
     }
   }, [dateRange, selectedBranchId, customStartDate, customEndDate])
 
-  // Auth check et chargement initial
+  // Chargement initial (l'auth est déjà vérifiée par le middleware + AdminProvider)
   useEffect(() => {
-    const checkAuth = async () => {
-      const supabase = getClient()
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
-        router.push('/admin/login')
-        return
-      }
-      await loadStats()
-    }
-    checkAuth()
-  }, [router, loadStats])
+    loadStats()
+  }, [loadStats])
 
   // Recharger quand les filtres changent
   useEffect(() => {

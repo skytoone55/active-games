@@ -95,8 +95,8 @@ export function useSessionPersistence() {
       }
     }, REFRESH_INTERVAL)
 
-    // Premier refresh immédiat
-    refreshSession()
+    // Pas de refresh immédiat — autoRefreshToken: true dans la config Supabase
+    // gère déjà le refresh. Le timer ci-dessus est un filet de sécurité.
 
     return () => {
       if (refreshTimerRef.current) {

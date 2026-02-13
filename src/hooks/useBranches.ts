@@ -10,7 +10,7 @@ export interface BranchWithDetails extends Branch {
   laserRooms: LaserRoom[]
 }
 
-export function useBranches() {
+export function useBranches(authUserData?: { id: string; role: string | null; branches: Array<{ id: string }> } | null) {
   const [branches, setBranches] = useState<BranchWithDetails[]>([])
   // Ne pas charger depuis localStorage au début - on le fera après avoir chargé les branches autorisées
   const [selectedBranchId, setSelectedBranchId] = useState<string | null>(null)
@@ -31,29 +31,33 @@ export function useBranches() {
     setError(null)
 
     try {
-      // Récupérer l'utilisateur et ses branches autorisées
-      const { data: { user: authUser } } = await supabase.auth.getUser()
-      
-      if (!authUser) {
-        setBranches([])
-        setLoading(false)
-        return
-      }
+      // Si on a déjà les données user depuis useAuth, les utiliser directement
+      // Sinon fallback sur getUser() (pour les appels manuels de refresh)
+      let userId: string
+      let userRole: string | null
 
-      // Récupérer le rôle de l'utilisateur
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', authUser.id)
-        .single<{ role: string }>()
-
-      if (profileError) {
-        throw profileError
+      if (authUserData?.id) {
+        userId = authUserData.id
+        userRole = authUserData.role
+      } else {
+        const { data: { user: authUser } } = await supabase.auth.getUser()
+        if (!authUser) {
+          setBranches([])
+          setLoading(false)
+          return
+        }
+        userId = authUser.id
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', authUser.id)
+          .single<{ role: string }>()
+        userRole = profile?.role || null
       }
 
       let branchesData: Branch[] = []
 
-      if (profile?.role === 'super_admin') {
+      if (userRole === 'super_admin') {
         // Super admin voit toutes les branches
         const { data, error: branchesError } = await supabase
           .from('branches')
@@ -69,7 +73,7 @@ export function useBranches() {
         const { data: userBranches, error: userBranchesError } = await supabase
           .from('user_branches')
           .select('branch_id')
-          .eq('user_id', authUser.id)
+          .eq('user_id', userId)
           .returns<Array<{ branch_id: string }>>()
 
         if (userBranchesError) {
@@ -180,9 +184,11 @@ export function useBranches() {
     } finally {
       setLoading(false)
     }
-  }, []) // Plus de dépendance sur selectedBranchId
+  }, [authUserData]) // Recharger quand l'user change (login, etc.)
 
   useEffect(() => {
+    // Si authUserData est passé, attendre qu'il soit disponible avant de charger
+    if (authUserData === undefined) return // hook pas encore prêt
     fetchBranches()
   }, [fetchBranches])
 
