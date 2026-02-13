@@ -126,17 +126,15 @@ export function useSessionPersistence() {
   }, [refreshSession, isUserActive])
 
   // Gérer la visibilité de la page (quand l'utilisateur revient sur l'onglet)
+  // Note: autoRefreshToken: true dans la config Supabase gère déjà le refresh des tokens.
+  // On ne fait que mettre à jour l'activité ici — pas de refreshSession() qui cause
+  // des appels réseau inutiles et des cascades de re-render (spinner gris sur l'agenda).
   useEffect(() => {
     if (typeof window === 'undefined') return
 
-    const handleVisibilityChange = async () => {
+    const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
-        // L'utilisateur est revenu - vérifier et rafraîchir la session
-        // But only if not timed out by inactivity
         updateActivity()
-        if (isUserActive()) {
-          await refreshSession()
-        }
       }
     }
 
@@ -145,7 +143,7 @@ export function useSessionPersistence() {
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange)
     }
-  }, [updateActivity, refreshSession, isUserActive])
+  }, [updateActivity])
 
   return {
     updateActivity,

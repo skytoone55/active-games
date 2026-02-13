@@ -24,9 +24,13 @@ const CACHE_KEYS = {
 const CACHE_VERSION = '1.0'
 
 // Durée de validité du cache (en ms)
+// Note: les bookings sont rafraîchis en temps réel via Supabase Realtime,
+// donc le TTL peut être long — il sert uniquement de sécurité ultime.
+// Un TTL trop court (ex: 5min) cause un écran gris + spinner quand l'utilisateur
+// revient sur l'onglet après une pause, car le cache expire et force un rechargement complet.
 const CACHE_TTL = {
-  BOOKINGS: 5 * 60 * 1000,      // 5 minutes
-  CONTACTS: 10 * 60 * 1000,     // 10 minutes
+  BOOKINGS: 30 * 60 * 1000,     // 30 minutes (realtime gère les mises à jour)
+  CONTACTS: 30 * 60 * 1000,     // 30 minutes
   BRANCH_CONFIG: 60 * 60 * 1000, // 1 heure
 }
 

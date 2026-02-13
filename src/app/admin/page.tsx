@@ -2429,10 +2429,16 @@ export default function AdminPage() {
           width: '100%',
           maxWidth: '100%'
         }}>
-          {/* Loader sur la grille — seulement au chargement initial (pas de données encore) */}
+          {/* Loader bloquant — seulement au chargement initial (pas de données encore) */}
           {bookingsLoading && allBookings.length === 0 && (
             <div className="absolute inset-0 bg-gray-900/50 flex items-center justify-center z-10">
               <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
+            </div>
+          )}
+          {/* Indicateur discret de rafraîchissement en arrière-plan */}
+          {bookingsLoading && allBookings.length > 0 && (
+            <div className="absolute top-2 right-2 z-10">
+              <Loader2 className="w-4 h-4 text-blue-400 animate-spin" />
             </div>
           )}
 

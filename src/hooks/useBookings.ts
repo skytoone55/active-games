@@ -114,9 +114,11 @@ export function useBookings(branchId: string | null, date?: string) {
       }
     }, 15000)
 
-    // Ne montrer le loading que si pas de cache (null = pas en cache, [] = jour vide en cache)
+    // Ne montrer le loading que si pas de cache ET pas de données déjà en mémoire
+    // Cela évite le spinner gris quand un refetch est déclenché après inactivité
+    // (reconnection realtime, etc.) alors que l'agenda est déjà affiché
     const cached = date ? getCachedBookings(branchId, date) : null
-    if (cached === null) {
+    if (cached === null && bookings.length === 0) {
       setLoading(true)
     }
     setError(null)
