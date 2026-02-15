@@ -459,16 +459,14 @@ export async function POST(request: NextRequest) {
 
         // 3. Onboarding flow / auto-reply / Clara AI
         const claraWhatsAppConfig = msSettings?.settings?.whatsapp_clara
+        let onboardingHandledMessage = false
         try {
-          // Show "typing..." indicator for any response
-          await sendTypingIndicator(messageId)
-
           if (hasEnabledSteps) {
-            await handleOnboarding(
+            onboardingHandledMessage = await handleOnboarding(
               supabase, conversation, senderPhone, isNewConversation,
               messageText, buttonReplyId, onboardingConfig, onboardingLang
             )
-            // After onboarding just completed, Clara does NOT reply yet (welcome message was just sent)
+            // If onboarding sent a message (buttons, welcome, etc.), AI must NOT reply to this same message
           } else if (isNewConversation && legacyAutoReply?.enabled && legacyAutoReply?.message) {
             // Legacy auto-reply fallback (plain text)
             let replyText = ''
@@ -530,7 +528,7 @@ export async function POST(request: NextRequest) {
           ? isBranchInactive(claraWhatsAppConfig, runtimeConversation.branch_id)
           : false
 
-        const baseEligibility = isOnboardingDone && isNotWaiting && !claraPaused && !isNewConversation && messageText && messageText !== `[${messageType}]`
+        const baseEligibility = isOnboardingDone && isNotWaiting && !claraPaused && !isNewConversation && !onboardingHandledMessage && messageText && messageText !== `[${messageType}]`
 
         let aiDidRespond = false
 
@@ -568,7 +566,7 @@ export async function POST(request: NextRequest) {
         ) {
           await sendTypingIndicator(messageId)
           try {
-            await handleClaraWhatsAppResponse(
+            const legacyResult = await handleClaraWhatsAppResponse(
               supabase,
               runtimeConversation,
               senderPhone,
@@ -576,9 +574,29 @@ export async function POST(request: NextRequest) {
               claraWhatsAppConfig,
               onboardingLang
             )
-            aiDidRespond = true
+            aiDidRespond = legacyResult?.sent === true
           } catch (claraErr) {
             console.error('[WHATSAPP CLARA] Legacy error (non-blocking):', claraErr)
+            const normalizedLang = (onboardingLang || '').toLowerCase()
+            const fallbackText = normalizedLang.startsWith('fr')
+              ? 'Je rencontre un souci technique. Un conseiller va reprendre votre demande rapidement.'
+              : normalizedLang.startsWith('he')
+                ? 'יש לי תקלה טכנית כרגע. נציג יחזור אליך בהקדם.'
+                : 'I am facing a technical issue right now. A human advisor will follow up shortly.'
+
+            const waId = await sendWhatsAppText(senderPhone, fallbackText)
+            await storeOutboundMessage(supabase, runtimeConversation.id, fallbackText, 'text', waId)
+
+            await (supabase as any)
+              .from('whatsapp_conversations')
+              .update({
+                needs_human: true,
+                needs_human_reason: 'Legacy Clara technical fallback',
+                updated_at: new Date().toISOString(),
+              })
+              .eq('id', runtimeConversation.id)
+
+            aiDidRespond = true
           }
         }
 
@@ -652,7 +670,7 @@ async function handleOnboarding(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   config: any,
   language: string
-) {
+): Promise<boolean> {
   const { waiting, stepId } = parseOnboardingStatus(conversation.onboarding_status)
 
   // --- NEW CONVERSATION: send first step buttons ---
@@ -661,7 +679,7 @@ async function handleOnboarding(
     if (firstStep) {
       await sendStepButtons(supabase, conversation.id, senderPhone, firstStep, language)
     }
-    return
+    return true
   }
 
   // --- WAITING FOR A STEP RESPONSE ---
@@ -676,7 +694,7 @@ async function handleOnboarding(
         .update({ onboarding_status: 'completed' })
         .eq('id', conversation.id)
       console.log('[WHATSAPP] Onboarding: step not found, auto-completing for', senderPhone)
-      return
+      return true
     }
 
     // Try to match the user's reply
@@ -789,10 +807,11 @@ async function handleOnboarding(
       // No match → resend current step buttons
       await sendStepButtons(supabase, conversation.id, senderPhone, currentStep, language)
     }
-    return
+    return true
   }
 
   // --- COMPLETED or NULL: Clara AI handles conversation ---
+  return false
 }
 
 // ============================================================
