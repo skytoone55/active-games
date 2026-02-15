@@ -97,14 +97,14 @@ export async function handleClaraWhatsAppResponse(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   claraConfig: any,
   language: string
-) {
+): Promise<{ sent: boolean; usedFallback?: boolean }> {
   console.log('[WHATSAPP CLARA] Processing message from', senderPhone, ':', messageText.substring(0, 100))
 
   // Get Clara settings (global)
   const globalSettings = await getClaraSettings()
   if (!globalSettings.enabled) {
     console.log('[WHATSAPP CLARA] Clara globally disabled, skipping')
-    return
+    return { sent: false }
   }
 
   // Track conversation started (only once per conversation — use upsert-like check)
@@ -285,7 +285,32 @@ export async function handleClaraWhatsAppResponse(
     const waId = await sendWhatsAppText(senderPhone, fullResponse)
     await storeOutboundMessage(supabase, conversation.id, fullResponse, 'text', waId)
     console.log('[WHATSAPP CLARA] Reply sent to', senderPhone, ':', fullResponse.substring(0, 100))
+    return { sent: true, usedFallback: false }
   } else {
     console.warn('[WHATSAPP CLARA] Empty response from LLM for message:', messageText)
+
+    const normalizedLang = (language || '').toLowerCase()
+    const fallbackText = normalizedLang.startsWith('fr')
+      ? 'Je rencontre un souci technique. Un conseiller va reprendre votre demande rapidement.'
+      : normalizedLang.startsWith('he')
+        ? 'יש לי תקלה טכנית כרגע. נציג יחזור אליך בהקדם.'
+        : 'I am facing a technical issue right now. A human advisor will follow up shortly.'
+
+    await supabase
+      .from('whatsapp_conversations')
+      .update({
+        needs_human: true,
+        needs_human_reason: 'Legacy Clara empty response',
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', conversation.id)
+
+    const waId = await sendWhatsAppText(senderPhone, fallbackText)
+    await storeOutboundMessage(supabase, conversation.id, fallbackText, 'text', waId)
+    await trackClaraEvent(supabase, conversation.id, conversation.branch_id, 'technical_fallback', {
+      reason: 'legacy_empty_response',
+    })
+
+    return { sent: true, usedFallback: true }
   }
 }
