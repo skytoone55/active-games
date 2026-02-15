@@ -70,19 +70,9 @@ export const CODEX_AVAILABLE_MODELS = [
   { id: 'claude-3-opus-20240229', name: 'Claude 3 Opus', provider: 'Anthropic' },
 ] as const
 
+export type ClaraCodexModelOption = (typeof CODEX_AVAILABLE_MODELS)[number]
+
 export const CODEX_WHATSAPP_TOOL_CATALOG: ClaraCodexToolCatalogItem[] = [
-  {
-    id: 'getBranchInfo',
-    label: 'Get Branch Info',
-    purpose: 'Read branch details (name, slug, phone, address, status).',
-    trigger: 'Used when customer asks where/which branch, contact details, or location info.',
-  },
-  {
-    id: 'getPricing',
-    label: 'Get Pricing',
-    purpose: 'Read active game/event pricing and event formulas.',
-    trigger: 'Used when customer asks prices or package cost by activity/branch.',
-  },
   {
     id: 'simulateBooking',
     label: 'Simulate Booking',

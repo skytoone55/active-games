@@ -817,8 +817,6 @@ export function createCodexWhatsAppTools(context: {
   contactName?: string
 }) {
   return {
-    getBranchInfo,
-    getPricing,
     simulateBooking,
     generateBookingLink: createWhatsAppGenerateBookingLink(context),
     escalateToHuman: createEscalateToHumanTool(context.conversationId, context.branchId),
