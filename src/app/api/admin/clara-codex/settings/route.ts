@@ -39,7 +39,7 @@ export async function PUT(request: NextRequest) {
 
     const body = await request.json()
     const isActive = body?.is_active === true
-    const settings = normalizeClaraCodexSettings(body?.settings || {})
+    const settings = normalizeClaraCodexSettings({ ...(body?.settings || {}), enabled: isActive })
 
     const saved = await saveClaraCodexSettings({
       is_active: isActive,
