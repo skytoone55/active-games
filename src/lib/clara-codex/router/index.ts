@@ -70,7 +70,8 @@ export async function routeMessage(params: {
       summary: parsed.summary || '',
     }
   } catch (error) {
-    console.error('[ROUTER] Error:', error)
-    return { agent: 'info', locale: 'en', summary: 'Router error, fallback to info' }
+    const errMsg = error instanceof Error ? error.message : String(error)
+    console.error('[ROUTER] Error:', errMsg, error)
+    return { agent: 'info', locale: 'en', summary: `Router error, fallback to info` }
   }
 }

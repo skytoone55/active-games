@@ -8,7 +8,7 @@
  *        Generic step-based onboarding flow (N configurable steps)
  */
 
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse, after } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { createHmac } from 'crypto'
 import {
@@ -441,7 +441,22 @@ export async function POST(request: NextRequest) {
           }
         }
 
-        // 3. Store the inbound message
+        // 3. Dedup: skip if this WhatsApp message was already processed (Meta webhook retries)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { data: existingMsg } = await (supabase as any)
+          .from('whatsapp_messages')
+          .select('id')
+          .eq('whatsapp_message_id', messageId)
+          .eq('direction', 'inbound')
+          .limit(1)
+          .maybeSingle()
+
+        if (existingMsg) {
+          console.log('[WHATSAPP] Duplicate message skipped (Meta retry):', messageId)
+          continue
+        }
+
+        // 4. Store the inbound message
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         await (supabase as any)
           .from('whatsapp_messages')
@@ -534,31 +549,42 @@ export async function POST(request: NextRequest) {
         let aiDidRespond = false
 
         if (codexEnabled && baseEligibility && !codexOutsideSchedule && !codexBranchInactive) {
+          // Send typing indicator immediately, defer AI processing to after() so we return 200 to Meta fast
           await sendTypingIndicator(messageId)
-          try {
-            await handleClaraCodexWhatsAppResponseV2(
-              supabase,
-              runtimeConversation,
-              senderPhone,
-              messageText,
-              codexSettings as any,
-              onboardingLang
-            )
-            aiDidRespond = true
-          } catch (codexErr) {
-            console.error('[WHATSAPP CODEX V2] Processing error:', codexErr)
-            await triggerCodexTechnicalFallback({
-              supabase,
-              conversation: runtimeConversation,
-              senderPhone,
-              locale: onboardingLang,
-              settings: codexSettings as any,
-              metadata: {
-                error: codexErr instanceof Error ? codexErr.message : String(codexErr),
-              },
-            })
-            aiDidRespond = true
-          }
+          aiDidRespond = true // Set preemptively — the deferred handler WILL respond
+
+          // Capture variables for the after() closure
+          const deferredSupa = supabase
+          const deferredConv = { ...runtimeConversation }
+          const deferredPhone = senderPhone
+          const deferredText = messageText
+          const deferredSettings = codexSettings
+          const deferredLang = onboardingLang
+
+          after(async () => {
+            try {
+              await handleClaraCodexWhatsAppResponseV2(
+                deferredSupa,
+                deferredConv,
+                deferredPhone,
+                deferredText,
+                deferredSettings as any,
+                deferredLang
+              )
+            } catch (codexErr) {
+              console.error('[WHATSAPP CODEX V2] Deferred processing error:', codexErr)
+              await triggerCodexTechnicalFallback({
+                supabase: deferredSupa,
+                conversation: deferredConv,
+                senderPhone: deferredPhone,
+                locale: deferredLang,
+                settings: deferredSettings as any,
+                metadata: {
+                  error: codexErr instanceof Error ? codexErr.message : String(codexErr),
+                },
+              })
+            }
+          })
         } else if (
           claraWhatsAppConfig?.enabled &&
           baseEligibility &&
