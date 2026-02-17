@@ -24,8 +24,9 @@ import { ClaraSection } from './components/ClaraSection'
 import { MessengerSection } from './components/MessengerSection'
 import { WhatsAppSection } from './components/WhatsAppSection'
 import { ClaraCodexSection } from './components/ClaraCodexSection'
+import { ClaraCodexAgentsSection } from './components/ClaraCodexAgentsSection'
 
-type SettingsSection = 'mail' | 'credentials' | 'catalog' | 'messenger' | 'whatsapp' | 'clara' | 'clara_codex'
+type SettingsSection = 'mail' | 'credentials' | 'catalog' | 'messenger' | 'whatsapp' | 'clara' | 'clara_codex' | 'clara_codex_agents'
 
 export default function SettingsPage() {
   const { t } = useTranslation()
@@ -110,6 +111,13 @@ export default function SettingsPage() {
       icon: Bot,
       label: 'Clara Codex',
       description: 'WhatsApp AI isolée',
+      requiredPermission: 'settings'
+    },
+    {
+      id: 'clara_codex_agents',
+      icon: Sparkles,
+      label: 'Codex Agents',
+      description: 'Multi-agent config & tools',
       requiredPermission: 'settings'
     }
   ]
@@ -208,6 +216,9 @@ export default function SettingsPage() {
           )}
           {activeSection === 'clara_codex' && (
             <ClaraCodexSection isDark={isDark} />
+          )}
+          {activeSection === 'clara_codex_agents' && (
+            <ClaraCodexAgentsSection isDark={isDark} />
           )}
         </div>
       </div>

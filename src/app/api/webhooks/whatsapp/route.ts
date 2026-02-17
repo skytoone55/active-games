@@ -22,6 +22,7 @@ import {
   handleClaraCodexWhatsAppResponse,
   triggerCodexTechnicalFallback,
 } from '@/lib/clara-codex'
+import { handleClaraCodexWhatsAppResponseV2 } from '@/lib/clara-codex/whatsapp-handler-v2'
 import { downloadAndStoreMedia } from '@/lib/whatsapp/media'
 
 /**
@@ -535,7 +536,7 @@ export async function POST(request: NextRequest) {
         if (codexEnabled && baseEligibility && !codexOutsideSchedule && !codexBranchInactive) {
           await sendTypingIndicator(messageId)
           try {
-            await handleClaraCodexWhatsAppResponse(
+            await handleClaraCodexWhatsAppResponseV2(
               supabase,
               runtimeConversation,
               senderPhone,
@@ -545,7 +546,7 @@ export async function POST(request: NextRequest) {
             )
             aiDidRespond = true
           } catch (codexErr) {
-            console.error('[WHATSAPP CODEX] Processing error:', codexErr)
+            console.error('[WHATSAPP CODEX V2] Processing error:', codexErr)
             await triggerCodexTechnicalFallback({
               supabase,
               conversation: runtimeConversation,
@@ -878,7 +879,7 @@ async function processExpiredAutoActivateTimers(supabase: any, settings: any, co
 
       if (usingCodex) {
         try {
-          await handleClaraCodexWhatsAppResponse(
+          await handleClaraCodexWhatsAppResponseV2(
             supabase,
             { id: conv.id, branch_id: conv.branch_id, contact_name: conv.contact_name },
             conv.phone,
@@ -886,7 +887,7 @@ async function processExpiredAutoActivateTimers(supabase: any, settings: any, co
             activeConfig,
             language
           )
-          console.log(`[WHATSAPP AUTO-ACTIVATE] Clara Codex activated for ${conv.id} (${conv.phone})`)
+          console.log(`[WHATSAPP AUTO-ACTIVATE] Clara Codex V2 activated for ${conv.id} (${conv.phone})`)
         } catch (codexErr) {
           console.error(`[WHATSAPP AUTO-ACTIVATE] Clara Codex error for ${conv.id}:`, codexErr)
           await triggerCodexTechnicalFallback({

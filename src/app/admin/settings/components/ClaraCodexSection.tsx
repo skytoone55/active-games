@@ -17,6 +17,7 @@ import {
 import { useAdmin } from '@/contexts/AdminContext'
 import {
   buildDefaultSchedule,
+  ClaraCodexModelOption,
   ClaraCodexWhatsAppSettings,
   CODEX_AVAILABLE_MODELS,
   CODEX_WHATSAPP_TOOL_CATALOG,
@@ -31,7 +32,7 @@ interface SettingsResponse {
   id: string
   is_active: boolean
   settings: ClaraCodexWhatsAppSettings
-  models: typeof CODEX_AVAILABLE_MODELS
+  models: ClaraCodexModelOption[]
 }
 
 type SectionId = 'overview' | 'model' | 'branches' | 'schedule' | 'prompt' | 'fallbacks' | 'tools'
@@ -100,7 +101,7 @@ export function ClaraCodexSection({ isDark }: ClaraCodexSectionProps) {
   const [settingsId, setSettingsId] = useState<string | null>(null)
   const [isActive, setIsActive] = useState(false)
   const [settings, setSettings] = useState<ClaraCodexWhatsAppSettings>(normalizeClaraCodexSettings({}))
-  const [models, setModels] = useState<typeof CODEX_AVAILABLE_MODELS>(CODEX_AVAILABLE_MODELS)
+  const [models, setModels] = useState<ClaraCodexModelOption[]>([...CODEX_AVAILABLE_MODELS])
   const [originalPrimaryPrompt, setOriginalPrimaryPrompt] = useState('')
   const [unlockPrimaryPromptChecked, setUnlockPrimaryPromptChecked] = useState(false)
 
@@ -183,6 +184,9 @@ export function ClaraCodexSection({ isDark }: ClaraCodexSectionProps) {
   }
 
   function validateModelSection(): string | null {
+    if (models.length === 0) {
+      return 'No validated LLM key found. Add at least one provider key before choosing a model.'
+    }
     if (settings.temperature < 0 || settings.temperature > 1) {
       return 'Temperature must stay between 0 and 1.'
     }
@@ -462,6 +466,7 @@ export function ClaraCodexSection({ isDark }: ClaraCodexSectionProps) {
                         <span className={classNames('text-sm', isDark ? 'text-gray-300' : 'text-gray-700')}>Model</span>
                         <select
                           value={settings.model}
+                          disabled={models.length === 0}
                           onChange={(e) => {
                             setSettings(prev => ({ ...prev, model: e.target.value }))
                             clearSectionStatus('model')
@@ -479,6 +484,11 @@ export function ClaraCodexSection({ isDark }: ClaraCodexSectionProps) {
                             </optgroup>
                           ))}
                         </select>
+                        {models.length === 0 && (
+                          <p className={classNames('text-xs', isDark ? 'text-yellow-300' : 'text-yellow-700')}>
+                            No model available: validate at least one LLM API key first.
+                          </p>
+                        )}
                       </label>
 
                       <label className="space-y-1">

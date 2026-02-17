@@ -1,5 +1,6 @@
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import {
+  ClaraCodexModelOption,
   ClaraCodexSettingsRecord,
   ClaraCodexWhatsAppSettings,
   CODEX_AVAILABLE_MODELS,
@@ -87,8 +88,15 @@ export async function saveClaraCodexSettings(payload: ClaraCodexSettingsPayload)
   return toRecord(data as CodexSettingsRow)
 }
 
-export function getClaraCodexModels() {
-  return CODEX_AVAILABLE_MODELS
+function isCodexProviderConfigured(provider: string): boolean {
+  if (provider === 'OpenAI') return !!process.env.OPENAI_API_KEY
+  if (provider === 'Anthropic') return !!process.env.ANTHROPIC_API_KEY
+  if (provider === 'Google') return !!process.env.GOOGLE_AI_API_KEY
+  return false
+}
+
+export function getClaraCodexModels(): ClaraCodexModelOption[] {
+  return CODEX_AVAILABLE_MODELS.filter((model) => isCodexProviderConfigured(model.provider))
 }
 
 export function getLocalizedCodexMessage(
