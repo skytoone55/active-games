@@ -11,7 +11,7 @@
 import { NextRequest, NextResponse, after } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { createHmac } from 'crypto'
-import { sendWhatsAppText, storeOutboundMessage, triggerCodexTechnicalFallback } from '@/lib/whatsapp/messaging'
+import { sendWhatsAppText, storeOutboundMessage, triggerCodexTechnicalFallback, sendTypingIndicator as sendTypingIndicatorShared, createTypingIndicatorLoop } from '@/lib/whatsapp/messaging'
 import { getClaraCodexSettings } from '@/lib/clara-codex'
 import { handleClaraCodexWhatsAppResponseV2 } from '@/lib/clara-codex/whatsapp-handler-v2'
 import { downloadAndStoreMedia } from '@/lib/whatsapp/media'
@@ -85,37 +85,8 @@ async function sendInteractiveButtons(
   return result.messages?.[0]?.id || null
 }
 
-/**
- * Mark message as read + show typing indicator ("..." in WhatsApp)
- * The typing indicator disappears when response is sent or after 25s
- */
-async function sendTypingIndicator(messageId: string): Promise<void> {
-  const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID
-  const accessToken = process.env.WHATSAPP_ACCESS_TOKEN
-  if (!phoneNumberId || !accessToken || !messageId) return
-
-  try {
-    await fetch(
-      `https://graph.facebook.com/v21.0/${phoneNumberId}/messages`,
-      {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          messaging_product: 'whatsapp',
-          status: 'read',
-          message_id: messageId,
-          typing_indicator: { type: 'text' },
-        }),
-      }
-    )
-  } catch (err) {
-    // Non-blocking — don't fail if typing indicator fails
-    console.error('[WHATSAPP] Typing indicator error:', err)
-  }
-}
+// sendTypingIndicator imported from @/lib/whatsapp/messaging (shared utility)
+const sendTypingIndicator = sendTypingIndicatorShared
 
 // Get multilingual text by language key
 function getLocalizedText(multilingual: Record<string, string> | string | undefined, language: string): string {
@@ -565,8 +536,11 @@ export async function POST(request: NextRequest) {
           const deferredText = textForClara
           const deferredSettings = codexSettings
           const deferredLang = onboardingLang
+          const deferredMessageId = messageId
 
           after(async () => {
+            // Start periodic typing indicator refresh (WhatsApp "..." expires after ~25s)
+            const typingLoop = createTypingIndicatorLoop(deferredMessageId, 20_000)
             try {
               await handleClaraCodexWhatsAppResponseV2(
                 deferredSupa,
@@ -588,6 +562,8 @@ export async function POST(request: NextRequest) {
                   error: codexErr instanceof Error ? codexErr.message : String(codexErr),
                 },
               })
+            } finally {
+              typingLoop.stop()
             }
           })
         }

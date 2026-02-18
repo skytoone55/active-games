@@ -5,6 +5,9 @@ import { createAnthropic } from '@ai-sdk/anthropic'
 import type { AgentConfig, AgentId, RouterResult } from '../agents/types'
 import { getModelProvider } from '../config'
 
+/** Max time the router is allowed to take before we abort and fallback to 'info' */
+const ROUTER_TIMEOUT_MS = 25_000
+
 function getModel(config: AgentConfig) {
   const provider = getModelProvider(config.model)
   const apiKey =
@@ -43,14 +46,24 @@ export async function routeMessage(params: {
     },
   ]
 
+  // Abort if router takes too long (prevents hanging second messages)
+  const abortController = new AbortController()
+  const timeout = setTimeout(() => abortController.abort(), ROUTER_TIMEOUT_MS)
+
   try {
+    const start = Date.now()
     const result = await generateText({
       model: getModel(config),
       system: config.prompt,
       messages,
       temperature: config.temperature,
       maxOutputTokens: config.max_tokens,
+      abortSignal: abortController.signal,
     })
+    const elapsed = Date.now() - start
+    if (elapsed > 10_000) {
+      console.warn(`[ROUTER] Slow response: ${elapsed}ms`)
+    }
 
     const text = result.text.trim()
     const jsonMatch = text.match(/\{[\s\S]*\}/)
@@ -70,8 +83,11 @@ export async function routeMessage(params: {
       summary: parsed.summary || '',
     }
   } catch (error) {
+    const isAbort = error instanceof Error && error.name === 'AbortError'
     const errMsg = error instanceof Error ? error.message : String(error)
-    console.error('[ROUTER] Error:', errMsg, error)
-    return { agent: 'info', locale: 'en', summary: `Router error, fallback to info` }
+    console.error(`[ROUTER] ${isAbort ? 'TIMEOUT' : 'Error'}: ${errMsg}`)
+    return { agent: 'info', locale: 'en', summary: isAbort ? 'Router timeout, fallback to info' : 'Router error, fallback to info' }
+  } finally {
+    clearTimeout(timeout)
   }
 }

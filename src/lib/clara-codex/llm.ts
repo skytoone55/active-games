@@ -5,6 +5,9 @@ import { ModelMessage, ToolSet, streamText, stepCountIs } from 'ai'
 
 export type CodexProvider = 'gemini' | 'openai' | 'anthropic'
 
+/** Max time an agent stream is allowed to run before abort */
+const AGENT_STREAM_TIMEOUT_MS = 55_000
+
 export interface CodexStreamOptions {
   systemPrompt: string
   messages: ModelMessage[]
@@ -13,6 +16,7 @@ export interface CodexStreamOptions {
   temperature: number
   maxTokens: number
   tools?: ToolSet
+  abortSignal?: AbortSignal
 }
 
 function resolveModel(provider: CodexProvider, model: string): string {
@@ -41,7 +45,17 @@ export async function streamCodexResponse(options: CodexStreamOptions) {
   const resolvedModel = resolveModel(options.provider, options.model)
   const model = getLanguageModel(options.provider, resolvedModel)
 
-  return streamText({
+  // Use provided abort signal or create a default timeout
+  let abortSignal = options.abortSignal
+  let timeoutHandle: ReturnType<typeof setTimeout> | null = null
+
+  if (!abortSignal) {
+    const controller = new AbortController()
+    abortSignal = controller.signal
+    timeoutHandle = setTimeout(() => controller.abort(), AGENT_STREAM_TIMEOUT_MS)
+  }
+
+  const stream = streamText({
     model,
     system: options.systemPrompt,
     messages: options.messages,
@@ -49,7 +63,17 @@ export async function streamCodexResponse(options: CodexStreamOptions) {
     temperature: options.temperature,
     maxOutputTokens: options.maxTokens,
     stopWhen: stepCountIs(12),
+    abortSignal,
   })
+
+  // Clear the safety timeout once the stream finishes (success or error)
+  if (timeoutHandle) {
+    const handle = timeoutHandle
+    // Wrap PromiseLike in a real Promise for proper .catch() support
+    Promise.resolve(stream.text).then(() => clearTimeout(handle), () => clearTimeout(handle))
+  }
+
+  return stream
 }
 
 export interface WhatsAppHistoryMessage {

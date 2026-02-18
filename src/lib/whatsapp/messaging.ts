@@ -5,6 +5,56 @@
  * Used by the webhook, auto-activate piggyback, and Clara handlers.
  */
 
+/**
+ * Send typing indicator ("..." in WhatsApp) + mark message as read.
+ * The typing indicator disappears when a response is sent or after ~25s (Meta limit).
+ * Call this periodically during long AI processing to keep the indicator visible.
+ */
+export async function sendTypingIndicator(messageId: string): Promise<void> {
+  const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID
+  const accessToken = process.env.WHATSAPP_ACCESS_TOKEN
+  if (!phoneNumberId || !accessToken || !messageId) return
+
+  try {
+    await fetch(
+      `https://graph.facebook.com/v21.0/${phoneNumberId}/messages`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          messaging_product: 'whatsapp',
+          status: 'read',
+          message_id: messageId,
+          typing_indicator: { type: 'text' },
+        }),
+      }
+    )
+  } catch (err) {
+    // Non-blocking — don't fail if typing indicator fails
+    console.error('[WHATSAPP] Typing indicator error:', err)
+  }
+}
+
+/**
+ * Create a typing indicator loop that refreshes every intervalMs.
+ * Returns a stop() function to cancel the loop.
+ * WhatsApp typing indicators expire after ~25s, so refresh at ~20s.
+ */
+export function createTypingIndicatorLoop(messageId: string, intervalMs = 20_000): { stop: () => void } {
+  if (!messageId) return { stop: () => {} }
+
+  const timer = setInterval(() => {
+    sendTypingIndicator(messageId).catch(() => {})
+  }, intervalMs)
+
+  return {
+    stop: () => clearInterval(timer),
+  }
+}
+
 export async function sendWhatsAppText(to: string, text: string): Promise<string | null> {
   const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID
   const accessToken = process.env.WHATSAPP_ACCESS_TOKEN
