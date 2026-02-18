@@ -2,10 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { verifyApiPermission } from '@/lib/permissions'
 import { syncFAQEmbedding } from '@/lib/clara-codex/agents/info/embeddings'
-import type { Database } from '@/lib/supabase/types'
 
 /**
- * PUT /api/admin/messenger/faq/[id]
+ * PUT /api/admin/clara-whatsapp/faq/[id]
  * Met à jour une FAQ
  */
 export async function PUT(
@@ -22,7 +21,7 @@ export async function PUT(
     const body = await request.json()
     const supabase = createServiceRoleClient() as any
 
-    const updateData: Database['public']['Tables']['messenger_faq']['Update'] = {
+    const updateData = {
       category: body.category,
       question: body.question,
       answer: body.answer,
@@ -32,7 +31,7 @@ export async function PUT(
     }
 
     const { data: updatedFaq, error } = await supabase
-      .from('messenger_faq')
+      .from('clara_whatsapp_faq')
       .update(updateData)
       .eq('id', id)
       .select()
@@ -48,13 +47,13 @@ export async function PUT(
     // Auto-regenerate embedding after update (fire-and-forget)
     if (updatedFaq?.id && body.question && body.answer) {
       syncFAQEmbedding(supabase, updatedFaq.id, body.question, body.answer).catch((err) =>
-        console.error('[Messenger FAQ API] Embedding sync error:', err)
+        console.error('[Clara WhatsApp FAQ API] Embedding sync error:', err)
       )
     }
 
     return NextResponse.json({ success: true, data: updatedFaq })
   } catch (error) {
-    console.error('[Messenger FAQ API] PUT error:', error)
+    console.error('[Clara WhatsApp FAQ API] PUT error:', error)
     return NextResponse.json(
       { success: false, error: 'Internal server error' },
       { status: 500 }
@@ -63,7 +62,7 @@ export async function PUT(
 }
 
 /**
- * DELETE /api/admin/messenger/faq/[id]
+ * DELETE /api/admin/clara-whatsapp/faq/[id]
  * Supprime une FAQ
  */
 export async function DELETE(
@@ -80,7 +79,7 @@ export async function DELETE(
     const supabase = createServiceRoleClient() as any
 
     const { error } = await supabase
-      .from('messenger_faq')
+      .from('clara_whatsapp_faq')
       .delete()
       .eq('id', id)
 
@@ -93,7 +92,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error('[Messenger FAQ API] DELETE error:', error)
+    console.error('[Clara WhatsApp FAQ API] DELETE error:', error)
     return NextResponse.json(
       { success: false, error: 'Internal server error' },
       { status: 500 }

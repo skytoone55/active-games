@@ -444,7 +444,7 @@ export interface Database {
           updated_at?: string
         }
       }
-      messenger_faq: {
+      clara_whatsapp_faq: {
         Row: {
           id: string
           category: string

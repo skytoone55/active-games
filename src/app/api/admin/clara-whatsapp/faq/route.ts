@@ -4,7 +4,7 @@ import { verifyApiPermission } from '@/lib/permissions'
 import { syncFAQEmbedding } from '@/lib/clara-codex/agents/info/embeddings'
 
 /**
- * GET /api/admin/messenger/faq
+ * GET /api/admin/clara-whatsapp/faq
  * Récupère toutes les FAQ
  */
 export async function GET(request: NextRequest) {
@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
     const supabase = createServiceRoleClient() as any
 
     const { data: faqs, error } = await supabase
-      .from('messenger_faq')
+      .from('clara_whatsapp_faq')
       .select('*')
       .order('category')
       .order('order_index')
@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ success: true, data: faqs })
   } catch (error) {
-    console.error('[Messenger FAQ API] GET error:', error)
+    console.error('[Clara WhatsApp FAQ API] GET error:', error)
     return NextResponse.json(
       { success: false, error: 'Internal server error' },
       { status: 500 }
@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
 }
 
 /**
- * POST /api/admin/messenger/faq
+ * POST /api/admin/clara-whatsapp/faq
  * Crée une nouvelle FAQ
  */
 export async function POST(request: NextRequest) {
@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
     const supabase = createServiceRoleClient() as any
 
     const { data: newFaq, error } = await supabase
-      .from('messenger_faq')
+      .from('clara_whatsapp_faq')
       .insert({
         category: body.category || 'general',
         question: body.question,
@@ -70,13 +70,13 @@ export async function POST(request: NextRequest) {
     // Auto-generate embedding for the new FAQ (fire-and-forget)
     if (newFaq?.id) {
       syncFAQEmbedding(supabase, newFaq.id, body.question, body.answer).catch((err) =>
-        console.error('[Messenger FAQ API] Embedding sync error:', err)
+        console.error('[Clara WhatsApp FAQ API] Embedding sync error:', err)
       )
     }
 
     return NextResponse.json({ success: true, data: newFaq })
   } catch (error) {
-    console.error('[Messenger FAQ API] POST error:', error)
+    console.error('[Clara WhatsApp FAQ API] POST error:', error)
     return NextResponse.json(
       { success: false, error: 'Internal server error' },
       { status: 500 }

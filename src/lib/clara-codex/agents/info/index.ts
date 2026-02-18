@@ -111,7 +111,7 @@ async function loadFAQ(
   locale: string
 ): Promise<Array<{ question: string; answer: string }>> {
   const { data } = await supabase
-    .from('messenger_faq')
+    .from('clara_whatsapp_faq')
     .select('question, answer')
     .eq('is_active', true)
     .order('order_index')

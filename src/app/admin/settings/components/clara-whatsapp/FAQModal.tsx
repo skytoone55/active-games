@@ -27,7 +27,7 @@ export function FAQModal({ faq, isDark, onSave, onCancel }: FAQModalProps) {
   async function handleSave() {
     setSaving(true)
     try {
-      const url = faq ? `/api/admin/messenger/faq/${faq.id}` : '/api/admin/messenger/faq'
+      const url = faq ? `/api/admin/clara-whatsapp/faq/${faq.id}` : '/api/admin/clara-whatsapp/faq'
       const method = faq ? 'PUT' : 'POST'
       const res = await fetch(url, {
         method,

@@ -56,7 +56,7 @@ export async function syncFAQEmbedding(
   if (!embedding) return false
 
   const { error } = await supabase
-    .from('messenger_faq')
+    .from('clara_whatsapp_faq')
     .update({ embedding: JSON.stringify(embedding) })
     .eq('id', faqId)
 
@@ -74,7 +74,7 @@ export async function syncAllFAQEmbeddings(
   supabase: any
 ): Promise<{ synced: number; failed: number; total: number }> {
   const { data: faqs, error } = await supabase
-    .from('messenger_faq')
+    .from('clara_whatsapp_faq')
     .select('id, question, answer')
     .eq('is_active', true)
     .order('order_index')

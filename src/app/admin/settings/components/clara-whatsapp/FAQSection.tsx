@@ -27,7 +27,7 @@ export function FAQSection({ isDark }: FAQSectionProps) {
   }, [])
 
   async function loadFAQs() {
-    const res = await fetch('/api/admin/messenger/faq')
+    const res = await fetch('/api/admin/clara-whatsapp/faq')
     const data = await res.json()
     if (data.success) setFaqs(data.data)
     setLoading(false)
@@ -35,7 +35,7 @@ export function FAQSection({ isDark }: FAQSectionProps) {
 
   async function handleDelete(id: string) {
     if (!confirm(t('messenger.faq.delete') + '?')) return
-    await fetch(`/api/admin/messenger/faq/${id}`, { method: 'DELETE' })
+    await fetch(`/api/admin/clara-whatsapp/faq/${id}`, { method: 'DELETE' })
     loadFAQs()
   }
 
@@ -43,7 +43,7 @@ export function FAQSection({ isDark }: FAQSectionProps) {
     setSyncing(true)
     setSyncStatus(null)
     try {
-      const res = await fetch('/api/admin/messenger/faq/sync-embeddings', { method: 'POST' })
+      const res = await fetch('/api/admin/clara-whatsapp/faq/sync-embeddings', { method: 'POST' })
       const data = await res.json()
       if (data.success) {
         setSyncStatus({

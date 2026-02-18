@@ -583,7 +583,7 @@ export async function processUserMessage(
 
         if (userWords.length > 0) {
           const { data: faqs } = await supabase
-            .from('messenger_faq')
+            .from('clara_whatsapp_faq')
             .select('question, answer, category')
             .eq('is_active', true)
             .order('order_index')
@@ -973,7 +973,7 @@ export async function processUserMessage(
           const faqWords = userMessage.toLowerCase().split(/\s+/).filter((w: string) => w.length > 2 && !fallbackStopWords.has(w))
           if (faqWords.length > 0) {
             const { data: faqs } = await supabase
-              .from('messenger_faq')
+              .from('clara_whatsapp_faq')
               .select('question, answer, category')
               .eq('is_active', true)
 
@@ -2394,7 +2394,7 @@ async function processClaraLLM(
     let faqContext = ''
     if (module.llm_config?.use_faq_context) {
       const { data: faqs } = await supabase
-        .from('messenger_faq')
+        .from('clara_whatsapp_faq')
         .select('*')
         .eq('is_active', true)
         .order('order_index')

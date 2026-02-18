@@ -4,7 +4,7 @@ import { verifyApiPermission } from '@/lib/permissions'
 import { syncAllFAQEmbeddings } from '@/lib/clara-codex/agents/info/embeddings'
 
 /**
- * POST /api/admin/messenger/faq/sync-embeddings
+ * POST /api/admin/clara-whatsapp/faq/sync-embeddings
  * Synchronise les embeddings de toutes les FAQ actives
  */
 export async function POST(request: NextRequest) {
