@@ -6,8 +6,9 @@ import { buildInfoPrompt } from './prompt'
 export const infoAgent: AgentHandler = {
   id: 'info',
 
-  async run({ context, config, history, supabase }): Promise<AgentResponse> {
-    const faqRows = await loadFAQ(supabase, context.locale)
+  async run({ context, config, history, messageText, supabase }): Promise<AgentResponse> {
+    const allFaq = await loadFAQ(supabase, context.locale)
+    const faqRows = filterFAQByRelevance(allFaq, messageText)
 
     const systemPrompt = buildInfoPrompt({
       config,
@@ -70,4 +71,59 @@ function pickLocalized(value: Record<string, string> | string | null, locale: st
   if (!value) return ''
   if (typeof value === 'string') return value
   return value[locale] || value.en || value.fr || value.he || ''
+}
+
+// ── FAQ relevance filter ──────────────────────────────────────────────
+
+const STOP_WORDS = new Set([
+  // Hebrew
+  'של', 'את', 'על', 'עם', 'זה', 'הוא', 'היא', 'אני', 'לא', 'כן', 'מה', 'איך', 'למה', 'מי',
+  'יש', 'אין', 'גם', 'רק', 'או', 'אם', 'כי', 'אז', 'פה', 'שם', 'הם', 'לי', 'לך', 'לו', 'לה',
+  'אנחנו', 'שלי', 'שלך', 'שלו', 'שלה', 'אפשר', 'צריך', 'רוצה', 'היי', 'שלום', 'בוקר', 'ערב',
+  // French
+  'le', 'la', 'les', 'de', 'du', 'des', 'un', 'une', 'et', 'ou', 'je', 'tu', 'il', 'elle', 'on',
+  'nous', 'vous', 'ils', 'est', 'sont', 'pour', 'pas', 'que', 'qui', 'dans', 'avec', 'sur', 'par',
+  'ne', 'ce', 'se', 'en', 'au', 'aux', 'mais', 'donc', 'car',
+  // English
+  'the', 'a', 'an', 'is', 'are', 'was', 'were', 'be', 'been', 'do', 'does', 'did', 'have', 'has',
+  'had', 'will', 'would', 'can', 'could', 'should', 'may', 'might', 'i', 'you', 'he', 'she', 'it',
+  'we', 'they', 'my', 'your', 'his', 'her', 'its', 'our', 'their', 'this', 'that', 'what', 'how',
+  'when', 'where', 'who', 'which', 'to', 'of', 'in', 'for', 'on', 'at', 'by', 'with', 'from',
+  'and', 'or', 'but', 'not', 'no', 'yes',
+])
+
+function extractKeywords(text: string): string[] {
+  return text
+    .toLowerCase()
+    .replace(/[?!.,;:"""''()\-–—]/g, ' ')
+    .split(/\s+/)
+    .filter(w => w.length >= 2 && !STOP_WORDS.has(w))
+}
+
+function filterFAQByRelevance(
+  allFaq: Array<{ question: string; answer: string }>,
+  userMessage: string,
+  maxResults = 8,
+  minScore = 1
+): Array<{ question: string; answer: string }> {
+  const keywords = extractKeywords(userMessage)
+  if (keywords.length === 0) return allFaq.slice(0, 5)
+
+  const scored = allFaq.map(faq => {
+    const faqText = `${faq.question} ${faq.answer}`.toLowerCase()
+    let score = 0
+    for (const kw of keywords) {
+      if (faqText.includes(kw)) score++
+    }
+    return { faq, score }
+  })
+
+  const relevant = scored
+    .filter(s => s.score >= minScore)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, maxResults)
+    .map(s => s.faq)
+
+  // If nothing matched, return nothing — let the model answer freely
+  return relevant
 }
