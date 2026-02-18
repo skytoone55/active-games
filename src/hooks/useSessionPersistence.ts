@@ -106,15 +106,25 @@ export function useSessionPersistence() {
   }, [refreshSession])
 
   // Gérer la visibilité de la page (quand l'utilisateur revient sur l'onglet)
-  // Note: autoRefreshToken: true dans la config Supabase gère déjà le refresh des tokens.
-  // On ne fait que mettre à jour l'activité ici — pas de refreshSession() qui cause
-  // des appels réseau inutiles et des cascades de re-render (spinner gris sur l'agenda).
+  // Refresh the session ONLY if the tab was hidden for a significant time (>5 min).
+  // Quick alt-tabs don't trigger a refresh (avoids unnecessary network calls / re-renders).
+  // This prevents the scenario where JWT expires during long background periods.
+  const lastVisibleRef = useRef(Date.now())
+
   useEffect(() => {
     if (typeof window === 'undefined') return
 
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
+        const hiddenDuration = Date.now() - lastVisibleRef.current
         updateActivity()
+        // If tab was hidden for more than 5 minutes, refresh the session token
+        // to ensure API calls work immediately (JWT may have expired)
+        if (hiddenDuration > 5 * 60 * 1000) {
+          refreshSession()
+        }
+      } else {
+        lastVisibleRef.current = Date.now()
       }
     }
 
@@ -123,7 +133,7 @@ export function useSessionPersistence() {
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange)
     }
-  }, [updateActivity])
+  }, [updateActivity, refreshSession])
 
   return {
     updateActivity,
