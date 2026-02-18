@@ -243,6 +243,7 @@ async function runAgentAndRespond(params: {
 
   // Handle empty response
   let fullText = response.text
+  let isTechFallback = false
   if (!fullText.trim()) {
     if (response.usedEscalationTool) {
       fullText = humanStatus.available
@@ -250,7 +251,26 @@ async function runAgentAndRespond(params: {
         : await buildNoAgentMessage(settings, context.locale, conversation.branch_id)
     } else {
       fullText = resolveLocalizedCodexText(settings.fallback_tech_error_message, context.locale)
+      isTechFallback = true
     }
+  }
+
+  // When agent returns empty (tech fallback) or escalates → mark needs_human + pause Clara
+  if (isTechFallback || response.usedEscalationTool) {
+    const autoResumeMinutes = Number((settings as any)?.auto_resume_minutes) || 30
+    await supabase.from('whatsapp_conversations')
+      .update({
+        needs_human: true,
+        needs_human_reason: isTechFallback
+          ? 'Clara empty response — technical fallback'
+          : 'Clara escalation to human',
+        clara_paused: true,
+        clara_paused_until: new Date(Date.now() + autoResumeMinutes * 60 * 1000).toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', conversation.id)
+
+    console.log(`[CLARA V2] Marked needs_human for ${conversation.id} (${isTechFallback ? 'tech_fallback' : 'escalation'})`)
   }
 
   // Append no-agent message if escalated but no humans
@@ -272,11 +292,12 @@ async function runAgentAndRespond(params: {
     toolErrors: response.toolErrors,
     humanAvailable: humanStatus.available,
     routedTo: response.agentId,
+    isTechFallback,
   })
 
   return {
     success: true,
-    usedEscalationTool: response.usedEscalationTool,
+    usedEscalationTool: response.usedEscalationTool || isTechFallback,
     toolErrors: response.toolErrors,
   }
 }

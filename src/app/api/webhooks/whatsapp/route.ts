@@ -802,16 +802,9 @@ async function handleOnboarding(
         const isFirstMsgQuestion = firstMsg.length >= 3 && !matchOption(currentStep, null, firstMsg)
 
         if (isFirstMsgQuestion) {
-          // User asked a question before onboarding — skip welcome, let Clara answer it
+          // User asked a question before onboarding — skip welcome, let Clara answer it directly
           console.log('[WHATSAPP] Onboarding completed with pending question:', firstMsg)
-          // Send welcome message if enabled (but continue to Clara response after)
-          if (config.welcome_message_enabled && config.welcome_message) {
-            const welcomeText = getLocalizedText(config.welcome_message, language)
-            if (welcomeText.trim()) {
-              const waId = await sendWhatsAppText(senderPhone, welcomeText)
-              await storeOutboundMessage(supabase, conversation.id, welcomeText, 'text', waId)
-            }
-          }
+          // Do NOT send welcome message — Clara will respond to the question instead
           return { handled: true, justCompleted: true }
         }
 
