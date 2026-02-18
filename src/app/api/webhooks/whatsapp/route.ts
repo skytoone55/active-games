@@ -461,12 +461,15 @@ export async function POST(request: NextRequest) {
 
         // 3. Onboarding flow / auto-reply / Clara AI
         let onboardingHandledMessage = false
+        let onboardingJustCompleted = false
         try {
           if (hasEnabledSteps) {
-            onboardingHandledMessage = await handleOnboarding(
+            const onboardingResult = await handleOnboarding(
               supabase, conversation, senderPhone, isNewConversation,
               messageText, buttonReplyId, onboardingConfig, onboardingLang
             )
+            onboardingHandledMessage = onboardingResult.handled
+            onboardingJustCompleted = onboardingResult.justCompleted
             // If onboarding sent a message (buttons, welcome, etc.), AI must NOT reply to this same message
           } else if (isNewConversation && legacyAutoReply?.enabled && legacyAutoReply?.message) {
             // Legacy auto-reply fallback (plain text)
@@ -524,20 +527,42 @@ export async function POST(request: NextRequest) {
           ? isBranchInactive(codexSettings, runtimeConversation.branch_id)
           : false
 
+        // Normal eligibility: onboarding done, not new conversation, not just handled
         const baseEligibility = isOnboardingDone && isNotWaiting && !claraPaused && !isNewConversation && !onboardingHandledMessage && messageText && messageText !== `[${messageType}]`
+        // Special case: onboarding JUST completed and user had asked a question before onboarding
+        // → Clara should answer the original question now
+        const postOnboardingEligibility = onboardingJustCompleted && isOnboardingDone && !claraPaused
 
         let aiDidRespond = false
 
-        if (codexEnabled && baseEligibility && !codexOutsideSchedule && !codexBranchInactive) {
+        if (codexEnabled && (baseEligibility || postOnboardingEligibility) && !codexOutsideSchedule && !codexBranchInactive) {
           // Send typing indicator immediately, defer AI processing to after() so we return 200 to Meta fast
           await sendTypingIndicator(messageId)
           aiDidRespond = true // Set preemptively — the deferred handler WILL respond
+
+          // For post-onboarding: find the user's first real message to pass to Clara
+          let textForClara = messageText
+          if (postOnboardingEligibility && !baseEligibility) {
+            // Retrieve the first inbound message (the original question asked before onboarding)
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const { data: firstInbound } = await (supabase as any)
+              .from('whatsapp_messages')
+              .select('content')
+              .eq('conversation_id', conversation.id)
+              .eq('direction', 'inbound')
+              .order('created_at', { ascending: true })
+              .limit(1)
+              .maybeSingle()
+
+            textForClara = firstInbound?.content || messageText
+            console.log('[WHATSAPP] Post-onboarding Clara trigger — answering original question:', textForClara)
+          }
 
           // Capture variables for the after() closure
           const deferredSupa = supabase
           const deferredConv = { ...runtimeConversation }
           const deferredPhone = senderPhone
-          const deferredText = messageText
+          const deferredText = textForClara
           const deferredSettings = codexSettings
           const deferredLang = onboardingLang
 
@@ -637,7 +662,7 @@ async function handleOnboarding(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   config: any,
   language: string
-): Promise<boolean> {
+): Promise<{ handled: boolean; justCompleted: boolean }> {
   const { waiting, stepId } = parseOnboardingStatus(conversation.onboarding_status)
 
   // --- NEW CONVERSATION: send first step buttons ---
@@ -646,7 +671,7 @@ async function handleOnboarding(
     if (firstStep) {
       await sendStepButtons(supabase, conversation.id, senderPhone, firstStep, language)
     }
-    return true
+    return { handled: true, justCompleted: false }
   }
 
   // --- WAITING FOR A STEP RESPONSE ---
@@ -661,7 +686,7 @@ async function handleOnboarding(
         .update({ onboarding_status: 'completed' })
         .eq('id', conversation.id)
       console.log('[WHATSAPP] Onboarding: step not found, auto-completing for', senderPhone)
-      return true
+      return { handled: true, justCompleted: true }
     }
 
     // Try to match the user's reply
@@ -760,7 +785,37 @@ async function handleOnboarding(
 
         console.log('[WHATSAPP] Onboarding completed for', senderPhone)
 
-        // Send welcome message if enabled
+        // Check if the user's FIRST message was a real question (not just a button click)
+        // If so, skip the generic welcome and let Clara answer the question instead
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { data: firstInbound } = await (supabase as any)
+          .from('whatsapp_messages')
+          .select('content')
+          .eq('conversation_id', conversation.id)
+          .eq('direction', 'inbound')
+          .order('created_at', { ascending: true })
+          .limit(1)
+          .maybeSingle()
+
+        const firstMsg = (firstInbound?.content || '').trim()
+        // A "real question" is at least 3 chars and not just a button option label
+        const isFirstMsgQuestion = firstMsg.length >= 3 && !matchOption(currentStep, null, firstMsg)
+
+        if (isFirstMsgQuestion) {
+          // User asked a question before onboarding — skip welcome, let Clara answer it
+          console.log('[WHATSAPP] Onboarding completed with pending question:', firstMsg)
+          // Send welcome message if enabled (but continue to Clara response after)
+          if (config.welcome_message_enabled && config.welcome_message) {
+            const welcomeText = getLocalizedText(config.welcome_message, language)
+            if (welcomeText.trim()) {
+              const waId = await sendWhatsAppText(senderPhone, welcomeText)
+              await storeOutboundMessage(supabase, conversation.id, welcomeText, 'text', waId)
+            }
+          }
+          return { handled: true, justCompleted: true }
+        }
+
+        // No pending question → send welcome message normally
         if (config.welcome_message_enabled && config.welcome_message) {
           const welcomeText = getLocalizedText(config.welcome_message, language)
           if (welcomeText.trim()) {
@@ -769,16 +824,17 @@ async function handleOnboarding(
             console.log('[WHATSAPP] Welcome message sent to', senderPhone)
           }
         }
+        return { handled: true, justCompleted: false }
       }
     } else {
       // No match → resend current step buttons
       await sendStepButtons(supabase, conversation.id, senderPhone, currentStep, language)
     }
-    return true
+    return { handled: true, justCompleted: false }
   }
 
   // --- COMPLETED or NULL: Clara AI handles conversation ---
-  return false
+  return { handled: false, justCompleted: false }
 }
 
 // ============================================================
