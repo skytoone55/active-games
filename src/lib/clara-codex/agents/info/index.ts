@@ -108,6 +108,30 @@ function extractKeywords(text: string): string[] {
     .filter(w => w.length >= 2 && !STOP_WORDS.has(w))
 }
 
+/**
+ * Check if keyword and FAQ word share a common root (≥3 chars).
+ * Handles Hebrew morphology like גיל/גילאים, סניף/סניפים, משחק/משחקים etc.
+ */
+function fuzzyMatch(keyword: string, faqText: string): boolean {
+  // Direct: keyword found in FAQ text
+  if (faqText.includes(keyword)) return true
+  // Reverse: any FAQ word contains the keyword (or keyword contains a FAQ word)
+  const faqWords = faqText.split(/\s+/)
+  for (const fw of faqWords) {
+    if (fw.length < 3 || keyword.length < 3) continue
+    // Shared root: one contains the other
+    if (fw.includes(keyword) || keyword.includes(fw)) return true
+    // Common prefix of at least 3 chars (handles Hebrew plural/conjugation)
+    let common = 0
+    for (let i = 0; i < Math.min(fw.length, keyword.length); i++) {
+      if (fw[i] === keyword[i]) common++
+      else break
+    }
+    if (common >= 3) return true
+  }
+  return false
+}
+
 function filterFAQByRelevance(
   allFaq: Array<{ question: string; answer: string }>,
   userMessage: string,
@@ -121,7 +145,7 @@ function filterFAQByRelevance(
     const faqText = `${faq.question} ${faq.answer}`.toLowerCase()
     let score = 0
     for (const kw of keywords) {
-      if (faqText.includes(kw)) score++
+      if (fuzzyMatch(kw, faqText)) score++
     }
     return { faq, score }
   })
