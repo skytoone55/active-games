@@ -347,7 +347,7 @@ export default function StatisticsPage() {
             { id: 'clients', label: t('admin.stats.tabs.clients'), icon: Users },
             { id: 'team', label: t('admin.stats.tabs.team'), icon: UserCheck },
             ...(canViewChatStats ? [{ id: 'chat', label: 'Chat', icon: MessageCircle }] : []),
-            ...(canViewCodexStats ? [{ id: 'codex', label: 'Clara Codex', icon: Bot }] : []),
+            ...(canViewCodexStats ? [{ id: 'codex', label: 'Clara WhatsApp', icon: Bot }] : []),
           ].map(tab => (
             <button
               key={tab.id}

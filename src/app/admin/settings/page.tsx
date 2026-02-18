@@ -11,7 +11,6 @@ import {
   Package,
   Sparkles,
   MessageSquare,
-  Phone,
   Bot
 } from 'lucide-react'
 import { useAdmin } from '@/contexts/AdminContext'
@@ -22,11 +21,9 @@ import { CredentialsSection } from './components/CredentialsSection'
 import { ICountCatalogSection } from './components/ICountCatalogSection'
 import { ClaraSection } from './components/ClaraSection'
 import { MessengerSection } from './components/MessengerSection'
-import { WhatsAppSection } from './components/WhatsAppSection'
-import { ClaraCodexSection } from './components/ClaraCodexSection'
-import { ClaraCodexAgentsSection } from './components/ClaraCodexAgentsSection'
+import { ClaraWhatsAppSection } from './components/clara-whatsapp/ClaraWhatsAppSection'
 
-type SettingsSection = 'mail' | 'credentials' | 'catalog' | 'messenger' | 'whatsapp' | 'clara' | 'clara_codex' | 'clara_codex_agents'
+type SettingsSection = 'mail' | 'credentials' | 'catalog' | 'messenger' | 'clara_whatsapp' | 'clara'
 
 export default function SettingsPage() {
   const { t } = useTranslation()
@@ -93,31 +90,17 @@ export default function SettingsPage() {
       requiredPermission: 'messenger'
     },
     {
-      id: 'whatsapp',
-      icon: Phone,
-      label: 'WhatsApp',
-      description: t('admin.settings.sections.whatsapp_desc'),
+      id: 'clara_whatsapp',
+      icon: Bot,
+      label: 'Clara WhatsApp',
+      description: 'IA multi-agent WhatsApp',
       requiredPermission: 'settings'
     },
     {
       id: 'clara',
       icon: Sparkles,
-      label: 'Clara AI',
-      description: t('admin.settings.sections.clara_desc'),
-      requiredPermission: 'settings'
-    },
-    {
-      id: 'clara_codex',
-      icon: Bot,
-      label: 'Clara Codex',
-      description: 'WhatsApp AI isolée',
-      requiredPermission: 'settings'
-    },
-    {
-      id: 'clara_codex_agents',
-      icon: Sparkles,
-      label: 'Codex Agents',
-      description: 'Multi-agent config & tools',
+      label: 'Clara CRM',
+      description: 'Chat public & CRM',
       requiredPermission: 'settings'
     }
   ]
@@ -208,17 +191,11 @@ export default function SettingsPage() {
           {activeSection === 'messenger' && (
             <MessengerSection isDark={isDark} />
           )}
-          {activeSection === 'whatsapp' && (
-            <WhatsAppSection isDark={isDark} />
+          {activeSection === 'clara_whatsapp' && (
+            <ClaraWhatsAppSection isDark={isDark} />
           )}
           {activeSection === 'clara' && (
             <ClaraSection isDark={isDark} />
-          )}
-          {activeSection === 'clara_codex' && (
-            <ClaraCodexSection isDark={isDark} />
-          )}
-          {activeSection === 'clara_codex_agents' && (
-            <ClaraCodexAgentsSection isDark={isDark} />
           )}
         </div>
       </div>

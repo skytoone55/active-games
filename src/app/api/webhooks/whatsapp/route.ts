@@ -11,17 +11,8 @@
 import { NextRequest, NextResponse, after } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { createHmac } from 'crypto'
-import {
-  sendWhatsAppText,
-  storeOutboundMessage,
-  trackClaraEvent,
-  handleClaraWhatsAppResponse,
-} from '@/lib/clara/whatsapp-handler'
-import {
-  getClaraCodexSettings,
-  handleClaraCodexWhatsAppResponse,
-  triggerCodexTechnicalFallback,
-} from '@/lib/clara-codex'
+import { sendWhatsAppText, storeOutboundMessage, triggerCodexTechnicalFallback } from '@/lib/whatsapp/messaging'
+import { getClaraCodexSettings } from '@/lib/clara-codex'
 import { handleClaraCodexWhatsAppResponseV2 } from '@/lib/clara-codex/whatsapp-handler-v2'
 import { downloadAndStoreMedia } from '@/lib/whatsapp/media'
 
@@ -54,11 +45,6 @@ function normalizePhone(phone: string): string {
 // ============================================================
 // WhatsApp API Helpers
 // ============================================================
-
-// sendTextMessage → imported as sendWhatsAppText from whatsapp-handler
-// storeOutboundMessage → imported from whatsapp-handler
-// trackClaraEvent → imported from whatsapp-handler
-// handleClaraWhatsApp → imported as handleClaraWhatsAppResponse from whatsapp-handler
 
 async function sendInteractiveButtons(
   to: string,
@@ -474,7 +460,6 @@ export async function POST(request: NextRequest) {
           })
 
         // 3. Onboarding flow / auto-reply / Clara AI
-        const claraWhatsAppConfig = msSettings?.settings?.whatsapp_clara
         let onboardingHandledMessage = false
         try {
           if (hasEnabledSteps) {
@@ -539,11 +524,6 @@ export async function POST(request: NextRequest) {
           ? isBranchInactive(codexSettings, runtimeConversation.branch_id)
           : false
 
-        const legacyOutsideSchedule = claraWhatsAppConfig ? isOutsideConfiguredSchedule(claraWhatsAppConfig) : false
-        const legacyBranchInactive = claraWhatsAppConfig
-          ? isBranchInactive(claraWhatsAppConfig, runtimeConversation.branch_id)
-          : false
-
         const baseEligibility = isOnboardingDone && isNotWaiting && !claraPaused && !isNewConversation && !onboardingHandledMessage && messageText && messageText !== `[${messageType}]`
 
         let aiDidRespond = false
@@ -585,52 +565,12 @@ export async function POST(request: NextRequest) {
               })
             }
           })
-        } else if (
-          claraWhatsAppConfig?.enabled &&
-          baseEligibility &&
-          !legacyOutsideSchedule &&
-          !legacyBranchInactive
-        ) {
-          await sendTypingIndicator(messageId)
-          try {
-            const legacyResult = await handleClaraWhatsAppResponse(
-              supabase,
-              runtimeConversation,
-              senderPhone,
-              messageText,
-              claraWhatsAppConfig,
-              onboardingLang
-            )
-            aiDidRespond = legacyResult?.sent === true
-          } catch (claraErr) {
-            console.error('[WHATSAPP CLARA] Legacy error (non-blocking):', claraErr)
-            const normalizedLang = (onboardingLang || '').toLowerCase()
-            const fallbackText = normalizedLang.startsWith('fr')
-              ? 'Je rencontre un souci technique. Un conseiller va reprendre votre demande rapidement.'
-              : normalizedLang.startsWith('he')
-                ? 'יש לי תקלה טכנית כרגע. נציג יחזור אליך בהקדם.'
-                : 'I am facing a technical issue right now. A human advisor will follow up shortly.'
-
-            const waId = await sendWhatsAppText(senderPhone, fallbackText)
-            await storeOutboundMessage(supabase, runtimeConversation.id, fallbackText, 'text', waId)
-
-            await (supabase as any)
-              .from('whatsapp_conversations')
-              .update({
-                needs_human: true,
-                needs_human_reason: 'Legacy Clara technical fallback',
-                updated_at: new Date().toISOString(),
-              })
-              .eq('id', runtimeConversation.id)
-
-            aiDidRespond = true
-          }
         }
 
         // 5. Auto-activate timer — set if AI did NOT respond and feature is enabled
         const autoActivateDelay = codexEnabled
           ? Number((codexSettings as any)?.auto_activate_delay_minutes || 0)
-          : Number(claraWhatsAppConfig?.auto_activate_delay_minutes || 0)
+          : 0
 
         if (autoActivateDelay > 0 && !aiDidRespond && isOnboardingDone && isNotWaiting) {
           const activateAt = new Date(Date.now() + autoActivateDelay * 60 * 1000).toISOString()
@@ -847,14 +787,10 @@ async function handleOnboarding(
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function processExpiredAutoActivateTimers(supabase: any, settings: any, codexSettingsRecord: any) {
   const codexConfig = codexSettingsRecord?.is_active ? codexSettingsRecord?.settings : null
-  const legacyConfig = settings?.whatsapp_clara
 
-  const activeConfig = codexConfig?.enabled ? codexConfig : legacyConfig
-  const usingCodex = !!(codexConfig?.enabled)
-
-  if (!activeConfig?.enabled) return
-  if (!activeConfig?.auto_activate_delay_minutes || activeConfig.auto_activate_delay_minutes <= 0) return
-  if (isOutsideConfiguredSchedule(activeConfig)) return
+  if (!codexConfig?.enabled) return
+  if (!codexConfig?.auto_activate_delay_minutes || codexConfig.auto_activate_delay_minutes <= 0) return
+  if (isOutsideConfiguredSchedule(codexConfig)) return
 
   const now = new Date().toISOString()
   const { data: conversations } = await supabase
@@ -891,7 +827,7 @@ async function processExpiredAutoActivateTimers(supabase: any, settings: any, co
       }
 
       // Check active branches
-      if (isBranchInactive(activeConfig, conv.branch_id)) {
+      if (isBranchInactive(codexConfig, conv.branch_id)) {
         await supabase.from('whatsapp_conversations')
           .update({ clara_auto_activate_at: null })
           .eq('id', conv.id)
@@ -903,41 +839,29 @@ async function processExpiredAutoActivateTimers(supabase: any, settings: any, co
         .update({ clara_auto_activate_at: null, clara_paused: false, clara_paused_until: null })
         .eq('id', conv.id)
 
-      if (usingCodex) {
-        try {
-          await handleClaraCodexWhatsAppResponseV2(
-            supabase,
-            { id: conv.id, branch_id: conv.branch_id, contact_name: conv.contact_name },
-            conv.phone,
-            lastInbound.content || '',
-            activeConfig,
-            language
-          )
-          console.log(`[WHATSAPP AUTO-ACTIVATE] Clara Codex V2 activated for ${conv.id} (${conv.phone})`)
-        } catch (codexErr) {
-          console.error(`[WHATSAPP AUTO-ACTIVATE] Clara Codex error for ${conv.id}:`, codexErr)
-          await triggerCodexTechnicalFallback({
-            supabase,
-            conversation: { id: conv.id, branch_id: conv.branch_id, contact_name: conv.contact_name },
-            senderPhone: conv.phone,
-            locale: language,
-            settings: activeConfig,
-            metadata: {
-              source: 'auto_activate',
-              error: codexErr instanceof Error ? codexErr.message : String(codexErr),
-            },
-          })
-        }
-      } else {
-        await handleClaraWhatsAppResponse(
+      try {
+        await handleClaraCodexWhatsAppResponseV2(
           supabase,
           { id: conv.id, branch_id: conv.branch_id, contact_name: conv.contact_name },
           conv.phone,
           lastInbound.content || '',
-          activeConfig,
+          codexConfig,
           language
         )
-        console.log(`[WHATSAPP AUTO-ACTIVATE] Clara legacy activated for ${conv.id} (${conv.phone})`)
+        console.log(`[WHATSAPP AUTO-ACTIVATE] Clara activated for ${conv.id} (${conv.phone})`)
+      } catch (codexErr) {
+        console.error(`[WHATSAPP AUTO-ACTIVATE] Clara error for ${conv.id}:`, codexErr)
+        await triggerCodexTechnicalFallback({
+          supabase,
+          conversation: { id: conv.id, branch_id: conv.branch_id, contact_name: conv.contact_name },
+          senderPhone: conv.phone,
+          locale: language,
+          settings: codexConfig,
+          metadata: {
+            source: 'auto_activate',
+            error: codexErr instanceof Error ? codexErr.message : String(codexErr),
+          },
+        })
       }
     } catch (err) {
       console.error(`[WHATSAPP AUTO-ACTIVATE] Error for ${conv.id}:`, err)
@@ -947,5 +871,3 @@ async function processExpiredAutoActivateTimers(supabase: any, settings: any, co
     }
   }
 }
-
-// Clara AI for WhatsApp — see @/lib/clara/whatsapp-handler

@@ -21,7 +21,7 @@ import type { AgentConfig, AgentId } from '@/lib/clara-codex/agents/types'
 import { AGENT_LABELS, AGENT_DESCRIPTIONS } from '@/lib/clara-codex/agents/types'
 import { DEFAULT_AGENT_CONFIGS } from '@/lib/clara-codex/agents/defaults'
 
-interface ClaraCodexAgentsSectionProps {
+interface AgentsTabProps {
   isDark: boolean
 }
 
@@ -40,32 +40,32 @@ const TOOLS_CATALOG = [
     id: 'checkGameAvailability',
     label: 'Check Game Availability',
     agent: 'resa_game' as AgentId,
-    purpose: 'Vérifie la disponibilité des créneaux pour les jeux ACTIVE et LASER.',
-    trigger: 'Appelé quand le client a fourni : type de jeu, nombre de joueurs, date et heure souhaitées.',
+    purpose: 'Verifie la disponibilite des creneaux pour les jeux ACTIVE et LASER.',
+    trigger: 'Appele quand le client a fourni : type de jeu, nombre de joueurs, date et heure souhaitees.',
     params: ['branchId', 'date', 'time', 'gameType (ACTIVE|LASER)', 'players', 'numberOfGames'],
   },
   {
     id: 'checkEventAvailability',
     label: 'Check Event Availability',
     agent: 'resa_event' as AgentId,
-    purpose: 'Vérifie la disponibilité pour un événement : salle privée + sessions de jeux.',
-    trigger: 'Appelé quand le client a fourni : type event, nombre de participants, date et heure.',
+    purpose: 'Verifie la disponibilite pour un evenement : salle privee + sessions de jeux.',
+    trigger: 'Appele quand le client a fourni : type event, nombre de participants, date et heure.',
     params: ['branchId', 'date', 'time', 'eventType (event_active|event_laser|event_mix)', 'participants'],
   },
   {
     id: 'generateBookingLink',
     label: 'Generate Booking Link',
     agent: 'resa_game / resa_event' as any,
-    purpose: 'Génère un lien de réservation pré-rempli une fois toutes les infos confirmées.',
-    trigger: 'Appelé uniquement après confirmation de disponibilité et collecte de l\'email.',
+    purpose: 'Genere un lien de reservation pre-rempli une fois toutes les infos confirmees.',
+    trigger: 'Appele uniquement apres confirmation de disponibilite et collecte de l\'email.',
     params: ['branchId', 'date', 'time', 'gameType', 'players', 'email', 'contactName', 'phone'],
   },
   {
     id: 'searchOrderByPhone',
     label: 'Search Order By Phone',
     agent: 'after_sale' as AgentId,
-    purpose: 'Recherche les commandes existantes par numéro de téléphone.',
-    trigger: 'Appelé quand un client post-réservation demande des infos sur sa commande.',
+    purpose: 'Recherche les commandes existantes par numero de telephone.',
+    trigger: 'Appele quand un client post-reservation demande des infos sur sa commande.',
     params: ['phone'],
   },
   {
@@ -73,7 +73,7 @@ const TOOLS_CATALOG = [
     label: 'Escalate To Human',
     agent: 'all agents' as any,
     purpose: 'Marque la conversation pour transfert humain. Log le contexte.',
-    trigger: 'Appelé pour plaintes, doutes, échecs d\'outils, ou demande explicite d\'un humain.',
+    trigger: 'Appele pour plaintes, doutes, echecs d\'outils, ou demande explicite d\'un humain.',
     params: ['conversationId', 'reason'],
   },
 ]
@@ -94,7 +94,7 @@ function agentIcon(agentId: AgentId) {
   }
 }
 
-export function ClaraCodexAgentsSection({ isDark }: ClaraCodexAgentsSectionProps) {
+export function AgentsTab({ isDark }: AgentsTabProps) {
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
@@ -183,57 +183,37 @@ export function ClaraCodexAgentsSection({ isDark }: ClaraCodexAgentsSectionProps
   if (loading) {
     return (
       <div className="flex justify-center py-16">
-        <Loader2 className={classNames('w-7 h-7 animate-spin', isDark ? 'text-blue-400' : 'text-blue-600')} />
+        <Loader2 className={classNames('w-7 h-7 animate-spin', isDark ? 'text-orange-400' : 'text-orange-600')} />
       </div>
     )
   }
 
   return (
     <div className="space-y-5">
-      {/* Header */}
-      <div className={classNames(
-        'rounded-xl border p-5',
-        isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
-      )}>
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2">
-              <Bot className={classNames('w-5 h-5', isDark ? 'text-blue-400' : 'text-blue-600')} />
-              <h3 className={classNames('text-lg font-semibold', isDark ? 'text-white' : 'text-gray-900')}>
-                Clara Codex — Multi-Agent System
-              </h3>
-            </div>
-            <p className={classNames('text-sm mt-1', isDark ? 'text-gray-400' : 'text-gray-600')}>
-              Configure each agent independently: model, prompt, temperature, and behavior.
-            </p>
-          </div>
-        </div>
-
-        {/* Tabs */}
-        <div className="flex gap-1 mt-4">
-          {[
-            { id: 'agents' as TabId, label: 'Agents', icon: Bot },
-            { id: 'tools' as TabId, label: 'Tools', icon: Wrench },
-          ].map(tab => {
-            const Icon = tab.icon
-            const isActive = activeTab === tab.id
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={classNames(
-                  'flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors',
-                  isActive
-                    ? isDark ? 'bg-blue-600/20 text-blue-400' : 'bg-blue-100 text-blue-700'
-                    : isDark ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-700/50' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-                )}
-              >
-                <Icon className="w-4 h-4" />
-                {tab.label}
-              </button>
-            )
-          })}
-        </div>
+      {/* Tabs */}
+      <div className="flex gap-1">
+        {[
+          { id: 'agents' as TabId, label: 'Agents', icon: Bot },
+          { id: 'tools' as TabId, label: 'Tools', icon: Wrench },
+        ].map(tab => {
+          const Icon = tab.icon
+          const isActive = activeTab === tab.id
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={classNames(
+                'flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors',
+                isActive
+                  ? isDark ? 'bg-orange-600/20 text-orange-400' : 'bg-orange-100 text-orange-700'
+                  : isDark ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-700/50' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+              )}
+            >
+              <Icon className="w-4 h-4" />
+              {tab.label}
+            </button>
+          )
+        })}
       </div>
 
       {loadError && (
@@ -247,7 +227,7 @@ export function ClaraCodexAgentsSection({ isDark }: ClaraCodexAgentsSectionProps
         </div>
       )}
 
-      {/* ─── AGENTS TAB ─── */}
+      {/* --- AGENTS TAB --- */}
       {activeTab === 'agents' && (
         <>
           {AGENT_ORDER.map(agentId => {
@@ -274,7 +254,7 @@ export function ClaraCodexAgentsSection({ isDark }: ClaraCodexAgentsSectionProps
                   )}
                 >
                   <div className="flex items-center gap-3 flex-1 min-w-0">
-                    <Icon className={classNames('w-4 h-4 flex-shrink-0', isDark ? 'text-blue-400' : 'text-blue-600')} />
+                    <Icon className={classNames('w-4 h-4 flex-shrink-0', isDark ? 'text-orange-400' : 'text-orange-600')} />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <h4 className={classNames('font-semibold', isDark ? 'text-white' : 'text-gray-900')}>
@@ -466,7 +446,7 @@ export function ClaraCodexAgentsSection({ isDark }: ClaraCodexAgentsSectionProps
               disabled={saving}
               className={classNames(
                 'inline-flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-medium text-white',
-                isDark ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-600 hover:bg-blue-700',
+                isDark ? 'bg-orange-600 hover:bg-orange-700' : 'bg-orange-600 hover:bg-orange-700',
                 saving && 'opacity-60 cursor-not-allowed'
               )}
             >
@@ -477,7 +457,7 @@ export function ClaraCodexAgentsSection({ isDark }: ClaraCodexAgentsSectionProps
         </>
       )}
 
-      {/* ─── TOOLS TAB ─── */}
+      {/* --- TOOLS TAB --- */}
       {activeTab === 'tools' && (
         <div className="space-y-4">
           <div className={classNames(
@@ -501,7 +481,7 @@ export function ClaraCodexAgentsSection({ isDark }: ClaraCodexAgentsSectionProps
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-center gap-2">
-                  <Wrench className={classNames('w-4 h-4', isDark ? 'text-blue-400' : 'text-blue-600')} />
+                  <Wrench className={classNames('w-4 h-4', isDark ? 'text-orange-400' : 'text-orange-600')} />
                   <h4 className={classNames('font-semibold text-sm', isDark ? 'text-white' : 'text-gray-900')}>
                     {tool.label}
                   </h4>
@@ -509,7 +489,7 @@ export function ClaraCodexAgentsSection({ isDark }: ClaraCodexAgentsSectionProps
                 <div className="flex items-center gap-2">
                   <code className={classNames(
                     'text-xs px-2 py-0.5 rounded',
-                    isDark ? 'bg-gray-700 text-blue-300' : 'bg-blue-50 text-blue-700'
+                    isDark ? 'bg-gray-700 text-orange-300' : 'bg-orange-50 text-orange-700'
                   )}>
                     {tool.id}
                   </code>
