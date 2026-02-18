@@ -70,6 +70,12 @@ export async function saveClaraCodexSettings(payload: ClaraCodexSettingsPayload)
   const current = await getClaraCodexSettings()
   const normalized = normalizeClaraCodexSettings(payload.settings)
 
+  // Preserve existing agents config if the incoming payload doesn't include them
+  // (e.g. when saving from the General tab which doesn't send agent overrides)
+  if (!normalized.agents && current.settings.agents) {
+    normalized.agents = current.settings.agents
+  }
+
   const { data, error } = await supabase
     .from(CODEX_SETTINGS_TABLE)
     .update({

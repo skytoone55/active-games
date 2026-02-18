@@ -42,6 +42,8 @@ export interface ClaraCodexWhatsAppSettings {
   fallback_no_agent_message: CodexLocalizedText
   fallback_tech_error_message: CodexLocalizedText
   fallback_human_message: CodexLocalizedText
+  /** Per-agent config overrides stored in the same JSON blob */
+  agents?: Record<string, unknown>
 }
 
 export interface ClaraCodexSettingsRecord {
@@ -173,11 +175,11 @@ function sanitizeDaySchedule(value: unknown, fallback: CodexDaySchedule): CodexD
 }
 
 export function normalizeClaraCodexSettings(raw: unknown): ClaraCodexWhatsAppSettings {
-  const input = (raw || {}) as Partial<ClaraCodexWhatsAppSettings>
+  const input = (raw || {}) as Partial<ClaraCodexWhatsAppSettings> & { agents?: Record<string, unknown> }
   const defaultSchedule = buildDefaultSchedule()
   const incomingSchedule = (input.schedule || {}) as Partial<Record<CodexDayName, CodexDaySchedule>>
 
-  return {
+  const result: ClaraCodexWhatsAppSettings = {
     enabled: typeof input.enabled === 'boolean' ? input.enabled : DEFAULT_CLARA_CODEX_SETTINGS.enabled,
     model: typeof input.model === 'string' && input.model.trim() ? input.model : DEFAULT_CLARA_CODEX_SETTINGS.model,
     temperature: typeof input.temperature === 'number' ? input.temperature : DEFAULT_CLARA_CODEX_SETTINGS.temperature,
@@ -230,6 +232,13 @@ export function normalizeClaraCodexSettings(raw: unknown): ClaraCodexWhatsAppSet
       DEFAULT_CLARA_CODEX_SETTINGS.fallback_human_message
     ),
   }
+
+  // Preserve per-agent config overrides (stored in the same JSON blob)
+  if (input.agents && typeof input.agents === 'object') {
+    result.agents = input.agents
+  }
+
+  return result
 }
 
 export function resolveLocalizedCodexText(

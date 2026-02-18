@@ -40,7 +40,8 @@ function resolveAgentConfig(agentId: AgentId, settings: MultiAgentSettings): Age
     model: overrides.model || defaults.model,
     temperature: overrides.temperature ?? defaults.temperature,
     max_tokens: overrides.max_tokens ?? defaults.max_tokens,
-    prompt: overrides.prompt || defaults.prompt,
+    // Use DB prompt as-is (even empty string). No default fallback.
+    prompt: typeof overrides.prompt === 'string' ? overrides.prompt : defaults.prompt,
     enabled: overrides.enabled ?? defaults.enabled,
   }
 }
