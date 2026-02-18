@@ -8,7 +8,15 @@ export const infoAgent: AgentHandler = {
 
   async run({ context, config, history, messageText, supabase }): Promise<AgentResponse> {
     const allFaq = await loadFAQ(supabase, context.locale)
-    const faqRows = filterFAQByRelevance(allFaq, messageText)
+
+    // Build search context from recent inbound messages (not just the last one)
+    const recentInbound = (history || [])
+      .filter((m) => m.direction === 'inbound' && m.content)
+      .slice(-4)
+      .map((m) => m.content!)
+      .join(' ')
+    const searchContext = `${recentInbound} ${messageText}`
+    const faqRows = filterFAQByRelevance(allFaq, searchContext)
 
     const systemPrompt = buildInfoPrompt({
       config,
