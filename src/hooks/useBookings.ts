@@ -6,8 +6,6 @@ import { useRealtimeRefresh, type TableName } from './useRealtimeSubscription'
 import {
   getCachedBookings,
   setCachedBookings,
-  updateCachedBooking,
-  removeCachedBooking,
   setLastSyncTime,
 } from '@/lib/cache'
 import type {
@@ -75,18 +73,24 @@ export function useBookings(branchId: string | null, date?: string) {
   const [error, setError] = useState<string | null>(null)
   const lastFetchKeyRef = useRef<string | null>(null)
   const isFetchingRef = useRef(false)
-  const initialCacheLoadedRef = useRef(false)
+  // Track whether we have any data displayed (avoids stale closure on bookings)
+  const hasDataRef = useRef(false)
 
-  // Charger depuis le cache au démarrage (affichage instantané)
+  // Keep hasDataRef in sync
   useEffect(() => {
-    if (!branchId || !date || initialCacheLoadedRef.current) return
+    hasDataRef.current = bookings.length > 0
+  }, [bookings])
+
+  // Load from cache EVERY time branchId or date changes (instant display)
+  useEffect(() => {
+    if (!branchId || !date) return
 
     const cached = getCachedBookings(branchId, date)
     if (cached !== null) {
       setBookings(cached)
-      setLoading(false) // Affichage instantané (y compris jours vides)
-      initialCacheLoadedRef.current = true
+      setLoading(false) // Instant display (including empty days)
     }
+    // If no cache, keep current loading state — fetchBookings will handle it
   }, [branchId, date])
 
   // Charger les réservations
@@ -114,11 +118,11 @@ export function useBookings(branchId: string | null, date?: string) {
       }
     }, 15000)
 
-    // Ne montrer le loading que si pas de cache ET pas de données déjà en mémoire
-    // Cela évite le spinner gris quand un refetch est déclenché après inactivité
-    // (reconnection realtime, etc.) alors que l'agenda est déjà affiché
+    // Only show loading spinner if no cache AND no data already in memory
+    // This avoids the grey spinner when a refetch is triggered (realtime, visibility, etc.)
+    // while the agenda is already displayed
     const cached = date ? getCachedBookings(branchId, date) : null
-    if (cached === null && bookings.length === 0) {
+    if (cached === null && !hasDataRef.current) {
       setLoading(true)
     }
     setError(null)
@@ -284,14 +288,31 @@ export function useBookings(branchId: string | null, date?: string) {
     }
   }, [branchId, date])
 
-  // Charger quand branchId ou date change (avec déduplication)
+  // Charger quand branchId ou date change (debounced pour navigations rapides)
+  const fetchDebounceRef = useRef<NodeJS.Timeout | null>(null)
   useEffect(() => {
     const fetchKey = `${branchId || ''}-${date || ''}`
     if (fetchKey === lastFetchKeyRef.current) {
       return
     }
     lastFetchKeyRef.current = fetchKey
-    fetchBookings()
+
+    // Cancel any pending debounced fetch
+    if (fetchDebounceRef.current) {
+      clearTimeout(fetchDebounceRef.current)
+    }
+
+    // Debounce: wait 150ms before fetching — lets cache display stabilize
+    // and avoids hammering the API when user rapidly navigates dates
+    fetchDebounceRef.current = setTimeout(() => {
+      fetchBookings()
+    }, 150)
+
+    return () => {
+      if (fetchDebounceRef.current) {
+        clearTimeout(fetchDebounceRef.current)
+      }
+    }
   }, [branchId, date, fetchBookings])
 
   // Realtime: écouter les changements sur bookings et game_sessions
