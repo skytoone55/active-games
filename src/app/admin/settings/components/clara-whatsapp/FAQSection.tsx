@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import { useTranslation } from '@/contexts/LanguageContext'
-import { Plus, Edit2, Trash2, Loader2, Filter } from 'lucide-react'
+import { Plus, Edit2, Trash2, Loader2, Filter, RefreshCw, CheckCircle, AlertCircle } from 'lucide-react'
 import type { FAQ } from '@/types/messenger'
 import { FAQModal } from './FAQModal'
 
@@ -19,6 +19,8 @@ export function FAQSection({ isDark }: FAQSectionProps) {
   const [editingFaq, setEditingFaq] = useState<FAQ | null>(null)
   const [showModal, setShowModal] = useState(false)
   const [filterCategory, setFilterCategory] = useState<string>('all')
+  const [syncing, setSyncing] = useState(false)
+  const [syncStatus, setSyncStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
 
   useEffect(() => {
     loadFAQs()
@@ -35,6 +37,28 @@ export function FAQSection({ isDark }: FAQSectionProps) {
     if (!confirm(t('messenger.faq.delete') + '?')) return
     await fetch(`/api/admin/messenger/faq/${id}`, { method: 'DELETE' })
     loadFAQs()
+  }
+
+  async function handleSyncEmbeddings() {
+    setSyncing(true)
+    setSyncStatus(null)
+    try {
+      const res = await fetch('/api/admin/messenger/faq/sync-embeddings', { method: 'POST' })
+      const data = await res.json()
+      if (data.success) {
+        setSyncStatus({
+          type: 'success',
+          message: `${t('messenger.faq.sync_success')} (${data.data.synced}/${data.data.total})`,
+        })
+      } else {
+        setSyncStatus({ type: 'error', message: t('messenger.faq.sync_error') })
+      }
+    } catch {
+      setSyncStatus({ type: 'error', message: t('messenger.faq.sync_error') })
+    } finally {
+      setSyncing(false)
+      setTimeout(() => setSyncStatus(null), 4000)
+    }
   }
 
   const filteredFaqs = useMemo(() => {
@@ -66,16 +90,45 @@ export function FAQSection({ isDark }: FAQSectionProps) {
 
       <div className="space-y-4">
         <div className="flex justify-between items-center">
-          <p className={isDark ? 'text-gray-400' : 'text-gray-600'}>
-            {t('messenger.faq.subtitle')} ({faqs.length})
-          </p>
-          <button
-            onClick={() => { setEditingFaq(null); setShowModal(true) }}
-            className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-          >
-            <Plus className="w-4 h-4" />
-            <span>{t('messenger.faq.add')}</span>
-          </button>
+          <div className="flex items-center gap-3">
+            <p className={isDark ? 'text-gray-400' : 'text-gray-600'}>
+              {t('messenger.faq.subtitle')} ({faqs.length})
+            </p>
+            {syncStatus && (
+              <span className={`flex items-center gap-1 text-xs px-2 py-1 rounded-full ${
+                syncStatus.type === 'success'
+                  ? 'bg-green-500/10 text-green-500'
+                  : 'bg-red-500/10 text-red-500'
+              }`}>
+                {syncStatus.type === 'success' ? <CheckCircle className="w-3 h-3" /> : <AlertCircle className="w-3 h-3" />}
+                {syncStatus.message}
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleSyncEmbeddings}
+              disabled={syncing}
+              title={t('messenger.faq.sync_embeddings_tooltip')}
+              className={`flex items-center space-x-2 px-3 py-2 rounded-lg border transition-colors ${
+                syncing
+                  ? 'opacity-50 cursor-not-allowed'
+                  : isDark
+                    ? 'border-gray-600 text-gray-300 hover:bg-gray-700'
+                    : 'border-gray-300 text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              <RefreshCw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} />
+              <span className="text-sm">{syncing ? t('messenger.faq.syncing') : t('messenger.faq.sync_embeddings')}</span>
+            </button>
+            <button
+              onClick={() => { setEditingFaq(null); setShowModal(true) }}
+              className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            >
+              <Plus className="w-4 h-4" />
+              <span>{t('messenger.faq.add')}</span>
+            </button>
+          </div>
         </div>
 
         {/* Category filter */}

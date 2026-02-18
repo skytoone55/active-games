@@ -2571,6 +2571,11 @@
       "filter_all": "Tout",
       "inactive": "Inactive",
       "no_results": "Aucune FAQ dans cette catégorie",
+      "sync_embeddings": "Synchroniser IA",
+      "sync_embeddings_tooltip": "Régénérer les embeddings vectoriels pour la recherche intelligente",
+      "syncing": "Synchronisation...",
+      "sync_success": "Embeddings synchronisés",
+      "sync_error": "Erreur de synchronisation",
       "categories": {
         "general": "Général",
         "booking": "Réservation",

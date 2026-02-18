@@ -2568,6 +2568,11 @@
       "filter_all": "הכל",
       "inactive": "לא פעיל",
       "no_results": "אין שאלות בקטגוריה זו",
+      "sync_embeddings": "סנכרון AI",
+      "sync_embeddings_tooltip": "יצירת וקטורים מחדש לחיפוש חכם",
+      "syncing": "מסנכרן...",
+      "sync_success": "הסנכרון הושלם",
+      "sync_error": "שגיאה בסנכרון",
       "categories": {
         "general": "כללי",
         "booking": "הזמנה",

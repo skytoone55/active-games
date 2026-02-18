@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { verifyApiPermission } from '@/lib/permissions'
+import { syncFAQEmbedding } from '@/lib/clara-codex/agents/info/embeddings'
 
 /**
  * GET /api/admin/messenger/faq
@@ -63,6 +64,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { success: false, error: error.message },
         { status: 500 }
+      )
+    }
+
+    // Auto-generate embedding for the new FAQ (fire-and-forget)
+    if (newFaq?.id) {
+      syncFAQEmbedding(supabase, newFaq.id, body.question, body.answer).catch((err) =>
+        console.error('[Messenger FAQ API] Embedding sync error:', err)
       )
     }
 

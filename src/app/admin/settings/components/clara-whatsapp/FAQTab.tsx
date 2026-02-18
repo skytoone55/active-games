@@ -1,6 +1,6 @@
 'use client'
 
-import { FAQSection } from '../messenger/FAQSection'
+import { FAQSection } from './FAQSection'
 
 interface FAQTabProps {
   isDark: boolean

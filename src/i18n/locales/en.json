@@ -2507,6 +2507,11 @@
       "filter_all": "All",
       "inactive": "Inactive",
       "no_results": "No FAQ in this category",
+      "sync_embeddings": "Sync AI",
+      "sync_embeddings_tooltip": "Regenerate vector embeddings for intelligent search",
+      "syncing": "Syncing...",
+      "sync_success": "Embeddings synced",
+      "sync_error": "Sync error",
       "categories": {
         "general": "General",
         "booking": "Booking",
