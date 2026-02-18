@@ -69,13 +69,13 @@ export async function routeMessage(params: {
     const jsonMatch = text.match(/\{[\s\S]*\}/)
     if (!jsonMatch) {
       console.error('[ROUTER] No JSON found in response:', text)
-      return { agent: 'info', locale: 'en', summary: 'Could not parse intent' }
+      return { agent: 'info', locale: 'he', summary: 'Could not parse intent' }
     }
 
     const parsed = JSON.parse(jsonMatch[0])
     const validAgents: AgentId[] = ['info', 'resa_game', 'resa_event', 'after_sale', 'escalation']
     const agent = validAgents.includes(parsed.agent) ? parsed.agent : 'info'
-    const locale = ['he', 'en', 'fr'].includes(parsed.locale) ? parsed.locale : 'en'
+    const locale = ['he', 'en', 'fr'].includes(parsed.locale) ? parsed.locale : 'he'
 
     return {
       agent,
@@ -86,7 +86,7 @@ export async function routeMessage(params: {
     const isAbort = error instanceof Error && error.name === 'AbortError'
     const errMsg = error instanceof Error ? error.message : String(error)
     console.error(`[ROUTER] ${isAbort ? 'TIMEOUT' : 'Error'}: ${errMsg}`)
-    return { agent: 'info', locale: 'en', summary: isAbort ? 'Router timeout, fallback to info' : 'Router error, fallback to info' }
+    return { agent: 'info', locale: 'he', summary: isAbort ? 'Router timeout, fallback to info' : 'Router error, fallback to info' }
   } finally {
     clearTimeout(timeout)
   }

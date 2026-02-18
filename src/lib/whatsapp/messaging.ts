@@ -159,8 +159,8 @@ export async function triggerCodexTechnicalFallback(params: {
 
 function normalizeLocale(input: string | null | undefined): string {
   const locale = (input || '').toLowerCase().trim()
-  if (!locale) return 'en'
+  if (!locale) return 'he'
   if (locale.startsWith('fr')) return 'fr'
-  if (locale.startsWith('he')) return 'he'
-  return 'en'
+  if (locale.startsWith('en')) return 'en'
+  return 'he'
 }

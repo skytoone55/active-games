@@ -48,8 +48,8 @@ function resolveAgentConfig(agentId: AgentId, settings: MultiAgentSettings): Age
 function normalizeLocale(input: string | null | undefined): string {
   const locale = (input || '').toLowerCase().trim()
   if (locale.startsWith('fr')) return 'fr'
-  if (locale.startsWith('he')) return 'he'
-  return 'en'
+  if (locale.startsWith('en')) return 'en'
+  return 'he'
 }
 
 async function getBranchPhone(branchId: string | null): Promise<string | null> {
@@ -130,7 +130,7 @@ export async function handleClaraCodexWhatsAppResponseV2(
     config: routerConfig,
   })
 
-  // If router timed out, its locale fallback ('en') is unreliable — use the caller's locale instead
+  // If router timed out, use the caller's locale instead of the router fallback
   const routerTimedOut = routing.summary?.includes('timeout')
   const detectedLocale = routerTimedOut ? normalizeLocale(locale) : (routing.locale || normalizeLocale(locale))
 
