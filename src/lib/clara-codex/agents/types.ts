@@ -23,6 +23,7 @@ export interface AgentContext {
   nowISO: string
   nowLabel: string
   humanAvailable: boolean
+  routerSummary?: string
 }
 
 export interface RouterResult {

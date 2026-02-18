@@ -153,7 +153,7 @@ export async function handleClaraCodexWhatsAppResponseV2(
       return runAgentAndRespond({
         agent: fallbackAgent,
         config: fallbackConfig,
-        context: buildContext(conversation, senderPhone, detectedLocale, now),
+        context: buildContext(conversation, senderPhone, detectedLocale, now, routing.summary),
         history: (history || []) as Array<{ direction: 'inbound' | 'outbound'; content: string | null }>,
         messageText,
         settings,
@@ -168,7 +168,7 @@ export async function handleClaraCodexWhatsAppResponseV2(
   return runAgentAndRespond({
     agent: agent!,
     config: agentConfig,
-    context: buildContext(conversation, senderPhone, detectedLocale, now),
+    context: buildContext(conversation, senderPhone, detectedLocale, now, routing.summary),
     history: history || [],
     messageText,
     settings,
@@ -182,7 +182,8 @@ function buildContext(
   conversation: ConversationContext,
   senderPhone: string,
   locale: string,
-  now: { isoDate: string; label: string }
+  now: { isoDate: string; label: string },
+  routerSummary?: string
 ): AgentContext {
   return {
     conversationId: conversation.id,
@@ -194,6 +195,7 @@ function buildContext(
     nowISO: now.isoDate,
     nowLabel: now.label,
     humanAvailable: false, // Will be resolved below
+    routerSummary,
   }
 }
 

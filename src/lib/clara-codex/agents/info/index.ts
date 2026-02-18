@@ -7,13 +7,11 @@ export const infoAgent: AgentHandler = {
   id: 'info',
 
   async run({ context, config, history, messageText, supabase }): Promise<AgentResponse> {
-    // Build search context from recent inbound messages
-    const recentInbound = (history || [])
-      .filter((m) => m.direction === 'inbound' && m.content)
-      .slice(-4)
-      .map((m) => m.content!)
-      .join(' ')
-    const searchContext = `${recentInbound} ${messageText}`.trim()
+    // Use router summary for embedding search (cleaner intent, no noise from branch selection etc.)
+    // Fall back to raw message if router didn't produce a useful summary
+    const searchContext = context.routerSummary && !context.routerSummary.includes('timeout') && !context.routerSummary.includes('fallback')
+      ? context.routerSummary
+      : messageText
 
     // Try vector search first, fall back to keyword filter, then full FAQ
     let faqRows = await searchFAQByEmbedding(supabase, searchContext, context.locale)
