@@ -172,6 +172,8 @@ export default function ChatPage() {
   const [closingConversation, setClosingConversation] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [deletingConversation, setDeletingConversation] = useState(false)
+  const [deletingMessageId, setDeletingMessageId] = useState<string | null>(null)
+  const [showDeleteMsgConfirm, setShowDeleteMsgConfirm] = useState<string | null>(null)
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; convId: string } | null>(null)
 
   // ============================================================
@@ -1008,6 +1010,28 @@ export default function ChatPage() {
     }
   }
 
+  const handleDeleteMessage = async (messageId: string) => {
+    if (deletingMessageId) return
+    setDeletingMessageId(messageId)
+    try {
+      const res = await fetch(`/api/chat/messages/${messageId}/delete`, {
+        method: 'POST',
+      })
+      const data = await res.json()
+      if (data.success) {
+        // Remove message from local state
+        setWaMessages(prev => prev.filter(m => m.id !== messageId))
+        setShowDeleteMsgConfirm(null)
+      } else {
+        console.error('Delete message failed:', data.error)
+      }
+    } catch (error) {
+      console.error('Error deleting message:', error)
+    } finally {
+      setDeletingMessageId(null)
+    }
+  }
+
   // ============================================================
   // Helpers
   // ============================================================
@@ -1588,7 +1612,17 @@ export default function ChatPage() {
                   </div>
                 ) : (
                   waMessages.map((msg) => (
-                    <div key={msg.id} className={`flex ${msg.direction === 'outbound' ? 'justify-end' : 'justify-start'}`}>
+                    <div key={msg.id} className={`group/msg flex items-end gap-1 ${msg.direction === 'outbound' ? 'justify-end' : 'justify-start'}`}>
+                      {/* Delete button — before bubble for outbound (right side) */}
+                      {msg.direction === 'outbound' && user?.role === 'super_admin' && (
+                        <button
+                          onClick={() => setShowDeleteMsgConfirm(msg.id)}
+                          className="opacity-0 group-hover/msg:opacity-100 transition-opacity p-1 rounded-full hover:bg-red-100 dark:hover:bg-red-900/30 text-gray-400 hover:text-red-500 mb-1 flex-shrink-0"
+                          title={t('admin.chat.delete_message') || 'Delete message'}
+                        >
+                          {deletingMessageId === msg.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                        </button>
+                      )}
                       <div className={`max-w-[75%] rounded-2xl px-4 py-2.5 ${
                         msg.direction === 'outbound'
                           ? 'bg-green-600 text-white rounded-br-md'
@@ -1644,6 +1678,16 @@ export default function ChatPage() {
                           )}
                         </div>
                       </div>
+                      {/* Delete button — after bubble for inbound (left side) */}
+                      {msg.direction === 'inbound' && user?.role === 'super_admin' && (
+                        <button
+                          onClick={() => setShowDeleteMsgConfirm(msg.id)}
+                          className="opacity-0 group-hover/msg:opacity-100 transition-opacity p-1 rounded-full hover:bg-red-100 dark:hover:bg-red-900/30 text-gray-400 hover:text-red-500 mb-1 flex-shrink-0"
+                          title={t('admin.chat.delete_message') || 'Delete message'}
+                        >
+                          {deletingMessageId === msg.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                        </button>
+                      )}
                     </div>
                   ))
                 )}
@@ -2217,6 +2261,19 @@ export default function ChatPage() {
         variant="danger"
         onConfirm={handleDeleteWaConversation}
         onCancel={() => setShowDeleteConfirm(false)}
+      />
+
+      {/* Delete individual message confirm (super_admin only) */}
+      <ConfirmDialog
+        isOpen={!!showDeleteMsgConfirm}
+        title={t('admin.chat.delete_message') || 'Delete message'}
+        message={t('admin.chat.delete_message_confirm') || 'Are you sure you want to delete this message? This action cannot be undone.'}
+        confirmLabel={t('admin.chat.delete_confirm_btn') || 'Delete'}
+        cancelLabel={t('common.cancel') || 'Cancel'}
+        isDark={isDark}
+        variant="danger"
+        onConfirm={() => showDeleteMsgConfirm && handleDeleteMessage(showDeleteMsgConfirm)}
+        onCancel={() => setShowDeleteMsgConfirm(null)}
       />
     </div>
   )
