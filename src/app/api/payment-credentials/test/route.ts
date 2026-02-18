@@ -40,15 +40,33 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { cid, username, password, branch_id } = body
 
-    if (!cid || !username || !password) {
+    if (!cid || !username) {
       return NextResponse.json({ error: 'Missing credentials' }, { status: 400 })
+    }
+
+    // If no password provided (or masked placeholder), read it from DB
+    let actualPassword = password
+    if ((!actualPassword || actualPassword === '••••••••') && branch_id) {
+      const serviceClient = createRawServiceClient()
+      const { data: creds } = await serviceClient
+        .from('payment_credentials')
+        .select('password')
+        .eq('branch_id', branch_id)
+        .eq('provider', 'icount')
+        .single()
+
+      actualPassword = creds?.password || null
+    }
+
+    if (!actualPassword || actualPassword === '••••••••') {
+      return NextResponse.json({ error: 'Password is required — please enter the password to test' }, { status: 400 })
     }
 
     // Use the ICountClient from the payment-provider lib
     const client = new ICountClient({
       cid: cid,
       user: username,
-      pass: password
+      pass: actualPassword
     })
 
     const result = await client.testConnection()

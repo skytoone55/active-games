@@ -88,7 +88,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { branch_id, cid, username, password } = body
 
-    if (!branch_id || !cid || !username || !password) {
+    if (!branch_id || !cid || !username) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
@@ -102,18 +102,27 @@ export async function POST(request: NextRequest) {
       .eq('provider', 'icount')
       .single()
 
+    // Determine if password should be updated:
+    // - Skip if empty, null, or the masked placeholder '••••••••'
+    const isRealPassword = password && password !== '••••••••'
+
     let result
     if (existing) {
-      // Update existing
+      // Update existing — only include password if a real new one was provided
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const updatePayload: Record<string, any> = {
+        cid,
+        username,
+        updated_by: user.id,
+        updated_at: new Date().toISOString()
+      }
+      if (isRealPassword) {
+        updatePayload.password = password
+      }
+
       const { data, error } = await serviceClient
         .from('payment_credentials')
-        .update({
-          cid,
-          username,
-          password,
-          updated_by: user.id,
-          updated_at: new Date().toISOString()
-        })
+        .update(updatePayload)
         .eq('id', existing.id)
         .select()
         .single()
@@ -121,6 +130,10 @@ export async function POST(request: NextRequest) {
       if (error) throw error
       result = data
     } else {
+      // New credentials require a real password
+      if (!isRealPassword) {
+        return NextResponse.json({ error: 'Password is required for new credentials' }, { status: 400 })
+      }
       // Create new
       const { data, error } = await serviceClient
         .from('payment_credentials')

@@ -112,9 +112,13 @@ export function CredentialsSection({ isDark }: CredentialsSectionProps) {
 
   // Test connection
   const handleTestConnection = async () => {
-    // Password is REQUIRED for testing - we can't use the masked password from DB
-    if (!formData.cid || !formData.username || !formData.password) {
-      setError('Please fill in all credentials including password to test connection')
+    if (!formData.cid || !formData.username) {
+      setError('Please fill in Company ID and Username to test connection')
+      return
+    }
+    // If no password in form AND no existing credentials, require password
+    if (!formData.password && !credentials) {
+      setError('Please enter the password to test connection')
       return
     }
 
@@ -128,7 +132,7 @@ export function CredentialsSection({ isDark }: CredentialsSectionProps) {
         body: JSON.stringify({
           cid: formData.cid,
           username: formData.username,
-          password: formData.password, // Always use form password, never the masked one
+          password: formData.password || '', // Backend reads from DB if empty
           branch_id: selectedBranch?.id
         })
       })
@@ -174,7 +178,7 @@ export function CredentialsSection({ isDark }: CredentialsSectionProps) {
           branch_id: selectedBranch.id,
           cid: formData.cid,
           username: formData.username,
-          password: formData.password || credentials?.password
+          password: formData.password || '' // Backend preserves existing password if empty
         })
       })
 
@@ -401,7 +405,7 @@ export function CredentialsSection({ isDark }: CredentialsSectionProps) {
             {/* Test Connection Button */}
             <button
               onClick={handleTestConnection}
-              disabled={testing || !formData.cid || !formData.username}
+              disabled={testing || !formData.cid || !formData.username || (!formData.password && !credentials)}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
                 isDark
                   ? 'bg-gray-700 hover:bg-gray-600 text-white disabled:bg-gray-800 disabled:text-gray-600'
