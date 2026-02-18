@@ -73,7 +73,9 @@ export async function GET(request: NextRequest) {
       countQuery = applyCommonFilters(countQuery)
 
       if (countFilter === 'unread') {
-        countQuery = countQuery.gt('unread_count', 0)
+        // messenger_conversations has no unread_count column — the site chat is
+        // fully automated by Clara, so "unread" doesn't apply. Return 0 immediately.
+        return NextResponse.json({ count: 0 })
       } else if (countFilter === 'needs_human') {
         countQuery = countQuery.eq('needs_human', true)
       }
@@ -109,10 +111,12 @@ export async function GET(request: NextRequest) {
     // For each conversation, batch-load last messages instead of N+1 queries
     const convIds = (data || []).map((c: Record<string, unknown>) => c.id)
 
-    // Get last message for all conversations in one query using distinct on
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let lastMessages: Record<string, unknown>[] = []
+    // Get last message + message counts in ONE query (avoids N+1 — previously 31 individual HEAD requests)
+    const lastMsgMap = new Map<string, Record<string, unknown>>()
+    let msgCounts: Record<string, number> = {}
+
     if (convIds.length > 0) {
+      // Load all messages for displayed conversations in a single query
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data: allMsgs } = await (supabase as any)
         .from('messenger_messages')
@@ -120,32 +124,14 @@ export async function GET(request: NextRequest) {
         .in('conversation_id', convIds)
         .order('created_at', { ascending: false })
 
-      lastMessages = allMsgs || []
-    }
-
-    // Get message counts for all conversations in one query
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let msgCounts: Record<string, number> = {}
-    if (convIds.length > 0) {
-      // Group counts by conversation_id — use individual counts since Supabase doesn't support GROUP BY
-      const countPromises = convIds.map(async (convId: string) => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const { count } = await (supabase as any)
-          .from('messenger_messages')
-          .select('id', { count: 'exact', head: true })
-          .eq('conversation_id', convId)
-        return { convId, count: count || 0 }
-      })
-      const counts = await Promise.all(countPromises)
-      counts.forEach(({ convId, count: c }) => { msgCounts[convId] = c })
-    }
-
-    // Build a map of last message per conversation
-    const lastMsgMap = new Map<string, Record<string, unknown>>()
-    for (const msg of lastMessages) {
-      const convId = msg.conversation_id as string
-      if (!lastMsgMap.has(convId)) {
-        lastMsgMap.set(convId, msg) // First one is the latest (ordered by created_at desc)
+      for (const msg of (allMsgs || [])) {
+        const convId = msg.conversation_id as string
+        // Count messages per conversation
+        msgCounts[convId] = (msgCounts[convId] || 0) + 1
+        // Keep only the first (latest) message per conversation
+        if (!lastMsgMap.has(convId)) {
+          lastMsgMap.set(convId, msg)
+        }
       }
     }
 
