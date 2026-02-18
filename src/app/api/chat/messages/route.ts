@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await (supabase as any)
       .from('whatsapp_conversations')
-      .update({ unread_count: 0 })
+      .update({ unread_count: 0, updated_at: new Date().toISOString() })
       .eq('id', conversationId)
 
     return NextResponse.json({

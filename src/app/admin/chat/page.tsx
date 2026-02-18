@@ -568,6 +568,23 @@ export default function ChatPage() {
   useRealtimeSubscription({ table: 'messenger_conversations', onChange: handleMsConversationChange }, !isLoading)
   useRealtimeSubscription({ table: 'messenger_messages', onChange: handleMsMessageChange }, !isLoading)
 
+  // Polling fallback: refresh conversation lists every 30s in case realtime events are missed
+  useEffect(() => {
+    if (isLoading) return
+    const interval = setInterval(() => {
+      fetchWaConversations()
+      fetchMsConversations()
+      // Also refresh messages of the currently viewed conversation
+      if (selectedWaConvIdRef.current) {
+        fetchWaMessages(selectedWaConvIdRef.current, true)
+      }
+      if (selectedMsConvIdRef.current) {
+        fetchMsMessages(selectedMsConvIdRef.current, true)
+      }
+    }, 30_000)
+    return () => clearInterval(interval)
+  }, [isLoading, fetchWaConversations, fetchMsConversations, fetchWaMessages, fetchMsMessages])
+
   // Scroll to bottom on new messages
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })

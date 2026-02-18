@@ -7,7 +7,6 @@ import { getClient } from '@/lib/supabase/client'
 import { Loader2 } from 'lucide-react'
 import { LanguageProvider, useTranslation } from '@/contexts/LanguageContext'
 import { useSessionPersistence } from '@/hooks/useSessionPersistence'
-import { ClaraProvider } from '@/components/Clara'
 import { swrFetcher } from '@/lib/swr-fetcher'
 import { AdminProvider, useAdmin } from '@/contexts/AdminContext'
 import { AdminHeader } from './components/AdminHeader'
@@ -165,24 +164,17 @@ function AdminLayoutContent({
     )
   }
 
-  // Authentifié - afficher le contenu avec Clara disponible
   // Login page: pas de header, pas de AdminProvider
   if (isLoginPage) {
-    return (
-      <ClaraProvider theme={theme}>
-        {children}
-      </ClaraProvider>
-    )
+    return children
   }
 
   return (
     <AdminProvider theme={theme} toggleTheme={toggleTheme}>
-      <ClaraProvider theme={theme}>
-        <div className="admin-layout">
-          <AdminHeaderInLayout theme={theme} toggleTheme={toggleTheme} />
-          {children}
-        </div>
-      </ClaraProvider>
+      <div className="admin-layout">
+        <AdminHeaderInLayout theme={theme} toggleTheme={toggleTheme} />
+        {children}
+      </div>
     </AdminProvider>
   )
 }

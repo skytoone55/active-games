@@ -9,7 +9,6 @@ import {
   ChevronRight,
   CreditCard,
   Package,
-  Sparkles,
   MessageSquare,
   Bot
 } from 'lucide-react'
@@ -19,11 +18,10 @@ import { useTranslation } from '@/contexts/LanguageContext'
 import { MailSection } from './components/MailSection'
 import { CredentialsSection } from './components/CredentialsSection'
 import { ICountCatalogSection } from './components/ICountCatalogSection'
-import { ClaraSection } from './components/ClaraSection'
 import { MessengerSection } from './components/MessengerSection'
 import { ClaraWhatsAppSection } from './components/clara-whatsapp/ClaraWhatsAppSection'
 
-type SettingsSection = 'mail' | 'credentials' | 'catalog' | 'messenger' | 'clara_whatsapp' | 'clara'
+type SettingsSection = 'mail' | 'credentials' | 'catalog' | 'messenger' | 'clara_whatsapp'
 
 export default function SettingsPage() {
   const { t } = useTranslation()
@@ -96,13 +94,6 @@ export default function SettingsPage() {
       description: 'IA multi-agent WhatsApp',
       requiredPermission: 'settings'
     },
-    {
-      id: 'clara',
-      icon: Sparkles,
-      label: 'Clara CRM',
-      description: 'Chat public & CRM',
-      requiredPermission: 'settings'
-    }
   ]
 
   // Filter sections based on permissions
@@ -193,9 +184,6 @@ export default function SettingsPage() {
           )}
           {activeSection === 'clara_whatsapp' && (
             <ClaraWhatsAppSection isDark={isDark} />
-          )}
-          {activeSection === 'clara' && (
-            <ClaraSection isDark={isDark} />
           )}
         </div>
       </div>

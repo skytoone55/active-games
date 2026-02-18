@@ -9,7 +9,6 @@ export { default as ContactSection } from './ContactSection'
 export { default as Footer } from './Footer'
 export { default as WhatsAppButton } from './WhatsAppButton'
 export { ErrorBoundary } from './ErrorBoundary'
-export { ClaraWidget } from './Clara/ClaraWidget'
 export { GlobalWidgets } from './GlobalWidgets'
 
 // Anciens composants du franchiseur (gardés mais non utilisés)

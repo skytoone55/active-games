@@ -13,6 +13,7 @@ import {
   Sparkles,
   MessageSquare,
   Wrench,
+  Key,
 } from 'lucide-react'
 import { useAdmin } from '@/contexts/AdminContext'
 import {
@@ -118,6 +119,15 @@ export function GeneralTab({ isDark }: GeneralTabProps) {
       acc[model.provider].push({ id: model.id, name: model.name })
       return acc
     }, {})
+  }, [models])
+
+  const configuredProviders = useMemo(() => {
+    const providers = new Set(models.map(m => m.provider))
+    return (['Google', 'OpenAI', 'Anthropic'] as const).map(name => ({
+      name,
+      envKey: name === 'Google' ? 'GOOGLE_AI_API_KEY' : name === 'OpenAI' ? 'OPENAI_API_KEY' : 'ANTHROPIC_API_KEY',
+      configured: providers.has(name),
+    }))
   }, [models])
 
   const selectedBranchCount = settings.active_branches.length
@@ -323,6 +333,30 @@ export function GeneralTab({ isDark }: GeneralTabProps) {
               <div className="px-5 pb-5 space-y-4">
                 {section === 'overview' && (
                   <>
+                    {/* API Keys Status */}
+                    <div className={classNames('rounded-lg border p-4', isDark ? 'bg-gray-900/40 border-gray-700' : 'bg-gray-50 border-gray-200')}>
+                      <h4 className={classNames('font-medium mb-3 flex items-center gap-2 text-sm', isDark ? 'text-white' : 'text-gray-900')}>
+                        <Key className="w-4 h-4" />
+                        API Keys
+                      </h4>
+                      <div className="grid gap-2">
+                        {configuredProviders.map(provider => (
+                          <div key={provider.name} className={classNames('flex items-center justify-between p-2 rounded-lg border', isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200')}>
+                            <div className="flex items-center gap-2">
+                              <div className={classNames('w-2 h-2 rounded-full', provider.configured ? 'bg-green-500' : 'bg-red-500')} />
+                              <span className={classNames('text-sm font-medium', isDark ? 'text-gray-200' : 'text-gray-900')}>{provider.name}</span>
+                            </div>
+                            <span className={classNames('text-xs', provider.configured ? (isDark ? 'text-green-400' : 'text-green-600') : (isDark ? 'text-red-400' : 'text-red-600'))}>
+                              {provider.configured ? '✓ Configured' : '✗ Missing'}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                      <p className={classNames('mt-2 text-xs', isDark ? 'text-gray-500' : 'text-gray-400')}>
+                        Set via environment variables: <code className="text-blue-400">GOOGLE_AI_API_KEY</code>, <code className="text-blue-400">OPENAI_API_KEY</code>, <code className="text-blue-400">ANTHROPIC_API_KEY</code>
+                      </p>
+                    </div>
+
                     <label className="inline-flex items-center gap-2 cursor-pointer">
                       <input type="checkbox" checked={isActive} onChange={(e) => { setIsActive(e.target.checked); clearSectionStatus('overview') }} className="w-5 h-5" />
                       <span className={classNames('text-sm font-medium', isDark ? 'text-gray-200' : 'text-gray-700')}>Active</span>
@@ -330,8 +364,8 @@ export function GeneralTab({ isDark }: GeneralTabProps) {
                     <div className={classNames('rounded-lg border p-3 text-sm', isDark ? 'bg-gray-900/40 border-gray-700 text-gray-300' : 'bg-gray-50 border-gray-200 text-gray-700')}>
                       Activation checks:
                       <ul className="mt-2 list-disc list-inside space-y-1">
-                        <li>Primary prompt must not be empty.</li>
                         <li>At least one branch must be selected.</li>
+                        <li>At least one LLM API key must be configured.</li>
                       </ul>
                     </div>
                     {renderSectionStatus('overview')}

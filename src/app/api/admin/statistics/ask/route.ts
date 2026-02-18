@@ -8,7 +8,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { verifyApiPermission } from '@/lib/permissions'
-import { CLARA_SCHEMA_SUMMARY } from '@/lib/clara/supabase-schema'
+import { CLARA_SCHEMA_SUMMARY } from '@/lib/supabase/schema-summary'
 
 // Tools UNIQUEMENT pour les vraies actions (pas pour les questions!)
 const ACTION_TOOLS = [
