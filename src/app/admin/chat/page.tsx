@@ -572,6 +572,8 @@ export default function ChatPage() {
   useEffect(() => {
     if (isLoading) return
     const interval = setInterval(() => {
+      // Skip polling when tab is hidden — the visibilitychange handler below will catch up
+      if (document.hidden) return
       fetchWaConversations()
       fetchMsConversations()
       // Also refresh messages of the currently viewed conversation
@@ -583,6 +585,28 @@ export default function ChatPage() {
       }
     }, 30_000)
     return () => clearInterval(interval)
+  }, [isLoading, fetchWaConversations, fetchMsConversations, fetchWaMessages, fetchMsMessages])
+
+  // Visibility change: instant refresh when user returns to the tab
+  // Browsers (especially Safari on Mac) aggressively suspend WebSockets in background tabs,
+  // causing Supabase Realtime to silently disconnect. This ensures data is fresh on return.
+  useEffect(() => {
+    if (isLoading) return
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        console.log('[Chat] Tab became visible — refreshing all data')
+        fetchWaConversations()
+        fetchMsConversations()
+        if (selectedWaConvIdRef.current) {
+          fetchWaMessages(selectedWaConvIdRef.current, true)
+        }
+        if (selectedMsConvIdRef.current) {
+          fetchMsMessages(selectedMsConvIdRef.current, true)
+        }
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
   }, [isLoading, fetchWaConversations, fetchMsConversations, fetchWaMessages, fetchMsMessages])
 
   // Scroll to bottom on new messages

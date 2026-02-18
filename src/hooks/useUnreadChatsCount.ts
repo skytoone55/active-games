@@ -69,6 +69,17 @@ export function useUnreadChatsCount(branches: { id: string }[]) {
     }
   }, [])
 
+  // Refresh counts when tab becomes visible (WebSocket may have disconnected in background)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden && branches.length > 0) {
+        fetchCounts()
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
+  }, [fetchCounts, branches.length])
+
   // Listen for changes on WhatsApp conversations & messages (single handler)
   useRealtimeSubscription(
     { table: 'whatsapp_conversations', onChange: handleRealtimeChange },

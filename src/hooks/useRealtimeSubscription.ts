@@ -111,8 +111,30 @@ export function useRealtimeSubscription(
           console.log(`[Realtime] Subscribed to ${table}${filter ? ` with filter ${filter}` : ''}`)
         } else if (status === 'CHANNEL_ERROR') {
           console.error(`[Realtime] Error subscribing to ${table}`, err)
+          // Auto-retry after 3s on channel error
+          setTimeout(() => {
+            if (channelRef.current) {
+              console.log(`[Realtime] Retrying subscription to ${table}...`)
+              const sb = getClient()
+              sb.removeChannel(channelRef.current)
+              channelRef.current = null
+            }
+            // Trigger re-subscription by resetting the subscribing flag
+            // The next render or visibility change will pick it up
+            isSubscribingRef.current = false
+          }, 3000)
         } else if (status === 'TIMED_OUT') {
           console.error(`[Realtime] Timeout subscribing to ${table}`)
+          // Auto-retry after 5s on timeout
+          setTimeout(() => {
+            if (channelRef.current) {
+              console.log(`[Realtime] Retrying subscription to ${table} after timeout...`)
+              const sb = getClient()
+              sb.removeChannel(channelRef.current)
+              channelRef.current = null
+            }
+            isSubscribingRef.current = false
+          }, 5000)
         }
       })
 
