@@ -2222,6 +2222,8 @@
       "delete_conversation_confirm": "האם אתה בטוח שברצונך למחוק לצמיתות את השיחה הזו?",
       "delete_conversation_warning": "כל ההודעות יימחקו לצמיתות. לא ניתן לבטל פעולה זו.",
       "delete_confirm_btn": "מחק",
+      "delete_message": "מחק הודעה",
+      "delete_message_confirm": "האם אתה בטוח שברצונך למחוק הודעה זו? לא ניתן לבטל פעולה זו.",
       "show_archived": "הצג ארכיון",
       "hide_archived": "הסתר ארכיון",
       "archived": "בארכיון",

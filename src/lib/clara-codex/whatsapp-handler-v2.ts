@@ -130,7 +130,9 @@ export async function handleClaraCodexWhatsAppResponseV2(
     config: routerConfig,
   })
 
-  const detectedLocale = routing.locale || normalizeLocale(locale)
+  // If router timed out, its locale fallback ('en') is unreliable — use the caller's locale instead
+  const routerTimedOut = routing.summary?.includes('timeout')
+  const detectedLocale = routerTimedOut ? normalizeLocale(locale) : (routing.locale || normalizeLocale(locale))
 
   await trackCodexEvent(supabase, conversation.id, conversation.branch_id, 'router_decision', {
     agent: routing.agent,
