@@ -32,11 +32,21 @@ export async function routeMessage(params: {
   messageText: string
   recentHistory: Array<{ role: 'user' | 'assistant'; content: string }>
   config: AgentConfig
+  profile?: { resa_type?: string | null; game_type?: string | null }
 }): Promise<RouterResult> {
-  const { messageText, recentHistory, config } = params
+  const { messageText, recentHistory, config, profile } = params
+
+  // Build system prompt — inject conversation profile if available
+  let systemPrompt = config.prompt
+  if (profile && (profile.resa_type || profile.game_type)) {
+    const profileLines: string[] = []
+    if (profile.resa_type) profileLines.push(`- Reservation type already identified: ${profile.resa_type.toUpperCase()}`)
+    if (profile.game_type) profileLines.push(`- Game type already identified: ${profile.game_type.toUpperCase()}`)
+    systemPrompt += `\n\nCONVERSATION PROFILE (already established from earlier messages):\n${profileLines.join('\n')}\nIMPORTANT: Do NOT switch away from the established reservation type unless the customer EXPLICITLY asks for something different (e.g. "actually I want an event" or "I changed my mind"). A customer giving a number of participants does NOT mean they want an event — stay on the current flow.`
+  }
 
   const messages = [
-    ...recentHistory.slice(-4).map(m => ({
+    ...recentHistory.map(m => ({
       role: m.role as 'user' | 'assistant',
       content: [{ type: 'text' as const, text: m.content }],
     })),
@@ -54,7 +64,7 @@ export async function routeMessage(params: {
     const start = Date.now()
     const result = await generateText({
       model: getModel(config),
-      system: config.prompt,
+      system: systemPrompt,
       messages,
       temperature: config.temperature,
       maxOutputTokens: config.max_tokens,

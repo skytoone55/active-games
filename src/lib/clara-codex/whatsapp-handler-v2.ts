@@ -118,18 +118,20 @@ export async function handleClaraCodexWhatsAppResponseV2(
 
   const recentMessages = (history || [])
     .filter((m: any) => m.content?.trim())
-    .slice(-6)
+    .slice(-20)
     .map((m: any) => ({
       role: m.direction === 'inbound' ? 'user' as const : 'assistant' as const,
       content: m.content as string,
     }))
 
-  // 2. Route the message
+  // 2. Route the message (pass conversation profile for context continuity)
   const routerConfig = resolveAgentConfig('router', settings)
+  const currentProfile: ConversationProfile = conversation.profile || {}
   const routing = await routeMessage({
     messageText,
     recentHistory: recentMessages,
     config: routerConfig,
+    profile: currentProfile.resa_type || currentProfile.game_type ? currentProfile : undefined,
   })
 
   // If router timed out, use the caller's locale instead of the router fallback
@@ -137,7 +139,6 @@ export async function handleClaraCodexWhatsAppResponseV2(
   const detectedLocale = routerTimedOut ? normalizeLocale(locale) : (routing.locale || normalizeLocale(locale))
 
   // 2b. Merge conversation profile from router hints
-  const currentProfile: ConversationProfile = conversation.profile || {}
   const updatedProfile = { ...currentProfile }
   let profileChanged = false
   if (routing.resa_type && !currentProfile.resa_type) {
