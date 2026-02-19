@@ -118,7 +118,7 @@ export async function handleClaraCodexWhatsAppResponseV2(
 
   const recentMessages = (history || [])
     .filter((m: any) => m.content?.trim())
-    .slice(-20)
+    .slice(-50)
     .map((m: any) => ({
       role: m.direction === 'inbound' ? 'user' as const : 'assistant' as const,
       content: m.content as string,
