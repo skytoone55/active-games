@@ -140,7 +140,12 @@ export async function handleClaraCodexWhatsAppResponseV2(
     ? (currentProfile.locale || normalizeLocale(locale))
     : (routing.locale || currentProfile.locale || normalizeLocale(locale))
 
-  // 2b. Merge conversation profile from router hints
+  // 2b. When router fails, reuse last successful agent instead of falling back to 'info'
+  const resolvedAgent: AgentId = routerFailed && currentProfile.last_agent
+    ? currentProfile.last_agent
+    : routing.agent
+
+  // 2c. Merge conversation profile from router hints
   const updatedProfile = { ...currentProfile }
   let profileChanged = false
   if (routing.resa_type && !currentProfile.resa_type) {
@@ -156,6 +161,11 @@ export async function handleClaraCodexWhatsAppResponseV2(
     updatedProfile.locale = routing.locale
     profileChanged = true
   }
+  // Persist last successful agent so router crashes don't lose context
+  if (!routerFailed && routing.agent !== currentProfile.last_agent) {
+    updatedProfile.last_agent = routing.agent
+    profileChanged = true
+  }
   if (profileChanged) {
     conversation.profile = updatedProfile
     await supabase.from('whatsapp_conversations')
@@ -163,27 +173,22 @@ export async function handleClaraCodexWhatsAppResponseV2(
       .eq('id', conversation.id)
   }
 
-  // 2c. Agent stickiness: if a booking is in progress and router routed to 'info',
-  //     keep the booking agent so it can use its tools (availability, booking link, etc.)
-  //     Only override for 'info' — escalation/after_sale are intentional switches.
-  let finalAgent = routing.agent
-  if (routing.agent === 'info' && updatedProfile.resa_type) {
-    const stickyAgent: AgentId = updatedProfile.resa_type === 'event' ? 'resa_event' : 'resa_game'
-    console.log(`[CLARA V2] Agent sticky override: router said 'info' but profile has resa_type=${updatedProfile.resa_type} → forcing ${stickyAgent}`)
-    finalAgent = stickyAgent
+  if (routerFailed && currentProfile.last_agent) {
+    console.log(`[CLARA V2] Router failed, reusing last agent: ${currentProfile.last_agent} (instead of fallback 'info')`)
   }
 
   await trackCodexEvent(supabase, conversation.id, conversation.branch_id, 'router_decision', {
-    agent: finalAgent,
+    agent: resolvedAgent,
     locale: detectedLocale,
     summary: routing.summary,
     resa_type: routing.resa_type || null,
     game_type: routing.game_type || null,
-    routerOriginalAgent: routing.agent !== finalAgent ? routing.agent : undefined,
+    routerFailed: routerFailed || undefined,
+    routerFallbackAgent: routerFailed ? currentProfile.last_agent : undefined,
   })
 
   // 3. Get the agent
-  const agentId = finalAgent
+  const agentId = resolvedAgent
   const agent = getAgent(agentId)
   const agentConfig = resolveAgentConfig(agentId, settings)
 

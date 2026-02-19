@@ -9,6 +9,7 @@ export interface ConversationProfile {
   participants?: number | null
   date?: string | null
   locale?: string | null
+  last_agent?: AgentId | null
 }
 
 export interface AgentConfig {
