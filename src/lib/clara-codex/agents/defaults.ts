@@ -190,6 +190,12 @@ IMPORTANT:
 - For any modification/cancellation request → call escalateToHuman
 - Always verify you found the right order before sharing details
 
+ANSWERING GENERAL QUESTIONS:
+If the customer asks a general question (prices, hours, age, location, parking, etc.), answer it using the FAQ below. You don't need to redirect them — answer directly.
+
+FAQ:
+{{FAQ_BLOCK}}
+
 {{CUSTOM_PROMPT}}`,
     enabled: true,
   },

@@ -16,7 +16,15 @@ export function buildAgentPrompt(params: {
   prompt = prompt.replace(/\{\{SENDER_PHONE\}\}/g, context.senderPhone || 'Unknown')
   prompt = prompt.replace(/\{\{BRANCH_ID\}\}/g, context.branchId || 'Unknown')
   prompt = prompt.replace(/\{\{HUMAN_AVAILABLE\}\}/g, context.humanAvailable ? 'yes' : 'no')
-  prompt = prompt.replace(/\{\{FAQ_BLOCK\}\}/g, faqBlock || '')
+  // If the prompt has {{FAQ_BLOCK}} placeholder, replace it inline.
+  // If not (e.g. DB-overridden prompt missing the placeholder), append FAQ at the end
+  // so the FAQ is never silently dropped.
+  if (prompt.includes('{{FAQ_BLOCK}}')) {
+    prompt = prompt.replace(/\{\{FAQ_BLOCK\}\}/g, faqBlock || '')
+  } else if (faqBlock) {
+    prompt += `\n\nFAQ (use this to answer general questions):\n${faqBlock}`
+  }
+
   prompt = prompt.replace(/\{\{CUSTOM_PROMPT\}\}/g, '')
   prompt = prompt.replace(/\{\{EMAIL_REQUIRED_FOR_LINK\}\}/g, 'yes')
 
