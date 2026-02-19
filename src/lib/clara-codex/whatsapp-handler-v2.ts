@@ -3,7 +3,7 @@ import { DEFAULT_AGENT_CONFIGS } from './agents/defaults'
 import { routeMessage } from './router/index'
 import { getAvailableHumanStatus, trackCodexEvent } from './tracking'
 import { resolveLocalizedCodexText } from './config'
-import type { AgentConfig, AgentContext, AgentId, AgentResponse } from './agents/types'
+import type { AgentConfig, AgentContext, AgentId, AgentResponse, ConversationProfile } from './agents/types'
 import type { ClaraCodexWhatsAppSettings } from './config'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 
@@ -12,6 +12,7 @@ interface ConversationContext {
   branch_id: string | null
   contact_name?: string | null
   contact_id?: string | null
+  profile?: ConversationProfile
 }
 
 interface MultiAgentSettings extends ClaraCodexWhatsAppSettings {
@@ -135,10 +136,31 @@ export async function handleClaraCodexWhatsAppResponseV2(
   const routerTimedOut = routing.summary?.includes('timeout')
   const detectedLocale = routerTimedOut ? normalizeLocale(locale) : (routing.locale || normalizeLocale(locale))
 
+  // 2b. Merge conversation profile from router hints
+  const currentProfile: ConversationProfile = conversation.profile || {}
+  const updatedProfile = { ...currentProfile }
+  let profileChanged = false
+  if (routing.resa_type && !currentProfile.resa_type) {
+    updatedProfile.resa_type = routing.resa_type
+    profileChanged = true
+  }
+  if (routing.game_type && !currentProfile.game_type) {
+    updatedProfile.game_type = routing.game_type
+    profileChanged = true
+  }
+  if (profileChanged) {
+    conversation.profile = updatedProfile
+    await supabase.from('whatsapp_conversations')
+      .update({ profile: updatedProfile })
+      .eq('id', conversation.id)
+  }
+
   await trackCodexEvent(supabase, conversation.id, conversation.branch_id, 'router_decision', {
     agent: routing.agent,
     locale: detectedLocale,
     summary: routing.summary,
+    resa_type: routing.resa_type || null,
+    game_type: routing.game_type || null,
   })
 
   // 3. Get the agent
@@ -197,6 +219,7 @@ function buildContext(
     nowLabel: now.label,
     humanAvailable: false, // Will be resolved below
     routerSummary,
+    profile: conversation.profile || undefined,
   }
 }
 

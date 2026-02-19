@@ -464,7 +464,7 @@ export async function POST(request: NextRequest) {
         // Re-read conversation state (onboarding may have changed during handleOnboarding)
         const { data: refreshedConversation } = await (supabase as any)
           .from('whatsapp_conversations')
-          .select('id, contact_name, onboarding_status, branch_id, clara_paused, clara_paused_until')
+          .select('id, contact_name, onboarding_status, branch_id, clara_paused, clara_paused_until, profile')
           .eq('id', conversation.id)
           .single()
 
@@ -820,7 +820,7 @@ async function processExpiredAutoActivateTimers(supabase: any, settings: any, co
   const now = new Date().toISOString()
   const { data: conversations } = await supabase
     .from('whatsapp_conversations')
-    .select('id, phone, contact_name, branch_id')
+    .select('id, phone, contact_name, branch_id, profile')
     .lte('clara_auto_activate_at', now)
     .eq('status', 'active')
     .limit(5)
@@ -867,7 +867,7 @@ async function processExpiredAutoActivateTimers(supabase: any, settings: any, co
       try {
         await handleClaraCodexWhatsAppResponseV2(
           supabase,
-          { id: conv.id, branch_id: conv.branch_id, contact_name: conv.contact_name },
+          { id: conv.id, branch_id: conv.branch_id, contact_name: conv.contact_name, profile: conv.profile },
           conv.phone,
           lastInbound.content || '',
           codexConfig,

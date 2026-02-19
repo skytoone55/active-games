@@ -5,8 +5,9 @@ import { useTranslation } from '@/contexts/LanguageContext'
 import { Plus, Edit2, Trash2, Loader2, Filter, RefreshCw, CheckCircle, AlertCircle } from 'lucide-react'
 import type { FAQ } from '@/types/messenger'
 import { FAQModal } from './FAQModal'
+import { FAQ_CATEGORIES } from '@/lib/clara-codex/agents/info/faq-categories'
 
-const CATEGORIES = ['general', 'booking', 'pricing', 'activities', 'location', 'safety', 'events'] as const
+const CATEGORIES = FAQ_CATEGORIES
 
 interface FAQSectionProps {
   isDark: boolean

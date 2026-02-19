@@ -2514,12 +2514,16 @@
       "sync_error": "Sync error",
       "categories": {
         "general": "General",
-        "booking": "Booking",
-        "pricing": "Pricing",
-        "activities": "Activities",
-        "location": "Location",
+        "game": "Games (all types)",
+        "game_laser": "Laser Tag",
+        "game_active": "Active Games",
+        "game_mix": "Mix (Laser + Active)",
+        "event": "Events & Birthdays",
+        "booking": "Booking & Policies",
         "safety": "Safety & Rules",
-        "events": "Events & Birthdays"
+        "branch_rishon": "Rishon LeZion",
+        "branch_petah": "Petah Tikva",
+        "branch_glilot": "Glilot"
       }
     },
     "formats": {

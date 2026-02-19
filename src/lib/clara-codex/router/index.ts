@@ -77,10 +77,16 @@ export async function routeMessage(params: {
     const agent = validAgents.includes(parsed.agent) ? parsed.agent : 'info'
     const locale = ['he', 'en', 'fr'].includes(parsed.locale) ? parsed.locale : 'he'
 
+    // Extract conversation context hints (if detectable)
+    const resaType = ['game', 'event'].includes(parsed.resa_type) ? parsed.resa_type : null
+    const gameType = ['laser', 'active', 'mix'].includes(parsed.game_type) ? parsed.game_type : null
+
     return {
       agent,
       locale,
       summary: parsed.summary || '',
+      resa_type: resaType,
+      game_type: gameType,
     }
   } catch (error) {
     const isAbort = error instanceof Error && error.name === 'AbortError'

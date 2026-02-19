@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useTranslation } from '@/contexts/LanguageContext'
 import { X, Save, Loader2 } from 'lucide-react'
 import type { FAQ } from '@/types/messenger'
+import { FAQ_CATEGORIES } from '@/lib/clara-codex/agents/info/faq-categories'
 
 interface FAQModalProps {
   faq: FAQ | null
@@ -69,7 +70,7 @@ export function FAQModal({ faq, isDark, onSave, onCancel }: FAQModalProps) {
               className="w-full px-3 py-2 rounded-lg border"
               style={{ backgroundColor: isDark ? '#111827' : 'white', borderColor: isDark ? '#374151' : '#D1D5DB', color: isDark ? 'white' : 'black' }}
             >
-              {['general', 'booking', 'pricing', 'activities', 'location', 'safety', 'events'].map((cat) => (
+              {FAQ_CATEGORIES.map((cat) => (
                 <option key={cat} value={cat}>
                   {t(`messenger.faq.categories.${cat}`)}
                 </option>

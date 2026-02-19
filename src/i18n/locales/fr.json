@@ -2578,12 +2578,16 @@
       "sync_error": "Erreur de synchronisation",
       "categories": {
         "general": "Général",
-        "booking": "Réservation",
-        "pricing": "Tarifs",
-        "activities": "Activités",
-        "location": "Localisation",
+        "game": "Jeux (tous types)",
+        "game_laser": "Laser Tag",
+        "game_active": "Active Games",
+        "game_mix": "Mix (Laser + Active)",
+        "event": "Événements & Anniversaires",
+        "booking": "Réservation & Politiques",
         "safety": "Sécurité & Règles",
-        "events": "Événements & Anniversaires"
+        "branch_rishon": "Rishon LeZion",
+        "branch_petah": "Petah Tikva",
+        "branch_glilot": "Glilot"
       }
     },
     "formats": {

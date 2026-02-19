@@ -2575,12 +2575,16 @@
       "sync_error": "שגיאה בסנכרון",
       "categories": {
         "general": "כללי",
-        "booking": "הזמנה",
-        "pricing": "תמחור",
-        "activities": "פעילויות",
-        "location": "מיקום",
+        "game": "משחקים (כל הסוגים)",
+        "game_laser": "לייזר טאג",
+        "game_active": "אקטיב גיימס",
+        "game_mix": "מיקס (לייזר + אקטיב)",
+        "event": "אירועים ויום הולדת",
+        "booking": "הזמנות ומדיניות",
         "safety": "בטיחות וכללים",
-        "events": "אירועים ויום הולדת"
+        "branch_rishon": "ראשון לציון",
+        "branch_petah": "פתח תקווה",
+        "branch_glilot": "גלילות"
       }
     },
     "formats": {

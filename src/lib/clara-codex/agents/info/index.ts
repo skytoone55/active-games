@@ -2,6 +2,7 @@ import { streamCodexResponse, toModelMessagesFromWhatsApp } from '../../llm'
 import { getModelProvider } from '../../config'
 import type { AgentHandler, AgentContext, AgentConfig, AgentResponse } from '../types'
 import { buildInfoPrompt } from './prompt'
+import { getRelevantCategories } from './faq-categories'
 
 export const infoAgent: AgentHandler = {
   id: 'info',
@@ -13,12 +14,18 @@ export const infoAgent: AgentHandler = {
       ? context.routerSummary
       : messageText
 
+    // Resolve FAQ categories based on conversation profile
+    const categories = getRelevantCategories(context.profile)
+
     // Try vector search first, fall back to keyword filter, then full FAQ
-    let faqRows = await searchFAQByEmbedding(supabase, searchContext, context.locale)
+    let faqRows = await searchFAQByEmbedding(supabase, searchContext, context.locale, 5, 0.3, categories)
     if (faqRows.length === 0) {
       const allFaq = await loadFAQ(supabase, context.locale)
       faqRows = filterFAQByKeywords(allFaq, searchContext)
     }
+
+    // Build profile context label for the prompt
+    const profileContext = buildProfileContextLabel(context)
 
     const systemPrompt = buildInfoPrompt({
       config,
@@ -26,6 +33,7 @@ export const infoAgent: AgentHandler = {
       nowLabel: context.nowLabel,
       todayISO: context.nowISO,
       faqRows,
+      profileContext,
     })
 
     const provider = getModelProvider(config.model)
@@ -83,16 +91,22 @@ async function searchFAQByEmbedding(
   query: string,
   locale: string,
   matchCount = 5,
-  matchThreshold = 0.3
+  matchThreshold = 0.3,
+  filterCategories: string[] | null = null
 ): Promise<Array<{ question: string; answer: string }>> {
   const embedding = await getEmbedding(query)
   if (!embedding) return []
 
-  const { data, error } = await supabase.rpc('match_faq', {
+  const rpcParams: Record<string, unknown> = {
     query_embedding: JSON.stringify(embedding),
     match_threshold: matchThreshold,
     match_count: matchCount,
-  })
+  }
+  if (filterCategories) {
+    rpcParams.filter_categories = filterCategories
+  }
+
+  const { data, error } = await supabase.rpc('match_faq', rpcParams)
 
   if (error || !data || data.length === 0) return []
 
@@ -101,6 +115,31 @@ async function searchFAQByEmbedding(
     const a = pickLocalized(row.answer, locale)
     return { question: q, answer: a }
   }).filter((r: { question: string; answer: string }) => r.question && r.answer)
+}
+
+// ── Profile context helper ───────────────────────────────────────────
+
+function buildProfileContextLabel(context: AgentContext): string {
+  const profile = context.profile
+  if (!profile?.resa_type) {
+    return 'No specific context. If the answer differs between games and events, provide both options. Default to "game" context if nothing specific is mentioned.'
+  }
+
+  const parts: string[] = []
+  if (profile.resa_type === 'game') {
+    const gameLabel = profile.game_type
+      ? { laser: 'Laser Tag', active: 'Active Games', mix: 'Mix (Laser + Active)' }[profile.game_type] || profile.game_type
+      : 'type not yet specified'
+    parts.push(`User is asking about a GAME (${gameLabel})`)
+  } else if (profile.resa_type === 'event') {
+    parts.push('User is asking about an EVENT / birthday')
+  }
+
+  if (profile.participants) {
+    parts.push(`${profile.participants} participants`)
+  }
+
+  return parts.join('. ') + '.'
 }
 
 // ── Keyword fallback ──────────────────────────────────────────────────

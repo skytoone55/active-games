@@ -2,6 +2,14 @@ import type { ToolSet } from 'ai'
 
 export type AgentId = 'router' | 'info' | 'resa_game' | 'resa_event' | 'after_sale' | 'escalation'
 
+/** Conversation context profile — tracked across agent switches */
+export interface ConversationProfile {
+  resa_type?: 'game' | 'event' | null
+  game_type?: 'laser' | 'active' | 'mix' | null
+  participants?: number | null
+  date?: string | null
+}
+
 export interface AgentConfig {
   id: AgentId
   label: string
@@ -24,12 +32,15 @@ export interface AgentContext {
   nowLabel: string
   humanAvailable: boolean
   routerSummary?: string
+  profile?: ConversationProfile
 }
 
 export interface RouterResult {
   agent: AgentId
   locale: string
   summary: string
+  resa_type?: 'game' | 'event' | null
+  game_type?: 'laser' | 'active' | 'mix' | null
 }
 
 export interface AgentResponse {
