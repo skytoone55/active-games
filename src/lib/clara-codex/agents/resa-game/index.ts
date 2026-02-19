@@ -2,6 +2,7 @@ import { streamCodexResponse, toModelMessagesFromWhatsApp } from '../../llm'
 import { getModelProvider } from '../../config'
 import { trackCodexEvent } from '../../tracking'
 import { buildAgentPrompt } from '../shared-prompt'
+import { loadRelevantFAQ, formatFAQBlock } from '../shared-faq'
 import { checkGameAvailability, createGameBookingLink } from './tools'
 import { createEscalateToHumanTool } from '../escalation/index'
 import type { AgentHandler, AgentResponse } from '../types'
@@ -9,8 +10,12 @@ import type { AgentHandler, AgentResponse } from '../types'
 export const resaGameAgent: AgentHandler = {
   id: 'resa_game',
 
-  async run({ context, config, history, supabase }): Promise<AgentResponse> {
-    const systemPrompt = buildAgentPrompt({ config, context })
+  async run({ context, config, history, messageText, supabase }): Promise<AgentResponse> {
+    // Load FAQ so agent can answer info questions within the booking flow
+    const faqRows = await loadRelevantFAQ({ supabase, messageText, context, routerSummary: context.routerSummary })
+    const faqBlock = formatFAQBlock(faqRows)
+
+    const systemPrompt = buildAgentPrompt({ config, context, faqBlock })
     const provider = getModelProvider(config.model)
     const modelMessages = toModelMessagesFromWhatsApp(history, 60)
 

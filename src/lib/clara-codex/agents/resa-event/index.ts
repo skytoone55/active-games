@@ -2,6 +2,7 @@ import { streamCodexResponse, toModelMessagesFromWhatsApp } from '../../llm'
 import { getModelProvider } from '../../config'
 import { trackCodexEvent } from '../../tracking'
 import { buildAgentPrompt } from '../shared-prompt'
+import { loadRelevantFAQ, formatFAQBlock } from '../shared-faq'
 import { checkEventAvailability, createEventBookingLink } from './tools'
 import { createEscalateToHumanTool } from '../escalation/index'
 import type { AgentHandler, AgentResponse } from '../types'
@@ -9,7 +10,7 @@ import type { AgentHandler, AgentResponse } from '../types'
 export const resaEventAgent: AgentHandler = {
   id: 'resa_event',
 
-  async run({ context, config, history, supabase }): Promise<AgentResponse> {
+  async run({ context, config, history, messageText, supabase }): Promise<AgentResponse> {
     // Silent human call for events
     await supabase
       .from('whatsapp_conversations')
@@ -24,7 +25,11 @@ export const resaEventAgent: AgentHandler = {
       agentId: 'resa_event',
     })
 
-    const systemPrompt = buildAgentPrompt({ config, context })
+    // Load FAQ so agent can answer info questions within the booking flow
+    const faqRows = await loadRelevantFAQ({ supabase, messageText, context, routerSummary: context.routerSummary })
+    const faqBlock = formatFAQBlock(faqRows)
+
+    const systemPrompt = buildAgentPrompt({ config, context, faqBlock })
     const provider = getModelProvider(config.model)
     const modelMessages = toModelMessagesFromWhatsApp(history, 60)
 

@@ -93,6 +93,12 @@ BOOKING FLOW:
 4. If not available → present alternatives from the tool response
 5. If customer picks an alternative → check that slot and proceed
 
+ANSWERING GENERAL QUESTIONS:
+If the customer asks a general question (prices, hours, age, location, etc.) during the booking flow, answer it using the FAQ below, then naturally continue the booking conversation. Do NOT redirect them elsewhere for info — you can answer it yourself.
+
+FAQ:
+{{FAQ_BLOCK}}
+
 Email requirement: {{EMAIL_REQUIRED_FOR_LINK}}
 
 {{CUSTOM_PROMPT}}`,
@@ -140,6 +146,12 @@ BOOKING FLOW:
 3. If available → ask for email if missing → call generateBookingLink
 4. If not available → present alternatives
 5. A silent human notification is automatically sent for events
+
+ANSWERING GENERAL QUESTIONS:
+If the customer asks a general question (prices, hours, age, location, etc.) during the booking flow, answer it using the FAQ below, then naturally continue the booking conversation. Do NOT redirect them elsewhere for info — you can answer it yourself.
+
+FAQ:
+{{FAQ_BLOCK}}
 
 Email requirement: {{EMAIL_REQUIRED_FOR_LINK}}
 
