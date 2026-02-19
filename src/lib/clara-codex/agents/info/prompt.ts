@@ -19,14 +19,7 @@ export function buildInfoPrompt(params: {
   prompt = prompt.replace(/\{\{NOW_ISRAEL\}\}/g, nowLabel)
   prompt = prompt.replace(/\{\{TODAY_ISO\}\}/g, todayISO)
 
-  // If the prompt has {{FAQ_BLOCK}} placeholder, replace it inline.
-  // If not (e.g. DB-overridden prompt missing the placeholder), append FAQ at the end
-  // so the FAQ is never silently dropped.
-  if (prompt.includes('{{FAQ_BLOCK}}')) {
-    prompt = prompt.replace(/\{\{FAQ_BLOCK\}\}/g, faqBlock || 'No FAQ available.')
-  } else if (faqBlock) {
-    prompt += `\n\nFAQ (use this to answer questions accurately):\n${faqBlock}`
-  }
+  prompt = prompt.replace(/\{\{FAQ_BLOCK\}\}/g, faqBlock || 'No FAQ available.')
 
   prompt = prompt.replace(/\{\{PROFILE_CONTEXT\}\}/g, profileContext || 'No specific context.')
   prompt = prompt.replace(/\{\{CUSTOM_PROMPT\}\}/g, '')
