@@ -435,9 +435,11 @@ export async function POST(request: NextRequest) {
         let onboardingJustCompleted = false
         try {
           if (hasEnabledSteps) {
+            // Pre-check if Clara is active so onboarding knows whether to skip welcome message
+            const codexActiveForOnboarding = !!(codexSettingsRecord?.is_active && (codexSettingsRecord?.settings as any)?.enabled === true)
             const onboardingResult = await handleOnboarding(
               supabase, conversation, senderPhone, isNewConversation,
-              messageText, buttonReplyId, onboardingConfig, onboardingLang
+              messageText, buttonReplyId, onboardingConfig, onboardingLang, codexActiveForOnboarding
             )
             onboardingHandledMessage = onboardingResult.handled
             onboardingJustCompleted = onboardingResult.justCompleted
@@ -637,7 +639,8 @@ async function handleOnboarding(
   buttonReplyId: string | null,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   config: any,
-  language: string
+  language: string,
+  claraActive: boolean = false
 ): Promise<{ handled: boolean; justCompleted: boolean }> {
   const { waiting, stepId } = parseOnboardingStatus(conversation.onboarding_status)
 
@@ -777,9 +780,9 @@ async function handleOnboarding(
         // A "real question" is at least 3 chars and not just a button option label
         const isFirstMsgQuestion = firstMsg.length >= 3 && !matchOption(currentStep, null, firstMsg)
 
-        if (isFirstMsgQuestion) {
+        if (isFirstMsgQuestion && claraActive) {
           // User asked a question before onboarding — skip welcome, let Clara answer it directly
-          console.log('[WHATSAPP] Onboarding completed with pending question:', firstMsg)
+          console.log('[WHATSAPP] Onboarding completed with pending question (Clara active):', firstMsg)
           // Do NOT send welcome message — Clara will respond to the question instead
           return { handled: true, justCompleted: true }
         }
