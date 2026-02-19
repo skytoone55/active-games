@@ -134,9 +134,11 @@ export async function handleClaraCodexWhatsAppResponseV2(
     profile: currentProfile.resa_type || currentProfile.game_type ? currentProfile : undefined,
   })
 
-  // If router timed out, use the caller's locale instead of the router fallback
-  const routerTimedOut = routing.summary?.includes('timeout')
-  const detectedLocale = routerTimedOut ? normalizeLocale(locale) : (routing.locale || normalizeLocale(locale))
+  // If router failed (timeout or parse error), use profile locale → caller locale → 'he'
+  const routerFailed = routing.summary?.includes('timeout') || routing.summary?.includes('Could not parse')
+  const detectedLocale = routerFailed
+    ? (currentProfile.locale || normalizeLocale(locale))
+    : (routing.locale || currentProfile.locale || normalizeLocale(locale))
 
   // 2b. Merge conversation profile from router hints
   const updatedProfile = { ...currentProfile }
@@ -149,6 +151,11 @@ export async function handleClaraCodexWhatsAppResponseV2(
     updatedProfile.game_type = routing.game_type
     profileChanged = true
   }
+  // Persist locale in profile so it survives router failures
+  if (!routerFailed && routing.locale && routing.locale !== currentProfile.locale) {
+    updatedProfile.locale = routing.locale
+    profileChanged = true
+  }
   if (profileChanged) {
     conversation.profile = updatedProfile
     await supabase.from('whatsapp_conversations')
@@ -156,16 +163,27 @@ export async function handleClaraCodexWhatsAppResponseV2(
       .eq('id', conversation.id)
   }
 
+  // 2c. Agent stickiness: if a booking is in progress and router routed to 'info',
+  //     keep the booking agent so it can use its tools (availability, booking link, etc.)
+  //     Only override for 'info' — escalation/after_sale are intentional switches.
+  let finalAgent = routing.agent
+  if (routing.agent === 'info' && updatedProfile.resa_type) {
+    const stickyAgent: AgentId = updatedProfile.resa_type === 'event' ? 'resa_event' : 'resa_game'
+    console.log(`[CLARA V2] Agent sticky override: router said 'info' but profile has resa_type=${updatedProfile.resa_type} → forcing ${stickyAgent}`)
+    finalAgent = stickyAgent
+  }
+
   await trackCodexEvent(supabase, conversation.id, conversation.branch_id, 'router_decision', {
-    agent: routing.agent,
+    agent: finalAgent,
     locale: detectedLocale,
     summary: routing.summary,
     resa_type: routing.resa_type || null,
     game_type: routing.game_type || null,
+    routerOriginalAgent: routing.agent !== finalAgent ? routing.agent : undefined,
   })
 
   // 3. Get the agent
-  const agentId = routing.agent
+  const agentId = finalAgent
   const agent = getAgent(agentId)
   const agentConfig = resolveAgentConfig(agentId, settings)
 

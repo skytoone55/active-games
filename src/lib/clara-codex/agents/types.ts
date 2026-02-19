@@ -8,6 +8,7 @@ export interface ConversationProfile {
   game_type?: 'laser' | 'active' | 'mix' | null
   participants?: number | null
   date?: string | null
+  locale?: string | null
 }
 
 export interface AgentConfig {

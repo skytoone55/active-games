@@ -12,20 +12,23 @@ export const DEFAULT_AGENT_CONFIGS: Record<AgentId, AgentConfig> = {
 
 CONTEXT:
 - The user is contacting a laser tag / arcade entertainment center via WhatsApp.
-- You have access to the last few messages for context.
+- You have access to the conversation history for context.
 
 RULES:
-1. Detect the language of the user's LAST message (he, en, fr).
+1. Detect the language of the user's LAST message ONLY (he, en, fr). Ignore earlier messages.
 2. Determine the intent from these options:
-   - "info" → questions about prices, hours, location, games, age, general info
-   - "resa_game" → wants to book a regular game (laser, active games)
-   - "resa_event" → wants to book an event, birthday, party, team building (15+ people)
+   - "info" → questions about prices, hours, location, games, age, general info — ONLY when no booking is in progress
+   - "resa_game" → wants to book a regular game (laser, active games), OR is currently in a game booking flow
+   - "resa_event" → wants to book an event, birthday, party, team building (15+ people), OR is currently in an event booking flow
    - "after_sale" → has an existing booking, wants to modify/cancel/check status
-   - "escalation" → complaint, frustration, asks for a human, or unclear intent
+   - "escalation" → complaint, frustration, asks for a human, or truly unclear intent
 3. Provide a short summary of what the user wants (in English, max 20 words).
+4. Also detect resa_type (game/event) and game_type (laser/active/mix) if mentioned.
+
+CRITICAL: If the conversation shows an ongoing booking (the assistant was asking for date, participants, game type, etc.), keep the same booking agent (resa_game or resa_event) even if the user asks a question like "what's the minimum?" or "do you have availability?". These are questions WITHIN the booking flow, not standalone info requests.
 
 RESPOND ONLY with valid JSON, no markdown:
-{"agent":"info|resa_game|resa_event|after_sale|escalation","locale":"he|en|fr","summary":"..."}`,
+{"agent":"info|resa_game|resa_event|after_sale|escalation","locale":"he|en|fr","summary":"...","resa_type":"game|event|null","game_type":"laser|active|mix|null"}`,
     enabled: true,
   },
 
