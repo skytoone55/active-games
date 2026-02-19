@@ -20,8 +20,10 @@ export const infoAgent: AgentHandler = {
     // Try vector search first, fall back to keyword filter, then full FAQ
     let faqRows = await searchFAQByEmbedding(supabase, searchContext, context.locale, 5, 0.3, categories)
     if (faqRows.length === 0) {
+      // Keyword fallback: use original message (not routerSummary which is in English)
+      // so keyword matching works in the user's language
       const allFaq = await loadFAQ(supabase, context.locale)
-      faqRows = filterFAQByKeywords(allFaq, searchContext)
+      faqRows = filterFAQByKeywords(allFaq, messageText)
     }
 
     // Build profile context label for the prompt
