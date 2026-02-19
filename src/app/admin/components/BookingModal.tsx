@@ -2384,7 +2384,7 @@ export function BookingModal({
   const { endHour: roomEndHour, endMinute: roomEndMinute } = calculateRoomEndTime()
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/50 backdrop-blur-sm"
@@ -2392,7 +2392,7 @@ export function BookingModal({
       />
 
       {/* Modal */}
-      <div className={`relative w-full max-w-3xl mx-4 rounded-2xl shadow-2xl ${isDark ? 'bg-gray-800' : 'bg-white'}`}>
+      <div className={`relative w-full max-w-3xl mx-4 rounded-2xl shadow-2xl max-h-[90vh] overflow-hidden flex flex-col ${isDark ? 'bg-gray-800' : 'bg-white'}`}>
         {/* Header */}
         <div className={`flex items-center justify-between p-6 border-b ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
           <div>
@@ -2684,7 +2684,7 @@ export function BookingModal({
         </div>
 
         {/* Body */}
-        <form ref={formRef} onSubmit={handleSubmit} className="p-6 space-y-5 max-h-[75vh] overflow-y-auto">
+        <form ref={formRef} onSubmit={handleSubmit} className="p-6 space-y-5 overflow-y-auto flex-1">
           {/* Avertissement commande fermée */}
           {orderStatus === 'closed' && (
             <div className="flex items-center gap-3 p-3 rounded-lg bg-amber-500/20 border border-amber-500/30">

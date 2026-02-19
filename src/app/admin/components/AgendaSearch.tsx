@@ -1,48 +1,50 @@
 'use client'
 
-import { Search } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { Search, Loader2 } from 'lucide-react'
 import { useTranslation } from '@/contexts/LanguageContext'
 import { toIsraelLocalDate } from '@/lib/dates'
-import type { BookingWithSlots } from '@/hooks/useBookings'
-import type { Contact } from '@/lib/supabase/types'
+import { getClient } from '@/lib/supabase/client'
+import type { Booking, Contact } from '@/lib/supabase/types'
+
+// Résultat de recherche = booking + contact CRM lié
+interface SearchResultBooking extends Booking {
+  primaryContact?: Pick<Contact, 'id' | 'first_name' | 'last_name' | 'phone' | 'email'> | null
+}
 
 interface AgendaSearchProps {
   searchQuery: string
   onSearchChange: (query: string) => void
-  searchResults: BookingWithSlots[]
-  onSelectBooking: (booking: BookingWithSlots, bookingDate: Date) => void
+  onSelectBooking: (bookingId: string, bookingDate: Date) => void
   isDark: boolean
+  branchId: string | null
 }
 
-// Helper pour obtenir les données du contact
-function getContactDisplayData(booking: BookingWithSlots) {
+function getDisplayName(booking: SearchResultBooking): { firstName: string; lastName: string } {
   if (booking.primaryContact) {
     return {
       firstName: booking.primaryContact.first_name || '',
       lastName: booking.primaryContact.last_name || '',
-      phone: booking.primaryContact.phone || '',
-      email: booking.primaryContact.email || '',
-      notes: booking.primaryContact.notes_client || '',
     }
   }
-
   return {
     firstName: booking.customer_first_name || '',
     lastName: booking.customer_last_name || '',
-    phone: booking.customer_phone || '',
-    email: booking.customer_email || '',
-    notes: booking.customer_notes_at_booking || '',
   }
 }
 
 export function AgendaSearch({
   searchQuery,
   onSearchChange,
-  searchResults,
   onSelectBooking,
   isDark,
+  branchId,
 }: AgendaSearchProps) {
   const { t, locale } = useTranslation()
+  const [results, setResults] = useState<SearchResultBooking[]>([])
+  const [isSearching, setIsSearching] = useState(false)
+  const [hasSearched, setHasSearched] = useState(false)
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const getDateLocale = () => {
     switch (locale) {
@@ -51,6 +53,56 @@ export function AgendaSearch({
       default: return 'fr-FR'
     }
   }
+
+  // Recherche Supabase avec debounce
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+
+    const query = searchQuery.trim()
+    if (query.length < 2 || !branchId) {
+      setResults([])
+      setHasSearched(false)
+      setIsSearching(false)
+      return
+    }
+
+    setIsSearching(true)
+
+    debounceRef.current = setTimeout(async () => {
+      try {
+        const supabase = getClient()
+        const pattern = `%${query}%`
+
+        const { data, error } = await supabase
+          .from('bookings')
+          .select('*, primaryContact:primary_contact_id(id, first_name, last_name, phone, email)')
+          .eq('branch_id', branchId)
+          .neq('status', 'CANCELLED')
+          .or(
+            `customer_first_name.ilike.${pattern},customer_last_name.ilike.${pattern},customer_phone.ilike.${pattern},customer_email.ilike.${pattern},reference_code.ilike.${pattern},notes.ilike.${pattern}`
+          )
+          .order('start_datetime', { ascending: false })
+          .limit(20)
+
+        if (error) {
+          console.error('[AgendaSearch] Error:', error)
+          setResults([])
+        } else {
+          setResults((data || []) as SearchResultBooking[])
+        }
+      } catch (err) {
+        console.error('[AgendaSearch] Fetch error:', err)
+        setResults([])
+      } finally {
+        setIsSearching(false)
+        setHasSearched(true)
+      }
+    }, 300)
+
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current)
+    }
+  }, [searchQuery, branchId])
 
   return (
     <div className={`${isDark ? 'bg-gray-800' : 'bg-white'} rounded-xl p-6 border ${isDark ? 'border-gray-700' : 'border-gray-200'} mb-6`}>
@@ -66,14 +118,22 @@ export function AgendaSearch({
           />
         </div>
 
+        {/* Loading */}
+        {searchQuery.trim().length >= 2 && isSearching && (
+          <div className={`w-96 ${isDark ? 'bg-gray-800' : 'bg-white'} border ${isDark ? 'border-gray-700' : 'border-gray-200'} rounded-lg shadow-xl px-4 py-3 flex items-center gap-2`}>
+            <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
+            <span className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>{t('admin.agenda.searching')}</span>
+          </div>
+        )}
+
         {/* Liste des résultats de recherche */}
-        {searchQuery && searchResults.length > 0 && (
+        {searchQuery.trim().length >= 2 && !isSearching && results.length > 0 && (
           <div className={`w-96 ${isDark ? 'bg-gray-800' : 'bg-white'} border ${isDark ? 'border-gray-700' : 'border-gray-200'} rounded-lg shadow-xl max-h-96 overflow-y-auto`}>
             <div className={`px-3 py-2 border-b ${isDark ? 'border-gray-700' : 'border-gray-200'} ${isDark ? 'text-white' : 'text-gray-900'} font-semibold text-sm`}>
-              {searchResults.length} {t('admin.agenda.results_found')}
+              {results.length} {t('admin.agenda.results_found')}
             </div>
-            <div className="divide-y divide-gray-700">
-              {searchResults.map((booking) => {
+            <div className={`divide-y ${isDark ? 'divide-gray-700' : 'divide-gray-200'}`}>
+              {results.map((booking) => {
                 const bookingDate = toIsraelLocalDate(new Date(booking.start_datetime))
                 const dateFormatted = bookingDate.toLocaleDateString(getDateLocale(), {
                   timeZone: 'Asia/Jerusalem',
@@ -82,14 +142,14 @@ export function AgendaSearch({
                   year: 'numeric'
                 })
                 const timeFormatted = `${String(bookingDate.getHours()).padStart(2, '0')}:${String(bookingDate.getMinutes()).padStart(2, '0')}`
-                const contactData = getContactDisplayData(booking)
-                const customerName = `${contactData.firstName || ''} ${contactData.lastName || ''}`.trim() || t('admin.agenda.booking.no_name')
+                const { firstName, lastName } = getDisplayName(booking)
+                const customerName = `${firstName} ${lastName}`.trim() || t('admin.agenda.booking.no_name')
 
                 return (
                   <button
                     key={booking.id}
                     type="button"
-                    onClick={() => onSelectBooking(booking, bookingDate)}
+                    onClick={() => onSelectBooking(booking.id, bookingDate)}
                     className={`w-full text-left px-3 py-2 ${isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-50'} transition-colors`}
                   >
                     <div className="flex items-center justify-between gap-2">
@@ -121,7 +181,7 @@ export function AgendaSearch({
         )}
 
         {/* Message si aucun résultat */}
-        {searchQuery && searchResults.length === 0 && (
+        {searchQuery.trim().length >= 2 && !isSearching && hasSearched && results.length === 0 && (
           <div className={`w-96 ${isDark ? 'bg-gray-800' : 'bg-white'} border ${isDark ? 'border-gray-700' : 'border-gray-200'} rounded-lg shadow-xl px-4 py-3 ${isDark ? 'text-gray-400' : 'text-gray-600'} text-sm`}>
             {t('admin.agenda.no_results')}
           </div>

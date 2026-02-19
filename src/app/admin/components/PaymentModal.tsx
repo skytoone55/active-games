@@ -252,8 +252,8 @@ export function PaymentModal({
   ]
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm">
-      <div className={`relative w-full max-w-lg mx-4 rounded-2xl border shadow-2xl ${
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+      <div className={`relative w-full max-w-lg mx-4 rounded-2xl border shadow-2xl max-h-[90vh] overflow-hidden flex flex-col ${
         isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
       }`}>
         {/* Header */}
@@ -301,7 +301,7 @@ export function PaymentModal({
         ) : (
           <>
             {/* Content */}
-            <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto">
+            <div className="p-6 space-y-6 overflow-y-auto flex-1">
 
               {/* Préautorisation disponible - Affichage prioritaire */}
               {existingPreauth && mode === 'payment' && (

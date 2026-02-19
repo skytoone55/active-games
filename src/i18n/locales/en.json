@@ -824,6 +824,7 @@
       "search_placeholder": "Search appointment (customer name, date, time, reference)...",
       "results_found": "result(s) found",
       "no_results": "No appointments found",
+      "searching": "Searching...",
       "ref": "Ref",
       "stats": {
         "with_room": "With room",

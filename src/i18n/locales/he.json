@@ -855,6 +855,7 @@
       "search_placeholder": "חיפוש פגישה (שם לקוח, תאריך, שעה, מספר הפניה)...",
       "results_found": "תוצאות נמצאו",
       "no_results": "לא נמצאו פגישות",
+      "searching": "מחפש...",
       "ref": "הפניה",
       "stats": {
         "with_room": "עם חדר",

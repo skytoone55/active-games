@@ -199,9 +199,9 @@ export function OrderDetailModal({
   const GameIcon = getGameIcon()
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={onClose}>
       <div 
-        className={`relative w-full max-w-4xl mx-4 rounded-2xl shadow-2xl overflow-hidden ${
+        className={`relative w-full max-w-4xl mx-4 rounded-2xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col ${
           isDark ? 'bg-gray-900' : 'bg-white'
         }`}
         onClick={(e) => e.stopPropagation()}
@@ -262,7 +262,7 @@ export function OrderDetailModal({
         )}
 
         {/* Contenu principal */}
-        <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-6 overflow-y-auto flex-1">
           {/* Colonne gauche - Infos réservation */}
           <div className="md:col-span-2 space-y-6">
             {/* Date & Heure */}

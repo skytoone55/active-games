@@ -61,8 +61,8 @@ export function ConfirmationModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className={`w-full max-w-md rounded-lg shadow-xl ${
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+      <div className={`w-full max-w-md rounded-lg shadow-xl max-h-[90vh] overflow-y-auto ${
         isDark ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200'
       }`}>
         {/* Header */}

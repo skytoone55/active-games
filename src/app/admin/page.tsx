@@ -18,7 +18,7 @@ import { useLaserRooms } from '@/hooks/useLaserRooms'
 import { useTranslation } from '@/contexts/LanguageContext'
 import { useAdmin } from '@/contexts/AdminContext'
 import { toIsraelLocalDate } from '@/lib/dates'
-import type { GameArea, GameSession, UserRole, ResourceType, BookingContact, BookingSlot, Contact } from '@/lib/supabase/types'
+import type { Booking, GameArea, GameSession, UserRole, ResourceType, BookingContact, BookingSlot, Contact } from '@/lib/supabase/types'
 
 // Helper: convertit un ISO datetime en Date "Israel-local" pour que .getHours()/.getMinutes() retournent l'heure d'Israël
 const toIL = (d: Date) => toIsraelLocalDate(d)
@@ -1176,32 +1176,7 @@ export default function AdminPage() {
 
   const stats = calculateStats()
 
-  // Rechercher dans TOUTES les réservations (pas seulement le jour sélectionné)
-  const searchResults = agendaSearchQuery
-    ? allBookings.filter((b) => {
-        const searchLower = agendaSearchQuery.toLowerCase()
-        const contactData = getContactDisplayData(b)
-        const customerName = `${contactData.firstName || ''} ${contactData.lastName || ''}`.toLowerCase().trim()
-        const bookingDate = extractLocalDateFromISO(b.start_datetime)
-        const startTime = toIL(new Date(b.start_datetime))
-        const timeStr = `${String(startTime.getHours()).padStart(2, '0')}:${String(startTime.getMinutes()).padStart(2, '0')}`
-        const notes = (b.notes || '').toLowerCase()
-        const customerPhone = contactData.phone.toLowerCase()
-        const customerEmail = contactData.email.toLowerCase()
-        const referenceCode = (b.reference_code || '').toLowerCase()
-        
-        return (
-          customerName.includes(searchLower) ||
-          bookingDate.includes(searchLower) ||
-          timeStr.includes(searchLower) ||
-          notes.includes(searchLower) ||
-          customerPhone.includes(searchLower) ||
-          customerEmail.includes(searchLower) ||
-          referenceCode.includes(searchLower) ||
-          b.id.toLowerCase().includes(searchLower)
-        )
-      })
-    : []
+  // Search is now handled directly by AgendaSearch component (server-side query)
 
   const calendarDays = getCalendarDays()
 
@@ -2148,15 +2123,36 @@ export default function AdminPage() {
         <AgendaSearch
           searchQuery={agendaSearchQuery}
           onSearchChange={setAgendaSearchQuery}
-          searchResults={searchResults}
-          onSelectBooking={(booking, bookingDate) => {
+          onSelectBooking={async (bookingId, bookingDate) => {
             setSelectedDate(bookingDate)
             setCalendarMonth(bookingDate.getMonth())
             setCalendarYear(bookingDate.getFullYear())
             setAgendaSearchQuery('')
-            openBookingModal(undefined, undefined, booking)
+            // Load full booking data (with slots, sessions, contacts) for the modal
+            try {
+              const supabase = getClient()
+              const { data: bk } = await supabase.from('bookings').select('*').eq('id', bookingId).single()
+              if (!bk) return
+              const booking = bk as unknown as Booking
+              const { data: slotsData } = await supabase.from('booking_slots').select('*').eq('booking_id', bookingId)
+              const { data: sessionsData } = await supabase.from('game_sessions').select('*').eq('booking_id', bookingId)
+              const { data: bcData } = await supabase.from('booking_contacts').select('*, contact:contact_id(*)').eq('booking_id', bookingId)
+              const bcRows = (bcData || []) as unknown as Array<BookingContact & { contact: Contact | null }>
+              const primaryBc = bcRows.find((bc) => bc.is_primary)
+              const fullBooking: BookingWithSlots = {
+                ...booking,
+                slots: (slotsData || []) as BookingSlot[],
+                game_sessions: (sessionsData || []) as GameSession[],
+                primaryContact: primaryBc?.contact || null,
+                allContacts: bcRows.map((bc) => bc.contact).filter(Boolean) as Contact[],
+              }
+              openBookingModal(undefined, undefined, fullBooking)
+            } catch (err) {
+              console.error('[AgendaSearch] Failed to load booking:', err)
+            }
           }}
           isDark={isDark}
+          branchId={selectedBranchId}
         />
 
         {/* Statistiques Agenda (Jour, Semaine, Mois) */}

@@ -881,6 +881,7 @@
       "search_placeholder": "Rechercher un rendez-vous (nom client, date, heure, reference)...",
       "results_found": "resultat(s) trouve(s)",
       "no_results": "Aucun rendez-vous trouve",
+      "searching": "Recherche en cours...",
       "ref": "Ref",
       "stats": {
         "with_room": "Avec salle",
