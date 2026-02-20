@@ -157,11 +157,12 @@ export function filterFAQByKeywords(
 // ── High-level FAQ loader (used by all agents) ────────────────────────
 
 /** Minimum vector similarity to consider a result relevant */
-const MIN_SIMILARITY = 0.45
+const MIN_SIMILARITY = 0.35
 
 /**
  * Load relevant FAQ rows for any agent.
  * Uses HYBRID search: vector + keyword in parallel, merges & deduplicates.
+ * Runs TWO vector searches (user message + router summary) to handle cross-language.
  * Filters out low-similarity vector results to avoid injecting irrelevant FAQ.
  */
 export async function loadRelevantFAQ(params: {
@@ -173,17 +174,31 @@ export async function loadRelevantFAQ(params: {
 }): Promise<Array<{ question: string; answer: string }>> {
   const { supabase, messageText, context, routerSummary } = params
 
-  const searchContext = routerSummary && !routerSummary.includes('timeout') && !routerSummary.includes('fallback')
-    ? routerSummary
-    : messageText
+  const hasRouterSummary = routerSummary && !routerSummary.includes('timeout') && !routerSummary.includes('fallback')
 
   const categories = getRelevantCategories(context.profile)
 
-  // ── Hybrid: run vector + keyword in parallel ──
-  const [vectorResults, allFaq] = await Promise.all([
-    searchFAQByEmbedding(supabase, searchContext, context.locale, 5, 0.3, categories),
+  // ── Hybrid: vector (user msg + router summary) + keyword, all in parallel ──
+  const [vectorFromMessage, vectorFromRouter, allFaq] = await Promise.all([
+    // Always search with user's original message (same language as FAQ = better scores)
+    searchFAQByEmbedding(supabase, messageText, context.locale, 5, 0.3, categories),
+    // Also search with router summary if available (English, may catch different intent)
+    hasRouterSummary
+      ? searchFAQByEmbedding(supabase, routerSummary!, context.locale, 5, 0.3, categories)
+      : Promise.resolve([] as FAQRow[]),
     loadFAQ(supabase, context.locale),
   ])
+
+  // Merge both vector results, keep best score per question
+  const vectorMap = new Map<string, FAQRow>()
+  for (const r of [...vectorFromMessage, ...vectorFromRouter]) {
+    const key = r.question.toLowerCase().trim()
+    const existing = vectorMap.get(key)
+    if (!existing || (r.similarity ?? 0) > (existing.similarity ?? 0)) {
+      vectorMap.set(key, r)
+    }
+  }
+  const vectorResults = Array.from(vectorMap.values())
 
   // Filter vector results: keep only those with high enough similarity
   const goodVectorResults = vectorResults.filter(r => (r.similarity ?? 0) >= MIN_SIMILARITY)
@@ -218,7 +233,8 @@ export async function loadRelevantFAQ(params: {
   // Track FAQ results (fire-and-forget, non-blocking)
   trackCodexEvent(supabase, context.conversationId, context.branchId, 'faq_loaded', {
     searchMethod: 'hybrid',
-    searchContext,
+    searchContext: messageText,
+    routerSummary: hasRouterSummary ? routerSummary : undefined,
     categories,
     locale: context.locale,
     resultCount: faqRows.length,
