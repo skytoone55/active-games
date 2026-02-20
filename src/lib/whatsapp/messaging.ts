@@ -10,8 +10,8 @@
  * The typing indicator disappears when a response is sent or after ~25s (Meta limit).
  * Call this periodically during long AI processing to keep the indicator visible.
  */
-export async function sendTypingIndicator(messageId: string): Promise<void> {
-  const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID
+export async function sendTypingIndicator(messageId: string, overridePhoneNumberId?: string): Promise<void> {
+  const phoneNumberId = overridePhoneNumberId || process.env.WHATSAPP_PHONE_NUMBER_ID
   const accessToken = process.env.WHATSAPP_ACCESS_TOKEN
   if (!phoneNumberId || !accessToken || !messageId) return
 
@@ -43,11 +43,11 @@ export async function sendTypingIndicator(messageId: string): Promise<void> {
  * Returns a stop() function to cancel the loop.
  * WhatsApp typing indicators expire after ~25s, so refresh at ~20s.
  */
-export function createTypingIndicatorLoop(messageId: string, intervalMs = 20_000): { stop: () => void } {
+export function createTypingIndicatorLoop(messageId: string, intervalMs = 20_000, overridePhoneNumberId?: string): { stop: () => void } {
   if (!messageId) return { stop: () => {} }
 
   const timer = setInterval(() => {
-    sendTypingIndicator(messageId).catch(() => {})
+    sendTypingIndicator(messageId, overridePhoneNumberId).catch(() => {})
   }, intervalMs)
 
   return {
@@ -55,8 +55,8 @@ export function createTypingIndicatorLoop(messageId: string, intervalMs = 20_000
   }
 }
 
-export async function sendWhatsAppText(to: string, text: string): Promise<string | null> {
-  const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID
+export async function sendWhatsAppText(to: string, text: string, overridePhoneNumberId?: string): Promise<string | null> {
+  const phoneNumberId = overridePhoneNumberId || process.env.WHATSAPP_PHONE_NUMBER_ID
   const accessToken = process.env.WHATSAPP_ACCESS_TOKEN
   if (!phoneNumberId || !accessToken || !text.trim()) return null
 
@@ -109,6 +109,7 @@ export async function triggerCodexTechnicalFallback(params: {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   settings: any
   metadata?: Record<string, unknown>
+  phoneNumberId?: string
 }) {
   const { resolveLocalizedCodexText } = await import('@/lib/clara-codex/config')
   const { getAvailableHumanStatus, trackCodexEvent } = await import('@/lib/clara-codex/tracking')
@@ -147,7 +148,7 @@ export async function triggerCodexTechnicalFallback(params: {
     })
     .eq('id', conversation.id)
 
-  const waId = await sendWhatsAppText(senderPhone, fullMessage)
+  const waId = await sendWhatsAppText(senderPhone, fullMessage, params.phoneNumberId)
   await storeOutboundMessage(supabase, conversation.id, fullMessage, 'text', waId)
 
   await trackCodexEvent(supabase, conversation.id, conversation.branch_id, 'technical_fallback', {

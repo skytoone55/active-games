@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: conversation, error: convError } = await (supabase as any)
       .from('whatsapp_conversations')
-      .select('id, phone')
+      .select('id, phone, wa_phone_number_id')
       .eq('id', conversationId)
       .single()
 
@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Conversation not found' }, { status: 404 })
     }
 
-    const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID
+    const phoneNumberId = conversation.wa_phone_number_id || process.env.WHATSAPP_PHONE_NUMBER_ID
     const accessToken = process.env.WHATSAPP_ACCESS_TOKEN
 
     if (!phoneNumberId || !accessToken) {
@@ -87,7 +87,7 @@ export async function POST(request: NextRequest) {
       console.log('[CHAT SEND] Media send:', { mimeType, filename, phone: conversation.phone, fileSize: fileBuffer.length })
 
       const result = await uploadAndSendMedia(
-        fileBuffer, mimeType, filename, conversation.phone, caption
+        fileBuffer, mimeType, filename, conversation.phone, caption, phoneNumberId
       )
 
       if (!result) {

@@ -123,10 +123,11 @@ export async function uploadAndSendMedia(
   mimeType: string,
   filename: string,
   recipientPhone: string,
-  caption?: string
+  caption?: string,
+  overridePhoneNumberId?: string
 ): Promise<{ stored: StoredMedia; waMessageId: string | null } | null> {
   const accessToken = process.env.WHATSAPP_ACCESS_TOKEN
-  const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID
+  const phoneNumberId = overridePhoneNumberId || process.env.WHATSAPP_PHONE_NUMBER_ID
 
   if (!accessToken || !phoneNumberId) {
     console.error('[WA MEDIA] WhatsApp not configured')

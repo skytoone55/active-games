@@ -67,8 +67,8 @@ async function buildNoAgentMessage(settings: ClaraCodexWhatsAppSettings, locale:
   return phone ? `${base}\nPhone: ${phone}` : base
 }
 
-export async function sendCodexWhatsAppText(to: string, text: string): Promise<string | null> {
-  const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID
+export async function sendCodexWhatsAppText(to: string, text: string, overridePhoneNumberId?: string): Promise<string | null> {
+  const phoneNumberId = overridePhoneNumberId || process.env.WHATSAPP_PHONE_NUMBER_ID
   const accessToken = process.env.WHATSAPP_ACCESS_TOKEN
   if (!phoneNumberId || !accessToken || !text.trim()) return null
 
@@ -100,7 +100,8 @@ export async function handleClaraCodexWhatsAppResponseV2(
   senderPhone: string,
   messageText: string,
   settings: MultiAgentSettings,
-  locale: string
+  locale: string,
+  phoneNumberId?: string
 ) {
   const now = getNowLabelIsrael()
 
@@ -207,6 +208,7 @@ export async function handleClaraCodexWhatsAppResponseV2(
         supabase,
         senderPhone,
         conversation,
+        phoneNumberId,
       })
     }
   }
@@ -222,6 +224,7 @@ export async function handleClaraCodexWhatsAppResponseV2(
     supabase,
     senderPhone,
     conversation,
+    phoneNumberId,
   })
 }
 
@@ -257,8 +260,9 @@ async function runAgentAndRespond(params: {
   supabase: any
   senderPhone: string
   conversation: ConversationContext
+  phoneNumberId?: string
 }) {
-  const { agent, config, context, history, messageText, settings, supabase, senderPhone, conversation } = params
+  const { agent, config, context, history, messageText, settings, supabase, senderPhone, conversation, phoneNumberId } = params
 
   // Resolve human availability
   const humanStatus = await getAvailableHumanStatus(conversation.branch_id)
@@ -283,7 +287,7 @@ async function runAgentAndRespond(params: {
       : await buildNoAgentMessage(settings, context.locale, conversation.branch_id)
 
     const fullMessage = `${techMessage}\n\n${tail}`
-    const waId = await sendCodexWhatsAppText(senderPhone, fullMessage)
+    const waId = await sendCodexWhatsAppText(senderPhone, fullMessage, phoneNumberId)
     await storeOutboundMessage(supabase, conversation.id, fullMessage, waId)
 
     await trackCodexEvent(supabase, conversation.id, conversation.branch_id, 'agent_error', {
@@ -334,7 +338,7 @@ async function runAgentAndRespond(params: {
   }
 
   // Send response
-  const waId = await sendCodexWhatsAppText(senderPhone, fullText)
+  const waId = await sendCodexWhatsAppText(senderPhone, fullText, phoneNumberId)
   await storeOutboundMessage(supabase, conversation.id, fullText, waId)
 
   await trackCodexEvent(supabase, conversation.id, conversation.branch_id, 'assistant_reply_sent_v2', {

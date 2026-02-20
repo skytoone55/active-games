@@ -49,9 +49,10 @@ function normalizePhone(phone: string): string {
 async function sendInteractiveButtons(
   to: string,
   bodyText: string,
-  buttons: Array<{ id: string; title: string }>
+  buttons: Array<{ id: string; title: string }>,
+  overridePhoneNumberId?: string
 ): Promise<string | null> {
-  const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID
+  const phoneNumberId = overridePhoneNumberId || process.env.WHATSAPP_PHONE_NUMBER_ID
   const accessToken = process.env.WHATSAPP_ACCESS_TOKEN
   if (!phoneNumberId || !accessToken || buttons.length === 0) return null
 
@@ -144,7 +145,7 @@ function parseOnboardingStatus(status: string | null): { waiting: boolean; stepI
 
 // Send buttons for a given step
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function sendStepButtons(supabase: any, conversationId: string, senderPhone: string, step: any, language: string) {
+async function sendStepButtons(supabase: any, conversationId: string, senderPhone: string, step: any, language: string, phoneNumberId?: string) {
   const promptText = getLocalizedText(step.prompt, language)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const buttons = (step.options || []).map((opt: any) => ({
@@ -153,7 +154,7 @@ async function sendStepButtons(supabase: any, conversationId: string, senderPhon
   }))
 
   if (promptText && buttons.length > 0) {
-    const waId = await sendInteractiveButtons(senderPhone, promptText, buttons)
+    const waId = await sendInteractiveButtons(senderPhone, promptText, buttons, phoneNumberId)
     await storeOutboundMessage(supabase, conversationId, promptText, 'interactive', waId)
     console.log(`[WHATSAPP] Onboarding: step "${step.id}" buttons sent to`, senderPhone)
   }
@@ -212,6 +213,9 @@ export async function POST(request: NextRequest) {
     if (!value) {
       return NextResponse.json({ received: true })
     }
+
+    // Extract phone_number_id from Meta webhook metadata (for multi-number support)
+    const waPhoneNumberId: string | undefined = value.metadata?.phone_number_id || undefined
 
     const supabase = createServiceRoleClient()
 
@@ -312,7 +316,7 @@ export async function POST(request: NextRequest) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         let { data: conversation } = await (supabase as any)
           .from('whatsapp_conversations')
-          .select('id, contact_id, contact_name, unread_count, onboarding_status, activity, branch_id, onboarding_data, clara_paused, clara_paused_until')
+          .select('id, contact_id, contact_name, unread_count, onboarding_status, activity, branch_id, onboarding_data, clara_paused, clara_paused_until, wa_phone_number_id')
           .eq('phone', senderPhone)
           .eq('status', 'active')
           .order('created_at', { ascending: false })
@@ -353,8 +357,9 @@ export async function POST(request: NextRequest) {
               unread_count: 1,
               last_message_at: new Date().toISOString(),
               onboarding_status: initialStatus,
+              wa_phone_number_id: waPhoneNumberId || null,
             })
-            .select('id, contact_id, onboarding_status, activity, branch_id, onboarding_data')
+            .select('id, contact_id, onboarding_status, activity, branch_id, onboarding_data, wa_phone_number_id')
             .single()
 
           conversation = newConv
@@ -362,14 +367,20 @@ export async function POST(request: NextRequest) {
         } else {
           // Update existing conversation
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const convUpdate: any = {
+            last_message_at: new Date().toISOString(),
+            unread_count: (conversation.unread_count || 0) + 1,
+            contact_name: contactName || undefined,
+            updated_at: new Date().toISOString(),
+          }
+          // Backfill wa_phone_number_id for older conversations
+          if (waPhoneNumberId && !conversation.wa_phone_number_id) {
+            convUpdate.wa_phone_number_id = waPhoneNumberId
+          }
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           await (supabase as any)
             .from('whatsapp_conversations')
-            .update({
-              last_message_at: new Date().toISOString(),
-              unread_count: (conversation.unread_count || 0) + 1,
-              contact_name: contactName || undefined,
-              updated_at: new Date().toISOString(),
-            })
+            .update(convUpdate)
             .eq('id', conversation.id)
         }
 
@@ -439,7 +450,7 @@ export async function POST(request: NextRequest) {
             const codexActiveForOnboarding = !!(codexSettingsRecord?.is_active && (codexSettingsRecord?.settings as any)?.enabled === true)
             const onboardingResult = await handleOnboarding(
               supabase, conversation, senderPhone, isNewConversation,
-              messageText, buttonReplyId, onboardingConfig, onboardingLang, codexActiveForOnboarding
+              messageText, buttonReplyId, onboardingConfig, onboardingLang, codexActiveForOnboarding, waPhoneNumberId
             )
             onboardingHandledMessage = onboardingResult.handled
             onboardingJustCompleted = onboardingResult.justCompleted
@@ -453,7 +464,7 @@ export async function POST(request: NextRequest) {
               replyText = legacyAutoReply.message.fr || legacyAutoReply.message.he || legacyAutoReply.message.en || ''
             }
             if (replyText.trim()) {
-              const waId = await sendWhatsAppText(senderPhone, replyText)
+              const waId = await sendWhatsAppText(senderPhone, replyText, waPhoneNumberId)
               await storeOutboundMessage(supabase, conversation.id, replyText, 'text', waId)
               console.log('[WHATSAPP] Legacy auto-reply sent to', senderPhone)
             }
@@ -510,7 +521,7 @@ export async function POST(request: NextRequest) {
 
         if (codexEnabled && (baseEligibility || postOnboardingEligibility) && !codexOutsideSchedule && !codexBranchInactive) {
           // Send typing indicator immediately, defer AI processing to after() so we return 200 to Meta fast
-          await sendTypingIndicator(messageId)
+          await sendTypingIndicator(messageId, waPhoneNumberId)
           aiDidRespond = true // Set preemptively — the deferred handler WILL respond
 
           // For post-onboarding: find the user's first real message to pass to Clara
@@ -539,10 +550,11 @@ export async function POST(request: NextRequest) {
           const deferredSettings = codexSettings
           const deferredLang = onboardingLang
           const deferredMessageId = messageId
+          const deferredPhoneNumberId = waPhoneNumberId
 
           after(async () => {
             // Start periodic typing indicator refresh (WhatsApp "..." expires after ~25s)
-            const typingLoop = createTypingIndicatorLoop(deferredMessageId, 20_000)
+            const typingLoop = createTypingIndicatorLoop(deferredMessageId, 20_000, deferredPhoneNumberId)
             try {
               await handleClaraCodexWhatsAppResponseV2(
                 deferredSupa,
@@ -550,7 +562,8 @@ export async function POST(request: NextRequest) {
                 deferredPhone,
                 deferredText,
                 deferredSettings as any,
-                deferredLang
+                deferredLang,
+                deferredPhoneNumberId
               )
             } catch (codexErr) {
               console.error('[WHATSAPP CODEX V2] Deferred processing error:', codexErr)
@@ -560,6 +573,7 @@ export async function POST(request: NextRequest) {
                 senderPhone: deferredPhone,
                 locale: deferredLang,
                 settings: deferredSettings as any,
+                phoneNumberId: deferredPhoneNumberId,
                 metadata: {
                   error: codexErr instanceof Error ? codexErr.message : String(codexErr),
                 },
@@ -640,7 +654,8 @@ async function handleOnboarding(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   config: any,
   language: string,
-  claraActive: boolean = false
+  claraActive: boolean = false,
+  phoneNumberId?: string
 ): Promise<{ handled: boolean; justCompleted: boolean }> {
   const { waiting, stepId } = parseOnboardingStatus(conversation.onboarding_status)
 
@@ -648,7 +663,7 @@ async function handleOnboarding(
   if (isNewConversation && waiting && stepId) {
     const firstStep = getStepById(config, stepId) || getFirstStep(config)
     if (firstStep) {
-      await sendStepButtons(supabase, conversation.id, senderPhone, firstStep, language)
+      await sendStepButtons(supabase, conversation.id, senderPhone, firstStep, language, phoneNumberId)
     }
     return { handled: true, justCompleted: false }
   }
@@ -752,7 +767,7 @@ async function handleOnboarding(
           .update(updateFields)
           .eq('id', conversation.id)
 
-        await sendStepButtons(supabase, conversation.id, senderPhone, nextStep, language)
+        await sendStepButtons(supabase, conversation.id, senderPhone, nextStep, language, phoneNumberId)
       } else {
         // All steps done → completed
         updateFields.onboarding_status = 'completed'
@@ -791,7 +806,7 @@ async function handleOnboarding(
         if (config.welcome_message_enabled && config.welcome_message) {
           const welcomeText = getLocalizedText(config.welcome_message, language)
           if (welcomeText.trim()) {
-            const waId = await sendWhatsAppText(senderPhone, welcomeText)
+            const waId = await sendWhatsAppText(senderPhone, welcomeText, phoneNumberId)
             await storeOutboundMessage(supabase, conversation.id, welcomeText, 'text', waId)
             console.log('[WHATSAPP] Welcome message sent to', senderPhone)
           }
@@ -800,7 +815,7 @@ async function handleOnboarding(
       }
     } else {
       // No match → resend current step buttons
-      await sendStepButtons(supabase, conversation.id, senderPhone, currentStep, language)
+      await sendStepButtons(supabase, conversation.id, senderPhone, currentStep, language, phoneNumberId)
     }
     return { handled: true, justCompleted: false }
   }
@@ -823,7 +838,7 @@ async function processExpiredAutoActivateTimers(supabase: any, settings: any, co
   const now = new Date().toISOString()
   const { data: conversations } = await supabase
     .from('whatsapp_conversations')
-    .select('id, phone, contact_name, branch_id, profile')
+    .select('id, phone, contact_name, branch_id, profile, wa_phone_number_id')
     .lte('clara_auto_activate_at', now)
     .eq('status', 'active')
     .limit(5)
@@ -874,7 +889,8 @@ async function processExpiredAutoActivateTimers(supabase: any, settings: any, co
           conv.phone,
           lastInbound.content || '',
           codexConfig,
-          language
+          language,
+          conv.wa_phone_number_id || undefined
         )
         console.log(`[WHATSAPP AUTO-ACTIVATE] Clara activated for ${conv.id} (${conv.phone})`)
       } catch (codexErr) {
@@ -885,6 +901,7 @@ async function processExpiredAutoActivateTimers(supabase: any, settings: any, co
           senderPhone: conv.phone,
           locale: language,
           settings: codexConfig,
+          phoneNumberId: conv.wa_phone_number_id || undefined,
           metadata: {
             source: 'auto_activate',
             error: codexErr instanceof Error ? codexErr.message : String(codexErr),
