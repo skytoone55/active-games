@@ -2,6 +2,13 @@ import type { AgentContext } from './types'
 import { getRelevantCategories } from './info/faq-categories'
 import { trackCodexEvent } from '../tracking'
 
+/** Internal FAQ row with optional relevance score */
+interface FAQRow {
+  question: string
+  answer: string
+  similarity?: number
+}
+
 // ── Vector similarity search ──────────────────────────────────────────
 
 async function getEmbedding(text: string): Promise<number[] | null> {
@@ -30,7 +37,7 @@ export async function searchFAQByEmbedding(
   matchCount = 5,
   matchThreshold = 0.3,
   filterCategories: string[] | null = null
-): Promise<Array<{ question: string; answer: string }>> {
+): Promise<FAQRow[]> {
   const embedding = await getEmbedding(query)
   if (!embedding) return []
 
@@ -47,14 +54,14 @@ export async function searchFAQByEmbedding(
 
   if (error || !data || data.length === 0) return []
 
-  return data.map((row: { question: Record<string, string> | string | null; answer: Record<string, string> | string | null }) => {
+  return data.map((row: { question: Record<string, string> | string | null; answer: Record<string, string> | string | null; similarity?: number }) => {
     const q = pickLocalized(row.question, locale)
     const a = pickLocalized(row.answer, locale)
-    return { question: q, answer: a }
-  }).filter((r: { question: string; answer: string }) => r.question && r.answer)
+    return { question: q, answer: a, similarity: row.similarity ?? undefined }
+  }).filter((r: FAQRow) => r.question && r.answer)
 }
 
-// ── Keyword fallback ──────────────────────────────────────────────────
+// ── Keyword search ──────────────────────────────────────────────────
 
 export async function loadFAQ(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -149,9 +156,13 @@ export function filterFAQByKeywords(
 
 // ── High-level FAQ loader (used by all agents) ────────────────────────
 
+/** Minimum vector similarity to consider a result relevant */
+const MIN_SIMILARITY = 0.45
+
 /**
  * Load relevant FAQ rows for any agent.
- * Uses vector search first, falls back to keyword matching.
+ * Uses HYBRID search: vector + keyword in parallel, merges & deduplicates.
+ * Filters out low-similarity vector results to avoid injecting irrelevant FAQ.
  */
 export async function loadRelevantFAQ(params: {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -168,21 +179,53 @@ export async function loadRelevantFAQ(params: {
 
   const categories = getRelevantCategories(context.profile)
 
-  let searchMethod: 'vector' | 'keyword' = 'vector'
-  let faqRows = await searchFAQByEmbedding(supabase, searchContext, context.locale, 5, 0.3, categories)
-  if (faqRows.length === 0) {
-    searchMethod = 'keyword'
-    const allFaq = await loadFAQ(supabase, context.locale)
-    faqRows = filterFAQByKeywords(allFaq, messageText)
+  // ── Hybrid: run vector + keyword in parallel ──
+  const [vectorResults, allFaq] = await Promise.all([
+    searchFAQByEmbedding(supabase, searchContext, context.locale, 5, 0.3, categories),
+    loadFAQ(supabase, context.locale),
+  ])
+
+  // Filter vector results: keep only those with high enough similarity
+  const goodVectorResults = vectorResults.filter(r => (r.similarity ?? 0) >= MIN_SIMILARITY)
+  const weakVectorResults = vectorResults.filter(r => (r.similarity ?? 0) < MIN_SIMILARITY)
+
+  // Keyword search on original user message (not router summary — closer to actual words)
+  const keywordResults = filterFAQByKeywords(allFaq, messageText)
+
+  // ── Merge & deduplicate (vector first, then keyword extras) ──
+  const seen = new Set<string>()
+  const merged: Array<{ question: string; answer: string }> = []
+
+  for (const row of goodVectorResults) {
+    const key = row.question.toLowerCase().trim()
+    if (!seen.has(key)) {
+      seen.add(key)
+      merged.push({ question: row.question, answer: row.answer })
+    }
   }
+
+  for (const row of keywordResults) {
+    const key = row.question.toLowerCase().trim()
+    if (!seen.has(key)) {
+      seen.add(key)
+      merged.push(row)
+    }
+  }
+
+  // Cap at 8 results max to keep prompt reasonable
+  const faqRows = merged.slice(0, 8)
 
   // Track FAQ results (fire-and-forget, non-blocking)
   trackCodexEvent(supabase, context.conversationId, context.branchId, 'faq_loaded', {
-    searchMethod,
+    searchMethod: 'hybrid',
     searchContext,
     categories,
     locale: context.locale,
     resultCount: faqRows.length,
+    vectorCount: goodVectorResults.length,
+    vectorDropped: weakVectorResults.length,
+    vectorScores: vectorResults.map(r => ({ q: r.question.slice(0, 60), s: Math.round((r.similarity ?? 0) * 100) / 100 })),
+    keywordCount: keywordResults.length,
     questions: faqRows.map(r => r.question.slice(0, 80)),
   }).catch(() => {})
 
@@ -193,7 +236,7 @@ export async function loadRelevantFAQ(params: {
  * Format FAQ rows into a text block for prompt injection.
  */
 export function formatFAQBlock(faqRows: Array<{ question: string; answer: string }>): string {
-  if (faqRows.length === 0) return 'No FAQ available.'
+  if (faqRows.length === 0) return 'No FAQ available for this question. Do NOT invent an answer — say you are not sure and suggest contacting the branch directly.'
   return faqRows
     .map(row => `Q: ${row.question}\nA: ${row.answer}`)
     .join('\n\n')
