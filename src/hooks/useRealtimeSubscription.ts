@@ -207,8 +207,8 @@ export function useRealtimeRefresh(
       const channelId = ++channelCounter
       const channelName = `rt_${additionalTable}_related_${channelId}`
 
-      // Filtrer par branch_id si la table le supporte (booking_slots oui, game_sessions non)
-      const tableFilter = additionalTable === 'booking_slots' && branchId
+      // Filtrer par branch_id (booking_slots et game_sessions ont tous deux branch_id)
+      const tableFilter = (additionalTable === 'booking_slots' || additionalTable === 'game_sessions') && branchId
         ? `branch_id=eq.${branchId}`
         : undefined
 

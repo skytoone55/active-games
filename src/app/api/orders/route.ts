@@ -850,7 +850,8 @@ export async function POST(request: NextRequest) {
       // Créer les game_sessions
       const sessionsToInsert = eventGameSessions.map(s => ({
         ...s,
-        booking_id: booking.id
+        booking_id: booking.id,
+        branch_id,
       }))
 
       const { error: sessionsError } = await supabase
@@ -1437,7 +1438,8 @@ export async function POST(request: NextRequest) {
     if (sessionResult.game_sessions.length > 0) {
       const sessionsToInsert = sessionResult.game_sessions.map(s => ({
         ...s,
-        booking_id: booking.id
+        booking_id: booking.id,
+        branch_id,
       }))
 
       const { error: sessionsError } = await supabase

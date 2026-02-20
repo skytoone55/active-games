@@ -298,6 +298,7 @@ export async function PUT(
           pause_before_minutes: number;
         }) => ({
           booking_id: id,
+          branch_id: updateData.branch_id || oldBooking.branch_id,
           game_area: session.game_area,
           start_datetime: session.start_datetime,
           end_datetime: session.end_datetime,

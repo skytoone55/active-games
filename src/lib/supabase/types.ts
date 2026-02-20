@@ -163,6 +163,7 @@ export interface Database {
         Row: {
           id: string
           booking_id: string
+          branch_id: string
           game_area: GameArea
           start_datetime: string
           end_datetime: string

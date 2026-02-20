@@ -14,6 +14,7 @@ import { SettingsModal } from './components/SettingsModal'
 const BookingModal = dynamic(() => import('./components/BookingModal').then(m => ({ default: m.BookingModal })), { ssr: false })
 const AccountingModal = dynamic(() => import('./components/AccountingModal').then(m => ({ default: m.AccountingModal })), { ssr: false })
 import { AgendaStats } from './components/AgendaStats'
+import { useAgendaStats } from '@/hooks/useAgendaStats'
 import { GridSettingsPopup } from './components/GridSettingsPopup'
 import { AgendaSearch } from './components/AgendaSearch'
 import { useUserPermissions } from '@/hooks/useUserPermissions'
@@ -755,11 +756,11 @@ export default function AdminPage() {
   // Calculer CAPACITY (après les hooks, mais TOTAL_SLOTS est déjà défini plus haut)
   const CAPACITY = TOTAL_SLOTS * MAX_PLAYERS_PER_SLOT // 14 * 6 = 84
 
-  // Pré-calculer la map OB une fois (après définition de CAPACITY, avant buildUISegments)
-  const obByTimeKey = calculateOBMapForDate(CAPACITY)
+  // Pré-calculer la map OB une fois (MEMOIZED — ne recalcule que si bookings/date/config changent)
+  const obByTimeKey = useMemo(() => calculateOBMapForDate(CAPACITY), [bookings, selectedDate, effectiveHours, CAPACITY, MAX_PLAYERS_PER_SLOT, SLOT_DURATION, TOTAL_SLOTS])
 
-  // Construire les segments UI
-  const uiSegments = buildUISegments()
+  // Construire les segments UI (MEMOIZED — ne recalcule que si bookings/date/config changent)
+  const uiSegments = useMemo(() => buildUISegments(), [bookings, selectedDate, effectiveHours, obByTimeKey, MAX_PLAYERS_PER_SLOT, SLOT_DURATION, TOTAL_SLOTS])
 
   // Ouvrir le modal de réservation
   const openBookingModal = async (hour?: number, minute?: number, booking?: BookingWithSlots, defaultType: 'GAME' | 'EVENT' = 'GAME', defaultGameArea?: 'ACTIVE' | 'LASER') => {
@@ -814,10 +815,12 @@ export default function AdminPage() {
     if (editingBooking) {
       // Mode édition
       const result = await updateBooking(editingBooking.id, data)
+      if (result !== null) refreshStats()
       return result !== null
     } else {
       // Mode création
       const result = await createBooking(data)
+      if (result !== null) refreshStats()
       return result !== null
     }
   }
@@ -830,6 +833,7 @@ export default function AdminPage() {
       setEditingBookingOrderId(null)
       setEditingBookingOrderStatus(null)
       setShowBookingModal(false)
+      refreshStats()
     }
     return success
   }
@@ -844,6 +848,7 @@ export default function AdminPage() {
       onConfirm: async () => {
         const success = await deleteAllBookings()
         if (success) {
+          refreshStats()
           setConfirmationModal({
             isOpen: true,
             title: t('admin.common.success'),
@@ -1089,95 +1094,11 @@ export default function AdminPage() {
     setSelectedDate(newSelectedDate)
   }
 
-  // Calculer les stats
-  const gameBookings = bookings.filter(b => b.type === 'GAME')
-  const eventBookings = bookings.filter(b => b.type === 'EVENT')
-  const totalParticipants = bookings.reduce((sum, b) => sum + b.participants_count, 0)
-
-  // Calculer les statistiques détaillées (Jour, Semaine, Mois)
-  const calculateStats = () => {
-    const dateStr = formatDateToString(selectedDate)
-    
-    // Utiliser allBookings directement (même source que l'agenda)
-    const bookingsForStats = allBookings || []
-    
-    // Stats du jour
-    const dayBookings = bookingsForStats.filter(b => {
-      const bookingDate = extractLocalDateFromISO(b.start_datetime)
-      return bookingDate === dateStr
-    })
-    const dayWithRoom = dayBookings.filter(b => b.event_room_id !== null)
-    const dayWithoutRoom = dayBookings.filter(b => b.event_room_id === null)
-    const dayTotalParticipants = dayBookings.reduce((sum, b) => sum + b.participants_count, 0)
-    
-    // Stats de la semaine (lundi à dimanche)
-    const dayOfWeek = selectedDate.getDay()
-    const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek
-    const weekStart = new Date(selectedDate)
-    weekStart.setDate(selectedDate.getDate() + diffToMonday)
-    weekStart.setHours(0, 0, 0, 0)
-    const weekEnd = new Date(weekStart)
-    weekEnd.setDate(weekStart.getDate() + 6)
-    weekEnd.setHours(23, 59, 59, 999)
-    
-    // Filtrer les réservations de la semaine en utilisant les dates locales
-    const weekBookings = bookingsForStats.filter(b => {
-      const bookingDateStr = extractLocalDateFromISO(b.start_datetime)
-      const bookingDate = new Date(bookingDateStr + 'T00:00:00')
-      bookingDate.setHours(0, 0, 0, 0)
-      return bookingDate >= weekStart && bookingDate <= weekEnd
-    })
-    
-    const weekWithRoom = weekBookings.filter(b => b.event_room_id !== null)
-    const weekWithoutRoom = weekBookings.filter(b => b.event_room_id === null)
-    const weekTotalParticipants = weekBookings.reduce((sum, b) => sum + b.participants_count, 0)
-    
-    // Stats du mois
-    const year = selectedDate.getFullYear()
-    const monthStart = new Date(year, selectedDate.getMonth(), 1)
-    monthStart.setHours(0, 0, 0, 0)
-    const monthEnd = new Date(year, selectedDate.getMonth() + 1, 0)
-    monthEnd.setHours(23, 59, 59, 999)
-    
-    // Filtrer les réservations du mois en utilisant les dates locales
-    const monthBookings = bookingsForStats.filter(b => {
-      const bookingDateStr = extractLocalDateFromISO(b.start_datetime)
-      const bookingDate = new Date(bookingDateStr + 'T00:00:00')
-      bookingDate.setHours(0, 0, 0, 0)
-      return bookingDate >= monthStart && bookingDate <= monthEnd
-    })
-    
-    const monthWithRoom = monthBookings.filter(b => b.event_room_id !== null)
-    const monthWithoutRoom = monthBookings.filter(b => b.event_room_id === null)
-    const monthTotalParticipants = monthBookings.reduce((sum, b) => sum + b.participants_count, 0)
-    
-    // Formater la période de la semaine
-    const weekStartStr = weekStart.toLocaleDateString(getDateLocale(), { timeZone: 'Asia/Jerusalem', day: '2-digit', month: 'short' })
-    const weekEndStr = weekEnd.toLocaleDateString(getDateLocale(), { timeZone: 'Asia/Jerusalem', day: '2-digit', month: 'short', year: 'numeric' })
-
-    return {
-      day: {
-        withRoom: dayWithRoom.length,
-        withoutRoom: dayWithoutRoom.length,
-        totalParticipants: dayTotalParticipants,
-        dateStr: selectedDate.toLocaleDateString(getDateLocale(), { timeZone: 'Asia/Jerusalem', day: '2-digit', month: 'short' })
-      },
-      week: {
-        withRoom: weekWithRoom.length,
-        withoutRoom: weekWithoutRoom.length,
-        totalParticipants: weekTotalParticipants,
-        period: `${weekStartStr} - ${weekEndStr}`
-      },
-      month: {
-        withRoom: monthWithRoom.length,
-        withoutRoom: monthWithoutRoom.length,
-        totalParticipants: monthTotalParticipants,
-        period: selectedDate.toLocaleDateString(getDateLocale(), { timeZone: 'Asia/Jerusalem', month: 'long', year: 'numeric' })
-      }
-    }
-  }
-
-  const stats = calculateStats()
+  // Statistiques agenda (Jour, Semaine, Mois) — hook dédié avec fetch séparé
+  // - Stats JOUR : calculées depuis allBookings (même données que l'agenda, pas de requête supplémentaire)
+  // - Stats SEMAINE/MOIS : fetch Supabase léger indépendant (seulement 2 colonnes, pas les objets complets)
+  // → L'agenda s'affiche sans attendre les stats semaine/mois
+  const { stats, loading: statsLoading, refreshStats } = useAgendaStats(selectedBranchId, selectedDate, allBookings, locale)
 
   // Search is now handled directly by AgendaSearch component (server-side query)
 
@@ -1802,129 +1723,126 @@ export default function AdminPage() {
     }
   }
 
-  // Vérifier si un créneau contient un segment pour GRID GAME (slots uniquement)
-  const getSegmentForCellSlots = (hour: number, minute: number, slotIndex: number): UISegment | null => {
-    const cellDate = new Date(selectedDate)
-    cellDate.setHours(hour, minute, 0, 0)
-    const cellDateEnd = new Date(cellDate)
-    cellDateEnd.setMinutes(cellDateEnd.getMinutes() + 15)
-
-    // Parcourir les segments dans l'ordre inverse pour prioriser les plus récents
-    for (let i = uiSegments.length - 1; i >= 0; i--) {
-      const segment = uiSegments[i]
-      
-      // Vérifier si ce segment chevauche la cellule
-      if (segment.start < cellDateEnd && segment.end > cellDate) {
-        // Vérifier si le slotIndex demandé est dans la plage du segment
-        if (slotIndex >= segment.slotStart && slotIndex < segment.slotEnd) {
-          return segment
+  // Pré-indexer les segments ACTIVE dans un Map pour lookup O(1) au lieu de O(n) par cellule
+  // Clé = "hour:minute:slotIndex" → segment le plus récent (dernier dans la liste)
+  const segmentIndexActive = useMemo(() => {
+    const index = new Map<string, UISegment>()
+    // Parcourir dans l'ordre normal — les segments plus tard dans la liste écrasent les précédents
+    // (équivalent à parcourir en reverse et prendre le premier trouvé)
+    for (const segment of uiSegments) {
+      // Pour chaque tranche de 15 min couverte par ce segment
+      const startMinutes = segment.start.getHours() * 60 + segment.start.getMinutes()
+      const endMinutes = segment.end.getHours() * 60 + segment.end.getMinutes()
+      for (let m = startMinutes; m < endMinutes; m += 15) {
+        const h = Math.floor(m / 60)
+        const min = m % 60
+        // Pour chaque slot couvert
+        for (let s = segment.slotStart; s < segment.slotEnd; s++) {
+          index.set(`${h}:${min}:${s}`, segment)
         }
       }
     }
+    return index
+  }, [uiSegments])
 
-    return null
+  // Lookup O(1) pour la grille ACTIVE (remplace le loop O(n) de getSegmentForCellSlots)
+  const getSegmentForCellSlots = (hour: number, minute: number, slotIndex: number): UISegment | null => {
+    return segmentIndexActive.get(`${hour}:${minute}:${slotIndex}`) || null
   }
 
-  // Obtenir tous les segments qui chevauchent une cellule LASER (pour affichage côte à côte)
-  const getSegmentsForCellLaser = (hour: number, minute: number, roomIndex: number): UISegment[] => {
-    const cellDate = new Date(selectedDate)
-    cellDate.setHours(hour, minute, 0, 0)
-    const cellDateEnd = new Date(cellDate)
-    cellDateEnd.setMinutes(cellDateEnd.getMinutes() + 15)
-    
+  // Pré-indexer les segments LASER dans un Map pour lookup O(1) au lieu de O(n×m) par cellule
+  // Clé = "hour:minute:roomIndex" → UISegment[] triés par bookingId
+  const segmentIndexLaser = useMemo(() => {
+    const index = new Map<string, UISegment[]>()
+
     const selectedBranch = branches.find(b => b.id === selectedBranchId)
     const branchLaserRooms = selectedBranch?.laserRooms || []
-    
-    // Trier les laser rooms par sort_order
     const sortedLaserRooms = [...branchLaserRooms]
       .filter(r => r.is_active)
       .sort((a, b) => a.sort_order - b.sort_order)
-    
-    if (roomIndex >= sortedLaserRooms.length) return []
-    
-    const targetRoom = sortedLaserRooms[roomIndex]
-    const segments: UISegment[] = []
-    
-    // IMPORTANT : Utiliser allBookings (toutes les réservations) au lieu de bookings (filtré par date)
-    // car une réservation peut avoir start_datetime sur une autre date mais des sessions LASER sur cette date
-    // Exemple : EVENT avec salle le 1er janvier mais sessions LASER le 2 janvier
+
+    if (sortedLaserRooms.length === 0) return index
+
     const dateStr = formatDateToString(selectedDate)
-    
-    // Chercher TOUS les bookings avec sessions LASER qui chevauchent ce créneau ET sont sur cette date
-    const relevantBookings = allBookings.filter(b => {
-      // Vérifier qu'il y a des game_sessions LASER
-      if (!b.game_sessions || b.game_sessions.length === 0) return false
-      
-      // Trouver toutes les sessions LASER qui chevauchent ce créneau ET sont sur cette date
-      const overlappingLaserSessions = b.game_sessions.filter(s => {
-        if (s.game_area !== 'LASER') return false
-        const sessionDate = extractLocalDateFromISO(s.start_datetime)
-        // Vérifier que la session est sur la date sélectionnée
-        if (sessionDate !== dateStr) return false
-        // Vérifier que la session chevauche le créneau de la cellule
-        const sessionStart = toIL(new Date(s.start_datetime))
-        const sessionEnd = toIL(new Date(s.end_datetime))
-        return sessionStart < cellDateEnd && sessionEnd > cellDate
-      })
-      
-      return overlappingLaserSessions.length > 0
-    })
-    
-    for (const booking of relevantBookings) {
-      // Vérifier si le booking a des game_sessions LASER
-      if (booking.game_sessions && booking.game_sessions.length > 0) {
-        // Trouver toutes les sessions LASER de ce booking qui chevauchent ce créneau
-        const overlappingSessions = booking.game_sessions.filter(session => {
-          if (session.game_area !== 'LASER') return false
-          const sessionStart = toIL(new Date(session.start_datetime))
-          const sessionEnd = toIL(new Date(session.end_datetime))
-          return sessionStart < cellDateEnd && sessionEnd > cellDate
+
+    // Pour chaque créneau de 15 min × chaque room, calculer les segments
+    for (const slot of timeSlots) {
+      const cellDate = new Date(selectedDate)
+      cellDate.setHours(slot.hour, slot.minute, 0, 0)
+      const cellDateEnd = new Date(cellDate)
+      cellDateEnd.setMinutes(cellDateEnd.getMinutes() + 15)
+
+      for (let roomIndex = 0; roomIndex < sortedLaserRooms.length; roomIndex++) {
+        const targetRoom = sortedLaserRooms[roomIndex]
+        const segments: UISegment[] = []
+
+        // IMPORTANT : Utiliser allBookings (toutes les réservations) au lieu de bookings (filtré par date)
+        // car une réservation peut avoir start_datetime sur une autre date mais des sessions LASER sur cette date
+        const relevantBookings = allBookings.filter(b => {
+          if (!b.game_sessions || b.game_sessions.length === 0) return false
+          return b.game_sessions.some(s => {
+            if (s.game_area !== 'LASER') return false
+            const sessionDate = extractLocalDateFromISO(s.start_datetime)
+            if (sessionDate !== dateStr) return false
+            const sessionStart = toIL(new Date(s.start_datetime))
+            const sessionEnd = toIL(new Date(s.end_datetime))
+            return sessionStart < cellDateEnd && sessionEnd > cellDate
+          })
         })
-        
-        if (overlappingSessions.length === 0) continue
-        
-        // Vérifier si une de ces sessions utilise la salle cible
-        const sessionForThisRoom = overlappingSessions.find(s => s.laser_room_id === targetRoom.id)
-        if (!sessionForThisRoom) continue
-        
-        // Trouver toutes les salles utilisées par ce booking pour CE CRÉNEAU SPÉCIFIQUE
-        // Important: ne prendre que les sessions qui chevauchent exactement ce créneau
-        const usedRoomIds = new Set(overlappingSessions.map(s => s.laser_room_id).filter(Boolean))
-        const usedRooms = sortedLaserRooms.filter(r => usedRoomIds.has(r.id))
-        
-        if (usedRooms.length === 0) continue
-        
-        // Trier les salles utilisées par sort_order pour déterminer slotStart et slotEnd
-        usedRooms.sort((a, b) => a.sort_order - b.sort_order)
-        const firstRoomIndex = sortedLaserRooms.findIndex(r => r.id === usedRooms[0].id)
-        const lastRoomIndex = sortedLaserRooms.findIndex(r => r.id === usedRooms[usedRooms.length - 1].id)
-        
-        // IMPORTANT: Utiliser les dates de la session spécifique, pas une fusion
-        // Cela permet d'afficher chaque jeu (session_order) séparément
-        const sessionStart = toIL(new Date(sessionForThisRoom.start_datetime))
-        const sessionEnd = toIL(new Date(sessionForThisRoom.end_datetime))
-        
-        // Créer le segment avec un ID unique incluant session_order pour différencier les jeux
-        const segment: UISegment = {
-          segmentId: `${booking.id}-laser-${sessionForThisRoom.session_order}-${firstRoomIndex}-${lastRoomIndex}-${sessionStart.getTime()}`,
-          bookingId: booking.id,
-          booking,
-          start: sessionStart,
-          end: sessionEnd,
-          slotStart: firstRoomIndex,
-          slotEnd: lastRoomIndex + 1, // +1 car slotEnd est exclusif
-          slotsKey: `laser-${firstRoomIndex}-${lastRoomIndex}`,
-          isOverbooked: false // Laser n'a pas d'overbooking
+
+        for (const booking of relevantBookings) {
+          if (!booking.game_sessions || booking.game_sessions.length === 0) continue
+
+          const overlappingSessions = booking.game_sessions.filter(session => {
+            if (session.game_area !== 'LASER') return false
+            const sessionStart = toIL(new Date(session.start_datetime))
+            const sessionEnd = toIL(new Date(session.end_datetime))
+            return sessionStart < cellDateEnd && sessionEnd > cellDate
+          })
+
+          if (overlappingSessions.length === 0) continue
+
+          const sessionForThisRoom = overlappingSessions.find(s => s.laser_room_id === targetRoom.id)
+          if (!sessionForThisRoom) continue
+
+          const usedRoomIds = new Set(overlappingSessions.map(s => s.laser_room_id).filter(Boolean))
+          const usedRooms = sortedLaserRooms.filter(r => usedRoomIds.has(r.id))
+
+          if (usedRooms.length === 0) continue
+
+          usedRooms.sort((a, b) => a.sort_order - b.sort_order)
+          const firstRoomIndex = sortedLaserRooms.findIndex(r => r.id === usedRooms[0].id)
+          const lastRoomIndex = sortedLaserRooms.findIndex(r => r.id === usedRooms[usedRooms.length - 1].id)
+
+          const sessionStart = toIL(new Date(sessionForThisRoom.start_datetime))
+          const sessionEnd = toIL(new Date(sessionForThisRoom.end_datetime))
+
+          segments.push({
+            segmentId: `${booking.id}-laser-${sessionForThisRoom.session_order}-${firstRoomIndex}-${lastRoomIndex}-${sessionStart.getTime()}`,
+            bookingId: booking.id,
+            booking,
+            start: sessionStart,
+            end: sessionEnd,
+            slotStart: firstRoomIndex,
+            slotEnd: lastRoomIndex + 1,
+            slotsKey: `laser-${firstRoomIndex}-${lastRoomIndex}`,
+            isOverbooked: false
+          })
         }
-        
-        segments.push(segment)
+
+        segments.sort((a, b) => a.bookingId.localeCompare(b.bookingId))
+        if (segments.length > 0) {
+          index.set(`${slot.hour}:${slot.minute}:${roomIndex}`, segments)
+        }
       }
     }
-    
-    // Trier les segments par bookingId pour un affichage stable
-    segments.sort((a, b) => a.bookingId.localeCompare(b.bookingId))
-    
-    return segments
+
+    return index
+  }, [allBookings, selectedDate, branches, selectedBranchId, timeSlots])
+
+  // Lookup O(1) pour la grille LASER (remplace le filtrage O(n×m) de getSegmentsForCellLaser)
+  const getSegmentsForCellLaser = (hour: number, minute: number, roomIndex: number): UISegment[] => {
+    return segmentIndexLaser.get(`${hour}:${minute}:${roomIndex}`) || []
   }
 
   // Fonction de compatibilité : retourne le premier segment (pour le code existant)
@@ -2159,7 +2077,7 @@ export default function AdminPage() {
         />
 
         {/* Statistiques Agenda (Jour, Semaine, Mois) */}
-        <AgendaStats stats={stats} isDark={isDark} />
+        <AgendaStats stats={stats} isDark={isDark} loading={statsLoading} />
 
         {/* Navigation de date */}
         <div className="flex items-center justify-between mb-6 gap-4">
@@ -3109,6 +3027,7 @@ export default function AdminPage() {
             // Rafraîchir les données de la branche après mise à jour des paramètres
             await refreshBranches()
             await refreshAllBookings()
+            refreshStats()
             setShowBranchSettingsModal(false)
           }}
           isDark={isDark}

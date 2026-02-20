@@ -478,6 +478,7 @@ export async function PATCH(
           const sessionEnd = new Date(sessionTime.getTime() + gameDuration * 60000)
           sessions.push({
             booking_id: booking.id,
+            branch_id: order.branch_id,
             game_area: order.game_area,
             start_datetime: sessionTime.toISOString(),
             end_datetime: sessionEnd.toISOString(),

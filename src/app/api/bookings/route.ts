@@ -318,6 +318,7 @@ export async function POST(request: NextRequest) {
     if (body.game_sessions && body.game_sessions.length > 0) {
       const sessionsToInsert = body.game_sessions.map(session => ({
         booking_id: newBooking.id,
+        branch_id: body.branch_id,
         game_area: session.game_area,
         start_datetime: session.start_datetime,
         end_datetime: session.end_datetime,
