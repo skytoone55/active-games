@@ -1,5 +1,6 @@
 import type { AgentContext } from './types'
 import { getRelevantCategories } from './info/faq-categories'
+import { trackCodexEvent } from '../tracking'
 
 // ── Vector similarity search ──────────────────────────────────────────
 
@@ -167,11 +168,23 @@ export async function loadRelevantFAQ(params: {
 
   const categories = getRelevantCategories(context.profile)
 
+  let searchMethod: 'vector' | 'keyword' = 'vector'
   let faqRows = await searchFAQByEmbedding(supabase, searchContext, context.locale, 5, 0.3, categories)
   if (faqRows.length === 0) {
+    searchMethod = 'keyword'
     const allFaq = await loadFAQ(supabase, context.locale)
     faqRows = filterFAQByKeywords(allFaq, messageText)
   }
+
+  // Track FAQ results (fire-and-forget, non-blocking)
+  trackCodexEvent(supabase, context.conversationId, context.branchId, 'faq_loaded', {
+    searchMethod,
+    searchContext,
+    categories,
+    locale: context.locale,
+    resultCount: faqRows.length,
+    questions: faqRows.map(r => r.question.slice(0, 80)),
+  }).catch(() => {})
 
   return faqRows
 }
