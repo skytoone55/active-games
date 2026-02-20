@@ -3,7 +3,7 @@ import { DEFAULT_AGENT_CONFIGS } from './agents/defaults'
 import { routeMessage } from './router/index'
 import { getAvailableHumanStatus, trackCodexEvent } from './tracking'
 import { resolveLocalizedCodexText } from './config'
-import type { AgentConfig, AgentContext, AgentId, AgentResponse, ConversationProfile } from './agents/types'
+import type { AgentConfig, AgentContext, AgentId, AgentResponse, ConversationProfile, PromptGlobalSettings } from './agents/types'
 import type { ClaraCodexWhatsAppSettings } from './config'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 
@@ -189,7 +189,13 @@ export async function handleClaraCodexWhatsAppResponseV2(
     routerFallbackAgent: routerFailed ? currentProfile.last_agent : undefined,
   })
 
-  // 3. Get the agent
+  // 3. Extract global prompt settings for template replacements
+  const globalPromptSettings: PromptGlobalSettings = {
+    custom_prompt: settings.custom_prompt || '',
+    enforce_email_for_link: settings.enforce_email_for_link !== false,
+  }
+
+  // 4. Get the agent
   const agentId = resolvedAgent
   const agent = getAgent(agentId)
   const agentConfig = resolveAgentConfig(agentId, settings)
@@ -202,7 +208,7 @@ export async function handleClaraCodexWhatsAppResponseV2(
       return runAgentAndRespond({
         agent: fallbackAgent,
         config: fallbackConfig,
-        context: buildContext(conversation, senderPhone, detectedLocale, now, routing.summary),
+        context: buildContext(conversation, senderPhone, detectedLocale, now, routing.summary, globalPromptSettings),
         history: (history || []) as Array<{ direction: 'inbound' | 'outbound'; content: string | null }>,
         messageText,
         settings,
@@ -214,11 +220,11 @@ export async function handleClaraCodexWhatsAppResponseV2(
     }
   }
 
-  // 4. Run the agent
+  // 5. Run the agent
   return runAgentAndRespond({
     agent: agent!,
     config: agentConfig,
-    context: buildContext(conversation, senderPhone, detectedLocale, now, routing.summary),
+    context: buildContext(conversation, senderPhone, detectedLocale, now, routing.summary, globalPromptSettings),
     history: history || [],
     messageText,
     settings,
@@ -234,7 +240,8 @@ function buildContext(
   senderPhone: string,
   locale: string,
   now: { isoDate: string; label: string },
-  routerSummary?: string
+  routerSummary?: string,
+  globalPromptSettings?: PromptGlobalSettings
 ): AgentContext {
   return {
     conversationId: conversation.id,
@@ -248,6 +255,7 @@ function buildContext(
     humanAvailable: false, // Will be resolved below
     routerSummary,
     profile: conversation.profile || undefined,
+    globalPromptSettings,
   }
 }
 

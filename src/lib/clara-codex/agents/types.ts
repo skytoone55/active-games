@@ -23,6 +23,12 @@ export interface AgentConfig {
   enabled: boolean
 }
 
+/** Global prompt settings injected into all agents via {{CUSTOM_PROMPT}} and {{EMAIL_REQUIRED_FOR_LINK}} */
+export interface PromptGlobalSettings {
+  custom_prompt: string
+  enforce_email_for_link: boolean
+}
+
 export interface AgentContext {
   conversationId: string
   branchId: string | null
@@ -35,6 +41,8 @@ export interface AgentContext {
   humanAvailable: boolean
   routerSummary?: string
   profile?: ConversationProfile
+  /** Global settings for prompt template replacements */
+  globalPromptSettings?: PromptGlobalSettings
 }
 
 export interface RouterResult {

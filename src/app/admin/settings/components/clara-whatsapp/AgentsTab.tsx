@@ -16,6 +16,7 @@ import {
   HeadphonesIcon,
   ArrowUpRight,
   RotateCcw,
+  Settings2,
 } from 'lucide-react'
 import type { AgentConfig, AgentId } from '@/lib/clara-codex/agents/types'
 import { AGENT_LABELS, AGENT_DESCRIPTIONS } from '@/lib/clara-codex/agents/types'
@@ -25,14 +26,35 @@ interface AgentsTabProps {
   isDark: boolean
 }
 
+interface PromptSettings {
+  custom_prompt: string
+  enforce_email_for_link: boolean
+}
+
 interface AgentsApiResponse {
   agents: Record<AgentId, AgentConfig>
   models: Array<{ id: string; name: string; provider: string }>
+  promptSettings?: PromptSettings
 }
 
 type TabId = 'agents' | 'tools'
 
 const AGENT_ORDER: AgentId[] = ['router', 'info', 'resa_game', 'resa_event', 'after_sale', 'escalation']
+
+// Template variables documentation
+const TEMPLATE_VARIABLES = [
+  { name: '{{LOCALE}}', desc: 'Langue detectee (Hebrew / English / French)', auto: true },
+  { name: '{{NOW_ISRAEL}}', desc: 'Date et heure actuelle en Israel', auto: true },
+  { name: '{{TODAY_ISO}}', desc: 'Date du jour (YYYY-MM-DD)', auto: true },
+  { name: '{{CONTACT_NAME}}', desc: 'Nom du contact WhatsApp', auto: true },
+  { name: '{{SENDER_PHONE}}', desc: 'Numero de telephone du client', auto: true },
+  { name: '{{BRANCH_ID}}', desc: 'ID de la succursale', auto: true },
+  { name: '{{HUMAN_AVAILABLE}}', desc: 'Agent humain disponible (yes/no)', auto: true },
+  { name: '{{FAQ_BLOCK}}', desc: 'FAQ pertinentes (recherche hybride vector + keyword)', auto: true },
+  { name: '{{PROFILE_CONTEXT}}', desc: 'Contexte game/event du profil conversation (info agent)', auto: true },
+  { name: '{{CUSTOM_PROMPT}}', desc: 'Instructions supplementaires injectees dans tous les agents', auto: false },
+  { name: '{{EMAIL_REQUIRED_FOR_LINK}}', desc: 'Email obligatoire avant lien de reservation (yes/no)', auto: false },
+]
 
 // Tools catalog for the tools tab
 const TOOLS_CATALOG = [
@@ -42,7 +64,7 @@ const TOOLS_CATALOG = [
     agent: 'resa_game' as AgentId,
     purpose: 'Verifie la disponibilite des creneaux pour les jeux ACTIVE et LASER.',
     trigger: 'Appele quand le client a fourni : type de jeu, nombre de joueurs, date et heure souhaitees.',
-    params: ['branchId', 'date', 'time', 'gameType (ACTIVE|LASER)', 'players', 'numberOfGames'],
+    params: ['branchId', 'date', 'time', 'gameArea (ACTIVE|LASER|MIX)', 'players', 'numberOfGames', 'duration'],
   },
   {
     id: 'checkEventAvailability',
@@ -58,7 +80,7 @@ const TOOLS_CATALOG = [
     agent: 'resa_game / resa_event' as any,
     purpose: 'Genere un lien de reservation pre-rempli une fois toutes les infos confirmees.',
     trigger: 'Appele uniquement apres confirmation de disponibilite et collecte de l\'email.',
-    params: ['branchId', 'date', 'time', 'gameType', 'players', 'email', 'contactName', 'phone'],
+    params: ['branchId', 'date', 'time', 'gameArea', 'players', 'email', 'contactName', 'phone'],
   },
   {
     id: 'searchOrderByPhone',
@@ -102,6 +124,10 @@ export function AgentsTab({ isDark }: AgentsTabProps) {
 
   const [agents, setAgents] = useState<Record<AgentId, AgentConfig>>({} as any)
   const [models, setModels] = useState<Array<{ id: string; name: string; provider: string }>>([])
+  const [promptSettings, setPromptSettings] = useState<PromptSettings>({
+    custom_prompt: '',
+    enforce_email_for_link: true,
+  })
   const [openAgents, setOpenAgents] = useState<Record<AgentId, boolean>>({
     router: false,
     info: true,
@@ -110,6 +136,7 @@ export function AgentsTab({ isDark }: AgentsTabProps) {
     after_sale: false,
     escalation: false,
   })
+  const [promptProcessingOpen, setPromptProcessingOpen] = useState(false)
 
   const [activeTab, setActiveTab] = useState<TabId>('agents')
 
@@ -139,6 +166,9 @@ export function AgentsTab({ isDark }: AgentsTabProps) {
       if (Array.isArray(payload.models) && payload.models.length > 0) {
         setModels(payload.models)
       }
+      if (payload.promptSettings) {
+        setPromptSettings(payload.promptSettings)
+      }
     } catch (e) {
       setLoadError(e instanceof Error ? e.message : 'Failed to load')
     } finally {
@@ -153,7 +183,7 @@ export function AgentsTab({ isDark }: AgentsTabProps) {
       const response = await fetch('/api/admin/clara-codex/agents', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ agents }),
+        body: JSON.stringify({ agents, promptSettings }),
       })
       const json = await response.json()
       if (!response.ok || !json.success) {
@@ -230,6 +260,119 @@ export function AgentsTab({ isDark }: AgentsTabProps) {
       {/* --- AGENTS TAB --- */}
       {activeTab === 'agents' && (
         <>
+          {/* ── Prompt Processing Section ── */}
+          <div className={classNames(
+            'rounded-xl border',
+            isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
+          )}>
+            <button
+              onClick={() => setPromptProcessingOpen(!promptProcessingOpen)}
+              className={classNames(
+                'w-full px-5 py-4 flex items-center justify-between text-left',
+                isDark ? 'hover:bg-gray-700/40' : 'hover:bg-gray-50'
+              )}
+            >
+              <div className="flex items-center gap-3 flex-1 min-w-0">
+                <Settings2 className={classNames('w-4 h-4 flex-shrink-0', isDark ? 'text-blue-400' : 'text-blue-600')} />
+                <div className="flex-1 min-w-0">
+                  <h4 className={classNames('font-semibold', isDark ? 'text-white' : 'text-gray-900')}>
+                    Prompt Processing
+                  </h4>
+                  <p className={classNames('text-xs truncate', isDark ? 'text-gray-400' : 'text-gray-600')}>
+                    Variables template et instructions globales injectees dans tous les agents
+                  </p>
+                </div>
+              </div>
+              {promptProcessingOpen ? (
+                <ChevronUp className={classNames('w-4 h-4 ml-2', isDark ? 'text-gray-400' : 'text-gray-500')} />
+              ) : (
+                <ChevronDown className={classNames('w-4 h-4 ml-2', isDark ? 'text-gray-400' : 'text-gray-500')} />
+              )}
+            </button>
+
+            {promptProcessingOpen && (
+              <div className="px-5 pb-5 space-y-4">
+                {/* Template variables reference */}
+                <div className={classNames(
+                  'rounded-lg border p-4 space-y-2',
+                  isDark ? 'bg-gray-900/40 border-gray-700' : 'bg-gray-50 border-gray-200'
+                )}>
+                  <p className={classNames('text-sm font-medium', isDark ? 'text-gray-200' : 'text-gray-700')}>
+                    Variables template
+                  </p>
+                  <p className={classNames('text-xs', isDark ? 'text-gray-400' : 'text-gray-500')}>
+                    Ces variables sont remplacees automatiquement dans le prompt de chaque agent avant envoi au LLM.
+                  </p>
+                  <div className="space-y-1 mt-2">
+                    {TEMPLATE_VARIABLES.map(v => (
+                      <div key={v.name} className="flex items-start gap-2 text-xs">
+                        <code className={classNames(
+                          'px-1.5 py-0.5 rounded flex-shrink-0 font-mono',
+                          v.auto
+                            ? isDark ? 'bg-gray-700 text-green-400' : 'bg-green-50 text-green-700'
+                            : isDark ? 'bg-gray-700 text-orange-400' : 'bg-orange-50 text-orange-700'
+                        )}>
+                          {v.name}
+                        </code>
+                        <span className={isDark ? 'text-gray-400' : 'text-gray-600'}>
+                          {v.desc}
+                          {!v.auto && (
+                            <span className={classNames(
+                              'ml-1 font-medium',
+                              isDark ? 'text-orange-400' : 'text-orange-600'
+                            )}>
+                              — editable ci-dessous
+                            </span>
+                          )}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Custom Prompt */}
+                <label className="space-y-1 block">
+                  <span className={classNames('text-sm font-medium', isDark ? 'text-gray-300' : 'text-gray-700')}>
+                    Custom Prompt <code className="text-xs font-normal">{'{{CUSTOM_PROMPT}}'}</code>
+                  </span>
+                  <p className={classNames('text-xs', isDark ? 'text-gray-400' : 'text-gray-500')}>
+                    Instructions supplementaires injectees dans tous les agents (info, resa_game, resa_event, after_sale).
+                    Laisser vide si non necessaire.
+                  </p>
+                  <textarea
+                    value={promptSettings.custom_prompt}
+                    onChange={(e) => { setPromptSettings(prev => ({ ...prev, custom_prompt: e.target.value })); setSaveStatus(null) }}
+                    rows={4}
+                    placeholder="Ex: Always mention our current promotion: 10% off for groups of 20+..."
+                    className={classNames(
+                      'w-full rounded-lg border px-3 py-2 text-sm font-mono',
+                      isDark ? 'bg-gray-900 border-gray-700 text-white placeholder:text-gray-600' : 'bg-white border-gray-300 text-gray-900 placeholder:text-gray-400'
+                    )}
+                  />
+                </label>
+
+                {/* Email Required */}
+                <label className="inline-flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={promptSettings.enforce_email_for_link}
+                    onChange={(e) => { setPromptSettings(prev => ({ ...prev, enforce_email_for_link: e.target.checked })); setSaveStatus(null) }}
+                    className="w-5 h-5"
+                  />
+                  <div>
+                    <span className={classNames('text-sm font-medium', isDark ? 'text-gray-200' : 'text-gray-700')}>
+                      Email obligatoire pour le lien de reservation
+                    </span>
+                    <p className={classNames('text-xs', isDark ? 'text-gray-400' : 'text-gray-500')}>
+                      <code>{'{{EMAIL_REQUIRED_FOR_LINK}}'}</code> = {promptSettings.enforce_email_for_link ? '"yes"' : '"no"'}
+                    </p>
+                  </div>
+                </label>
+              </div>
+            )}
+          </div>
+
+          {/* ── Agent Cards ── */}
           {AGENT_ORDER.map(agentId => {
             const config = agents[agentId]
             if (!config) return null
@@ -387,24 +530,9 @@ export function AgentsTab({ isDark }: AgentsTabProps) {
                           )}
                         />
                         {agentId !== 'router' && (
-                          <div className={classNames(
-                            'rounded-lg border p-3 text-xs space-y-1',
-                            isDark ? 'bg-gray-900/40 border-gray-700 text-gray-400' : 'bg-gray-50 border-gray-200 text-gray-500'
-                          )}>
-                            <p className="font-medium">Template variables:</p>
-                            <p>
-                              <code>{'{{LOCALE}}'}</code>{' '}
-                              <code>{'{{NOW_ISRAEL}}'}</code>{' '}
-                              <code>{'{{TODAY_ISO}}'}</code>{' '}
-                              <code>{'{{CONTACT_NAME}}'}</code>{' '}
-                              <code>{'{{SENDER_PHONE}}'}</code>{' '}
-                              <code>{'{{BRANCH_ID}}'}</code>{' '}
-                              <code>{'{{HUMAN_AVAILABLE}}'}</code>{' '}
-                              <code>{'{{FAQ_BLOCK}}'}</code>{' '}
-                              <code>{'{{CUSTOM_PROMPT}}'}</code>{' '}
-                              <code>{'{{EMAIL_REQUIRED_FOR_LINK}}'}</code>
-                            </p>
-                          </div>
+                          <p className={classNames('text-xs', isDark ? 'text-gray-500' : 'text-gray-400')}>
+                            Utilise les variables template definies dans la section Prompt Processing ci-dessus.
+                          </p>
                         )}
                       </label>
                     )}

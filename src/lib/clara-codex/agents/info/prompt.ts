@@ -1,4 +1,4 @@
-import type { AgentConfig } from '../types'
+import type { AgentConfig, PromptGlobalSettings } from '../types'
 import { formatFAQBlock } from '../shared-faq'
 
 export function buildInfoPrompt(params: {
@@ -8,8 +8,9 @@ export function buildInfoPrompt(params: {
   todayISO: string
   faqRows: Array<{ question: string; answer: string }>
   profileContext?: string
+  globalPromptSettings?: PromptGlobalSettings
 }): string {
-  const { config, locale, nowLabel, todayISO, faqRows, profileContext } = params
+  const { config, locale, nowLabel, todayISO, faqRows, profileContext, globalPromptSettings } = params
 
   const faqBlock = formatFAQBlock(faqRows)
 
@@ -21,7 +22,7 @@ export function buildInfoPrompt(params: {
   prompt = prompt.replace(/\{\{FAQ_BLOCK\}\}/g, faqBlock)
 
   prompt = prompt.replace(/\{\{PROFILE_CONTEXT\}\}/g, profileContext || 'No specific context.')
-  prompt = prompt.replace(/\{\{CUSTOM_PROMPT\}\}/g, '')
+  prompt = prompt.replace(/\{\{CUSTOM_PROMPT\}\}/g, globalPromptSettings?.custom_prompt || '')
 
   return prompt.trim()
 }

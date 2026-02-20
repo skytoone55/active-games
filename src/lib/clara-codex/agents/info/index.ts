@@ -21,6 +21,7 @@ export const infoAgent: AgentHandler = {
       todayISO: context.nowISO,
       faqRows,
       profileContext,
+      globalPromptSettings: context.globalPromptSettings,
     })
 
     const provider = getModelProvider(config.model)

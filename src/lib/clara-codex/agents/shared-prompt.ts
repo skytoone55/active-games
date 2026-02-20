@@ -7,6 +7,7 @@ export function buildAgentPrompt(params: {
   extraReplacements?: Record<string, string>
 }): string {
   const { config, context, faqBlock, extraReplacements } = params
+  const gps = context.globalPromptSettings
 
   let prompt = config.prompt
   prompt = prompt.replace(/\{\{LOCALE\}\}/g, getLocaleLabel(context.locale))
@@ -18,8 +19,8 @@ export function buildAgentPrompt(params: {
   prompt = prompt.replace(/\{\{HUMAN_AVAILABLE\}\}/g, context.humanAvailable ? 'yes' : 'no')
   prompt = prompt.replace(/\{\{FAQ_BLOCK\}\}/g, faqBlock || '')
 
-  prompt = prompt.replace(/\{\{CUSTOM_PROMPT\}\}/g, '')
-  prompt = prompt.replace(/\{\{EMAIL_REQUIRED_FOR_LINK\}\}/g, 'yes')
+  prompt = prompt.replace(/\{\{CUSTOM_PROMPT\}\}/g, gps?.custom_prompt || '')
+  prompt = prompt.replace(/\{\{EMAIL_REQUIRED_FOR_LINK\}\}/g, gps?.enforce_email_for_link !== false ? 'yes' : 'no')
 
   if (extraReplacements) {
     for (const [key, value] of Object.entries(extraReplacements)) {
