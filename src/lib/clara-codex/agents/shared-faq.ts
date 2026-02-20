@@ -253,7 +253,17 @@ export async function loadRelevantFAQ(params: {
  */
 export function formatFAQBlock(faqRows: Array<{ question: string; answer: string }>): string {
   if (faqRows.length === 0) return 'No FAQ available for this question. Do NOT invent an answer — say you are not sure and suggest contacting the branch directly.'
-  return faqRows
+
+  const entries = faqRows
     .map(row => `Q: ${row.question}\nA: ${row.answer}`)
     .join('\n\n')
+
+  return `${entries}
+
+IMPORTANT — FAQ USAGE RULES:
+The FAQ entries above are pre-filtered suggestions — they may NOT all be relevant to the customer's question.
+Before answering, match the customer's INTENT to the right FAQ entry.
+If no FAQ entry logically answers the question, say you are not sure and offer to help differently.
+Never answer with a FAQ entry that does not match what the customer is actually asking.
+Customers often have typos or spelling mistakes — interpret their intent, not their exact spelling.`
 }
