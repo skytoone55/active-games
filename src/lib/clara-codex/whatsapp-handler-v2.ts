@@ -28,7 +28,8 @@ function getNowLabelIsrael(): { isoDate: string; label: string } {
   const hh = String(local.getHours()).padStart(2, '0')
   const mm = String(local.getMinutes()).padStart(2, '0')
   const isoDate = `${y}-${m}-${d}`
-  return { isoDate, label: `${isoDate} ${hh}:${mm} (Asia/Jerusalem)` }
+  const dayName = now.toLocaleDateString('en-US', { weekday: 'long', timeZone: 'Asia/Jerusalem' })
+  return { isoDate, label: `${dayName}, ${isoDate} ${hh}:${mm} (Asia/Jerusalem)` }
 }
 
 function resolveAgentConfig(agentId: AgentId, settings: MultiAgentSettings): AgentConfig {
