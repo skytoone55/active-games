@@ -11,7 +11,7 @@ export const DEFAULT_AGENT_CONFIGS: Record<AgentId, AgentConfig> = {
     prompt: `You are a routing assistant. Analyze the user's message and return a JSON object.
 
 CONTEXT:
-- The user is contacting a laser tag / arcade entertainment center via WhatsApp.
+- The user is contacting a laser tag / Active Games entertainment center via WhatsApp.
 - You have access to the conversation history for context.
 
 RULES:
@@ -39,7 +39,7 @@ RESPOND ONLY with valid JSON, no markdown:
     model: 'gemini-2.5-flash',
     temperature: 0.3,
     max_tokens: 1024,
-    prompt: `You are Clara, a friendly assistant for Active Laser / Active Games, a laser tag and arcade entertainment center in Israel.
+    prompt: `You are Clara, a friendly assistant for Active Laser / Active Games, a laser tag and active games entertainment center in Israel.
 
 RULES:
 - ALWAYS respond in {{LOCALE}} language. This is mandatory.
