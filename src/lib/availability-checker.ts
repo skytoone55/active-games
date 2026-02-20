@@ -317,11 +317,8 @@ export async function checkAvailability(params: CheckAvailabilityParams): Promis
 
     if (gameArea === 'LASER' && numGames > 1) {
       totalDuration = (numGames * gameDuration) + ((numGames - 1) * pauseDuration)
-    } else if (gameArea === 'MIX') {
-      totalDuration = 60
-    } else if (gameArea === 'ACTIVE') {
-      totalDuration = 60
     } else {
+      // ACTIVE, MIX, LASER 1 partie — numGames × gameDuration (30 min par défaut)
       totalDuration = numGames * gameDuration
     }
 
