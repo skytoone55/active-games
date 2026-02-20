@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, memo } from 'react'
 import { X, CreditCard, Banknote, Building2, FileText, Loader2, AlertCircle, CheckCircle, Lock, ShieldCheck } from 'lucide-react'
 import { useTranslation } from '@/contexts/LanguageContext'
 
@@ -60,7 +60,7 @@ export interface PaymentData {
   notes?: string
 }
 
-export function PaymentModal({
+export const PaymentModal = memo(function PaymentModal({
   isOpen,
   onClose,
   onSubmit,
@@ -918,4 +918,4 @@ export function PaymentModal({
       </div>
     </div>
   )
-}
+})

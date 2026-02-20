@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useCallback, useState, useEffect } from 'react'
+import { createContext, useContext, useCallback, useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { getClient } from '@/lib/supabase/client'
 import { useAuth, type AuthUser } from '@/hooks/useAuth'
@@ -60,7 +60,9 @@ export function AdminProvider({ children, theme, toggleTheme }: {
     }
   }, [user?.id, user?.role])
 
-  const value: AdminContextValue = {
+  const isDark = theme === 'dark'
+
+  const value: AdminContextValue = useMemo(() => ({
     user,
     loading: authLoading, // Only block on auth, not branches — pages can render while branches load
     signOut,
@@ -73,8 +75,8 @@ export function AdminProvider({ children, theme, toggleTheme }: {
     branchesLoading,
     theme,
     toggleTheme,
-    isDark: theme === 'dark',
-  }
+    isDark,
+  }), [user, authLoading, signOut, refreshUser, branches, selectedBranch, selectedBranchId, selectBranch, refreshBranches, branchesLoading, theme, toggleTheme, isDark])
 
   return (
     <AdminContext.Provider value={value}>

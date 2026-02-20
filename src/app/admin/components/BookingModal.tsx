@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo, memo } from 'react'
 import { X, Loader2, Users, Clock, User, Phone, Mail, MessageSquare, Gamepad2, PartyPopper, Palette, Home, Calendar, ChevronLeft, ChevronRight, Edit2, RefreshCw, AlertTriangle, ChevronDown, Building2, Zap, Target, FileText, Receipt, CheckCheck, Ban } from 'lucide-react'
 import type { CreateBookingData, BookingWithSlots } from '@/hooks/useBookings'
 import { ContactFieldAutocomplete } from './ContactFieldAutocomplete'
@@ -82,7 +82,7 @@ const COLORS = [
   { nameKey: 'admin.booking_modal.colors.emerald', value: '#10B981' },
 ]
 
-export function BookingModal({
+export const BookingModal = memo(function BookingModal({
   isOpen,
   onClose,
   onSubmit,
@@ -4601,4 +4601,4 @@ export function BookingModal({
 
     </div>
   )
-}
+})

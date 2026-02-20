@@ -2,14 +2,17 @@
 
 import { useState, useEffect, Fragment, useMemo } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import dynamic from 'next/dynamic'
 import { Loader2, ChevronLeft, ChevronRight, Calendar, Settings, Sliders } from 'lucide-react'
 import { getClient } from '@/lib/supabase/client'
 import { useBookings, type BookingWithSlots, type CreateBookingData } from '@/hooks/useBookings'
-import { BookingModal } from './components/BookingModal'
-import { AccountingModal } from './components/AccountingModal'
 import { OrderDetailModalWrapper } from './components/OrderDetailModalWrapper'
 import { ConfirmationModal } from './components/ConfirmationModal'
 import { SettingsModal } from './components/SettingsModal'
+
+// Dynamic imports pour les modals lourds — réduit le bundle initial de ~300 KB
+const BookingModal = dynamic(() => import('./components/BookingModal').then(m => ({ default: m.BookingModal })), { ssr: false })
+const AccountingModal = dynamic(() => import('./components/AccountingModal').then(m => ({ default: m.AccountingModal })), { ssr: false })
 import { AgendaStats } from './components/AgendaStats'
 import { GridSettingsPopup } from './components/GridSettingsPopup'
 import { AgendaSearch } from './components/AgendaSearch'

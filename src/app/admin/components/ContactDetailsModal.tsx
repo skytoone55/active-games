@@ -69,20 +69,27 @@ export function ContactDetailsModal({
     setLoadingBookings(true)
     const supabase = getClient()
 
-    // Charger le contact
-    const { data: contactData } = await supabase
-      .from('contacts')
-      .select('*')
-      .eq('id', contactId)
-      .single()
+    try {
+      // Charger le contact
+      const { data: contactData, error: contactError } = await supabase
+        .from('contacts')
+        .select('*')
+        .eq('id', contactId)
+        .single()
 
-    if (contactData) {
+      if (contactError) {
+        console.error('Error fetching contact:', contactError)
+        return
+      }
+
+      if (!contactData) return
+
       setContact(contactData)
 
       // Charger les ORDERS liées au contact (pas les bookings)
       // Les orders contiennent TOUTES les commandes, y compris annulées
       const ordersList: any[] = []
-      
+
       // Méthode 1: Via contact_id directement
       const { data: contactOrders, error: contactOrdersError } = await supabase
         .from('orders')
@@ -108,7 +115,7 @@ export function ContactDetailsModal({
       if (contactOrders && Array.isArray(contactOrders)) {
         ordersList.push(...contactOrders)
       }
-      
+
       // Méthode 2: Via téléphone (fallback pour anciennes commandes sans contact_id)
       const phoneNumber = (contactData as Contact).phone
       if (phoneNumber && ordersList.length === 0) {
@@ -143,14 +150,14 @@ export function ContactDetailsModal({
           })
         }
       }
-      
+
       const orders = ordersList
 
       // Transformer les orders pour l'affichage (format similaire aux anciens bookings)
       const linkedItems = orders.map((order: any) => ({
         id: order.id,
         type: order.order_type,
-        status: order.status === 'cancelled' ? 'CANCELLED' : 
+        status: order.status === 'cancelled' ? 'CANCELLED' :
                 order.status === 'pending' ? 'PENDING' : 'CONFIRMED',
         start_datetime: order.booking?.start_datetime || `${order.requested_date}T${order.requested_time}`,
         participants_count: order.participants_count,
@@ -170,7 +177,7 @@ export function ContactDetailsModal({
       const totalParticipants = linkedItems
         .filter((b: any) => b.status !== 'CANCELLED')
         .reduce((sum: number, b: any) => sum + (b.participants_count || 0), 0)
-      const upcomingCount = linkedItems.filter((b: any) => 
+      const upcomingCount = linkedItems.filter((b: any) =>
         new Date(b.start_datetime) >= now && b.status !== 'CANCELLED'
       ).length
       const lastItem = linkedItems.find((b: any) => b.status !== 'CANCELLED')
@@ -183,10 +190,12 @@ export function ContactDetailsModal({
         upcomingBookings: upcomingCount,
         lastActivity: lastItem ? lastItem.start_datetime : null,
       })
+    } catch (err) {
+      console.error('Error loading contact data:', err)
+    } finally {
+      setLoading(false)
+      setLoadingBookings(false)
     }
-
-    setLoading(false)
-    setLoadingBookings(false)
   }, [contactId])
 
   useEffect(() => {

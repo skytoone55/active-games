@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, startTransition, useRef } from 'react'
+import useSWR from 'swr'
 import { Search, Edit2, Archive, User, Loader2, Eye, ChevronLeft, ChevronRight, Plus, Download, ArrowUpDown, ArrowUp, ArrowDown, GitMerge, Settings, X, MessageSquare } from 'lucide-react'
 import { useContacts, type SearchContactsResult } from '@/hooks/useContacts'
 import { useAdmin } from '@/contexts/AdminContext'
@@ -28,19 +29,13 @@ export default function ClientsPage() {
       default: return 'fr-FR'
     }
   }
-  const { searchContacts, archiveContact, unarchiveContact } = useContacts(selectedBranch?.id || null)
+  const { archiveContact, unarchiveContact } = useContacts(selectedBranch?.id || null)
   const unreadContactRequests = useUnreadContactRequestsCount(selectedBranch?.id || null)
 
   const [showContactRequests, setShowContactRequests] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [includeArchived, setIncludeArchived] = useState(false)
-  const [contacts, setContacts] = useState<Contact[]>([])
-  const [loading, setLoading] = useState(false)
-  const [refreshing, setRefreshing] = useState(false)
-  const hasDataRef = useRef(false)
   const [page, setPage] = useState(1)
-  const [totalPages, setTotalPages] = useState(1)
-  const [total, setTotal] = useState(0)
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null)
   const [showDetailsModal, setShowDetailsModal] = useState(false)
   const [showClientModal, setShowClientModal] = useState(false)
@@ -74,67 +69,60 @@ export default function ClientsPage() {
 
   // Note: L'auth est gérée par le layout parent, pas de redirection ici
 
-  // Rechercher les contacts
-  const performSearch = useCallback(async () => {
-    const branchToUse = selectedBranch || (branches.length > 0 ? branches[0] : null)
-    if (!branchToUse?.id) return
+  // SWR pour le cache contacts (même pattern que useOrders)
+  const effectiveBranchId = selectedBranch?.id || (branches.length > 0 ? branches[0]?.id : null)
+  const swrKey = effectiveBranchId
+    ? `/api/contacts?branchId=${effectiveBranchId}${searchQuery.trim() ? `&query=${encodeURIComponent(searchQuery.trim())}` : ''}${filterStatus !== 'all' ? `&status=${filterStatus}` : ''}${filterStatus === 'all' && includeArchived ? '&includeArchived=true' : ''}${filterSource !== 'all' ? `&source=${filterSource}` : ''}&page=${page}&pageSize=${pageSize}`
+    : null
 
-    // Stale-while-revalidate: si on a déjà des données, ne pas bloquer avec le spinner
-    if (!hasDataRef.current) {
-      setLoading(true)
-    } else {
-      setRefreshing(true)
-    }
-    try {
-      const branchToUse = selectedBranch || (branches.length > 0 ? branches[0] : null)
-      if (!branchToUse) return
-      
-      const result: SearchContactsResult = await searchContacts({
-        query: searchQuery.trim() || undefined,
-        branchId: branchToUse.id,
-        includeArchived: filterStatus === 'all' ? includeArchived : filterStatus === 'archived',
-        status: filterStatus === 'all' ? undefined : filterStatus,
-        source: filterSource === 'all' ? undefined : filterSource,
-        page,
-        pageSize,
-      })
-
-      // Appliquer le tri côté client
-      let sortedContacts = [...result.contacts]
-      if (sortField === 'name') {
-        sortedContacts.sort((a, b) => {
-          const nameA = `${a.first_name || ''} ${a.last_name || ''}`.trim().toLowerCase() || a.phone
-          const nameB = `${b.first_name || ''} ${b.last_name || ''}`.trim().toLowerCase() || b.phone
-          return sortDirection === 'asc' 
-            ? nameA.localeCompare(nameB)
-            : nameB.localeCompare(nameA)
-        })
-      } else if (sortField === 'created_at') {
-        sortedContacts.sort((a, b) => {
-          const dateA = new Date(a.created_at).getTime()
-          const dateB = new Date(b.created_at).getTime()
-          return sortDirection === 'asc' ? dateA - dateB : dateB - dateA
-        })
+  const { data: swrData, error: swrError, isLoading: swrLoading, isValidating: swrValidating, mutate } = useSWR<SearchContactsResult>(
+    swrKey,
+    async (url: string) => {
+      const response = await fetch(url)
+      const data = await response.json()
+      if (!response.ok) throw new Error(data.error || 'Error')
+      return {
+        contacts: data.contacts || [],
+        total: data.total || 0,
+        page: data.page || 1,
+        pageSize: data.pageSize || 50,
+        totalPages: data.totalPages || 0,
       }
+    },
+    { revalidateOnFocus: false, dedupingInterval: 10000 }
+  )
 
-      setContacts(sortedContacts)
-      hasDataRef.current = sortedContacts.length > 0
-      setTotalPages(result.totalPages)
-      setTotal(result.total)
-    } catch (error) {
-      console.error('Error searching contacts:', error)
-    } finally {
-      setLoading(false)
-      setRefreshing(false)
+  // Appliquer le tri côté client sur les résultats SWR
+  const contacts = (() => {
+    if (!swrData?.contacts) return []
+    const sorted = [...swrData.contacts]
+    if (sortField === 'name') {
+      sorted.sort((a, b) => {
+        const nameA = `${a.first_name || ''} ${a.last_name || ''}`.trim().toLowerCase() || a.phone
+        const nameB = `${b.first_name || ''} ${b.last_name || ''}`.trim().toLowerCase() || b.phone
+        return sortDirection === 'asc'
+          ? nameA.localeCompare(nameB)
+          : nameB.localeCompare(nameA)
+      })
+    } else if (sortField === 'created_at') {
+      sorted.sort((a, b) => {
+        const dateA = new Date(a.created_at).getTime()
+        const dateB = new Date(b.created_at).getTime()
+        return sortDirection === 'asc' ? dateA - dateB : dateB - dateA
+      })
     }
-  }, [searchQuery, includeArchived, page, selectedBranch?.id, branches, sortField, sortDirection, filterStatus, filterSource])
+    return sorted
+  })()
 
-  useEffect(() => {
-    const branchToUse = selectedBranch || (branches.length > 0 ? branches[0] : null)
-    if (branchToUse?.id) {
-      performSearch()
-    }
-  }, [performSearch, selectedBranch?.id, branches])
+  const totalPages = swrData?.totalPages || 1
+  const total = swrData?.total || 0
+  const loading = swrLoading
+  const refreshing = swrValidating && !swrLoading
+
+  // Rafraîchir après mutation (create, archive, etc.)
+  const performSearch = useCallback(() => {
+    mutate()
+  }, [mutate])
 
   // Gérer l'archivage
   const handleArchive = (contact: Contact) => {

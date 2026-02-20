@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, memo } from 'react'
 import {
   X,
   Loader2,
@@ -38,7 +38,7 @@ interface AccountingModalProps {
 
 type PaymentStatus = 'unpaid' | 'partial' | 'paid' | 'guaranteed'
 
-export function AccountingModal({
+export const AccountingModal = memo(function AccountingModal({
   orderId,
   onClose,
   onCloseOrder,
@@ -1002,4 +1002,4 @@ export function AccountingModal({
       />
     </div>
   )
-}
+})
