@@ -316,7 +316,7 @@ export async function POST(request: NextRequest) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         let { data: conversation } = await (supabase as any)
           .from('whatsapp_conversations')
-          .select('id, contact_id, contact_name, unread_count, onboarding_status, activity, branch_id, onboarding_data, clara_paused, clara_paused_until, wa_phone_number_id')
+          .select('id, contact_id, contact_name, unread_count, onboarding_status, activity, branch_id, onboarding_data, clara_paused, clara_paused_until, wa_phone_number_id, last_message_at')
           .eq('phone', senderPhone)
           .eq('status', 'active')
           .order('created_at', { ascending: false })
@@ -441,11 +441,67 @@ export async function POST(request: NextRequest) {
             media_filename: mediaFilename,
           })
 
-        // 3. Onboarding flow / auto-reply / Clara AI
-        let onboardingHandledMessage = false
+        // 3a. Session timeout check — configurable via onboarding settings
+        const sessionTimeoutMinutes = Number(onboardingConfig?.session_timeout_minutes) || 0
+        const sessionTimeoutMs = sessionTimeoutMinutes * 60 * 1000
+        let sessionResetHandled = false
+        if (
+          sessionTimeoutMinutes > 0 &&
+          !isNewConversation &&
+          conversation.last_message_at &&
+          conversation.onboarding_status !== 'waiting:session_reset' &&
+          (conversation.onboarding_status === 'completed' || conversation.onboarding_status === null) &&
+          hasEnabledSteps
+        ) {
+          const lastMsgTime = new Date(conversation.last_message_at).getTime()
+          const elapsed = Date.now() - lastMsgTime
+          if (elapsed >= sessionTimeoutMs) {
+            // Read configurable messages or use defaults
+            const lang = onboardingLang || 'he'
+            const defaultBody: Record<string, string> = {
+              he: 'שלום! רוצה להמשיך את השיחה הקודמת או להתחיל שיחה חדשה?',
+              fr: 'Bonjour ! Voulez-vous continuer notre conversation ou en démarrer une nouvelle ?',
+              en: 'Hi! Would you like to continue our previous conversation or start a new one?',
+            }
+            const defaultBtnContinue: Record<string, string> = {
+              he: 'להמשיך ▶️',
+              fr: 'Continuer ▶️',
+              en: 'Continue ▶️',
+            }
+            const defaultBtnNew: Record<string, string> = {
+              he: 'שיחה חדשה 🔄',
+              fr: 'Nouvelle conv. 🔄',
+              en: 'New conversation 🔄',
+            }
+            const stConfig = onboardingConfig?.session_timeout || {}
+            const body = getLocalizedText(stConfig.message, lang) || defaultBody[lang] || defaultBody.he
+            const btnContinueLabel = getLocalizedText(stConfig.button_continue, lang) || defaultBtnContinue[lang] || defaultBtnContinue.he
+            const btnNewLabel = getLocalizedText(stConfig.button_new, lang) || defaultBtnNew[lang] || defaultBtnNew.he
+            const buttons = [
+              { id: 'session_continue', title: btnContinueLabel.substring(0, 20) },
+              { id: 'session_new', title: btnNewLabel.substring(0, 20) },
+            ]
+
+            // Determine restart step (configurable: which step to restart from, default: first)
+            const restartStepId = stConfig.restart_from_step || null
+
+            const waId = await sendInteractiveButtons(senderPhone, body, buttons, waPhoneNumberId)
+            await storeOutboundMessage(supabase, conversation.id, body, 'interactive', waId)
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            await (supabase as any)
+              .from('whatsapp_conversations')
+              .update({ onboarding_status: 'waiting:session_reset' })
+              .eq('id', conversation.id)
+            console.log(`[WHATSAPP] Session timeout (${Math.round(elapsed / 60000)}min) — sent continue/new buttons to`, senderPhone)
+            sessionResetHandled = true
+          }
+        }
+
+        // 3b. Onboarding flow / auto-reply / Clara AI
+        let onboardingHandledMessage = sessionResetHandled
         let onboardingJustCompleted = false
         try {
-          if (hasEnabledSteps) {
+          if (hasEnabledSteps && !sessionResetHandled) {
             // Pre-check if Clara is active so onboarding knows whether to skip welcome message
             // Clara is active for onboarding if:
             // 1. Normally enabled (is_active + enabled) and not blocked by test mode, OR
@@ -705,6 +761,63 @@ async function handleOnboarding(
       await sendStepButtons(supabase, conversation.id, senderPhone, firstStep, language, phoneNumberId)
     }
     return { handled: true, justCompleted: false }
+  }
+
+  // --- SESSION RESET CHOICE (continue or new conversation) ---
+  if (stepId === 'session_reset') {
+    if (buttonReplyId === 'session_new') {
+      // Full reset: clear profile, activity, branch, re-trigger onboarding
+      // Use configurable restart step or default to first step
+      const stConfig = config?.session_timeout || {}
+      const restartStepId = stConfig.restart_from_step || null
+      const restartStep = restartStepId ? getStepById(config, restartStepId) : null
+      const targetStep = restartStep || getFirstStep(config)
+      const resetStatus = targetStep ? `waiting:${targetStep.id}` : 'completed'
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const resetFields: Record<string, any> = {
+        onboarding_status: resetStatus,
+        profile: null,
+        needs_human: false,
+        needs_human_reason: null,
+      }
+      // Only clear activity/branch/onboarding_data if restarting from the beginning
+      if (!restartStep || targetStep?.type === 'activity') {
+        resetFields.activity = null
+        resetFields.branch_id = null
+        resetFields.onboarding_data = null
+      } else if (targetStep?.type === 'branch') {
+        resetFields.branch_id = null
+        resetFields.onboarding_data = null
+      } else {
+        resetFields.onboarding_data = null
+      }
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (supabase as any)
+        .from('whatsapp_conversations')
+        .update(resetFields)
+        .eq('id', conversation.id)
+
+      if (targetStep) {
+        await sendStepButtons(supabase, conversation.id, senderPhone, targetStep, language, phoneNumberId)
+      }
+      console.log('[WHATSAPP] Session reset — re-onboarding from step', targetStep?.id || 'none', 'for', senderPhone)
+      return { handled: true, justCompleted: false }
+    } else {
+      // "Continue" button OR any other text → resume previous conversation
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (supabase as any)
+        .from('whatsapp_conversations')
+        .update({ onboarding_status: 'completed' })
+        .eq('id', conversation.id)
+      console.log('[WHATSAPP] Session continue — resuming previous conversation for', senderPhone)
+      if (buttonReplyId === 'session_continue') {
+        return { handled: true, justCompleted: false }
+      }
+      // User typed something else → let Clara handle it
+      return { handled: false, justCompleted: false }
+    }
   }
 
   // --- WAITING FOR A STEP RESPONSE ---

@@ -39,12 +39,21 @@ interface OnboardingStep {
   options: OnboardingStepOption[]
 }
 
+interface SessionTimeoutConfig {
+  message: MultilingualText
+  button_continue: MultilingualText
+  button_new: MultilingualText
+  restart_from_step: string | null
+}
+
 interface WhatsAppOnboardingConfig {
   enabled: boolean
   language: 'he' | 'fr' | 'en'
   steps: OnboardingStep[]
   welcome_message_enabled: boolean
   welcome_message: MultilingualText
+  session_timeout_minutes: number
+  session_timeout: SessionTimeoutConfig
 }
 
 // ============================================================
@@ -78,6 +87,13 @@ const DEFAULT_CONFIG: WhatsAppOnboardingConfig = {
   ],
   welcome_message_enabled: true,
   welcome_message: emptyMultilingual(),
+  session_timeout_minutes: 0,
+  session_timeout: {
+    message: { fr: 'Bonjour ! Voulez-vous continuer notre conversation ou en demarrer une nouvelle ?', en: 'Hi! Would you like to continue our previous conversation or start a new one?', he: 'שלום! רוצה להמשיך את השיחה הקודמת או להתחיל שיחה חדשה?' },
+    button_continue: { fr: 'Continuer', en: 'Continue', he: 'להמשיך ▶️' },
+    button_new: { fr: 'Nouvelle conv.', en: 'New conversation', he: 'שיחה חדשה 🔄' },
+    restart_from_step: null,
+  },
 }
 
 // Migrate old config format (activities/branches arrays) to new steps format
@@ -126,6 +142,8 @@ function migrateConfig(saved: any): WhatsAppOnboardingConfig {
     steps,
     welcome_message_enabled: saved.welcome_message_enabled ?? true,
     welcome_message: saved.welcome_message || emptyMultilingual(),
+    session_timeout_minutes: saved.session_timeout_minutes ?? 0,
+    session_timeout: saved.session_timeout ?? DEFAULT_CONFIG.session_timeout,
   }
 }
 
@@ -718,6 +736,126 @@ export function OnboardingTab({ isDark }: OnboardingTabProps) {
                     style={inputStyle}
                   />
                 </div>
+              )}
+            </div>
+          </div>
+          {/* ── Session Timeout ── */}
+          <div className={`p-4 rounded-xl border ${isDark ? 'bg-gray-800/50 border-gray-700' : 'bg-white border-gray-200'}`}>
+            <div className="flex items-center space-x-3 mb-4">
+              <div className="w-8 h-8 rounded-lg bg-orange-100 flex items-center justify-center">
+                <span className="text-orange-600 text-sm">⏱️</span>
+              </div>
+              <h3 className={`font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                Session Timeout
+              </h3>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className={`block text-sm font-medium mb-1 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                  Timeout (minutes) — 0 = désactivé
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  max={1440}
+                  value={config.session_timeout_minutes}
+                  onChange={(e) => updateConfig({ session_timeout_minutes: Math.max(0, parseInt(e.target.value) || 0) })}
+                  className="w-32 px-3 py-2 rounded-lg border"
+                  style={inputStyle}
+                />
+              </div>
+
+              {config.session_timeout_minutes > 0 && (
+                <>
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className={`block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                        Message
+                      </label>
+                      <LanguageTabs />
+                    </div>
+                    <textarea
+                      rows={2}
+                      value={config.session_timeout?.message?.[activeLocale] || ''}
+                      onChange={(e) => setConfig(prev => ({
+                        ...prev,
+                        session_timeout: {
+                          ...prev.session_timeout,
+                          message: { ...(prev.session_timeout?.message || emptyMultilingual()), [activeLocale]: e.target.value }
+                        }
+                      }))}
+                      className="w-full px-3 py-2 rounded-lg border resize-none"
+                      style={inputStyle}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className={`block text-sm font-medium mb-1 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                        Bouton "Continuer"
+                      </label>
+                      <input
+                        type="text"
+                        maxLength={20}
+                        value={config.session_timeout?.button_continue?.[activeLocale] || ''}
+                        onChange={(e) => setConfig(prev => ({
+                          ...prev,
+                          session_timeout: {
+                            ...prev.session_timeout,
+                            button_continue: { ...(prev.session_timeout?.button_continue || emptyMultilingual()), [activeLocale]: e.target.value }
+                          }
+                        }))}
+                        className="w-full px-3 py-2 rounded-lg border"
+                        style={inputStyle}
+                      />
+                    </div>
+                    <div>
+                      <label className={`block text-sm font-medium mb-1 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                        Bouton "Nouvelle conv."
+                      </label>
+                      <input
+                        type="text"
+                        maxLength={20}
+                        value={config.session_timeout?.button_new?.[activeLocale] || ''}
+                        onChange={(e) => setConfig(prev => ({
+                          ...prev,
+                          session_timeout: {
+                            ...prev.session_timeout,
+                            button_new: { ...(prev.session_timeout?.button_new || emptyMultilingual()), [activeLocale]: e.target.value }
+                          }
+                        }))}
+                        className="w-full px-3 py-2 rounded-lg border"
+                        style={inputStyle}
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className={`block text-sm font-medium mb-1 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                      Redémarrer depuis l&apos;étape
+                    </label>
+                    <select
+                      value={config.session_timeout?.restart_from_step || ''}
+                      onChange={(e) => setConfig(prev => ({
+                        ...prev,
+                        session_timeout: {
+                          ...prev.session_timeout,
+                          restart_from_step: e.target.value || null,
+                        }
+                      }))}
+                      className="w-full px-3 py-2 rounded-lg border"
+                      style={inputStyle}
+                    >
+                      <option value="">Début (toutes les étapes)</option>
+                      {sortedSteps.filter(s => s.enabled).map(step => (
+                        <option key={step.id} value={step.id}>
+                          {step.name[activeLocale] || step.name.he || step.id}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </>
               )}
             </div>
           </div>
