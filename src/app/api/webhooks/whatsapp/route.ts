@@ -447,9 +447,14 @@ export async function POST(request: NextRequest) {
         try {
           if (hasEnabledSteps) {
             // Pre-check if Clara is active so onboarding knows whether to skip welcome message
-            const codexActiveForOnboarding = !!(
-              codexSettingsRecord?.is_active &&
-              (codexSettingsRecord?.settings as any)?.enabled === true &&
+            // Clara is active for onboarding if:
+            // 1. Normally enabled (is_active + enabled) and not blocked by test mode, OR
+            // 2. Test mode is on and this phone is whitelisted (bypass even if Clara is OFF)
+            const codexNormalForOnboarding = !!(codexSettingsRecord?.is_active && (codexSettingsRecord?.settings as any)?.enabled === true)
+            const codexTestBypassForOnboarding = !!((codexSettingsRecord?.settings as any)?.test_mode === true &&
+              isPhoneInTestWhitelist(codexSettingsRecord?.settings, senderPhone))
+            const codexActiveForOnboarding = codexTestBypassForOnboarding || (
+              codexNormalForOnboarding &&
               !((codexSettingsRecord?.settings as any)?.test_mode === true &&
                 !isPhoneInTestWhitelist(codexSettingsRecord?.settings, senderPhone))
             )
@@ -510,17 +515,24 @@ export async function POST(request: NextRequest) {
         }
 
         const codexSettings = codexSettingsRecord?.settings as Record<string, unknown> | undefined
-        const codexEnabled = !!(codexSettingsRecord?.is_active && codexSettings?.enabled === true)
-        const codexOutsideSchedule = codexEnabled ? isOutsideConfiguredSchedule(codexSettings) : false
-        const codexBranchInactive = codexEnabled
+        const codexNormallyEnabled = !!(codexSettingsRecord?.is_active && codexSettings?.enabled === true)
+
+        // Test mode bypass: if test_mode is ON and phone is whitelisted, Clara responds even if is_active=false
+        const codexTestModeActive = (codexSettings as any)?.test_mode === true
+        const codexPhoneWhitelisted = codexTestModeActive && isPhoneInTestWhitelist(codexSettings, senderPhone)
+        const codexEnabled = codexNormallyEnabled || codexPhoneWhitelisted
+
+        const codexOutsideSchedule = codexEnabled && !codexPhoneWhitelisted ? isOutsideConfiguredSchedule(codexSettings) : false
+        const codexBranchInactive = codexEnabled && !codexPhoneWhitelisted
           ? isBranchInactive(codexSettings, runtimeConversation.branch_id)
           : false
-        const codexTestModeBlocked = codexEnabled && (codexSettings as any)?.test_mode === true
+        // Block non-whitelisted phones when test mode is active and Clara is normally enabled
+        const codexTestModeBlocked = codexNormallyEnabled && codexTestModeActive
           ? !isPhoneInTestWhitelist(codexSettings, senderPhone)
           : false
 
-        if ((codexSettings as any)?.test_mode === true) {
-          console.log('[WHATSAPP] Test mode active — phone', senderPhone, codexTestModeBlocked ? 'BLOCKED' : 'ALLOWED')
+        if (codexTestModeActive) {
+          console.log('[WHATSAPP] Test mode active — phone', senderPhone, codexPhoneWhitelisted ? 'ALLOWED (bypass)' : 'BLOCKED')
         }
 
         // Normal eligibility: onboarding done, not new conversation, not just handled
