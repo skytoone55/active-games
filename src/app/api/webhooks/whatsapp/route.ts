@@ -813,7 +813,8 @@ async function handleOnboarding(
         .eq('id', conversation.id)
       console.log('[WHATSAPP] Session continue — resuming previous conversation for', senderPhone)
       if (buttonReplyId === 'session_continue') {
-        return { handled: true, justCompleted: false }
+        // Return handled=false so Clara picks up the conversation and responds
+        return { handled: false, justCompleted: false }
       }
       // User typed something else → let Clara handle it
       return { handled: false, justCompleted: false }
