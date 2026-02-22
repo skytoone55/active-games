@@ -166,13 +166,21 @@ export async function handleClaraCodexWhatsAppResponseV2(
   // 2c. Merge conversation profile from router hints
   const updatedProfile = { ...currentProfile }
   let profileChanged = false
-  if (routing.resa_type && !currentProfile.resa_type) {
+  if (routing.resa_type && routing.resa_type !== currentProfile.resa_type) {
     updatedProfile.resa_type = routing.resa_type
     profileChanged = true
   }
-  if (routing.game_type && !currentProfile.game_type) {
+  if (routing.game_type && routing.game_type !== currentProfile.game_type) {
     updatedProfile.game_type = routing.game_type
     profileChanged = true
+    // Sync activity field for CRM display
+    const gameTypeToActivity: Record<string, string> = {
+      'laser': 'laser_city', 'active': 'active_games', 'mix': 'active_and_laser'
+    }
+    await supabase.from('whatsapp_conversations')
+      .update({ activity: gameTypeToActivity[routing.game_type] || null })
+      .eq('id', conversation.id)
+    console.log(`[CLARA V2] Updated activity to '${gameTypeToActivity[routing.game_type]}' (game_type changed from '${currentProfile.game_type}' to '${routing.game_type}')`)
   }
   // Persist locale in profile so it survives router failures
   if (!routerFailed && routing.locale && routing.locale !== currentProfile.locale) {
@@ -224,7 +232,7 @@ export async function handleClaraCodexWhatsAppResponseV2(
       return runAgentAndRespond({
         agent: fallbackAgent,
         config: fallbackConfig,
-        context: buildContext(conversation, senderPhone, detectedLocale, now, routing.summary, globalPromptSettings),
+        context: await buildContext(supabase, conversation, senderPhone, detectedLocale, now, routing.summary, globalPromptSettings),
         history: (history || []) as Array<{ direction: 'inbound' | 'outbound'; content: string | null }>,
         messageText,
         settings,
@@ -240,7 +248,7 @@ export async function handleClaraCodexWhatsAppResponseV2(
   return runAgentAndRespond({
     agent: agent!,
     config: agentConfig,
-    context: buildContext(conversation, senderPhone, detectedLocale, now, routing.summary, globalPromptSettings),
+    context: await buildContext(supabase, conversation, senderPhone, detectedLocale, now, routing.summary, globalPromptSettings),
     history: history || [],
     messageText,
     settings,
@@ -251,17 +259,61 @@ export async function handleClaraCodexWhatsAppResponseV2(
   })
 }
 
-function buildContext(
+async function buildContext(
+  supabase: any,
   conversation: ConversationContext,
   senderPhone: string,
   locale: string,
   now: { isoDate: string; label: string },
   routerSummary?: string,
   globalPromptSettings?: PromptGlobalSettings
-): AgentContext {
+): Promise<AgentContext> {
+  // Query branches + settings to build capabilities block
+  let branchName: string | null = null
+  let branchCapabilities = ''
+
+  try {
+    const { data: branches } = await supabase
+      .from('branches')
+      .select('id, name, name_en, slug')
+      .eq('is_active', true)
+      .order('sort_order')
+
+    const { data: allSettings } = await supabase
+      .from('branch_settings')
+      .select('branch_id, laser_enabled')
+
+    const { data: laserRooms } = await supabase
+      .from('laser_rooms')
+      .select('branch_id')
+      .eq('is_active', true)
+
+    if (branches && branches.length > 0) {
+      // Resolve current branch name
+      const currentBranch = branches.find((b: any) => b.id === conversation.branch_id)
+      branchName = currentBranch?.name_en || currentBranch?.name || null
+
+      // Build capabilities text
+      const lines: string[] = ['BRANCH CAPABILITIES (source of truth — do NOT contradict this):']
+      for (const branch of branches) {
+        const settings = allSettings?.find((s: any) => s.branch_id === branch.id)
+        const hasLaserRooms = laserRooms?.some((r: any) => r.branch_id === branch.id)
+        const hasLaser = settings?.laser_enabled && hasLaserRooms
+        const isCurrent = branch.id === conversation.branch_id
+        const label = branch.name_en || branch.name
+        lines.push(`- ${label}${isCurrent ? ' (CURRENT BRANCH)' : ''}: Laser Game ${hasLaser ? '✓' : '✗'}, Active Games ✓`)
+      }
+      branchCapabilities = lines.join('\n')
+    }
+  } catch (err) {
+    console.error('[CLARA V2] Failed to build branch capabilities:', err)
+  }
+
   return {
     conversationId: conversation.id,
     branchId: conversation.branch_id,
+    branchName,
+    branchCapabilities,
     senderPhone,
     contactName: conversation.contact_name || null,
     contactId: conversation.contact_id || null,

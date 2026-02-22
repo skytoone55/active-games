@@ -543,7 +543,7 @@ export async function POST(request: NextRequest) {
         // Re-read conversation state (onboarding may have changed during handleOnboarding)
         const { data: refreshedConversation } = await (supabase as any)
           .from('whatsapp_conversations')
-          .select('id, contact_name, onboarding_status, branch_id, clara_paused, clara_paused_until, profile, activity')
+          .select('id, contact_name, onboarding_status, branch_id, clara_paused, clara_paused_until, profile, activity, clara_processing, clara_processing_since')
           .eq('id', conversation.id)
           .single()
 
@@ -600,6 +600,36 @@ export async function POST(request: NextRequest) {
         let aiDidRespond = false
 
         if (codexEnabled && (baseEligibility || postOnboardingEligibility) && !codexOutsideSchedule && !codexBranchInactive && !codexTestModeBlocked) {
+          // Auto-release stale processing locks (> 2 min = stuck)
+          if (runtimeConversation.clara_processing && runtimeConversation.clara_processing_since) {
+            const lockAge = Date.now() - new Date(runtimeConversation.clara_processing_since).getTime()
+            if (lockAge > 120_000) {
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              await (supabase as any)
+                .from('whatsapp_conversations')
+                .update({ clara_processing: false, clara_processing_since: null })
+                .eq('id', conversation.id)
+              console.log('[WHATSAPP] Auto-released stale Clara lock for', conversation.id, `(age: ${Math.round(lockAge / 1000)}s)`)
+            }
+          }
+
+          // Try to acquire processing lock (atomic update with condition)
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const { data: lockResult } = await (supabase as any)
+            .from('whatsapp_conversations')
+            .update({
+              clara_processing: true,
+              clara_processing_since: new Date().toISOString()
+            })
+            .eq('id', conversation.id)
+            .eq('clara_processing', false)
+            .select('id')
+            .maybeSingle()
+
+          if (!lockResult) {
+            // Another message is already being processed — skip Clara for this one
+            console.log('[WHATSAPP] Clara already processing, skipping for message:', messageId)
+          } else {
           // Send typing indicator immediately, defer AI processing to after() so we return 200 to Meta fast
           await sendTypingIndicator(messageId, waPhoneNumberId)
           aiDidRespond = true // Set preemptively — the deferred handler WILL respond
@@ -660,8 +690,14 @@ export async function POST(request: NextRequest) {
               })
             } finally {
               typingLoop.stop()
+              // Release processing lock
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              await (deferredSupa as any).from('whatsapp_conversations')
+                .update({ clara_processing: false, clara_processing_since: null })
+                .eq('id', deferredConv.id)
             }
           })
+          } // end lockResult
         }
 
         // 5. Auto-activate timer — set if AI did NOT respond and feature is enabled
@@ -761,6 +797,58 @@ async function handleOnboarding(
       await sendStepButtons(supabase, conversation.id, senderPhone, firstStep, language, phoneNumberId)
     }
     return { handled: true, justCompleted: false }
+  }
+
+  // --- SESSION RESET BUTTONS — work regardless of current onboarding status ---
+  // This handles the case where user clicks "Continue" first, then scrolls back
+  // and clicks "New conversation" (or vice versa). The button must always work.
+  if (buttonReplyId === 'session_new' && stepId !== 'session_reset' && !isNewConversation) {
+    // Treat as full reset even though we're not in session_reset state
+    const stConfig = config?.session_timeout || {}
+    const restartStepId = stConfig.restart_from_step || null
+    const restartStep = restartStepId ? getStepById(config, restartStepId) : null
+    const targetStep = restartStep || getFirstStep(config)
+    const resetStatus = targetStep ? `waiting:${targetStep.id}` : 'completed'
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const resetFields: Record<string, any> = {
+      onboarding_status: resetStatus,
+      profile: null,
+      needs_human: false,
+      needs_human_reason: null,
+    }
+    if (!restartStep || targetStep?.type === 'activity') {
+      resetFields.activity = null
+      resetFields.branch_id = null
+      resetFields.onboarding_data = null
+    } else if (targetStep?.type === 'branch') {
+      resetFields.branch_id = null
+      resetFields.onboarding_data = null
+    } else {
+      resetFields.onboarding_data = null
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (supabase as any)
+      .from('whatsapp_conversations')
+      .update(resetFields)
+      .eq('id', conversation.id)
+
+    if (targetStep) {
+      await sendStepButtons(supabase, conversation.id, senderPhone, targetStep, language, phoneNumberId)
+    }
+    console.log('[WHATSAPP] Late session_new click — re-onboarding from step', targetStep?.id || 'none', 'for', senderPhone)
+    return { handled: true, justCompleted: false }
+  }
+  if (buttonReplyId === 'session_continue' && stepId !== 'session_reset') {
+    // Late "Continue" click — just mark as completed and let Clara handle
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (supabase as any)
+      .from('whatsapp_conversations')
+      .update({ onboarding_status: 'completed' })
+      .eq('id', conversation.id)
+    console.log('[WHATSAPP] Late session_continue click — resuming for', senderPhone)
+    return { handled: false, justCompleted: false }
   }
 
   // --- SESSION RESET CHOICE (continue or new conversation) ---

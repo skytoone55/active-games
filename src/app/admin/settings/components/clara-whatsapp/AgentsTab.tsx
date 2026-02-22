@@ -342,7 +342,7 @@ export function AgentsTab({ isDark }: AgentsTabProps) {
                   <textarea
                     value={promptSettings.custom_prompt}
                     onChange={(e) => { setPromptSettings(prev => ({ ...prev, custom_prompt: e.target.value })); setSaveStatus(null) }}
-                    rows={4}
+                    rows={12}
                     placeholder="Ex: Always mention our current promotion: 10% off for groups of 20+..."
                     className={classNames(
                       'w-full rounded-lg border px-3 py-2 text-sm font-mono',

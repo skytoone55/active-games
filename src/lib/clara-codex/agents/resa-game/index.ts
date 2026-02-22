@@ -38,6 +38,7 @@ export const resaGameAgent: AgentHandler = {
     let fullText = ''
     let usedEscalationTool = false
     let toolErrors = 0
+    let lastToolArgs: Record<string, unknown> = {}
 
     for await (const part of stream.fullStream) {
       if (part.type === 'text-delta') {
@@ -46,13 +47,25 @@ export const resaGameAgent: AgentHandler = {
       }
       if (part.type === 'tool-call') {
         const toolName = (part as { toolName?: string }).toolName || 'unknown'
+        lastToolArgs = (part as { args?: Record<string, unknown> }).args || {}
         if (toolName === 'escalateToHuman') usedEscalationTool = true
         await trackCodexEvent(supabase, context.conversationId, context.branchId, 'tool_called', { toolName, agentId: 'resa_game' })
       }
       if (part.type === 'tool-result') {
         const result = (part as { result?: { error?: string } }).result
         if (result?.error) toolErrors++
-        else toolErrors = 0
+        else {
+          toolErrors = 0
+          // Sync branch_id if the tool used a different branch
+          const usedBranchId = lastToolArgs.branchId as string | undefined
+          if (usedBranchId && usedBranchId !== context.branchId) {
+            await supabase.from('whatsapp_conversations')
+              .update({ branch_id: usedBranchId })
+              .eq('id', context.conversationId)
+            context.branchId = usedBranchId
+            console.log(`[CLARA V2] resa_game: synced branch_id to ${usedBranchId}`)
+          }
+        }
       }
     }
 

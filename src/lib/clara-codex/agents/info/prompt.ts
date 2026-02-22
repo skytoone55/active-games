@@ -8,9 +8,10 @@ export function buildInfoPrompt(params: {
   todayISO: string
   faqRows: Array<{ question: string; answer: string }>
   profileContext?: string
+  branchCapabilities?: string
   globalPromptSettings?: PromptGlobalSettings
 }): string {
-  const { config, locale, nowLabel, todayISO, faqRows, profileContext, globalPromptSettings } = params
+  const { config, locale, nowLabel, todayISO, faqRows, profileContext, branchCapabilities, globalPromptSettings } = params
 
   const faqBlock = formatFAQBlock(faqRows)
 
@@ -22,6 +23,7 @@ export function buildInfoPrompt(params: {
   prompt = prompt.replace(/\{\{FAQ_BLOCK\}\}/g, faqBlock)
 
   prompt = prompt.replace(/\{\{PROFILE_CONTEXT\}\}/g, profileContext || 'No specific context.')
+  prompt = prompt.replace(/\{\{BRANCH_CAPABILITIES\}\}/g, branchCapabilities || '')
   prompt = prompt.replace(/\{\{CUSTOM_PROMPT\}\}/g, globalPromptSettings?.custom_prompt || '')
 
   return prompt.trim()

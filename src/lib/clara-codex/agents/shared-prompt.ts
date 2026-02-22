@@ -15,7 +15,8 @@ export function buildAgentPrompt(params: {
   prompt = prompt.replace(/\{\{TODAY_ISO\}\}/g, context.nowISO)
   prompt = prompt.replace(/\{\{CONTACT_NAME\}\}/g, context.contactName || 'Unknown')
   prompt = prompt.replace(/\{\{SENDER_PHONE\}\}/g, context.senderPhone || 'Unknown')
-  prompt = prompt.replace(/\{\{BRANCH_ID\}\}/g, context.branchId || 'Unknown')
+  prompt = prompt.replace(/\{\{BRANCH_ID\}\}/g, context.branchName || context.branchId || 'Unknown')
+  prompt = prompt.replace(/\{\{BRANCH_CAPABILITIES\}\}/g, context.branchCapabilities || '')
   prompt = prompt.replace(/\{\{HUMAN_AVAILABLE\}\}/g, context.humanAvailable ? 'yes' : 'no')
   prompt = prompt.replace(/\{\{FAQ_BLOCK\}\}/g, faqBlock || '')
 

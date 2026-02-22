@@ -21,6 +21,7 @@ export const infoAgent: AgentHandler = {
       todayISO: context.nowISO,
       faqRows,
       profileContext,
+      branchCapabilities: context.branchCapabilities,
       globalPromptSettings: context.globalPromptSettings,
     })
 

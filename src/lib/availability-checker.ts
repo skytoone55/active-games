@@ -123,6 +123,11 @@ async function checkTimeAvailability(
 
   // Vérifier disponibilité LASER
   if (gameArea === 'LASER' || gameArea === 'laser' || gameArea === 'MIX' || gameArea === 'mix') {
+    // Guard: check if laser is enabled at this branch
+    if (!settings.laser_enabled) {
+      return false
+    }
+
     const { findBestLaserRoomsForBooking } = await import('@/lib/laser-allocation')
 
     const { data: laserRooms } = await supabase
@@ -385,6 +390,16 @@ export async function checkAvailability(params: CheckAvailabilityParams): Promis
 
     // Vérifier disponibilité LASER
     if (gameArea === 'LASER' || gameArea === 'MIX') {
+      // Guard: check if laser is enabled at this branch
+      if (!settings.laser_enabled) {
+        console.log('[Availability Checker] Laser not enabled at branch', branchId)
+        return {
+          available: false,
+          reason: 'laser_not_enabled',
+          message: 'Laser games are not available at this branch'
+        }
+      }
+
       const { findBestLaserRoomsForBooking } = await import('@/lib/laser-allocation')
 
       const { data: laserRooms } = await supabase

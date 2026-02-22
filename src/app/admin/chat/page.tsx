@@ -1306,9 +1306,11 @@ export default function ChatPage() {
                             <span className={`text-[10px] px-1.5 py-0.5 rounded-full flex-shrink-0 ${
                               conv.activity === 'laser_city'
                                 ? isDark ? 'bg-red-500/20 text-red-400' : 'bg-red-100 text-red-600'
-                                : isDark ? 'bg-purple-500/20 text-purple-400' : 'bg-purple-100 text-purple-600'
+                                : conv.activity === 'active_and_laser'
+                                  ? isDark ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-100 text-blue-600'
+                                  : isDark ? 'bg-purple-500/20 text-purple-400' : 'bg-purple-100 text-purple-600'
                             }`}>
-                              {conv.activity === 'laser_city' ? 'Laser' : 'Active'}
+                              {conv.activity === 'laser_city' ? 'Laser' : conv.activity === 'active_and_laser' ? 'Mix' : 'Active'}
                             </span>
                           )}
                           {conv.onboarding_status && conv.onboarding_status !== 'completed' && (
@@ -1522,9 +1524,11 @@ export default function ChatPage() {
                       <span className={`text-xs px-2 py-0.5 rounded-full ${
                         selectedWaConv.activity === 'laser_city'
                           ? isDark ? 'bg-red-500/20 text-red-400' : 'bg-red-100 text-red-600'
-                          : isDark ? 'bg-purple-500/20 text-purple-400' : 'bg-purple-100 text-purple-600'
+                          : selectedWaConv.activity === 'active_and_laser'
+                            ? isDark ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-100 text-blue-600'
+                            : isDark ? 'bg-purple-500/20 text-purple-400' : 'bg-purple-100 text-purple-600'
                       }`}>
-                        {selectedWaConv.activity === 'laser_city' ? 'Laser City' : 'Active Games'}
+                        {selectedWaConv.activity === 'laser_city' ? 'Laser' : selectedWaConv.activity === 'active_and_laser' ? 'Mix' : 'Active'}
                       </span>
                     )}
                   </div>

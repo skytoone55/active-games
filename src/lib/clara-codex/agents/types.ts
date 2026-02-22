@@ -43,6 +43,10 @@ export interface AgentContext {
   profile?: ConversationProfile
   /** Global settings for prompt template replacements */
   globalPromptSettings?: PromptGlobalSettings
+  /** Branch name (human-readable) for prompt injection */
+  branchName?: string | null
+  /** Branch capabilities block for prompt injection */
+  branchCapabilities?: string
 }
 
 export interface RouterResult {
