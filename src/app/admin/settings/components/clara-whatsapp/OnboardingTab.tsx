@@ -145,7 +145,7 @@ export function OnboardingTab({ isDark }: OnboardingTabProps) {
   const [saving, setSaving] = useState(false)
   const [settings, setSettings] = useState<MessengerSettings | null>(null)
   const [config, setConfig] = useState<WhatsAppOnboardingConfig>(DEFAULT_CONFIG)
-  const [activeLocale, setActiveLocale] = useState<Locale>((locale as Locale) || 'fr')
+  const [activeLocale, setActiveLocale] = useState<Locale>('he')
 
   useEffect(() => {
     loadSettings()
@@ -160,6 +160,9 @@ export function OnboardingTab({ isDark }: OnboardingTabProps) {
         const saved = data.data.settings?.whatsapp_onboarding
         if (saved) {
           setConfig(migrateConfig(saved))
+          if (saved.language && LOCALES.includes(saved.language)) {
+            setActiveLocale(saved.language as Locale)
+          }
         }
       }
     } catch (error) {
