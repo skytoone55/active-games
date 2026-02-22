@@ -359,7 +359,7 @@
     widget.addEventListener('click', function(e) {
         // Don't navigate if clicking the close button
         if (e.target.closest('.close-btn')) return;
-        window.open('https://activegames.co.il', '_blank');
+        window.open('https://activegames.co.il?utm_source=lasercity&utm_medium=widget&utm_campaign=slider_popup', '_blank');
     });
 
     // Close function - just hides for this session only
