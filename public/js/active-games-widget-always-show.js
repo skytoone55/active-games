@@ -24,6 +24,10 @@
             z-index: 99999;
         }
 
+        .active-games-widget {
+            cursor: pointer;
+        }
+
         .active-games-widget:hover {
             transform: translateY(-50%) scale(1.02);
             box-shadow: 0 15px 50px rgba(0, 0, 0, 0.4),
@@ -324,6 +328,7 @@
             <img src="https://activegames.co.il/images/logo-activegames.png" alt="Active Games" class="widget-logo">
             <div class="widget-description">
                 חוו את עתיד הבידור האינטראקטיבי עם טכנולוגיה מתקדמת ומשחקים מרגשים!
+                <br><span style="font-size: 11px; color: #08f7fe;">activegames.co.il</span>
             </div>
             <div class="widget-buttons">
                 <a href="https://activegames.co.il" target="_blank" class="widget-btn">
@@ -337,7 +342,7 @@
     const badge = document.createElement('div');
     badge.id = 'activeGamesBadge';
     badge.className = 'new-badge';
-    badge.textContent = 'פתיחה קרובה - היו הראשונים!';
+    badge.textContent = 'פתיחה קרובה - תהיו הראשונים!';
 
     // Add widget and badge to page when DOM is ready
     if (document.readyState === 'loading') {
@@ -349,6 +354,13 @@
         document.body.appendChild(widget);
         document.body.appendChild(badge);
     }
+
+    // Click anywhere on widget → open activegames.co.il (except close button)
+    widget.addEventListener('click', function(e) {
+        // Don't navigate if clicking the close button
+        if (e.target.closest('.close-btn')) return;
+        window.open('https://activegames.co.il', '_blank');
+    });
 
     // Close function - just hides for this session only
     window.closeActiveGamesWidget = function() {
