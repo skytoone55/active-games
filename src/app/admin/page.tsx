@@ -105,12 +105,11 @@ export default function AdminPage() {
   const [currentWeekStart, setCurrentWeekStart] = useState(() => {
     const today = new Date()
     today.setHours(0, 0, 0, 0)
-    const day = today.getDay()
-    const diff = today.getDate() - day + (day === 0 ? -6 : 1) // Lundi
-    const monday = new Date(today)
-    monday.setDate(diff)
-    monday.setHours(0, 0, 0, 0)
-    return monday
+    const day = today.getDay() // 0=dimanche
+    const sunday = new Date(today)
+    sunday.setDate(today.getDate() - day) // recule jusqu'au dimanche
+    sunday.setHours(0, 0, 0, 0)
+    return sunday
   })
   const [showBookingModal, setShowBookingModal] = useState(false)
   const [modalInitialHour, setModalInitialHour] = useState(10)
@@ -954,13 +953,11 @@ export default function AdminPage() {
     setCalendarMonth(date.getMonth())
     setCalendarYear(date.getFullYear())
     setShowCalendarModal(false)
-    // Mettre à jour la semaine
-    const day = date.getDay()
-    const diff = date.getDate() - day + (day === 0 ? -6 : 1)
-    const monday = new Date(date)
-    monday.setDate(diff)
-    monday.setHours(0, 0, 0, 0)
-    setCurrentWeekStart(monday)
+    // Mettre à jour la semaine (dimanche → samedi)
+    const sunday = new Date(date)
+    sunday.setDate(date.getDate() - date.getDay())
+    sunday.setHours(0, 0, 0, 0)
+    setCurrentWeekStart(sunday)
   }
 
   const handlePreviousMonth = () => {
@@ -997,8 +994,8 @@ export default function AdminPage() {
     const startDay = firstDay.getDay()
     const days = []
     
-    // Jours vides avant le premier jour
-    for (let i = 0; i < (startDay === 0 ? 6 : startDay - 1); i++) {
+    // Jours vides avant le premier jour (dimanche = 0, pas de décalage)
+    for (let i = 0; i < startDay; i++) {
       days.push(null)
     }
     
@@ -1020,39 +1017,33 @@ export default function AdminPage() {
     const newDate = new Date(selectedDate)
     newDate.setDate(newDate.getDate() - 1)
     setSelectedDate(newDate)
-    // Mettre à jour la semaine si nécessaire
-    const day = newDate.getDay()
-    const diff = newDate.getDate() - day + (day === 0 ? -6 : 1)
-    const monday = new Date(newDate)
-    monday.setDate(diff)
-    monday.setHours(0, 0, 0, 0)
-    setCurrentWeekStart(monday)
+    // Mettre à jour la semaine (dimanche → samedi)
+    const sunday = new Date(newDate)
+    sunday.setDate(newDate.getDate() - newDate.getDay())
+    sunday.setHours(0, 0, 0, 0)
+    setCurrentWeekStart(sunday)
   }
 
   const goToNextDay = () => {
     const newDate = new Date(selectedDate)
     newDate.setDate(newDate.getDate() + 1)
     setSelectedDate(newDate)
-    // Mettre à jour la semaine si nécessaire
-    const day = newDate.getDay()
-    const diff = newDate.getDate() - day + (day === 0 ? -6 : 1)
-    const monday = new Date(newDate)
-    monday.setDate(diff)
-    monday.setHours(0, 0, 0, 0)
-    setCurrentWeekStart(monday)
+    // Mettre à jour la semaine (dimanche → samedi)
+    const sunday = new Date(newDate)
+    sunday.setDate(newDate.getDate() - newDate.getDay())
+    sunday.setHours(0, 0, 0, 0)
+    setCurrentWeekStart(sunday)
   }
 
   const goToToday = () => {
     const today = new Date()
     today.setHours(0, 0, 0, 0)
     setSelectedDate(today)
-    // Mettre à jour la semaine
-    const day = today.getDay()
-    const diff = today.getDate() - day + (day === 0 ? -6 : 1)
-    const monday = new Date(today)
-    monday.setDate(diff)
-    monday.setHours(0, 0, 0, 0)
-    setCurrentWeekStart(monday)
+    // Mettre à jour la semaine (dimanche → samedi)
+    const sunday = new Date(today)
+    sunday.setDate(today.getDate() - today.getDay())
+    sunday.setHours(0, 0, 0, 0)
+    setCurrentWeekStart(sunday)
   }
 
   // Générer les jours de la semaine
@@ -1074,11 +1065,9 @@ export default function AdminPage() {
     const newWeekStart = new Date(currentWeekStart)
     newWeekStart.setDate(newWeekStart.getDate() - 7)
     setCurrentWeekStart(newWeekStart)
-    // Mettre à jour la date sélectionnée pour rester sur le même jour de la semaine
-    const dayOfWeek = selectedDate.getDay()
-    const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek
+    // Garder le même jour de la semaine
     const newSelectedDate = new Date(newWeekStart)
-    newSelectedDate.setDate(newWeekStart.getDate() + diffToMonday + (selectedDate.getDay() === 0 ? 6 : selectedDate.getDay() - 1))
+    newSelectedDate.setDate(newWeekStart.getDate() + selectedDate.getDay())
     setSelectedDate(newSelectedDate)
   }
 
@@ -1086,11 +1075,9 @@ export default function AdminPage() {
     const newWeekStart = new Date(currentWeekStart)
     newWeekStart.setDate(newWeekStart.getDate() + 7)
     setCurrentWeekStart(newWeekStart)
-    // Mettre à jour la date sélectionnée pour rester sur le même jour de la semaine
-    const dayOfWeek = selectedDate.getDay()
-    const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek
+    // Garder le même jour de la semaine
     const newSelectedDate = new Date(newWeekStart)
-    newSelectedDate.setDate(newWeekStart.getDate() + diffToMonday + (selectedDate.getDay() === 0 ? 6 : selectedDate.getDay() - 1))
+    newSelectedDate.setDate(newWeekStart.getDate() + selectedDate.getDay())
     setSelectedDate(newSelectedDate)
   }
 
@@ -2217,7 +2204,7 @@ export default function AdminPage() {
                     {/* Grille calendrier */}
                     <div className="grid grid-cols-7 gap-1">
                       {/* En-têtes jours */}
-                      {(tArray('admin.agenda.days_short').length > 0 ? tArray('admin.agenda.days_short') : ['L', 'M', 'M', 'J', 'V', 'S', 'D']).map((day, i) => (
+                      {(tArray('admin.agenda.days_short').length > 0 ? tArray('admin.agenda.days_short') : ['D', 'L', 'M', 'M', 'J', 'V', 'S']).map((day, i) => (
                         <div key={i} className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'} text-center p-1 font-bold`}>
                           {day}
                         </div>

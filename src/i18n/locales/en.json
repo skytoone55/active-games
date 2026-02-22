@@ -885,12 +885,12 @@
         "december": "December"
       },
       "days_short": [
+        "S",
         "M",
         "T",
         "W",
         "T",
         "F",
-        "S",
         "S"
       ]
     },

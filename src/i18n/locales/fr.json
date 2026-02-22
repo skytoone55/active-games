@@ -942,13 +942,13 @@
         "december": "Decembre"
       },
       "days_short": [
+        "D",
         "L",
         "M",
         "M",
         "J",
         "V",
-        "S",
-        "D"
+        "S"
       ]
     },
     "orders": {

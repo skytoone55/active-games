@@ -37,7 +37,7 @@ export function DateNavigation({
   // Helper pour obtenir les jours de la semaine traduits (format court)
   const getDaysShort = (): string[] => {
     const days = tArray('admin.agenda.days_short')
-    return days.length > 0 ? days : ['L', 'M', 'M', 'J', 'V', 'S', 'D']
+    return days.length > 0 ? days : ['D', 'L', 'M', 'M', 'J', 'V', 'S']
   }
 
   const [showCalendar, setShowCalendar] = useState(false)
@@ -88,9 +88,7 @@ export function DateNavigation({
 
   const getStartOfWeek = (date: Date) => {
     const d = new Date(date)
-    const day = d.getDay()
-    const diff = d.getDate() - day + (day === 0 ? -6 : 1)
-    d.setDate(diff)
+    d.setDate(d.getDate() - d.getDay()) // recule jusqu'au dimanche
     d.setHours(0, 0, 0, 0)
     return d
   }
@@ -125,8 +123,7 @@ export function DateNavigation({
   }
 
   const getFirstDayOfMonth = (month: number, year: number) => {
-    const day = new Date(year, month, 1).getDay()
-    return day === 0 ? 6 : day - 1 // Lundi = 0
+    return new Date(year, month, 1).getDay() // Dimanche = 0 (premier jour de la semaine)
   }
 
   const renderCalendar = () => {

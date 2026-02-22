@@ -46,15 +46,14 @@ export function useAgendaStats(
     }
   }
 
-  // Calcule les bornes de la semaine (lundi → dimanche)
+  // Calcule les bornes de la semaine (dimanche → samedi, standard israélien)
   const getWeekBounds = useCallback((date: Date) => {
-    const dayOfWeek = date.getDay()
-    const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek
+    const dayOfWeek = date.getDay() // 0=dimanche, 6=samedi
     const weekStart = new Date(date)
-    weekStart.setDate(date.getDate() + diffToMonday)
+    weekStart.setDate(date.getDate() - dayOfWeek) // recule jusqu'au dimanche
     weekStart.setHours(0, 0, 0, 0)
     const weekEnd = new Date(weekStart)
-    weekEnd.setDate(weekStart.getDate() + 6)
+    weekEnd.setDate(weekStart.getDate() + 6) // samedi
     weekEnd.setHours(23, 59, 59, 999)
     return { weekStart, weekEnd }
   }, [])

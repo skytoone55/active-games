@@ -139,7 +139,7 @@ export const BookingModal = memo(function BookingModal({
       return days
     }
     // Fallback si la traduction n'est pas un tableau
-    return ['L', 'M', 'M', 'J', 'V', 'S', 'D']
+    return ['D', 'L', 'M', 'M', 'J', 'V', 'S']
   }
 
   const [loading, setLoading] = useState(false)
@@ -915,8 +915,8 @@ export const BookingModal = memo(function BookingModal({
     const startDay = firstDay.getDay()
     const days = []
     
-    // Jours vides avant le premier jour
-    for (let i = 0; i < (startDay === 0 ? 6 : startDay - 1); i++) {
+    // Jours vides avant le premier jour (dimanche = 0)
+    for (let i = 0; i < startDay; i++) {
       days.push(null)
     }
     
