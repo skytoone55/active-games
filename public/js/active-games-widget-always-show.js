@@ -328,7 +328,7 @@
             <img src="https://activegames.co.il/images/logo-activegames.png" alt="Active Games" class="widget-logo">
             <div class="widget-description">
                 חוו את עתיד הבידור האינטראקטיבי עם טכנולוגיה מתקדמת ומשחקים מרגשים!
-                <br><span style="font-size: 11px; color: #08f7fe;">activegames.co.il</span>
+                <br><span style="font-size: 15px; font-weight: 700; color: #08f7fe; text-shadow: 0 0 10px rgba(8, 247, 254, 0.6);">activegames.co.il</span>
             </div>
             <div class="widget-buttons">
                 <a href="https://activegames.co.il" target="_blank" class="widget-btn">
