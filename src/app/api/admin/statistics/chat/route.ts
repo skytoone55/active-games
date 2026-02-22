@@ -150,11 +150,27 @@ export async function GET(request: NextRequest) {
       msgsByConv[m.conversation_id].push(m)
     })
 
+    // Helper: check if a message was sent during overnight hours (22h-9h Israel time)
+    // Messages received overnight inflate response time averages (e.g. msg at 21h30 → reply at 9h = 12h)
+    function isOvernightHour(dateStr: string): boolean {
+      // Convert to Israel time (Asia/Jerusalem)
+      const date = new Date(dateStr)
+      const israelHour = parseInt(
+        date.toLocaleString('en-US', { timeZone: 'Asia/Jerusalem', hour: 'numeric', hour12: false })
+      )
+      // 22, 23, 0, 1, 2, 3, 4, 5, 6, 7, 8 → overnight
+      return israelHour >= 22 || israelHour < 9
+    }
+
     // Compute response times: for each inbound message, find the next outbound message
+    // Skip inbound messages received during overnight hours (22h-9h) to avoid inflating stats
     const responseTimes: { seconds: number; agentId: string | null }[] = []
     Object.values(msgsByConv).forEach(convMsgs => {
       for (let i = 0; i < convMsgs.length; i++) {
         if (convMsgs[i].direction === 'inbound') {
+          // Skip overnight inbound messages from response time calculation
+          if (isOvernightHour(convMsgs[i].created_at)) continue
+
           // Find next outbound message
           for (let j = i + 1; j < convMsgs.length; j++) {
             if (convMsgs[j].direction === 'outbound') {
