@@ -22,6 +22,14 @@ export function buildAgentPrompt(params: {
   prompt = prompt.replace(/\{\{CUSTOM_PROMPT\}\}/g, gps?.custom_prompt || '')
   prompt = prompt.replace(/\{\{EMAIL_REQUIRED_FOR_LINK\}\}/g, gps?.enforce_email_for_link !== false ? 'yes' : 'no')
 
+  // Inject game_type hint from profile (set by onboarding or router)
+  const gameTypeHint = context.profile?.game_type
+    ? `The customer has already selected game type: ${
+        { laser: 'Laser Tag', active: 'Active Games', mix: 'Mix (Laser + Active)' }[context.profile.game_type] || context.profile.game_type
+      }. Use this as default — do NOT suggest other game types unless the customer explicitly asks to change.`
+    : ''
+  prompt = prompt.replace(/\{\{GAME_TYPE_HINT\}\}/g, gameTypeHint)
+
   if (extraReplacements) {
     for (const [key, value] of Object.entries(extraReplacements)) {
       prompt = prompt.split(key).join(value)

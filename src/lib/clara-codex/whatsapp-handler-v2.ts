@@ -13,6 +13,7 @@ interface ConversationContext {
   contact_name?: string | null
   contact_id?: string | null
   profile?: ConversationProfile
+  activity?: string | null
 }
 
 interface MultiAgentSettings extends ClaraCodexWhatsAppSettings {
@@ -129,6 +130,21 @@ export async function handleClaraCodexWhatsAppResponseV2(
   // 2. Route the message (pass conversation profile for context continuity)
   const routerConfig = resolveAgentConfig('router', settings)
   const currentProfile: ConversationProfile = conversation.profile || {}
+
+  // Inject onboarding activity as default game_type if not already set by conversation
+  if (!currentProfile.game_type && conversation.activity) {
+    const activityToGameType: Record<string, 'laser' | 'active' | 'mix'> = {
+      'laser_city': 'laser',
+      'active_games': 'active',
+      'active_and_laser': 'mix',
+    }
+    const mapped = activityToGameType[conversation.activity]
+    if (mapped) {
+      currentProfile.game_type = mapped
+      console.log(`[CLARA V2] Injected game_type '${mapped}' from onboarding activity '${conversation.activity}'`)
+    }
+  }
+
   const routing = await routeMessage({
     messageText,
     recentHistory: recentMessages,
