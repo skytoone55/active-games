@@ -292,11 +292,19 @@ function ReservationContent() {
     const dates: string[] = []
     const today = new Date()
 
-    // Start from TODAY (i=0), not tomorrow
+    // Active Games ouvre le 22 mars 2026 à Rishon LeZion
+    const activeOpeningDate = new Date(2026, 2, 22) // mois 0-indexed → 2 = mars
+    const isRishon = bookingData.branchSlug === 'rishon-lezion'
+
+    // Si ACTIVE ou MIX à Rishon, commencer au 22 mars (ou aujourd'hui si après)
+    const startDate = (isRishon && (bookingData.gameArea === 'ACTIVE' || bookingData.gameArea === 'MIX'))
+      ? (activeOpeningDate > today ? activeOpeningDate : today)
+      : today
+
     for (let i = 0; i <= 365; i++) {
-      const date = new Date(today)
-      date.setDate(today.getDate() + i)
-      
+      const date = new Date(startDate)
+      date.setDate(startDate.getDate() + i)
+
       // FORMAT LOCAL (pas ISO pour éviter décalage timezone)
       const year = date.getFullYear()
       const month = String(date.getMonth() + 1).padStart(2, '0')
@@ -431,14 +439,24 @@ function ReservationContent() {
     }
   }
 
+  // Petah Tikva : Active/Mix pas encore disponible (ouverture bientôt, pas de date)
+  const isPetahTikva = bookingData.branchSlug === 'petah-tikva'
+
   // Sélection du type de jeu (pour Game uniquement)
   const handleGameAreaSelect = (gameArea: 'ACTIVE' | 'LASER' | 'MIX') => {
+    // Bloquer ACTIVE/MIX pour Petah Tikva (pas encore ouvert)
+    if (isPetahTikva && (gameArea === 'ACTIVE' || gameArea === 'MIX')) return
+
     // Définir le nombre de jeux par défaut selon le type
     // ACTIVE: numberOfGames en tranches de 30min (2 = 1h, 3 = 1h30, 4 = 2h)
     // LASER: numberOfGames = nombre de parties
     // MIX: toujours 1 (formule fixe 30min Active + 1 Laser)
     const defaultGames = gameArea === 'LASER' ? 1 : gameArea === 'MIX' ? 1 : 2 // 2 = 1h pour Active
-    setBookingData({ ...bookingData, gameArea, numberOfGames: defaultGames })
+    // Reset date/time si on passe à ACTIVE/MIX à Rishon et que la date est avant l'ouverture (22 mars 2026)
+    const activeOpeningDate = new Date(2026, 2, 22)
+    const isRishon = bookingData.branchSlug === 'rishon-lezion'
+    const needsReset = isRishon && (gameArea === 'ACTIVE' || gameArea === 'MIX') && bookingData.date && new Date(bookingData.date) < activeOpeningDate
+    setBookingData({ ...bookingData, gameArea, numberOfGames: defaultGames, ...(needsReset ? { date: null, time: null } : {}) })
     // Ne pas changer d'étape - on attend la sélection du nombre de jeux
   }
 
@@ -1072,16 +1090,23 @@ function ReservationContent() {
                       <motion.button
                         onClick={() => handleGameAreaSelect('ACTIVE')}
                         className={`border-2 rounded-xl p-6 text-center transition-all duration-300 ${
-                          bookingData.gameArea === 'ACTIVE'
-                            ? 'bg-dark-200 border-blue-500/70 shadow-[0_0_20px_rgba(59,130,246,0.3)]'
-                            : 'bg-dark-200/50 border-primary/30 hover:border-blue-500/70 hover:shadow-[0_0_20px_rgba(59,130,246,0.3)]'
+                          isPetahTikva
+                            ? 'bg-dark-200/30 border-gray-600/50 cursor-not-allowed opacity-60'
+                            : bookingData.gameArea === 'ACTIVE'
+                              ? 'bg-dark-200 border-blue-500/70 shadow-[0_0_20px_rgba(59,130,246,0.3)]'
+                              : 'bg-dark-200/50 border-primary/30 hover:border-blue-500/70 hover:shadow-[0_0_20px_rgba(59,130,246,0.3)]'
                         }`}
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
+                        whileHover={isPetahTikva ? {} : { scale: 1.02 }}
+                        whileTap={isPetahTikva ? {} : { scale: 0.98 }}
+                        disabled={isPetahTikva}
                       >
-                        <Zap className="w-12 h-12 mx-auto mb-3 text-blue-500" />
+                        <Zap className={`w-12 h-12 mx-auto mb-3 ${isPetahTikva ? 'text-gray-500' : 'text-blue-500'}`} />
                         <h3 className="text-xl font-bold mb-2">Active Games</h3>
-                        <p className="text-gray-400 text-sm">{t('booking.game_area.active.description')}</p>
+                        {isPetahTikva ? (
+                          <p className="text-amber-400 text-sm font-medium">{t('booking.game_area.opening_soon')}</p>
+                        ) : (
+                          <p className="text-gray-400 text-sm">{t('booking.game_area.active.description')}</p>
+                        )}
                       </motion.button>
                     )}
 
@@ -1106,16 +1131,23 @@ function ReservationContent() {
                       <motion.button
                         onClick={() => handleGameAreaSelect('MIX')}
                         className={`border-2 rounded-xl p-6 text-center transition-all duration-300 ${
-                          bookingData.gameArea === 'MIX'
-                            ? 'bg-dark-200 border-cyan-500/70 shadow-[0_0_20px_rgba(6,182,212,0.3)]'
-                            : 'bg-dark-200/50 border-primary/30 hover:border-cyan-500/70 hover:shadow-[0_0_20px_rgba(6,182,212,0.3)]'
+                          isPetahTikva
+                            ? 'bg-dark-200/30 border-gray-600/50 cursor-not-allowed opacity-60'
+                            : bookingData.gameArea === 'MIX'
+                              ? 'bg-dark-200 border-cyan-500/70 shadow-[0_0_20px_rgba(6,182,212,0.3)]'
+                              : 'bg-dark-200/50 border-primary/30 hover:border-cyan-500/70 hover:shadow-[0_0_20px_rgba(6,182,212,0.3)]'
                         }`}
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
+                        whileHover={isPetahTikva ? {} : { scale: 1.02 }}
+                        whileTap={isPetahTikva ? {} : { scale: 0.98 }}
+                        disabled={isPetahTikva}
                       >
-                        <Gamepad2 className="w-12 h-12 mx-auto mb-3 text-cyan-500" />
+                        <Gamepad2 className={`w-12 h-12 mx-auto mb-3 ${isPetahTikva ? 'text-gray-500' : 'text-cyan-500'}`} />
                         <h3 className="text-xl font-bold mb-2">{t('booking.game_area.mix.title')}</h3>
-                        <p className="text-gray-400 text-sm">{t('booking.game_area.mix.description')}</p>
+                        {isPetahTikva ? (
+                          <p className="text-amber-400 text-sm font-medium">{t('booking.game_area.opening_soon')}</p>
+                        ) : (
+                          <p className="text-gray-400 text-sm">{t('booking.game_area.mix.description')}</p>
+                        )}
                       </motion.button>
                     )}
                   </div>
@@ -1221,19 +1253,27 @@ function ReservationContent() {
                     {bookingData.branchSlug !== 'glilot' && (
                       <motion.button
                         onClick={() => {
+                          if (isPetahTikva) return
                           setBookingData({ ...bookingData, gameArea: 'ACTIVE', numberOfGames: 2, eventType: 'event_active' })
                         }}
                         className={`border-2 rounded-xl p-6 text-center transition-all duration-300 ${
-                          bookingData.gameArea === 'ACTIVE'
-                            ? 'bg-dark-200 border-blue-500/70 shadow-[0_0_20px_rgba(59,130,246,0.3)]'
-                            : 'bg-dark-200/50 border-primary/30 hover:border-blue-500/70 hover:shadow-[0_0_20px_rgba(59,130,246,0.3)]'
+                          isPetahTikva
+                            ? 'bg-dark-200/30 border-gray-600/50 cursor-not-allowed opacity-60'
+                            : bookingData.gameArea === 'ACTIVE'
+                              ? 'bg-dark-200 border-blue-500/70 shadow-[0_0_20px_rgba(59,130,246,0.3)]'
+                              : 'bg-dark-200/50 border-primary/30 hover:border-blue-500/70 hover:shadow-[0_0_20px_rgba(59,130,246,0.3)]'
                         }`}
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
+                        whileHover={isPetahTikva ? {} : { scale: 1.02 }}
+                        whileTap={isPetahTikva ? {} : { scale: 0.98 }}
+                        disabled={isPetahTikva}
                       >
-                        <Zap className="w-12 h-12 mx-auto mb-3 text-blue-500" />
+                        <Zap className={`w-12 h-12 mx-auto mb-3 ${isPetahTikva ? 'text-gray-500' : 'text-blue-500'}`} />
                         <h3 className="text-xl font-bold mb-2">Active Games</h3>
-                        <p className="text-gray-400 text-sm">{t('booking.event_game.active_1h')}</p>
+                        {isPetahTikva ? (
+                          <p className="text-amber-400 text-sm font-medium">{t('booking.game_area.opening_soon')}</p>
+                        ) : (
+                          <p className="text-gray-400 text-sm">{t('booking.event_game.active_1h')}</p>
+                        )}
                       </motion.button>
                     )}
 
@@ -1259,19 +1299,27 @@ function ReservationContent() {
                     {bookingData.branchSlug !== 'glilot' && (
                       <motion.button
                         onClick={() => {
+                          if (isPetahTikva) return
                           setBookingData({ ...bookingData, gameArea: 'MIX', numberOfGames: 2, eventType: 'event_mix' })
                         }}
                         className={`border-2 rounded-xl p-6 text-center transition-all duration-300 ${
-                          bookingData.gameArea === 'MIX'
-                            ? 'bg-dark-200 border-cyan-500/70 shadow-[0_0_20px_rgba(6,182,212,0.3)]'
-                            : 'bg-dark-200/50 border-primary/30 hover:border-cyan-500/70 hover:shadow-[0_0_20px_rgba(6,182,212,0.3)]'
+                          isPetahTikva
+                            ? 'bg-dark-200/30 border-gray-600/50 cursor-not-allowed opacity-60'
+                            : bookingData.gameArea === 'MIX'
+                              ? 'bg-dark-200 border-cyan-500/70 shadow-[0_0_20px_rgba(6,182,212,0.3)]'
+                              : 'bg-dark-200/50 border-primary/30 hover:border-cyan-500/70 hover:shadow-[0_0_20px_rgba(6,182,212,0.3)]'
                         }`}
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
+                        whileHover={isPetahTikva ? {} : { scale: 1.02 }}
+                        whileTap={isPetahTikva ? {} : { scale: 0.98 }}
+                        disabled={isPetahTikva}
                       >
-                        <Gamepad2 className="w-12 h-12 mx-auto mb-3 text-cyan-500" />
+                        <Gamepad2 className={`w-12 h-12 mx-auto mb-3 ${isPetahTikva ? 'text-gray-500' : 'text-cyan-500'}`} />
                         <h3 className="text-xl font-bold mb-2">Mix</h3>
-                        <p className="text-gray-400 text-sm">{t('booking.event_game.mix')}</p>
+                        {isPetahTikva ? (
+                          <p className="text-amber-400 text-sm font-medium">{t('booking.game_area.opening_soon')}</p>
+                        ) : (
+                          <p className="text-gray-400 text-sm">{t('booking.event_game.mix')}</p>
+                        )}
                       </motion.button>
                     )}
                   </div>
