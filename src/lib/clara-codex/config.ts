@@ -39,6 +39,8 @@ export interface ClaraCodexWhatsAppSettings {
   event_keywords: string[]
   enforce_email_for_link: boolean
   silent_human_call: boolean
+  test_mode: boolean
+  test_phone_numbers: string[]
   fallback_no_agent_message: CodexLocalizedText
   fallback_tech_error_message: CodexLocalizedText
   fallback_human_message: CodexLocalizedText
@@ -140,6 +142,8 @@ export const DEFAULT_CLARA_CODEX_SETTINGS: ClaraCodexWhatsAppSettings = {
   ],
   enforce_email_for_link: true,
   silent_human_call: true,
+  test_mode: false,
+  test_phone_numbers: [],
   fallback_no_agent_message: {
     fr: 'Tous nos conseillers sont occupés pour le moment. Nous vous recontactons au plus vite. Je reste disponible si vous voulez avancer sur les informations.',
     en: 'All our advisors are currently busy. We will contact you as soon as possible. I can still help with information in the meantime.',
@@ -219,6 +223,12 @@ export function normalizeClaraCodexSettings(raw: unknown): ClaraCodexWhatsAppSet
     silent_human_call: typeof input.silent_human_call === 'boolean'
       ? input.silent_human_call
       : DEFAULT_CLARA_CODEX_SETTINGS.silent_human_call,
+    test_mode: typeof input.test_mode === 'boolean'
+      ? input.test_mode
+      : DEFAULT_CLARA_CODEX_SETTINGS.test_mode,
+    test_phone_numbers: Array.isArray(input.test_phone_numbers)
+      ? input.test_phone_numbers.filter((x): x is string => typeof x === 'string' && x.trim().length > 0)
+      : DEFAULT_CLARA_CODEX_SETTINGS.test_phone_numbers,
     fallback_no_agent_message: sanitizeLocalizedText(
       input.fallback_no_agent_message,
       DEFAULT_CLARA_CODEX_SETTINGS.fallback_no_agent_message

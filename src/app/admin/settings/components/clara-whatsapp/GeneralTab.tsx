@@ -14,6 +14,7 @@ import {
   MessageSquare,
   Wrench,
   Key,
+  FlaskConical,
 } from 'lucide-react'
 import { useAdmin } from '@/contexts/AdminContext'
 import {
@@ -368,6 +369,50 @@ export function GeneralTab({ isDark }: GeneralTabProps) {
                         <li>At least one LLM API key must be configured.</li>
                       </ul>
                     </div>
+                    {/* Test Mode */}
+                    <div className={classNames('rounded-lg border p-4', isDark ? 'bg-gray-900/40 border-gray-700' : 'bg-gray-50 border-gray-200')}>
+                      <h4 className={classNames('font-medium mb-3 flex items-center gap-2 text-sm', isDark ? 'text-white' : 'text-gray-900')}>
+                        <FlaskConical className="w-4 h-4" />
+                        Test Mode
+                      </h4>
+                      <label className="inline-flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" checked={settings.test_mode} onChange={(e) => { setSettings(prev => ({ ...prev, test_mode: e.target.checked })); clearSectionStatus('overview') }} className="w-5 h-5" />
+                        <span className={classNames('text-sm font-medium', isDark ? 'text-gray-200' : 'text-gray-700')}>Enable test mode</span>
+                      </label>
+                      <p className={classNames('text-xs mt-2', isDark ? 'text-gray-400' : 'text-gray-500')}>
+                        When enabled, Clara will only respond to the whitelisted phone numbers below. All other customers will be handled normally (no AI response).
+                      </p>
+                      {settings.test_mode && (
+                        <>
+                          {settings.test_phone_numbers.length === 0 && (
+                            <div className={classNames('mt-3 rounded-lg border px-3 py-2 text-xs flex items-center gap-2', isDark ? 'bg-yellow-900/20 border-yellow-800 text-yellow-300' : 'bg-yellow-50 border-yellow-200 text-yellow-700')}>
+                              <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                              <span>Test mode is active but no phone numbers are whitelisted. Clara won&apos;t respond to anyone.</span>
+                            </div>
+                          )}
+                          <div className="mt-3 space-y-2">
+                            <label className={classNames('text-sm', isDark ? 'text-gray-300' : 'text-gray-700')}>
+                              Whitelisted phone numbers
+                            </label>
+                            <textarea
+                              value={settings.test_phone_numbers.join('\n')}
+                              onChange={(e) => {
+                                const numbers = e.target.value.split(/[\n,]+/).map(n => n.trim()).filter(Boolean)
+                                setSettings(prev => ({ ...prev, test_phone_numbers: numbers }))
+                                clearSectionStatus('overview')
+                              }}
+                              rows={4}
+                              placeholder={'972501234567\n972509876543'}
+                              className={classNames('w-full rounded-lg border px-3 py-2 text-sm font-mono', isDark ? 'bg-gray-900 border-gray-700 text-white placeholder-gray-600' : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400')}
+                            />
+                            <p className={classNames('text-xs', isDark ? 'text-gray-500' : 'text-gray-400')}>
+                              One number per line. Format: international without + (e.g. 972501234567) or local (e.g. 0501234567).
+                            </p>
+                          </div>
+                        </>
+                      )}
+                    </div>
+
                     {renderSectionStatus('overview')}
                     {renderSaveButton('overview', 'Save Activation')}
                   </>

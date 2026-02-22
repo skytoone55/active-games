@@ -510,6 +510,9 @@ export async function POST(request: NextRequest) {
         const codexBranchInactive = codexEnabled
           ? isBranchInactive(codexSettings, runtimeConversation.branch_id)
           : false
+        const codexTestModeBlocked = codexEnabled && (codexSettings as any)?.test_mode === true
+          ? !isPhoneInTestWhitelist(codexSettings, senderPhone)
+          : false
 
         // Normal eligibility: onboarding done, not new conversation, not just handled
         const baseEligibility = isOnboardingDone && isNotWaiting && !claraPaused && !isNewConversation && !onboardingHandledMessage && messageText && messageText !== `[${messageType}]`
@@ -519,7 +522,7 @@ export async function POST(request: NextRequest) {
 
         let aiDidRespond = false
 
-        if (codexEnabled && (baseEligibility || postOnboardingEligibility) && !codexOutsideSchedule && !codexBranchInactive) {
+        if (codexEnabled && (baseEligibility || postOnboardingEligibility) && !codexOutsideSchedule && !codexBranchInactive && !codexTestModeBlocked) {
           // Send typing indicator immediately, defer AI processing to after() so we return 200 to Meta fast
           await sendTypingIndicator(messageId, waPhoneNumberId)
           aiDidRespond = true // Set preemptively — the deferred handler WILL respond
@@ -637,6 +640,21 @@ function isBranchInactive(config: any, branchId: string | null | undefined): boo
   if (config.active_branches.length === 0) return false
   if (!branchId) return false
   return !config.active_branches.includes(branchId)
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function isPhoneInTestWhitelist(config: any, phone: string): boolean {
+  const whitelist = config?.test_phone_numbers
+  if (!Array.isArray(whitelist) || whitelist.length === 0) return false
+  // Normalize: strip leading '+' and leading '0' → compare raw digits
+  const normalize = (p: string) => {
+    let n = p.replace(/[^0-9]/g, '')
+    // Convert Israeli local format 05XXXXXXXX → 9725XXXXXXXX
+    if (n.startsWith('0') && n.length === 10) n = '972' + n.slice(1)
+    return n
+  }
+  const normalizedPhone = normalize(phone)
+  return whitelist.some((w: string) => normalize(w) === normalizedPhone)
 }
 
 // ============================================================

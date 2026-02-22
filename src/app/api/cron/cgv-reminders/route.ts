@@ -69,6 +69,21 @@ export async function GET(_request: NextRequest) {
     const now = new Date()
     const reminderThreshold = new Date(now.getTime() - reminderDelayMs)
 
+    // 1b. Cleanup: nullify cgv_token for orders whose requested_date has passed
+    const todayISO = now.toISOString().split('T')[0]
+    const { data: expired } = await supabase
+      .from('orders')
+      .update({ cgv_token: null })
+      .eq('source', 'admin_agenda')
+      .not('cgv_token', 'is', null)
+      .is('cgv_validated_at', null)
+      .lt('requested_date', todayISO)
+      .select('id')
+
+    if (expired?.length) {
+      console.log(`[CGV REMINDERS] Expired ${expired.length} orders (reservation date passed, cgv_token nullified)`)
+    }
+
     // 2. Trouver les orders admin qui ont besoin d'un rappel CGV
     const { data: ordersToRemind, error: fetchError } = await supabase
       .from('orders')
