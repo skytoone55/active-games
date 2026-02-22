@@ -336,22 +336,19 @@ async function runAgentAndRespond(params: {
     }
   }
 
-  // When agent returns empty (tech fallback) or escalates → mark needs_human + pause Clara
+  // When agent returns empty (tech fallback) or escalates → mark needs_human (but do NOT pause Clara — she keeps talking)
   if (isTechFallback || response.usedEscalationTool) {
-    const autoResumeMinutes = Number((settings as any)?.auto_resume_minutes) || 30
     await supabase.from('whatsapp_conversations')
       .update({
         needs_human: true,
         needs_human_reason: isTechFallback
           ? 'Clara empty response — technical fallback'
           : 'Clara escalation to human',
-        clara_paused: true,
-        clara_paused_until: new Date(Date.now() + autoResumeMinutes * 60 * 1000).toISOString(),
         updated_at: new Date().toISOString(),
       })
       .eq('id', conversation.id)
 
-    console.log(`[CLARA V2] Marked needs_human for ${conversation.id} (${isTechFallback ? 'tech_fallback' : 'escalation'})`)
+    console.log(`[CLARA V2] Marked needs_human for ${conversation.id} (${isTechFallback ? 'tech_fallback' : 'escalation'}) — Clara stays active`)
   }
 
   // Append no-agent message if escalated but no humans
