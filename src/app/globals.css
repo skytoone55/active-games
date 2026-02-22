@@ -423,12 +423,46 @@ input[type="number"] {
   position: relative;
 }
 
-/* WhatsApp Button */
-.whatsapp-float {
+/* Floating Buttons Container */
+.floating-buttons {
   position: fixed;
   bottom: 30px;
   left: 30px;
   right: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  z-index: 99;
+}
+
+@media (max-width: 768px) {
+  .floating-buttons {
+    bottom: 100px;
+    z-index: 10;
+  }
+}
+
+/* Phone Button */
+.phone-float {
+  width: 50px;
+  height: 50px;
+  background: #2196F3;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 20px rgba(33, 150, 243, 0.4);
+  transition: all 0.3s ease;
+  text-decoration: none;
+}
+
+.phone-float:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 30px rgba(33, 150, 243, 0.6);
+}
+
+/* WhatsApp Button */
+.whatsapp-float {
   width: 60px;
   height: 60px;
   background: #25d366;
@@ -437,24 +471,14 @@ input[type="number"] {
   align-items: center;
   justify-content: center;
   box-shadow: 0 4px 20px rgba(37, 211, 102, 0.4);
-  z-index: 99;
   transition: all 0.3s ease;
-}
-
-/* Remonter le bouton WhatsApp sur mobile pour éviter le chevauchement avec le chat */
-@media (max-width: 768px) {
-  .whatsapp-float {
-    bottom: 100px;
-    z-index: 10; /* Passe derrière le chat Clara (z-index 9999) sur mobile */
-  }
+  text-decoration: none;
 }
 
 .whatsapp-float:hover {
   transform: scale(1.1);
   box-shadow: 0 6px 30px rgba(37, 211, 102, 0.6);
 }
-
-/* WhatsApp toujours à gauche, quelle que soit la direction */
 
 /* Accessibility Styles */
 /* Taille de police - appliqué au root pour affecter tout le site */
