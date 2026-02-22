@@ -447,7 +447,12 @@ export async function POST(request: NextRequest) {
         try {
           if (hasEnabledSteps) {
             // Pre-check if Clara is active so onboarding knows whether to skip welcome message
-            const codexActiveForOnboarding = !!(codexSettingsRecord?.is_active && (codexSettingsRecord?.settings as any)?.enabled === true)
+            const codexActiveForOnboarding = !!(
+              codexSettingsRecord?.is_active &&
+              (codexSettingsRecord?.settings as any)?.enabled === true &&
+              !((codexSettingsRecord?.settings as any)?.test_mode === true &&
+                !isPhoneInTestWhitelist(codexSettingsRecord?.settings, senderPhone))
+            )
             const onboardingResult = await handleOnboarding(
               supabase, conversation, senderPhone, isNewConversation,
               messageText, buttonReplyId, onboardingConfig, onboardingLang, codexActiveForOnboarding, waPhoneNumberId
@@ -513,6 +518,10 @@ export async function POST(request: NextRequest) {
         const codexTestModeBlocked = codexEnabled && (codexSettings as any)?.test_mode === true
           ? !isPhoneInTestWhitelist(codexSettings, senderPhone)
           : false
+
+        if ((codexSettings as any)?.test_mode === true) {
+          console.log('[WHATSAPP] Test mode active — phone', senderPhone, codexTestModeBlocked ? 'BLOCKED' : 'ALLOWED')
+        }
 
         // Normal eligibility: onboarding done, not new conversation, not just handled
         const baseEligibility = isOnboardingDone && isNotWaiting && !claraPaused && !isNewConversation && !onboardingHandledMessage && messageText && messageText !== `[${messageType}]`
