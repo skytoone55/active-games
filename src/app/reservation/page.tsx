@@ -281,6 +281,21 @@ function ReservationContent() {
     fetchDepositInfo()
   }, [step, bookingData.branchSlug, bookingData.type, bookingData.players, bookingData.gameArea, bookingData.numberOfGames, bookingData.eventType])
 
+  // Auto-navigate calendar to first available month when game area or branch changes
+  // (e.g. Rishon ACTIVE/MIX starts March 22 → calendar should open on March, not current month)
+  useEffect(() => {
+    const today = new Date()
+    const activeOpeningDate = new Date(2026, 2, 22)
+    const isRishon = bookingData.branchSlug === 'rishon-lezion'
+
+    const startDate = (isRishon && (bookingData.gameArea === 'ACTIVE' || bookingData.gameArea === 'MIX'))
+      ? (activeOpeningDate > today ? activeOpeningDate : today)
+      : today
+
+    setSelectedMonth(startDate.getMonth() + 1)
+    setSelectedYear(startDate.getFullYear())
+  }, [bookingData.gameArea, bookingData.branchSlug])
+
   const isRTL = locale === 'he'
   const dir = getDirection(locale)
 
@@ -441,6 +456,9 @@ function ReservationContent() {
 
   // Petah Tikva : Active/Mix pas encore disponible (ouverture bientôt, pas de date)
   const isPetahTikva = bookingData.branchSlug === 'petah-tikva'
+
+  // Rishon LeZion : ACTIVE/MIX ouvre le 22 mars 2026 — afficher la date d'ouverture si on est avant
+  const isRishonPreOpening = bookingData.branchSlug === 'rishon-lezion' && new Date() < new Date(2026, 2, 22)
 
   // Sélection du type de jeu (pour Game uniquement)
   const handleGameAreaSelect = (gameArea: 'ACTIVE' | 'LASER' | 'MIX') => {
@@ -1105,7 +1123,12 @@ function ReservationContent() {
                         {isPetahTikva ? (
                           <p className="text-amber-400 text-sm font-medium">{t('booking.game_area.opening_soon')}</p>
                         ) : (
-                          <p className="text-gray-400 text-sm">{t('booking.game_area.active.description')}</p>
+                          <>
+                            <p className="text-gray-400 text-sm">{t('booking.game_area.active.description')}</p>
+                            {isRishonPreOpening && (
+                              <p className="text-amber-400 text-sm font-medium mt-1">{t('booking.game_area.opening_march22')}</p>
+                            )}
+                          </>
                         )}
                       </motion.button>
                     )}
@@ -1146,7 +1169,12 @@ function ReservationContent() {
                         {isPetahTikva ? (
                           <p className="text-amber-400 text-sm font-medium">{t('booking.game_area.opening_soon')}</p>
                         ) : (
-                          <p className="text-gray-400 text-sm">{t('booking.game_area.mix.description')}</p>
+                          <>
+                            <p className="text-gray-400 text-sm">{t('booking.game_area.mix.description')}</p>
+                            {isRishonPreOpening && (
+                              <p className="text-amber-400 text-sm font-medium mt-1">{t('booking.game_area.opening_march22')}</p>
+                            )}
+                          </>
                         )}
                       </motion.button>
                     )}
@@ -1272,7 +1300,12 @@ function ReservationContent() {
                         {isPetahTikva ? (
                           <p className="text-amber-400 text-sm font-medium">{t('booking.game_area.opening_soon')}</p>
                         ) : (
-                          <p className="text-gray-400 text-sm">{t('booking.event_game.active_1h')}</p>
+                          <>
+                            <p className="text-gray-400 text-sm">{t('booking.event_game.active_1h')}</p>
+                            {isRishonPreOpening && (
+                              <p className="text-amber-400 text-sm font-medium mt-1">{t('booking.game_area.opening_march22')}</p>
+                            )}
+                          </>
                         )}
                       </motion.button>
                     )}
@@ -1318,7 +1351,12 @@ function ReservationContent() {
                         {isPetahTikva ? (
                           <p className="text-amber-400 text-sm font-medium">{t('booking.game_area.opening_soon')}</p>
                         ) : (
-                          <p className="text-gray-400 text-sm">{t('booking.event_game.mix')}</p>
+                          <>
+                            <p className="text-gray-400 text-sm">{t('booking.event_game.mix')}</p>
+                            {isRishonPreOpening && (
+                              <p className="text-amber-400 text-sm font-medium mt-1">{t('booking.game_area.opening_march22')}</p>
+                            )}
+                          </>
                         )}
                       </motion.button>
                     )}
