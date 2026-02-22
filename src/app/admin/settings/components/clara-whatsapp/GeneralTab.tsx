@@ -15,6 +15,8 @@ import {
   Wrench,
   Key,
   FlaskConical,
+  Plus,
+  X,
 } from 'lucide-react'
 import { useAdmin } from '@/contexts/AdminContext'
 import {
@@ -101,6 +103,7 @@ export function GeneralTab({ isDark }: GeneralTabProps) {
   const [isActive, setIsActive] = useState(false)
   const [settings, setSettings] = useState<ClaraCodexWhatsAppSettings>(normalizeClaraCodexSettings({}))
   const [models, setModels] = useState<ClaraCodexModelOption[]>([...CODEX_AVAILABLE_MODELS])
+  const [newPhone, setNewPhone] = useState('')
   const [openSections, setOpenSections] = useState<Record<SectionId, boolean>>({
     overview: true,
     model: false,
@@ -394,19 +397,65 @@ export function GeneralTab({ isDark }: GeneralTabProps) {
                             <label className={classNames('text-sm', isDark ? 'text-gray-300' : 'text-gray-700')}>
                               Whitelisted phone numbers
                             </label>
-                            <textarea
-                              value={settings.test_phone_numbers.join('\n')}
-                              onChange={(e) => {
-                                const numbers = e.target.value.split(/[\n,]+/).map(n => n.trim()).filter(Boolean)
-                                setSettings(prev => ({ ...prev, test_phone_numbers: numbers }))
-                                clearSectionStatus('overview')
-                              }}
-                              rows={4}
-                              placeholder={'972501234567\n972509876543'}
-                              className={classNames('w-full rounded-lg border px-3 py-2 text-sm font-mono', isDark ? 'bg-gray-900 border-gray-700 text-white placeholder-gray-600' : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400')}
-                            />
+                            <div className="flex gap-2">
+                              <input
+                                type="text"
+                                value={newPhone}
+                                onChange={(e) => setNewPhone(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    e.preventDefault()
+                                    const cleaned = newPhone.replace(/[-\s+]/g, '').trim()
+                                    if (cleaned && !settings.test_phone_numbers.includes(cleaned)) {
+                                      setSettings(prev => ({ ...prev, test_phone_numbers: [...prev.test_phone_numbers, cleaned] }))
+                                      clearSectionStatus('overview')
+                                    }
+                                    setNewPhone('')
+                                  }
+                                }}
+                                placeholder="ex: 0501234567"
+                                className={classNames('flex-1 rounded-lg border px-3 py-2 text-sm font-mono', isDark ? 'bg-gray-900 border-gray-700 text-white placeholder-gray-600' : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400')}
+                              />
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const cleaned = newPhone.replace(/[-\s+]/g, '').trim()
+                                  if (cleaned && !settings.test_phone_numbers.includes(cleaned)) {
+                                    setSettings(prev => ({ ...prev, test_phone_numbers: [...prev.test_phone_numbers, cleaned] }))
+                                    clearSectionStatus('overview')
+                                  }
+                                  setNewPhone('')
+                                }}
+                                className={classNames('inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium', isDark ? 'bg-gray-700 border-gray-600 text-white hover:bg-gray-600' : 'bg-gray-100 border-gray-300 text-gray-700 hover:bg-gray-200')}
+                              >
+                                <Plus className="w-4 h-4" />
+                                Add
+                              </button>
+                            </div>
+                            {settings.test_phone_numbers.length > 0 && (
+                              <div className="flex flex-wrap gap-2 mt-2">
+                                {settings.test_phone_numbers.map((phone, idx) => (
+                                  <span
+                                    key={idx}
+                                    className={classNames('inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-mono', isDark ? 'bg-gray-700 text-gray-200' : 'bg-gray-200 text-gray-800')}
+                                  >
+                                    {phone}
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setSettings(prev => ({ ...prev, test_phone_numbers: prev.test_phone_numbers.filter((_, i) => i !== idx) }))
+                                        clearSectionStatus('overview')
+                                      }}
+                                      className={classNames('rounded-full p-0.5 hover:bg-red-500/20', isDark ? 'text-gray-400 hover:text-red-400' : 'text-gray-500 hover:text-red-600')}
+                                    >
+                                      <X className="w-3.5 h-3.5" />
+                                    </button>
+                                  </span>
+                                ))}
+                              </div>
+                            )}
                             <p className={classNames('text-xs', isDark ? 'text-gray-500' : 'text-gray-400')}>
-                              One number per line. Format: international without + (e.g. 972501234567) or local (e.g. 0501234567).
+                              International (972501234567) or local (0501234567). Press Enter or click Add.
                             </p>
                           </div>
                         </>
