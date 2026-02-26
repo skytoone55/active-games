@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback, useTransition } from 'react'
+import React, { useState, useEffect, useRef, useCallback, useTransition } from 'react'
 import { MessageCircle, Send, Search, Phone, User, ArrowLeft, Loader2, Filter, UserPlus, Globe, Bot, Archive, X, Smile, Trash2, EyeOff, Plus, Zap, Settings2, Sparkles, HandHelping, CheckCircle, Paperclip, Mic, MicOff, FileText, Play, Square } from 'lucide-react'
 import dynamic from 'next/dynamic'
 import { Theme as EmojiTheme } from 'emoji-picker-react'
@@ -1060,6 +1060,34 @@ export default function ChatPage() {
     return d.toLocaleDateString(locale === 'he' ? 'he-IL' : locale === 'fr' ? 'fr-FR' : 'en-US', { day: '2-digit', month: '2-digit' })
   }
 
+  const getDateKey = (dateStr: string) => {
+    const d = new Date(dateStr)
+    return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`
+  }
+
+  const formatDateSeparator = (dateStr: string) => {
+    const d = new Date(dateStr)
+    const now = new Date()
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+    const msgDay = new Date(d.getFullYear(), d.getMonth(), d.getDate())
+    const diffDays = Math.round((today.getTime() - msgDay.getTime()) / (1000 * 60 * 60 * 24))
+    const loc = locale === 'he' ? 'he-IL' : locale === 'fr' ? 'fr-FR' : 'en-US'
+    if (diffDays === 0) return locale === 'he' ? 'היום' : locale === 'fr' ? "Aujourd'hui" : 'Today'
+    if (diffDays === 1) return t('admin.chat.yesterday') || (locale === 'he' ? 'אתמול' : locale === 'fr' ? 'Hier' : 'Yesterday')
+    if (diffDays < 7) return d.toLocaleDateString(loc, { weekday: 'long' })
+    return d.toLocaleDateString(loc, { day: '2-digit', month: '2-digit', year: 'numeric' })
+  }
+
+  const formatMessageTime = (dateStr: string) => {
+    const d = new Date(dateStr)
+    const now = new Date()
+    const isToday = d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate()
+    if (isToday) return formatTime(dateStr)
+    const loc = locale === 'he' ? 'he-IL' : locale === 'fr' ? 'fr-FR' : 'en-US'
+    const shortDate = d.toLocaleDateString(loc, { day: '2-digit', month: '2-digit' })
+    return `${shortDate} ${formatTime(dateStr)}`
+  }
+
   const getWaDisplayName = (conv: WhatsAppConversation) => {
     if (conv.contacts?.first_name || conv.contacts?.last_name) {
       return `${conv.contacts.first_name || ''} ${conv.contacts.last_name || ''}`.trim()
@@ -1615,8 +1643,19 @@ export default function ChatPage() {
                     <p>{t('admin.chat.no_messages') || 'No messages yet'}</p>
                   </div>
                 ) : (
-                  waMessages.map((msg) => (
-                    <div key={msg.id} className={`group/msg flex items-end gap-1 ${msg.direction === 'outbound' ? 'justify-end' : 'justify-start'}`}>
+                  waMessages.map((msg, idx) => {
+                    const prevMsg = idx > 0 ? waMessages[idx - 1] : null
+                    const showDateSep = !prevMsg || getDateKey(msg.created_at) !== getDateKey(prevMsg.created_at)
+                    return (
+                    <React.Fragment key={msg.id}>
+                      {showDateSep && (
+                        <div className="flex items-center justify-center my-3">
+                          <div className={`text-xs px-3 py-1 rounded-full ${isDark ? 'bg-gray-700 text-gray-400' : 'bg-gray-200 text-gray-500'}`}>
+                            {formatDateSeparator(msg.created_at)}
+                          </div>
+                        </div>
+                      )}
+                    <div className={`group/msg flex items-end gap-1 ${msg.direction === 'outbound' ? 'justify-end' : 'justify-start'}`}>
                       {/* Delete button — before bubble for outbound (right side) */}
                       {msg.direction === 'outbound' && user?.role === 'super_admin' && (
                         <button
@@ -1674,7 +1713,7 @@ export default function ChatPage() {
                             ? 'text-green-200'
                             : isDark ? 'text-gray-500' : 'text-gray-400'
                         }`}>
-                          {formatTime(msg.created_at)}
+                          {formatMessageTime(msg.created_at)}
                           {msg.direction === 'outbound' && (
                             <span className="ml-1">
                               {msg.status === 'read' ? '✓✓' : msg.status === 'delivered' ? '✓✓' : '✓'}
@@ -1693,7 +1732,9 @@ export default function ChatPage() {
                         </button>
                       )}
                     </div>
-                  ))
+                    </React.Fragment>
+                    )
+                  })
                 )}
                 <div ref={messagesEndRef} />
               </div>
@@ -2003,11 +2044,21 @@ export default function ChatPage() {
                     <p>{t('admin.chat.no_messages') || 'No messages yet'}</p>
                   </div>
                 ) : (
-                  msMessages.map((msg) => {
+                  msMessages.map((msg, idx) => {
                     if (msg.role === 'system') return null
                     const isAssistant = msg.role === 'assistant'
+                    const prevMsg = idx > 0 ? msMessages[idx - 1] : null
+                    const showDateSep = !prevMsg || getDateKey(msg.created_at) !== getDateKey(prevMsg.created_at)
                     return (
-                      <div key={msg.id} className={`flex ${isAssistant ? 'justify-start' : 'justify-end'}`}>
+                      <React.Fragment key={msg.id}>
+                        {showDateSep && (
+                          <div className="flex items-center justify-center my-3">
+                            <div className={`text-xs px-3 py-1 rounded-full ${isDark ? 'bg-gray-700 text-gray-400' : 'bg-gray-200 text-gray-500'}`}>
+                              {formatDateSeparator(msg.created_at)}
+                            </div>
+                          </div>
+                        )}
+                      <div className={`flex ${isAssistant ? 'justify-start' : 'justify-end'}`}>
                         {isAssistant && (
                           <div className="w-7 h-7 rounded-full bg-blue-600 flex items-center justify-center flex-shrink-0 mr-2 mt-1">
                             <Bot className="w-3.5 h-3.5 text-white" />
@@ -2026,10 +2077,11 @@ export default function ChatPage() {
                               ? isDark ? 'text-gray-500' : 'text-gray-400'
                               : 'text-blue-200'
                           }`}>
-                            {formatTime(msg.created_at)}
+                            {formatMessageTime(msg.created_at)}
                           </div>
                         </div>
                       </div>
+                      </React.Fragment>
                     )
                   })
                 )}
