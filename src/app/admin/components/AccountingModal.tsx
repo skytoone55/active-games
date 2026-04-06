@@ -136,17 +136,25 @@ export const AccountingModal = memo(function AccountingModal({
 
       let laserGames = 0
       let activeDuration = 0
+      const customGameAreas: ('ACTIVE' | 'LASER')[] = []
+      const customGameDurations: string[] = []
 
       // Calculer depuis les game_sessions si disponibles via le booking
       const gameSessions = (booking as any)?.game_sessions
       if (gameSessions && Array.isArray(gameSessions) && gameSessions.length > 0) {
-        gameSessions.forEach((session: any) => {
-          if (session?.game_area === 'LASER') {
-            laserGames++
-          } else if (session?.game_area === 'ACTIVE') {
-            const sessionStart = new Date(session.start_datetime)
-            const sessionEnd = new Date(session.end_datetime)
-            activeDuration += Math.round((sessionEnd.getTime() - sessionStart.getTime()) / 60000)
+        // Trier par session_order pour garder l'ordre correct
+        const sorted = [...gameSessions].sort((a: any, b: any) => (a.session_order ?? 0) - (b.session_order ?? 0))
+        sorted.forEach((session: any) => {
+          const area = session?.game_area as 'ACTIVE' | 'LASER'
+          if (area === 'LASER') laserGames++
+          else if (area === 'ACTIVE') {
+            const dur = Math.round((new Date(session.end_datetime).getTime() - new Date(session.start_datetime).getTime()) / 60000)
+            activeDuration += dur
+          }
+          if (area === 'ACTIVE' || area === 'LASER') {
+            customGameAreas.push(area)
+            const dur = Math.round((new Date(session.end_datetime).getTime() - new Date(session.start_datetime).getTime()) / 60000)
+            customGameDurations.push(String(dur))
           }
         })
       } else {
@@ -175,8 +183,10 @@ export const AccountingModal = memo(function AccountingModal({
         participants,
         numberOfGames: laserGames || 1,
         gameDurations: activeDuration > 0 ? [String(activeDuration)] : ['60'],
+        customGameAreas: gameArea === 'CUSTOM' ? customGameAreas : undefined,
+        customGameDurations: gameArea === 'CUSTOM' ? customGameDurations : undefined,
         eventQuickPlan,
-        eventRoomId: null, // Laisser le calcul utiliser formula.room_id (icount_rooms)
+        eventRoomId: null,
         products: safeProducts,
         eventFormulas: safeEventFormulas,
         rooms: safeRooms,
