@@ -21,7 +21,7 @@ export interface CalculatePriceParams {
   bookingType: 'GAME' | 'EVENT'
   participants: number
   // GAME params
-  gameArea?: 'ACTIVE' | 'LASER' | 'MIX' | 'CUSTOM' | null
+  gameArea?: 'ACTIVE' | 'LASER' | 'MIX' | 'CUSTOM' | null  // MIX est traité comme CUSTOM
   numberOfGames?: number            // For LASER: number of parties
   gameDurations?: string[]          // For ACTIVE: durations in minutes
   // GAME CUSTOM params
@@ -189,8 +189,11 @@ export function calculateBookingPrice(params: CalculatePriceParams): PriceCalcul
   let roomName: string | undefined
   let breakdownParts: string[] = []
 
+  // Normaliser MIX → CUSTOM (MIX est calculé par l'API, CUSTOM est sélectionné dans l'UI)
+  const normalizedGameArea = gameArea === 'MIX' ? 'CUSTOM' : gameArea
+
   if (bookingType === 'GAME') {
-    if (gameArea === 'LASER') {
+    if (normalizedGameArea === 'LASER') {
       // LASER: price per party × participants
       const product = findLaserProduct(products, numberOfGames)
       if (product) {
@@ -209,7 +212,7 @@ export function calculateBookingPrice(params: CalculatePriceParams): PriceCalcul
           details: { participants, unitPrice: 0 }
         }
       }
-    } else if (gameArea === 'ACTIVE') {
+    } else if (normalizedGameArea === 'ACTIVE') {
       // ACTIVE: price per duration × participants
       const totalDuration = gameDurations.reduce((sum, d) => sum + parseInt(d || '0'), 0)
       const product = findActiveProduct(products, totalDuration)
@@ -228,7 +231,7 @@ export function calculateBookingPrice(params: CalculatePriceParams): PriceCalcul
           details: { participants, unitPrice: 0 }
         }
       }
-    } else if (gameArea === 'CUSTOM') {
+    } else if (normalizedGameArea === 'CUSTOM') {
       // CUSTOM: combine LASER and ACTIVE games
       const { customGameAreas = [], customGameDurations = [] } = params
 

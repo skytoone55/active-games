@@ -583,25 +583,31 @@ export const BookingModal = memo(function BookingModal({
         if (editingBooking.game_sessions && editingBooking.game_sessions.length > 0) {
           // Déterminer game_area pour GAME
           if (editingBooking.type === 'GAME') {
-            const firstSession = editingBooking.game_sessions[0]
-            setGameArea(firstSession.game_area)
-            
             // IMPORTANT: Compter les session_order UNIQUES, pas le nombre total de sessions
             // Car un jeu peut avoir plusieurs sessions (ex: 2 salles LASER pour un même jeu)
             const sessions = editingBooking.game_sessions || []
+
+            // Détecter si c'est un booking CUSTOM (mix ACTIVE + LASER)
+            const hasActiveSessions = sessions.some((s: { game_area: string }) => s.game_area === 'ACTIVE')
+            const hasLaserSessions = sessions.some((s: { game_area: string }) => s.game_area === 'LASER')
+            const detectedGameArea = (hasActiveSessions && hasLaserSessions) ? 'CUSTOM' : sessions[0].game_area
+            setGameArea(detectedGameArea as GameArea)
+
             const uniqueSessionOrders = [...new Set(sessions.map(s => s.session_order))].sort((a, b) => a - b)
             setNumberOfGames(uniqueSessionOrders.length)
-            
+
             // Initialiser les durées et pauses par JEU (groupé par session_order)
             const durations: string[] = []
             const pauses: number[] = []
             const roomIds: string[] = []
-            
+            const customAreas: GameArea[] = []
+            const customLaserRoomIds: string[] = []
+
             uniqueSessionOrders.forEach((sessionOrder, index) => {
               // Trouver toutes les sessions de ce jeu
               const sessionsForThisGame = sessions.filter(s => s.session_order === sessionOrder)
               if (sessionsForThisGame.length === 0) return
-              
+
               // Prendre la première session pour les temps (toutes ont les mêmes heures)
               const firstSessionOfGame = sessionsForThisGame[0]
               const sessionStart = new Date(firstSessionOfGame.start_datetime)
@@ -609,7 +615,9 @@ export const BookingModal = memo(function BookingModal({
               const durationMs = sessionEnd.getTime() - sessionStart.getTime()
               const durationMinutes = Math.round(durationMs / (1000 * 60))
               durations.push(String(durationMinutes))
-              
+              customAreas.push(firstSessionOfGame.game_area as GameArea)
+              customLaserRoomIds.push(sessionsForThisGame.find(s => s.laser_room_id)?.laser_room_id || '')
+
               // Calculer la pause "après" ce jeu en regardant l'écart avec le jeu suivant
               if (index < uniqueSessionOrders.length - 1) {
                 const nextSessionOrder = uniqueSessionOrders[index + 1]
@@ -622,22 +630,31 @@ export const BookingModal = memo(function BookingModal({
                 }
               }
               // Pas de pause après le dernier jeu
-              
-              // Collecter les room IDs pour ce jeu
+
+              // Collecter les room IDs pour ce jeu (mode LASER)
               sessionsForThisGame.forEach(s => {
                 if (s.laser_room_id) {
                   roomIds.push(s.laser_room_id)
                 }
               })
             })
-            
+
             setGameDurations(durations)
             setGamePauses(pauses)
             setLaserRoomIds(roomIds)
-            
+
+            // Initialiser les données CUSTOM si le booking est en mode sur mesure
+            if (detectedGameArea === 'CUSTOM') {
+              setGameCustomGameArea(customAreas)
+              setGameCustomGameDurations(durations)
+              setGameCustomGamePauses(pauses)
+              setGameCustomNumberOfGames(uniqueSessionOrders.length)
+              setGameCustomLaserRoomIds(customLaserRoomIds)
+            }
+
             // Mode allocation LASER reste toujours sur 'auto' par défaut
             // L'utilisateur peut le changer manuellement si besoin
-            
+
             // Les pauses sont maintenant "après" chaque jeu, pas besoin de gapBetweenGames
           } else if (editingBooking.type === 'EVENT') {
             // EVENT : déterminer le plan de jeu depuis les sessions

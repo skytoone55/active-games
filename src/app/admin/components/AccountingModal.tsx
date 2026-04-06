@@ -82,7 +82,8 @@ export const AccountingModal = memo(function AccountingModal({
         contact:contacts(*),
         booking:bookings(
           *,
-          slots:booking_slots(*)
+          slots:booking_slots(*),
+          game_sessions(*)
         )
       `)
       .eq('id', orderId)
@@ -126,7 +127,9 @@ export const AccountingModal = memo(function AccountingModal({
       const bookingType = order.order_type as 'GAME' | 'EVENT'
       if (!bookingType) return null
 
-      const gameArea = (order.game_area || 'ACTIVE') as 'ACTIVE' | 'LASER' | 'CUSTOM'
+      // 'MIX' est le même que 'CUSTOM' (MIX est calculé par l'API, CUSTOM est sélectionné dans l'UI)
+      const rawGameArea = order.game_area || 'ACTIVE'
+      const gameArea = (rawGameArea === 'MIX' ? 'CUSTOM' : rawGameArea) as 'ACTIVE' | 'LASER' | 'CUSTOM'
       const participants = order.participants_count || 0
 
       if (participants < 1) return null
@@ -134,13 +137,16 @@ export const AccountingModal = memo(function AccountingModal({
       let laserGames = 0
       let activeDuration = 0
 
-      const slots = booking?.slots
-      if (slots && Array.isArray(slots) && slots.length > 0) {
-        slots.forEach((slot: any) => {
-          if (slot?.area === 'LASER') {
+      // Calculer depuis les game_sessions si disponibles via le booking
+      const gameSessions = (booking as any)?.game_sessions
+      if (gameSessions && Array.isArray(gameSessions) && gameSessions.length > 0) {
+        gameSessions.forEach((session: any) => {
+          if (session?.game_area === 'LASER') {
             laserGames++
-          } else if (slot?.area === 'ACTIVE') {
-            activeDuration += slot?.duration_minutes || 30
+          } else if (session?.game_area === 'ACTIVE') {
+            const sessionStart = new Date(session.start_datetime)
+            const sessionEnd = new Date(session.end_datetime)
+            activeDuration += Math.round((sessionEnd.getTime() - sessionStart.getTime()) / 60000)
           }
         })
       } else {
