@@ -1748,3 +1748,43 @@ export async function GET(request: NextRequest) {
     )
   }
 }
+
+/**
+ * PATCH /api/orders
+ * Bulk actions sur plusieurs commandes
+ * action: 'mark_all_aborted_seen' — marque tous les aborted non vus comme vus
+ */
+export async function PATCH(request: NextRequest) {
+  try {
+    const { verifyApiPermission } = await import('@/lib/permissions')
+    const { success, user, errorResponse } = await verifyApiPermission('orders', 'view')
+    if (!success || !user) return errorResponse
+
+    const body = await request.json()
+    const { action, branch_id } = body
+
+    if (!branch_id) {
+      return NextResponse.json({ success: false, error: 'branch_id required' }, { status: 400 })
+    }
+
+    if (action === 'mark_all_aborted_seen') {
+      const { error } = await supabase
+        .from('orders')
+        .update({ aborted_seen_at: new Date().toISOString() })
+        .eq('branch_id', branch_id)
+        .eq('status', 'aborted')
+        .is('aborted_seen_at', null)
+
+      if (error) {
+        return NextResponse.json({ success: false, error: error.message }, { status: 500 })
+      }
+
+      return NextResponse.json({ success: true })
+    }
+
+    return NextResponse.json({ success: false, error: 'Unknown action' }, { status: 400 })
+  } catch (error) {
+    console.error('Error in PATCH /api/orders:', error)
+    return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 })
+  }
+}

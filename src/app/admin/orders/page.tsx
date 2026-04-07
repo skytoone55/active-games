@@ -12,9 +12,10 @@ import {
   PartyPopper,
   Target,
   Gamepad2,
-  Mail
+  Mail,
+  CheckCheck
 } from 'lucide-react'
-import { useOrders, notifyAbortedOrdersChanged } from '@/hooks/useOrders'
+import { useOrders, useUnseenAbortedOrdersCount, notifyAbortedOrdersChanged } from '@/hooks/useOrders'
 import { useAdmin } from '@/contexts/AdminContext'
 import { useUserPermissions } from '@/hooks/useUserPermissions'
 import type { UserRole } from '@/hooks/useUserPermissions'
@@ -70,6 +71,29 @@ export default function OrdersPage() {
     pendingCount,
     cancelOrder
   } = useOrders(selectedBranchId)
+
+  const { count: unseenAbortedCount, refetch: refetchUnseenAborted } = useUnseenAbortedOrdersCount(selectedBranchId)
+  const [markingAllSeen, setMarkingAllSeen] = useState(false)
+
+  const handleMarkAllAbortedSeen = async () => {
+    if (!selectedBranchId || markingAllSeen) return
+    setMarkingAllSeen(true)
+    try {
+      const res = await fetch('/api/orders', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'mark_all_aborted_seen', branch_id: selectedBranchId }),
+      })
+      if ((await res.json()).success) {
+        notifyAbortedOrdersChanged()
+        refetchUnseenAborted()
+      }
+    } catch (_) {
+      // silencieux
+    } finally {
+      setMarkingAllSeen(false)
+    }
+  }
 
   // Permissions
   const { hasPermission } = useUserPermissions(user?.role as UserRole || null)
@@ -534,7 +558,28 @@ export default function OrdersPage() {
           >
             <XCircle className="w-4 h-4" />
             {t('admin.orders.filter.aborted')} ({stats.aborted || 0})
+            {unseenAbortedCount > 0 && (
+              <span className="ml-1 bg-orange-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                {unseenAbortedCount > 9 ? '9+' : unseenAbortedCount}
+              </span>
+            )}
           </button>
+
+          {/* Bouton Tout marquer comme lu — visible si des aborted non vus */}
+          {unseenAbortedCount > 0 && (
+            <button
+              onClick={handleMarkAllAbortedSeen}
+              disabled={markingAllSeen}
+              className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
+                isDark
+                  ? 'bg-orange-900/40 hover:bg-orange-900/60 text-orange-300 border border-orange-700/50'
+                  : 'bg-orange-50 hover:bg-orange-100 text-orange-700 border border-orange-200'
+              } disabled:opacity-50`}
+            >
+              <CheckCheck className="w-4 h-4" />
+              Tout marquer comme lu
+            </button>
+          )}
 
           <button
             onClick={() => setQuickStatusFilter('cancelled')}
