@@ -199,8 +199,8 @@
       "title": "Event Packages",
       "description": "Active + Laser Event",
       "tiers": [
-        { "label": "15 participants minimum", "price": "130", "currency": "NIS" },
-        { "label": "30 participants minimum", "price": "120", "currency": "NIS" }
+        { "label": "15 participants minimum", "price": "135", "currency": "NIS" },
+        { "label": "30 participants minimum", "price": "125", "currency": "NIS" }
       ],
       "roomPrice": "500 NIS",
       "roomLabel": "Private event room",
