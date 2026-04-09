@@ -89,17 +89,22 @@ export async function downloadAndStoreMedia(media: MediaDownloadInfo): Promise<S
       return null
     }
 
-    // Step 4: Get public URL
-    const { data: { publicUrl } } = supabase.storage
+    // Step 4: Get signed URL (30 days) — évite le CDN public = pas de Cached Egress
+    const { data: signedData, error: signedError } = await supabase.storage
       .from('whatsapp-media')
-      .getPublicUrl(storagePath)
+      .createSignedUrl(storagePath, 2592000) // 30 jours
+
+    if (signedError || !signedData?.signedUrl) {
+      console.error('[WA MEDIA] Failed to create signed URL:', signedError)
+      return null
+    }
 
     console.log('[WA MEDIA] Stored inbound:', storagePath)
 
-    // FIFO cleanup (non-blocking) — 50 Mo limit
+    // FIFO cleanup (non-blocking)
     cleanupOldMedia(supabase, 'inbound').catch(() => {})
 
-    return { publicUrl, storagePath }
+    return { publicUrl: signedData.signedUrl, storagePath }
   } catch (error) {
     console.error('[WA MEDIA] Download error:', error)
     return null
@@ -152,11 +157,18 @@ export async function uploadAndSendMedia(
       return null
     }
 
-    const { data: { publicUrl } } = supabase.storage
+    // Signed URL (30 jours) — évite le CDN public = pas de Cached Egress
+    const { data: signedData, error: signedError } = await supabase.storage
       .from('whatsapp-media')
-      .getPublicUrl(finalPath)
+      .createSignedUrl(finalPath, 2592000) // 30 jours
 
-    console.log('[WA MEDIA] Uploaded to:', finalPath, '| publicUrl:', publicUrl)
+    if (signedError || !signedData?.signedUrl) {
+      console.error('[WA MEDIA] Failed to create signed URL:', signedError)
+      return null
+    }
+    const publicUrl = signedData.signedUrl
+
+    console.log('[WA MEDIA] Uploaded to:', finalPath)
 
     // Step 2: Determine WhatsApp media type from MIME
     const waType = getWhatsAppMediaType(mimeType)
@@ -307,7 +319,7 @@ async function sendViaLink(
 // FIFO Cleanup — Keep storage under 50 Mo
 // ============================================================
 
-const MAX_FILES_PER_FOLDER = 80 // ~50 Mo budget split across inbound/outbound
+const MAX_FILES_PER_FOLDER = 20 // limite basse pour minimiser le stockage et l'egress
 
 /**
  * Delete oldest files in a storage folder to stay under the limit.
