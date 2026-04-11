@@ -87,11 +87,14 @@ export function useIncomingMessageAlert() {
   }, [pathname])
 
   const dismiss = useCallback(() => {
+    if (autoStopTimerRef.current) clearTimeout(autoStopTimerRef.current)
     ringRef.current?.stop()
     ringRef.current = null
     setIsRinging(false)
     setPendingCount(0)
   }, [])
+
+  const autoStopTimerRef = useRef<NodeJS.Timeout | null>(null)
 
   const triggerAlert = useCallback((messageId: string) => {
     if (notifiedRef.current.has(messageId)) return
@@ -103,6 +106,14 @@ export function useIncomingMessageAlert() {
     if (!ringRef.current) {
       ringRef.current = createRingLoop()
       setIsRinging(true)
+
+      // Auto-stop after 30 seconds
+      if (autoStopTimerRef.current) clearTimeout(autoStopTimerRef.current)
+      autoStopTimerRef.current = setTimeout(() => {
+        ringRef.current?.stop()
+        ringRef.current = null
+        setIsRinging(false)
+      }, 30000)
     }
   }, [])
 
@@ -139,7 +150,10 @@ export function useIncomingMessageAlert() {
 
   // Cleanup on unmount
   useEffect(() => {
-    return () => { ringRef.current?.stop() }
+    return () => {
+      if (autoStopTimerRef.current) clearTimeout(autoStopTimerRef.current)
+      ringRef.current?.stop()
+    }
   }, [])
 
   return { isRinging, pendingCount, dismiss }
