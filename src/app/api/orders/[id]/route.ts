@@ -583,20 +583,13 @@ export async function PATCH(
         booking_reference: originalReference
       })
 
-    } else if (action === 'mark_aborted_seen') {
-      // Marquer une commande aborted comme vue par l'admin
-      if (order.status !== 'aborted') {
-        return NextResponse.json(
-          { success: false, error: 'Order is not aborted' },
-          { status: 400 }
-        )
-      }
-
+    } else if (action === 'mark_seen' || action === 'mark_aborted_seen') {
+      // Marquer une commande comme vue par l'admin (tous statuts)
       const { error: updateError } = await supabase
         .from('orders')
         .update({
-          aborted_seen_at: new Date().toISOString(),
-          aborted_seen_by: user.id,
+          seen_at: new Date().toISOString(),
+          seen_by: user.id,
         })
         .eq('id', id)
 
@@ -607,7 +600,7 @@ export async function PATCH(
         )
       }
 
-      return NextResponse.json({ success: true, message: 'Aborted order marked as seen' })
+      return NextResponse.json({ success: true, message: 'Order marked as seen' })
 
     } else {
       return NextResponse.json(

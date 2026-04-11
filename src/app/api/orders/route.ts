@@ -1681,7 +1681,7 @@ export async function GET(request: NextRequest) {
 
     // ─── countOnly mode: return just counts, no full data (for header badges) ───
     if (countOnly) {
-      const [pendingResult, abortedResult] = await Promise.all([
+      const [pendingResult, unseenResult] = await Promise.all([
         supabase
           .from('orders')
           .select('*', { count: 'exact', head: true })
@@ -1689,17 +1689,23 @@ export async function GET(request: NextRequest) {
           .eq('status', 'pending'),
         supabase
           .from('orders')
-          .select('*', { count: 'exact', head: true })
+          .select('status')
           .eq('branch_id', branchId)
-          .eq('status', 'aborted')
-          .is('aborted_seen_at', null)
+          .is('seen_at', null)
       ])
+
+      const unseenCounts = { total: 0, pending: 0, auto_confirmed: 0, manually_confirmed: 0, aborted: 0, cancelled: 0, closed: 0 }
+      unseenResult.data?.forEach((o: { status: string }) => {
+        unseenCounts.total++
+        if (o.status in unseenCounts) (unseenCounts as Record<string, number>)[o.status]++
+      })
 
       return NextResponse.json({
         success: true,
         orders: [],
         pending_count: pendingResult.count || 0,
-        unseen_aborted_count: abortedResult.count || 0,
+        unseen_aborted_count: unseenCounts.aborted,
+        unseen_counts: unseenCounts,
       })
     }
 
@@ -1731,14 +1737,22 @@ export async function GET(request: NextRequest) {
     // Compter les pending
     const pendingCount = orders?.filter(o => o.status === 'pending').length || 0
 
-    // Compter les aborted non vus
-    const unseenAbortedCount = orders?.filter(o => o.status === 'aborted' && !o.aborted_seen_at).length || 0
+    // Compter les non vus par statut
+    const unseenCounts = { total: 0, pending: 0, auto_confirmed: 0, manually_confirmed: 0, aborted: 0, cancelled: 0, closed: 0 }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    orders?.forEach((o: any) => {
+      if (!o.seen_at) {
+        unseenCounts.total++
+        if (o.status in unseenCounts) (unseenCounts as Record<string, number>)[o.status]++
+      }
+    })
 
     return NextResponse.json({
       success: true,
       orders,
       pending_count: pendingCount,
-      unseen_aborted_count: unseenAbortedCount
+      unseen_aborted_count: unseenCounts.aborted,
+      unseen_counts: unseenCounts,
     })
   } catch (error) {
     console.error('Error in GET /api/orders:', error)
@@ -1767,14 +1781,22 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'branch_id required' }, { status: 400 })
     }
 
-    if (action === 'mark_all_aborted_seen') {
-      const { error } = await supabase
-        .from('orders')
-        .update({ aborted_seen_at: new Date().toISOString() })
-        .eq('branch_id', branch_id)
-        .eq('status', 'aborted')
-        .is('aborted_seen_at', null)
+    if (action === 'mark_all_seen' || action === 'mark_all_aborted_seen') {
+      const { status: targetStatus } = body
+      // mark_all_aborted_seen is kept for backward compat (same as mark_all_seen with status=aborted)
+      const resolvedStatus = action === 'mark_all_aborted_seen' ? 'aborted' : targetStatus
 
+      let updateQuery = supabase
+        .from('orders')
+        .update({ seen_at: new Date().toISOString() })
+        .eq('branch_id', branch_id)
+        .is('seen_at', null)
+
+      if (resolvedStatus) {
+        updateQuery = updateQuery.eq('status', resolvedStatus)
+      }
+
+      const { error } = await updateQuery
       if (error) {
         return NextResponse.json({ success: false, error: error.message }, { status: 500 })
       }

@@ -8,7 +8,7 @@ import { usePathname } from 'next/navigation'
 import type { AuthUser } from '@/hooks/useAuth'
 import type { Branch, UserRole } from '@/lib/supabase/types'
 import { BranchSelector } from './BranchSelector'
-import { usePendingOrdersCount, useUnseenAbortedOrdersCount } from '@/hooks/useOrders'
+import { usePendingOrdersCount, useUnseenOrdersCount } from '@/hooks/useOrders'
 import { useUnreadContactRequestsCount } from '@/hooks/useContactRequests'
 import { useUnreadChatsCount } from '@/hooks/useUnreadChatsCount'
 import { useNeedsHumanCount } from '@/hooks/useNeedsHumanCount'
@@ -87,8 +87,9 @@ function AdminHeaderComponent({
   const pendingOrdersCount = usePendingOrdersCount(selectedBranch?.id || null)
   const hasPendingOrders = pendingOrdersCount > 0
 
-  // Compteur de commandes aborted non vues (badge orange sur Commandes)
-  const { count: unseenAbortedCount } = useUnseenAbortedOrdersCount(selectedBranch?.id || null)
+  // Compteur de toutes les commandes non vues (badge orange sur Commandes)
+  const { counts: unseenOrdersCounts } = useUnseenOrdersCount(selectedBranch?.id || null)
+  const unseenAbortedCount = unseenOrdersCounts.total
   const hasUnseenAborted = unseenAbortedCount > 0
 
   // Compteur de demandes de contact non lues (badge sur Clients)

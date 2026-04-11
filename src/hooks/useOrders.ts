@@ -15,6 +15,16 @@ interface OrdersStats {
   cancelled: number
 }
 
+export interface UnseenCounts {
+  total: number
+  pending: number
+  auto_confirmed: number
+  manually_confirmed: number
+  aborted: number
+  cancelled: number
+  closed: number
+}
+
 export function useOrders(branchId: string | null) {
   const [statusFilter, setStatusFilter] = useState<OrderStatus | undefined>(undefined)
 
@@ -147,11 +157,11 @@ export function usePendingOrdersCount(branchId: string | null) {
 }
 
 /**
- * Hook for unseen aborted orders count (header badge)
+ * Hook for unseen orders count per status (header badge + filter badges)
  * Uses countOnly for performance — no full order data loaded
- * Listens to 'aborted-orders-changed' event for instant updates
+ * Listens to 'orders-seen-changed' event for instant updates
  */
-export function useUnseenAbortedOrdersCount(branchId: string | null) {
+export function useUnseenOrdersCount(branchId: string | null) {
   const swrKey = branchId
     ? `/api/orders?branch_id=${branchId}&countOnly=true`
     : null
@@ -159,6 +169,7 @@ export function useUnseenAbortedOrdersCount(branchId: string | null) {
   const { data, mutate } = useSWR<{
     success: boolean
     orders: OrderWithRelations[]
+    unseen_counts: UnseenCounts
     unseen_aborted_count: number
   }>(
     swrKey,
@@ -166,26 +177,38 @@ export function useUnseenAbortedOrdersCount(branchId: string | null) {
     { revalidateOnFocus: false, dedupingInterval: 15000 }
   )
 
-  // Realtime: revalidate on changes
-  const handleRealtimeRefresh = useCallback(() => {
-    mutate()
-  }, [mutate])
-
+  const handleRealtimeRefresh = useCallback(() => { mutate() }, [mutate])
   useRealtimeRefresh('orders', branchId, handleRealtimeRefresh)
 
-  // Listen to local events for instant badge update
   useEffect(() => {
     const handleChange = () => mutate()
+    window.addEventListener('orders-seen-changed', handleChange)
+    // backward compat
     window.addEventListener('aborted-orders-changed', handleChange)
-    return () => window.removeEventListener('aborted-orders-changed', handleChange)
+    return () => {
+      window.removeEventListener('orders-seen-changed', handleChange)
+      window.removeEventListener('aborted-orders-changed', handleChange)
+    }
   }, [mutate])
 
-  return { count: data?.unseen_aborted_count || 0, refetch: () => mutate() }
+  const defaultCounts: UnseenCounts = { total: 0, pending: 0, auto_confirmed: 0, manually_confirmed: 0, aborted: 0, cancelled: 0, closed: 0 }
+  return { counts: data?.unseen_counts || defaultCounts, refetch: () => mutate() }
+}
+
+/** @deprecated Use useUnseenOrdersCount instead */
+export function useUnseenAbortedOrdersCount(branchId: string | null) {
+  const { counts, refetch } = useUnseenOrdersCount(branchId)
+  return { count: counts.aborted, refetch }
 }
 
 /**
- * Notify that aborted orders have changed (header badge updates)
+ * Notify that orders seen state has changed (instant badge updates)
  */
+export function notifyOrdersSeenChanged() {
+  window.dispatchEvent(new Event('orders-seen-changed'))
+}
+
+/** @deprecated Use notifyOrdersSeenChanged instead */
 export function notifyAbortedOrdersChanged() {
-  window.dispatchEvent(new Event('aborted-orders-changed'))
+  notifyOrdersSeenChanged()
 }

@@ -15,7 +15,7 @@ import {
   Mail,
   CheckCheck
 } from 'lucide-react'
-import { useOrders, useUnseenAbortedOrdersCount, notifyAbortedOrdersChanged } from '@/hooks/useOrders'
+import { useOrders, useUnseenOrdersCount, notifyOrdersSeenChanged } from '@/hooks/useOrders'
 import { useAdmin } from '@/contexts/AdminContext'
 import { useUserPermissions } from '@/hooks/useUserPermissions'
 import type { UserRole } from '@/hooks/useUserPermissions'
@@ -72,26 +72,26 @@ export default function OrdersPage() {
     cancelOrder
   } = useOrders(selectedBranchId)
 
-  const { count: unseenAbortedCount, refetch: refetchUnseenAborted } = useUnseenAbortedOrdersCount(selectedBranchId)
-  const [markingAllSeen, setMarkingAllSeen] = useState(false)
+  const { counts: unseenCounts, refetch: refetchUnseen } = useUnseenOrdersCount(selectedBranchId)
+  const [markingAllSeen, setMarkingAllSeen] = useState<string | null>(null)
 
-  const handleMarkAllAbortedSeen = async () => {
+  const handleMarkAllSeen = async (status?: string) => {
     if (!selectedBranchId || markingAllSeen) return
-    setMarkingAllSeen(true)
+    setMarkingAllSeen(status || 'all')
     try {
       const res = await fetch('/api/orders', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'mark_all_aborted_seen', branch_id: selectedBranchId }),
+        body: JSON.stringify({ action: 'mark_all_seen', branch_id: selectedBranchId, status }),
       })
       if ((await res.json()).success) {
-        notifyAbortedOrdersChanged()
-        refetchUnseenAborted()
+        notifyOrdersSeenChanged()
+        refetchUnseen()
       }
     } catch (_) {
       // silencieux
     } finally {
-      setMarkingAllSeen(false)
+      setMarkingAllSeen(null)
     }
   }
 
@@ -298,19 +298,18 @@ export default function OrdersPage() {
   const handleViewOrder = (order: OrderWithRelations) => {
     setSelectedOrder(order)
 
-    // Auto-marquer comme vu si c'est une commande aborted non vue
+    // Auto-marquer comme vu si pas encore vu (tous statuts)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    if (order.status === 'aborted' && !(order as any).aborted_seen_at) {
+    if (!(order as any).seen_at) {
       fetch(`/api/orders/${order.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'mark_aborted_seen' }),
+        body: JSON.stringify({ action: 'mark_seen' }),
       })
         .then(res => res.json())
         .then(data => {
           if (data.success) {
-            // Notifier le header pour mise à jour instantanée du badge orange
-            notifyAbortedOrdersChanged()
+            notifyOrdersSeenChanged()
           }
         })
         .catch(() => {})
@@ -503,95 +502,175 @@ export default function OrdersPage() {
             {t('admin.orders.filter.all')} ({stats.total})
           </button>
 
-          <button
-            onClick={() => setQuickStatusFilter('pending')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
-              quickStatusFilter === 'pending'
-                ? 'bg-red-600 text-white'
-                : stats.pending > 0
-                  ? 'bg-red-500/20 text-red-500 hover:bg-red-500/30 border-2 border-red-500'
-                  : isDark ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-            }`}
-          >
-            <Clock className="w-4 h-4" />
-            {t('admin.orders.filter.pending')}
-            {stats.pending > 0 && (
-              <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
-                quickStatusFilter === 'pending' ? 'bg-white text-red-600' : 'bg-red-500 text-white'
-              }`}>
-                {stats.pending}
-              </span>
-            )}
-          </button>
-
-          <button
-            onClick={() => setQuickStatusFilter('auto_confirmed')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
-              quickStatusFilter === 'auto_confirmed'
-                ? 'bg-green-600 text-white'
-                : isDark ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-            }`}
-          >
-            <CheckCircle className="w-4 h-4" />
-            {t('admin.orders.filter.auto_confirmed')} ({stats.auto_confirmed})
-          </button>
-
-          <button
-            onClick={() => setQuickStatusFilter('manually_confirmed')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
-              quickStatusFilter === 'manually_confirmed'
-                ? 'bg-blue-600 text-white'
-                : isDark ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-            }`}
-          >
-            <CheckCircle className="w-4 h-4" />
-            {t('admin.orders.filter.manually_confirmed')} ({stats.manually_confirmed})
-          </button>
-
-          <button
-            onClick={() => setQuickStatusFilter('aborted')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
-              quickStatusFilter === 'aborted'
-                ? 'bg-orange-600 text-white'
-                : isDark ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-            }`}
-          >
-            <XCircle className="w-4 h-4" />
-            {t('admin.orders.filter.aborted')} ({stats.aborted || 0})
-            {unseenAbortedCount > 0 && (
-              <span className="ml-1 bg-orange-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
-                {unseenAbortedCount > 9 ? '9+' : unseenAbortedCount}
-              </span>
-            )}
-          </button>
-
-          {/* Bouton Tout marquer comme lu — visible si des aborted non vus */}
-          {unseenAbortedCount > 0 && (
+          {/* Pending */}
+          <div className="flex items-center gap-1">
             <button
-              onClick={handleMarkAllAbortedSeen}
-              disabled={markingAllSeen}
-              className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
-                isDark
-                  ? 'bg-orange-900/40 hover:bg-orange-900/60 text-orange-300 border border-orange-700/50'
-                  : 'bg-orange-50 hover:bg-orange-100 text-orange-700 border border-orange-200'
-              } disabled:opacity-50`}
+              onClick={() => setQuickStatusFilter('pending')}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
+                quickStatusFilter === 'pending'
+                  ? 'bg-red-600 text-white'
+                  : unseenCounts.pending > 0
+                    ? 'bg-red-500/20 text-red-500 hover:bg-red-500/30 border-2 border-red-500'
+                    : isDark ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              }`}
             >
-              <CheckCheck className="w-4 h-4" />
-              Tout marquer comme lu
+              <Clock className="w-4 h-4" />
+              {t('admin.orders.filter.pending')}
+              {unseenCounts.pending > 0 && (
+                <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
+                  quickStatusFilter === 'pending' ? 'bg-white text-red-600' : 'bg-red-500 text-white'
+                }`}>
+                  {unseenCounts.pending > 9 ? '9+' : unseenCounts.pending}
+                </span>
+              )}
             </button>
-          )}
+            {unseenCounts.pending > 0 && (
+              <button
+                onClick={() => handleMarkAllSeen('pending')}
+                disabled={markingAllSeen !== null}
+                title="Tout marquer comme lu"
+                className={`p-2 rounded-lg transition-colors ${isDark ? 'bg-red-900/30 hover:bg-red-900/50 text-red-300' : 'bg-red-50 hover:bg-red-100 text-red-600'} disabled:opacity-50`}
+              >
+                <CheckCheck className="w-4 h-4" />
+              </button>
+            )}
+          </div>
 
-          <button
-            onClick={() => setQuickStatusFilter('cancelled')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
-              quickStatusFilter === 'cancelled'
-                ? 'bg-red-600 text-white'
-                : isDark ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-            }`}
-          >
-            <XCircle className="w-4 h-4" />
-            {t('admin.orders.filter.cancelled')} ({stats.cancelled})
-          </button>
+          {/* Auto confirmée */}
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setQuickStatusFilter('auto_confirmed')}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
+                quickStatusFilter === 'auto_confirmed'
+                  ? 'bg-green-600 text-white'
+                  : unseenCounts.auto_confirmed > 0
+                    ? 'bg-green-500/20 text-green-500 hover:bg-green-500/30 border-2 border-green-500'
+                    : isDark ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              }`}
+            >
+              <CheckCircle className="w-4 h-4" />
+              {t('admin.orders.filter.auto_confirmed')} ({stats.auto_confirmed})
+              {unseenCounts.auto_confirmed > 0 && (
+                <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
+                  quickStatusFilter === 'auto_confirmed' ? 'bg-white text-green-600' : 'bg-green-500 text-white'
+                }`}>
+                  {unseenCounts.auto_confirmed > 9 ? '9+' : unseenCounts.auto_confirmed}
+                </span>
+              )}
+            </button>
+            {unseenCounts.auto_confirmed > 0 && (
+              <button
+                onClick={() => handleMarkAllSeen('auto_confirmed')}
+                disabled={markingAllSeen !== null}
+                title="Tout marquer comme lu"
+                className={`p-2 rounded-lg transition-colors ${isDark ? 'bg-green-900/30 hover:bg-green-900/50 text-green-300' : 'bg-green-50 hover:bg-green-100 text-green-600'} disabled:opacity-50`}
+              >
+                <CheckCheck className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+
+          {/* Confirmée manuellement */}
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setQuickStatusFilter('manually_confirmed')}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
+                quickStatusFilter === 'manually_confirmed'
+                  ? 'bg-blue-600 text-white'
+                  : unseenCounts.manually_confirmed > 0
+                    ? 'bg-blue-500/20 text-blue-500 hover:bg-blue-500/30 border-2 border-blue-500'
+                    : isDark ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              }`}
+            >
+              <CheckCircle className="w-4 h-4" />
+              {t('admin.orders.filter.manually_confirmed')} ({stats.manually_confirmed})
+              {unseenCounts.manually_confirmed > 0 && (
+                <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
+                  quickStatusFilter === 'manually_confirmed' ? 'bg-white text-blue-600' : 'bg-blue-500 text-white'
+                }`}>
+                  {unseenCounts.manually_confirmed > 9 ? '9+' : unseenCounts.manually_confirmed}
+                </span>
+              )}
+            </button>
+            {unseenCounts.manually_confirmed > 0 && (
+              <button
+                onClick={() => handleMarkAllSeen('manually_confirmed')}
+                disabled={markingAllSeen !== null}
+                title="Tout marquer comme lu"
+                className={`p-2 rounded-lg transition-colors ${isDark ? 'bg-blue-900/30 hover:bg-blue-900/50 text-blue-300' : 'bg-blue-50 hover:bg-blue-100 text-blue-600'} disabled:opacity-50`}
+              >
+                <CheckCheck className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+
+          {/* Abandonnée */}
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setQuickStatusFilter('aborted')}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
+                quickStatusFilter === 'aborted'
+                  ? 'bg-orange-600 text-white'
+                  : unseenCounts.aborted > 0
+                    ? 'bg-orange-500/20 text-orange-500 hover:bg-orange-500/30 border-2 border-orange-500'
+                    : isDark ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              }`}
+            >
+              <XCircle className="w-4 h-4" />
+              {t('admin.orders.filter.aborted')} ({stats.aborted || 0})
+              {unseenCounts.aborted > 0 && (
+                <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
+                  quickStatusFilter === 'aborted' ? 'bg-white text-orange-600' : 'bg-orange-500 text-white'
+                }`}>
+                  {unseenCounts.aborted > 9 ? '9+' : unseenCounts.aborted}
+                </span>
+              )}
+            </button>
+            {unseenCounts.aborted > 0 && (
+              <button
+                onClick={() => handleMarkAllSeen('aborted')}
+                disabled={markingAllSeen !== null}
+                title="Tout marquer comme lu"
+                className={`p-2 rounded-lg transition-colors ${isDark ? 'bg-orange-900/30 hover:bg-orange-900/50 text-orange-300' : 'bg-orange-50 hover:bg-orange-100 text-orange-600'} disabled:opacity-50`}
+              >
+                <CheckCheck className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+
+          {/* Annulée */}
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setQuickStatusFilter('cancelled')}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
+                quickStatusFilter === 'cancelled'
+                  ? 'bg-red-600 text-white'
+                  : unseenCounts.cancelled > 0
+                    ? 'bg-red-500/20 text-red-500 hover:bg-red-500/30 border-2 border-red-500'
+                    : isDark ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              }`}
+            >
+              <XCircle className="w-4 h-4" />
+              {t('admin.orders.filter.cancelled')} ({stats.cancelled})
+              {unseenCounts.cancelled > 0 && (
+                <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
+                  quickStatusFilter === 'cancelled' ? 'bg-white text-red-600' : 'bg-red-500 text-white'
+                }`}>
+                  {unseenCounts.cancelled > 9 ? '9+' : unseenCounts.cancelled}
+                </span>
+              )}
+            </button>
+            {unseenCounts.cancelled > 0 && (
+              <button
+                onClick={() => handleMarkAllSeen('cancelled')}
+                disabled={markingAllSeen !== null}
+                title="Tout marquer comme lu"
+                className={`p-2 rounded-lg transition-colors ${isDark ? 'bg-red-900/30 hover:bg-red-900/50 text-red-300' : 'bg-red-50 hover:bg-red-100 text-red-600'} disabled:opacity-50`}
+              >
+                <CheckCheck className="w-4 h-4" />
+              </button>
+            )}
+          </div>
 
           {/* Spacer */}
           <div className="flex-1" />
