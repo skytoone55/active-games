@@ -16,6 +16,7 @@ import { extractIsraelDate, extractIsraelTime } from '@/lib/dates'
 import { logBookingAction, logContactAction, logOrderAction, getClientIpFromHeaders } from '@/lib/activity-logger'
 import { triggerEmailAutomation } from '@/lib/email-automation-service'
 import { calculateBookingPrice } from '@/lib/price-calculator'
+import { sendOrderRedirectionNotification } from '@/lib/order-notification'
 import type { ICountProduct, ICountEventFormula, ICountRoom } from '@/hooks/usePricingData'
 // iCount offers removed - invoice+receipt created only at order close
 import type {
@@ -506,39 +507,56 @@ export async function POST(request: NextRequest) {
 
     // iCount offer creation removed - invoice+receipt created at order close
 
-    // Envoyer l'email de confirmation
+    // Récupérer la branche (pour l'email de confirmation ET la notification de redirection)
+    const { data: branch } = await supabase
+      .from('branches')
+      .select('*')
+      .eq('id', body.branch_id)
+      .single<Branch>()
+
+    // Envoyer l'email de confirmation au client
     let emailSent = false
     let emailLogId: string | undefined
 
-    if (body.customer_email) {
-      // Récupérer la branche pour l'email
-      const { data: branch } = await supabase
-        .from('branches')
-        .select('*')
-        .eq('id', body.branch_id)
-        .single<Branch>()
+    if (body.customer_email && branch) {
+      try {
+        const emailResult = await triggerEmailAutomation('booking_confirmed', {
+          booking: newBooking,
+          branch,
+          triggeredBy: user.id,
+          locale: body.locale || 'he',
+          cgvToken: orderCgvToken,
+          metadata: { source: 'admin_agenda' }
+        })
 
-      if (branch) {
-        try {
-          const emailResult = await triggerEmailAutomation('booking_confirmed', {
-            booking: newBooking,
-            branch,
-            triggeredBy: user.id,
-            locale: body.locale || 'he',
-            cgvToken: orderCgvToken,
-            metadata: { source: 'admin_agenda' }
-          })
+        emailSent = emailResult.success
+        emailLogId = emailResult.emailLogId
 
-          emailSent = emailResult.success
-          emailLogId = emailResult.emailLogId
-
-          if (!emailResult.success) {
-            console.error('Email send failed:', emailResult.errors)
-          }
-        } catch (emailErr) {
-          console.error('Email send exception:', emailErr)
+        if (!emailResult.success) {
+          console.error('Email send failed:', emailResult.errors)
         }
+      } catch (emailErr) {
+        console.error('Email send exception:', emailErr)
       }
+    }
+
+    // Notification de redirection (commande admin agenda)
+    if (orderId && !body.reactivateOrderId) {
+      sendOrderRedirectionNotification({
+        branchId: body.branch_id,
+        branchName: branch?.name || body.branch_id,
+        orderId,
+        reference: referenceCode,
+        status: 'auto_confirmed',
+        customerFirstName: body.customer_first_name || 'Client',
+        customerLastName: body.customer_last_name || null,
+        customerPhone: body.customer_phone || '',
+        customerEmail: body.customer_email || null,
+        requestedDate: extractIsraelDate(bookingDate.toISOString()),
+        requestedTime: extractIsraelTime(bookingDate.toISOString()),
+        orderType: body.type,
+        participantsCount: body.participants_count,
+      }).catch(() => {})
     }
 
     return NextResponse.json({
