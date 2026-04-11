@@ -10,6 +10,7 @@ import { useSessionPersistence } from '@/hooks/useSessionPersistence'
 import { swrFetcher } from '@/lib/swr-fetcher'
 import { AdminProvider, useAdmin } from '@/contexts/AdminContext'
 import { AdminHeader } from './components/AdminHeader'
+import { IncomingMessageBanner } from './components/IncomingMessageBanner'
 
 /**
  * AdminHeader rendu dans le layout — lit user/branches/signOut depuis AdminContext.
@@ -173,6 +174,7 @@ function AdminLayoutContent({
     <AdminProvider theme={theme} toggleTheme={toggleTheme}>
       <div className="admin-layout">
         <AdminHeaderInLayout theme={theme} toggleTheme={toggleTheme} />
+        <IncomingMessageBanner />
         {children}
       </div>
     </AdminProvider>
