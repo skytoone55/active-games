@@ -269,6 +269,8 @@
   "booking": {
     "order_now": "הזמן עכשיו",
     "title": "הזמינו את המפגש שלכם",
+    "branch_disabled_title": "הזמנות אונליין אינן זמינות זמנית",
+    "branch_disabled_message": "ההזמנות אונליין מושהות זמנית בערוץ הזמנות זה עבור הסניף. אנא בחרו סניף אחר או פנו אלינו בטלפון.",
     "step1": {
       "title": "בחרו סניף",
       "subtitle": "בחרו את המיקום שבו אתם רוצים לשחק"
@@ -2014,7 +2016,9 @@
         "credentials_desc": "הגדרות API של iCount לכל סניף",
         "whatsapp": "WhatsApp",
         "whatsapp_desc": "אונבורדינג והודעות אוטומטיות",
-        "clara_desc": "הגדרות גלובליות של העוזר הדיגיטלי"
+        "clara_desc": "הגדרות גלובליות של העוזר הדיגיטלי",
+        "online_orders": "הזמנות אונליין",
+        "online_orders_desc": "הפעלה / סוגי משחק לכל סניף"
       },
       "templates_tabs": {
         "emails": "תבניות אימייל",
@@ -2023,7 +2027,24 @@
       "mail_tabs": {
         "templates": "תבניות",
         "automations": "אוטומציות",
-        "terms": "תנאים"
+        "terms": "תנאים",
+        "redirection": "הפניה"
+      },
+      "online_orders": {
+        "title": "הזמנות אונליין",
+        "subtitle": "שלטו במה שלקוחות יכולים להזמין אונליין עבור סניף זה.",
+        "select_branch": "בחרו סניף כדי להגדיר הזמנות אונליין.",
+        "master_enabled_label": "הזמנות אונליין פעילות",
+        "master_enabled_desc": "לקוחות יכולים לבצע הזמנות אונליין עבור סניף זה",
+        "master_disabled_desc": "לא תתקבלנה הזמנות אונליין עבור סניף זה",
+        "disabled_warning": "הלקוחות יראו הודעה שההזמנות אינן זמינות זמנית עבור סניף זה.",
+        "game_types_label": "סוגי משחק מורשים",
+        "active_game_label": "Active Games מורשה",
+        "active_game_desc": "אפשר הזמנות מסוג Active Games (לייזר טאג וכו')",
+        "laser_label": "Laser City מורשה",
+        "laser_desc": "אפשר הזמנות מסוג Laser City",
+        "save": "שמור",
+        "saved": "נשמר!"
       },
       "email_templates": {
         "title": "תבניות אימייל",

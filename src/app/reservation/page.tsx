@@ -954,18 +954,16 @@ function ReservationContent() {
                 <div className="text-center py-8">
                   <AlertCircle className="w-16 h-16 text-amber-400 mx-auto mb-4" />
                   <h2 className="text-2xl font-bold mb-3" style={{ fontFamily: 'Orbitron, sans-serif' }}>
-                    {locale === 'he' ? 'ההזמנות מושהות זמנית' : 'Réservations temporairement indisponibles'}
+                    {t('booking.branch_disabled_title')}
                   </h2>
                   <p className="text-gray-400 mb-6">
-                    {locale === 'he'
-                      ? 'ניתן ליצור קשר עמנו ישירות לתיאום'
-                      : 'Les réservations en ligne sont momentanément suspendues pour cette branche. Contactez-nous directement.'}
+                    {t('booking.branch_disabled_message')}
                   </p>
                   <button
                     onClick={() => { setBookingData({ ...bookingData, branch: null, branchSlug: null }); setStep(1) }}
                     className="border border-primary/50 text-primary hover:bg-primary/10 px-6 py-2 rounded-lg transition-colors"
                   >
-                    {locale === 'he' ? 'חזור' : 'Choisir une autre branche'}
+                    {t('booking.step1.title')}
                   </button>
                 </div>
               )}

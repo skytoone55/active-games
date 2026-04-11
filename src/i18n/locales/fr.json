@@ -335,6 +335,8 @@
   "booking": {
     "order_now": "Reserver maintenant",
     "title": "Reservez votre session",
+    "branch_disabled_title": "Reservations en ligne temporairement indisponibles",
+    "branch_disabled_message": "Les reservations en ligne sont temporairement suspendues sur ce canal de reservation pour cette succursale. Veuillez selectionner une autre succursale ou nous contacter par telephone.",
     "step1": {
       "title": "Selectionner la succursale",
       "subtitle": "Choisissez l'emplacement ou vous souhaitez jouer"
@@ -2015,7 +2017,9 @@
         "credentials_desc": "Configuration API iCount par branche",
         "whatsapp": "WhatsApp",
         "whatsapp_desc": "Onboarding et messages automatiques",
-        "clara_desc": "Parametres globaux de l'assistant IA"
+        "clara_desc": "Parametres globaux de l'assistant IA",
+        "online_orders": "Reservations en ligne",
+        "online_orders_desc": "Activer / types de jeux par branche"
       },
       "templates_tabs": {
         "emails": "Templates d'emails",
@@ -2024,7 +2028,24 @@
       "mail_tabs": {
         "templates": "Templates",
         "automations": "Automatisations",
-        "terms": "CGV"
+        "terms": "CGV",
+        "redirection": "Redirection"
+      },
+      "online_orders": {
+        "title": "Reservations en ligne",
+        "subtitle": "Controlez ce qui est accessible aux clients pour cette branche.",
+        "select_branch": "Selectionnez une branche pour configurer les reservations en ligne.",
+        "master_enabled_label": "Commandes en ligne activees",
+        "master_enabled_desc": "Les clients peuvent passer des commandes en ligne sur cette branche",
+        "master_disabled_desc": "Aucune commande en ligne ne sera acceptee pour cette branche",
+        "disabled_warning": "Les clients verront un message indiquant que les reservations sont temporairement indisponibles pour cette branche.",
+        "game_types_label": "Types de jeux autorises",
+        "active_game_label": "Active Games autorise",
+        "active_game_desc": "Autoriser les reservations de type Active Games (laser tag, etc.)",
+        "laser_label": "Laser City autorise",
+        "laser_desc": "Autoriser les reservations de type Laser City",
+        "save": "Sauvegarder",
+        "saved": "Sauvegarde !"
       },
       "email_templates": {
         "title": "Templates d'emails",

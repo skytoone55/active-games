@@ -99,8 +99,8 @@ export default function SettingsPage() {
     {
       id: 'online_orders',
       icon: Globe,
-      label: 'Réservations en ligne',
-      description: 'Activer / types de jeux par branche',
+      label: t('admin.settings.sections.online_orders'),
+      description: t('admin.settings.sections.online_orders_desc'),
       requiredPermission: 'settings'
     },
   ]

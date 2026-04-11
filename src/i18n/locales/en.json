@@ -278,6 +278,8 @@
   "booking": {
     "order_now": "Order now",
     "title": "Book your session",
+    "branch_disabled_title": "Online reservations temporarily unavailable",
+    "branch_disabled_message": "Online reservations are temporarily suspended on this booking channel for this branch. Please select another branch or contact us by phone.",
     "step1": {
       "title": "Select branch",
       "subtitle": "Choose the location where you want to play"
@@ -1952,7 +1954,9 @@
         "credentials_desc": "iCount API settings per branch",
         "whatsapp": "WhatsApp",
         "whatsapp_desc": "Onboarding and automated messages",
-        "clara_desc": "Global AI assistant settings"
+        "clara_desc": "Global AI assistant settings",
+        "online_orders": "Online Reservations",
+        "online_orders_desc": "Enable / game types per branch"
       },
       "templates_tabs": {
         "emails": "Email Templates",
@@ -1961,7 +1965,24 @@
       "mail_tabs": {
         "templates": "Templates",
         "automations": "Automations",
-        "terms": "T&C"
+        "terms": "T&C",
+        "redirection": "Redirection"
+      },
+      "online_orders": {
+        "title": "Online Reservations",
+        "subtitle": "Control what customers can book online for this branch.",
+        "select_branch": "Select a branch to configure online reservations.",
+        "master_enabled_label": "Online orders enabled",
+        "master_enabled_desc": "Customers can place online orders for this branch",
+        "master_disabled_desc": "No online orders will be accepted for this branch",
+        "disabled_warning": "Customers will see a message that reservations are temporarily unavailable for this branch.",
+        "game_types_label": "Allowed game types",
+        "active_game_label": "Active Games allowed",
+        "active_game_desc": "Allow Active Games bookings (laser tag, etc.)",
+        "laser_label": "Laser City allowed",
+        "laser_desc": "Allow Laser City bookings",
+        "save": "Save",
+        "saved": "Saved!"
       },
       "email_templates": {
         "title": "Email Templates",

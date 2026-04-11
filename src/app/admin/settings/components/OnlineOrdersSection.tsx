@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Save, Loader2, Globe, Target, Gamepad2, PowerOff } from 'lucide-react'
+import { useTranslation } from '@/contexts/LanguageContext'
 
 interface OnlineOrdersSectionProps {
   isDark: boolean
@@ -15,6 +16,7 @@ interface OnlineSettings {
 }
 
 export function OnlineOrdersSection({ isDark, branchId }: OnlineOrdersSectionProps) {
+  const { t } = useTranslation()
   const [settings, setSettings] = useState<OnlineSettings>({
     online_orders_enabled: true,
     active_game_enabled: true,
@@ -129,16 +131,16 @@ export function OnlineOrdersSection({ isDark, branchId }: OnlineOrdersSectionPro
     <div className="space-y-6">
       <div>
         <h3 className={`text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-          Réservations en ligne
+          {t('admin.settings.online_orders.title')}
         </h3>
         <p className={`text-sm mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-          Contrôlez ce qui est accessible aux clients pour cette branche sur la page de réservation en ligne.
+          {t('admin.settings.online_orders.subtitle')}
         </p>
       </div>
 
       {!branchId && (
         <div className={`p-4 rounded-lg border ${isDark ? 'bg-yellow-900/20 border-yellow-700/50 text-yellow-300' : 'bg-yellow-50 border-yellow-200 text-yellow-700'}`}>
-          Sélectionnez une branche pour configurer les réservations en ligne.
+          {t('admin.settings.online_orders.select_branch')}
         </div>
       )}
 
@@ -153,37 +155,36 @@ export function OnlineOrdersSection({ isDark, branchId }: OnlineOrdersSectionPro
               {/* Master switch */}
               <ToggleRow
                 icon={settings.online_orders_enabled ? Globe : PowerOff}
-                label="Commandes en ligne activées"
+                label={t('admin.settings.online_orders.master_enabled_label')}
                 description={
                   settings.online_orders_enabled
-                    ? 'Les clients peuvent passer des commandes en ligne sur cette branche'
-                    : 'Aucune commande en ligne ne sera acceptée pour cette branche'
+                    ? t('admin.settings.online_orders.master_enabled_desc')
+                    : t('admin.settings.online_orders.master_disabled_desc')
                 }
                 value={settings.online_orders_enabled}
                 onToggle={() => toggle('online_orders_enabled')}
                 danger={!settings.online_orders_enabled}
               />
 
-              {/* Si commandes désactivées, afficher un message */}
               {!settings.online_orders_enabled && (
                 <div className={`px-4 py-3 rounded-lg border text-sm flex items-center gap-2 ${
                   isDark ? 'bg-red-900/20 border-red-700/50 text-red-300' : 'bg-red-50 border-red-200 text-red-700'
                 }`}>
                   <PowerOff className="w-4 h-4 flex-shrink-0" />
-                  Les clients verront un message indiquant que les réservations sont temporairement indisponibles pour cette branche.
+                  {t('admin.settings.online_orders.disabled_warning')}
                 </div>
               )}
 
               <div className={`border-t pt-3 ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
                 <p className={`text-xs font-medium uppercase tracking-wide mb-2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                  Types de jeux autorisés
+                  {t('admin.settings.online_orders.game_types_label')}
                 </p>
 
                 <div className="space-y-2">
                   <ToggleRow
                     icon={Gamepad2}
-                    label="Active Games autorisé"
-                    description="Autoriser les réservations de type Active Games (laser tag, etc.)"
+                    label={t('admin.settings.online_orders.active_game_label')}
+                    description={t('admin.settings.online_orders.active_game_desc')}
                     value={settings.active_game_enabled}
                     onToggle={() => toggle('active_game_enabled')}
                     disabled={!settings.online_orders_enabled}
@@ -191,8 +192,8 @@ export function OnlineOrdersSection({ isDark, branchId }: OnlineOrdersSectionPro
 
                   <ToggleRow
                     icon={Target}
-                    label="Laser City autorisé"
-                    description="Autoriser les réservations de type Laser City"
+                    label={t('admin.settings.online_orders.laser_label')}
+                    description={t('admin.settings.online_orders.laser_desc')}
                     value={settings.laser_enabled}
                     onToggle={() => toggle('laser_enabled')}
                     disabled={!settings.online_orders_enabled}
@@ -213,7 +214,7 @@ export function OnlineOrdersSection({ isDark, branchId }: OnlineOrdersSectionPro
                   } disabled:opacity-50`}
                 >
                   {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                  {saved ? 'Sauvegardé !' : 'Sauvegarder'}
+                  {saved ? t('admin.settings.online_orders.saved') : t('admin.settings.online_orders.save')}
                 </button>
               </div>
             </div>

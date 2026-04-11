@@ -38,7 +38,7 @@ export function MailSection({ isDark, branchId }: MailSectionProps) {
     {
       id: 'redirection' as SubTab,
       icon: Forward,
-      label: 'Redirection',
+      label: t('admin.settings.mail_tabs.redirection') || 'Redirection',
     },
   ]
 
