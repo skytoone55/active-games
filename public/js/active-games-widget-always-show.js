@@ -342,7 +342,7 @@
     const badge = document.createElement('div');
     badge.id = 'activeGamesBadge';
     badge.className = 'new-badge';
-    badge.textContent = 'פתיחה קרובה - תהיו הראשונים!';
+    badge.textContent = 'פתחנו! מהרו להזמין';
 
     // Add widget and badge to page when DOM is ready
     if (document.readyState === 'loading') {
