@@ -40,7 +40,7 @@ export function useOrders(branchId: string | null) {
   }>(
     swrKey,
     swrFetcher,
-    { revalidateOnFocus: false, dedupingInterval: 10000 }
+    { revalidateOnFocus: true, dedupingInterval: 3000 }
   )
 
   const orders = data?.orders || []
@@ -143,7 +143,7 @@ export function usePendingOrdersCount(branchId: string | null) {
   }>(
     swrKey,
     swrFetcher,
-    { revalidateOnFocus: false, dedupingInterval: 15000 }
+    { revalidateOnFocus: true, dedupingInterval: 3000 }
   )
 
   // Realtime: revalidate on changes
@@ -174,7 +174,7 @@ export function useUnseenOrdersCount(branchId: string | null) {
   }>(
     swrKey,
     swrFetcher,
-    { revalidateOnFocus: false, dedupingInterval: 15000 }
+    { revalidateOnFocus: true, dedupingInterval: 3000 }
   )
 
   const handleRealtimeRefresh = useCallback(() => { mutate() }, [mutate])

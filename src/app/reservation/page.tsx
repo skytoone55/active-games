@@ -765,6 +765,7 @@ function ReservationContent() {
       }
 
       const orderId = result.order_id
+      const orderReference = result.reference
 
       // ÉTAPE 2: Si acompte requis, effectuer le paiement
       if (depositInfo && depositInfo.amount > 0) {
@@ -776,6 +777,7 @@ function ReservationContent() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               order_id: orderId,
+              request_reference: orderReference,
               amount: depositInfo.amount,
               card_info: {
                 cc_number: cardData.cc_number.replace(/\s/g, ''),

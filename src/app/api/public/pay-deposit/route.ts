@@ -25,6 +25,7 @@ const supabase = createClient(
 
 interface PayDepositRequest {
   order_id: string
+  request_reference: string  // Security: must match order to prove caller went through booking flow
   amount: number
   card_info: {
     cc_number: string
@@ -55,10 +56,10 @@ export async function POST(request: NextRequest) {
   try {
     const body: PayDepositRequest = await request.json()
 
-    const { order_id, amount, card_info } = body
+    const { order_id, request_reference, amount, card_info } = body
 
     // Validation de base
-    if (!order_id || !amount || !card_info) {
+    if (!order_id || !request_reference || !amount || !card_info) {
       return NextResponse.json(
         { success: false, error: 'Missing required fields' },
         { status: 400 }
@@ -79,11 +80,12 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Récupérer la commande
+    // Récupérer la commande — vérification croisée id + reference (sécurité)
     const { data: order, error: orderError } = await supabase
       .from('orders')
       .select('*')
       .eq('id', order_id)
+      .eq('request_reference', request_reference)
       .single()
 
     if (orderError || !order) {

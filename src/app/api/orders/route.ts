@@ -46,6 +46,16 @@ function generateShortReference(): string {
   return Math.random().toString(36).substring(2, 8).toUpperCase()
 }
 
+// Supprimer toutes les dépendances d'un booking avant de supprimer le booking lui-même
+async function rollbackBooking(bookingId: string): Promise<void> {
+  await Promise.all([
+    supabase.from('game_sessions').delete().eq('booking_id', bookingId),
+    supabase.from('booking_slots').delete().eq('booking_id', bookingId),
+    supabase.from('booking_contacts').delete().eq('booking_id', bookingId),
+  ])
+  await supabase.from('bookings').delete().eq('id', bookingId)
+}
+
 // Mapper event_type vers le plan de jeu (comme dans l'admin)
 // event_active = Active + Active (AA)
 // event_laser = Laser + Laser (LL)
@@ -442,12 +452,12 @@ export async function POST(request: NextRequest) {
       locale as 'he' | 'fr' | 'en'
     )
 
-    // 2. Récupérer les settings
-    const { data: settings } = await supabase
-      .from('branch_settings')
-      .select('*')
-      .eq('branch_id', branch_id)
-      .single()
+    // 2. Récupérer les settings ET le nom de la branche en parallèle
+    const [{ data: settings }, { data: branchData }] = await Promise.all([
+      supabase.from('branch_settings').select('*').eq('branch_id', branch_id).single(),
+      supabase.from('branches').select('name').eq('id', branch_id).single(),
+    ])
+    const branchName = branchData?.name || branch_id
 
     if (!settings) {
       return NextResponse.json(
@@ -591,7 +601,7 @@ export async function POST(request: NextRequest) {
         // Notification de redirection (pending - room unavailable)
         sendOrderRedirectionNotification({
           branchId: branch_id,
-          branchName: (await supabase.from('branches').select('name').eq('id', branch_id).single()).data?.name || branch_id,
+          branchName: branchName,
           orderId: order.id,
           reference: order.request_reference,
           status: 'pending',
@@ -763,7 +773,7 @@ export async function POST(request: NextRequest) {
             // Notification de redirection (pending - laser unavailable)
             sendOrderRedirectionNotification({
               branchId: branch_id,
-              branchName: (await supabase.from('branches').select('name').eq('id', branch_id).single()).data?.name || branch_id,
+              branchName: branchName,
               orderId: order.id,
               reference: order.request_reference,
               status: 'pending',
@@ -866,13 +876,7 @@ export async function POST(request: NextRequest) {
         )
       }
 
-      // Helper pour rollback complet du booking et ses dépendances
-      const rollbackEventBooking = async (bookingId: string) => {
-        await supabase.from('game_sessions').delete().eq('booking_id', bookingId)
-        await supabase.from('booking_slots').delete().eq('booking_id', bookingId)
-        await supabase.from('booking_contacts').delete().eq('booking_id', bookingId)
-        await supabase.from('bookings').delete().eq('id', bookingId)
-      }
+      const rollbackEventBooking = rollbackBooking
 
       // Créer booking_contacts
       const { error: contactsError } = await supabase.from('booking_contacts').insert({
@@ -979,11 +983,7 @@ export async function POST(request: NextRequest) {
         .single()
 
       if (orderError) {
-        // Rollback complet du booking et ses dépendances
-        await supabase.from('game_sessions').delete().eq('booking_id', booking.id)
-        await supabase.from('booking_slots').delete().eq('booking_id', booking.id)
-        await supabase.from('booking_contacts').delete().eq('booking_id', booking.id)
-        await supabase.from('bookings').delete().eq('id', booking.id)
+        await rollbackBooking(booking.id)
         return NextResponse.json(
           { success: false, error: 'Failed to create order' },
           { status: 500 }
@@ -1105,7 +1105,7 @@ export async function POST(request: NextRequest) {
       // Envoyer notifications de redirection
       sendOrderRedirectionNotification({
         branchId: branch_id,
-        branchName: (await supabase.from('branches').select('name').eq('id', branch_id).single()).data?.name || branch_id,
+        branchName: branchName,
         orderId: order.id,
         reference: order.request_reference,
         status: order.status,
@@ -1284,7 +1284,7 @@ export async function POST(request: NextRequest) {
         // Notification de redirection (pending - overbooking)
         sendOrderRedirectionNotification({
           branchId: branch_id,
-          branchName: (await supabase.from('branches').select('name').eq('id', branch_id).single()).data?.name || branch_id,
+          branchName: branchName,
           orderId: order.id,
           reference: order.request_reference,
           status: 'pending',
@@ -1404,7 +1404,7 @@ export async function POST(request: NextRequest) {
       // Notification de redirection (pending - slot unavailable)
       sendOrderRedirectionNotification({
         branchId: branch_id,
-        branchName: (await supabase.from('branches').select('name').eq('id', branch_id).single()).data?.name || branch_id,
+        branchName: branchName,
         orderId: order.id,
         reference: order.request_reference,
         status: 'pending',
@@ -1486,13 +1486,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Helper pour rollback complet du booking GAME et ses dépendances
-    const rollbackGameBooking = async (bookingId: string) => {
-      await supabase.from('game_sessions').delete().eq('booking_id', bookingId)
-      await supabase.from('booking_slots').delete().eq('booking_id', bookingId)
-      await supabase.from('booking_contacts').delete().eq('booking_id', bookingId)
-      await supabase.from('bookings').delete().eq('id', bookingId)
-    }
+    const rollbackGameBooking = rollbackBooking
 
     // 6. Créer booking_contacts
     const { error: gameContactsError } = await supabase.from('booking_contacts').insert({
@@ -1745,7 +1739,7 @@ export async function POST(request: NextRequest) {
     // Envoyer notifications de redirection
     sendOrderRedirectionNotification({
       branchId: branch_id,
-      branchName: (await supabase.from('branches').select('name').eq('id', branch_id).single()).data?.name || branch_id,
+      branchName: branchName,
       orderId: order.id,
       reference: order.request_reference,
       status: order.status,
