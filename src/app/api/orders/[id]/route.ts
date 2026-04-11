@@ -10,6 +10,7 @@ import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { verifyApiPermission } from '@/lib/permissions'
 import { logOrderAction, logBookingAction, getClientIpFromHeaders } from '@/lib/activity-logger'
 import { sendBookingConfirmationEmail } from '@/lib/email-sender'
+import { sendOrderRedirectionNotification } from '@/lib/order-notification'
 // iCount offers removed - no more offer cancellation needed
 import type { UserRole, Booking, Branch } from '@/lib/supabase/types'
 
@@ -243,6 +244,25 @@ export async function PATCH(
         details: { previousStatus: order.status },
         ipAddress
       })
+
+      // Notification de redirection pour annulation
+      const supabaseForNotif = createServiceRoleClient() as any
+      const { data: branchForNotif } = await supabaseForNotif.from('branches').select('name').eq('id', order.branch_id).single()
+      sendOrderRedirectionNotification({
+        branchId: order.branch_id,
+        branchName: branchForNotif?.name || order.branch_id,
+        orderId: id,
+        reference: order.request_reference,
+        status: 'cancelled',
+        customerFirstName: order.customer_first_name,
+        customerLastName: order.customer_last_name || null,
+        customerPhone: order.customer_phone,
+        customerEmail: order.customer_email || null,
+        requestedDate: order.requested_date,
+        requestedTime: order.requested_time,
+        orderType: order.order_type,
+        participantsCount: order.participants_count,
+      }).catch(() => {})
 
       return NextResponse.json({
         success: true,

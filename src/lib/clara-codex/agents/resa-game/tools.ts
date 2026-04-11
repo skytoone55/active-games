@@ -2,6 +2,7 @@ import { tool } from 'ai'
 import { z } from 'zod'
 import { createClient } from '@supabase/supabase-js'
 import { checkAvailability as checkGameAvailabilityFn } from '@/lib/availability-checker'
+import { sendOrderRedirectionNotification } from '@/lib/order-notification'
 import type { AgentContext } from '../types'
 
 const supabase = createClient(
@@ -224,7 +225,8 @@ export function createGameBookingLink(context: AgentContext) {
       const bookingUrl = `${baseUrl}/reservation?${urlParams.toString()}`
 
       try {
-        await supabase.from('orders').insert({
+        const reference = Math.random().toString(36).substring(2, 8).toUpperCase()
+        const { data: newOrder } = await supabase.from('orders').insert({
           branch_id: context.branchId,
           order_type: 'GAME',
           participants_count: params.players,
@@ -238,10 +240,29 @@ export function createGameBookingLink(context: AgentContext) {
           customer_email: params.email,
           status: 'aborted',
           source: 'clara_codex',
-          request_reference: Math.random().toString(36).substring(2, 8).toUpperCase(),
+          request_reference: reference,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
-        })
+        }).select('id').single()
+
+        if (newOrder) {
+          const { data: branch } = await supabase.from('branches').select('name').eq('id', context.branchId).single()
+          sendOrderRedirectionNotification({
+            branchId: context.branchId || '',
+            branchName: branch?.name || context.branchId || '',
+            orderId: newOrder.id,
+            reference,
+            status: 'aborted',
+            customerFirstName: firstName,
+            customerLastName: lastName || null,
+            customerPhone: context.senderPhone,
+            customerEmail: params.email || null,
+            requestedDate: params.date,
+            requestedTime: params.time,
+            orderType: 'GAME',
+            participantsCount: params.players,
+          }).catch(() => {})
+        }
       } catch (e) {
         console.warn('[RESA GAME] Failed to store order lead:', e)
       }

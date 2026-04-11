@@ -11,6 +11,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { sendOrderRedirectionNotification } from '@/lib/order-notification'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -153,6 +154,29 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('[CREATE-ABORTED] Order created:', order.id)
+
+    // Notification de redirection pour les commandes aborted
+    const { data: branch } = await supabase
+      .from('branches')
+      .select('name')
+      .eq('id', branch_id)
+      .single()
+
+    sendOrderRedirectionNotification({
+      branchId: branch_id,
+      branchName: branch?.name || branch_id,
+      orderId: order.id,
+      reference: order.request_reference,
+      status: 'aborted',
+      customerFirstName: customer_first_name,
+      customerLastName: customer_last_name || null,
+      customerPhone: customer_phone,
+      customerEmail: customer_email || null,
+      requestedDate: requested_date,
+      requestedTime: requested_time,
+      orderType: order_type,
+      participantsCount: participants_count,
+    }).catch(() => {})
 
     return NextResponse.json({
       success: true,

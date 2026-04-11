@@ -4,6 +4,7 @@ import { createClient } from '@supabase/supabase-js'
 import { createIsraelDateTime } from '@/lib/dates'
 import { checkAvailability as checkGameAvailability } from '@/lib/availability-checker'
 import { getAvailableHumanStatus, trackCodexEvent } from './tracking'
+import { sendOrderRedirectionNotification } from '@/lib/order-notification'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -696,7 +697,8 @@ Email is mandatory before generating the link.`,
         .single()
 
       if (branch?.id) {
-        await supabase
+        const reference = Math.random().toString(36).substring(2, 8).toUpperCase()
+        const { data: newOrder } = await supabase
           .from('orders')
           .insert({
             branch_id: branch.id,
@@ -713,10 +715,30 @@ Email is mandatory before generating the link.`,
             customer_email: email,
             status: 'aborted',
             source: 'clara_codex',
-            request_reference: Math.random().toString(36).substring(2, 8).toUpperCase(),
+            request_reference: reference,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
           })
+          .select('id')
+          .single()
+
+        if (newOrder) {
+          sendOrderRedirectionNotification({
+            branchId: branch.id,
+            branchName: branchSlug,
+            orderId: newOrder.id,
+            reference,
+            status: 'aborted',
+            customerFirstName: firstName,
+            customerLastName: lastName || null,
+            customerPhone: phone,
+            customerEmail: email || null,
+            requestedDate: date,
+            requestedTime: time,
+            orderType: type.toUpperCase(),
+            participantsCount: players,
+          }).catch(() => {})
+        }
       }
     } catch (error) {
       console.warn('[Clara Codex] Failed to store aborted order lead:', error)
