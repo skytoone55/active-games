@@ -118,7 +118,7 @@ export async function sendOrderRedirectionNotification(params: OrderNotification
           entityType: 'order',
           entityId: params.orderId,
           branchId: params.branchId,
-          triggeredBy: 'order_notification',
+          triggeredBy: undefined, // null — not tied to a specific user UUID
         }).catch(err => {
           console.error('[ORDER NOTIF] Failed to send to', email, err)
           return { success: false, error: String(err) }
