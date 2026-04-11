@@ -10,7 +10,8 @@ import {
   CreditCard,
   Package,
   MessageSquare,
-  Bot
+  Bot,
+  Globe
 } from 'lucide-react'
 import { useAdmin } from '@/contexts/AdminContext'
 import { useUserPermissions } from '@/hooks/useUserPermissions'
@@ -20,8 +21,9 @@ import { CredentialsSection } from './components/CredentialsSection'
 import { ICountCatalogSection } from './components/ICountCatalogSection'
 import { MessengerSection } from './components/MessengerSection'
 import { ClaraWhatsAppSection } from './components/clara-whatsapp/ClaraWhatsAppSection'
+import { OnlineOrdersSection } from './components/OnlineOrdersSection'
 
-type SettingsSection = 'mail' | 'credentials' | 'catalog' | 'messenger' | 'clara_whatsapp'
+type SettingsSection = 'mail' | 'credentials' | 'catalog' | 'messenger' | 'clara_whatsapp' | 'online_orders'
 
 export default function SettingsPage() {
   const { t } = useTranslation()
@@ -92,6 +94,13 @@ export default function SettingsPage() {
       icon: Bot,
       label: 'Clara WhatsApp',
       description: 'IA multi-agent WhatsApp',
+      requiredPermission: 'settings'
+    },
+    {
+      id: 'online_orders',
+      icon: Globe,
+      label: 'Réservations en ligne',
+      description: 'Activer / types de jeux par branche',
       requiredPermission: 'settings'
     },
   ]
@@ -184,6 +193,9 @@ export default function SettingsPage() {
           )}
           {activeSection === 'clara_whatsapp' && (
             <ClaraWhatsAppSection isDark={isDark} />
+          )}
+          {activeSection === 'online_orders' && (
+            <OnlineOrdersSection isDark={isDark} branchId={selectedBranch?.id} />
           )}
         </div>
       </div>

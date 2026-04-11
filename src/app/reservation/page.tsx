@@ -86,6 +86,13 @@ function ReservationContent() {
   const [isProcessingPayment, setIsProcessingPayment] = useState(false)
   const [paymentSuccess, setPaymentSuccess] = useState(false)
 
+  // Paramètres de réservation en ligne de la branche sélectionnée
+  const [branchOnlineSettings, setBranchOnlineSettings] = useState<{
+    online_orders_enabled: boolean
+    active_game_enabled: boolean
+    laser_enabled: boolean
+  } | null>(null)
+
 
   // Helper function for translations
   const t = (key: string, params?: Record<string, any>) => {
@@ -423,20 +430,29 @@ function ReservationContent() {
 
   const handleBranchSelect = (branchName: string, branchSlug?: string) => {
     setBookingData({ ...bookingData, branch: branchName, branchSlug: branchSlug || null })
+    // Charger les paramètres de réservation en ligne de la branche
+    if (branchSlug) {
+      fetch(`/api/public/branch-online-settings?slug=${branchSlug}`)
+        .then(r => r.json())
+        .then(data => { if (data.success) setBranchOnlineSettings(data.settings) })
+        .catch(() => {})
+    }
     setTimeout(() => setStep(2), 300)
   }
 
   // Sélection du type (Game ou Event) - reste sur étape 2 pour saisir participants
   const handleTypeSelect = (type: 'game' | 'event') => {
-    // Pour Glilot: forcer gameArea='LASER'
-    const isGlilot = bookingData.branchSlug === 'glilot'
+    // Laser only = laser_enabled && !active_game_enabled
+    const laserOnly = branchOnlineSettings
+      ? (branchOnlineSettings.laser_enabled && !branchOnlineSettings.active_game_enabled)
+      : bookingData.branchSlug === 'glilot'
     setBookingData({
       ...bookingData,
       type,
-      gameArea: isGlilot ? 'LASER' : null,
-      numberOfGames: type === 'game' ? (isGlilot ? 1 : 2) : 2, // Glilot: 1 partie laser par défaut, autres: 2 jeux
+      gameArea: laserOnly ? 'LASER' : null,
+      numberOfGames: type === 'game' ? (laserOnly ? 1 : 2) : 2,
       players: null,
-      eventType: type === 'event' ? (isGlilot ? 'event_laser' : null) : null,
+      eventType: type === 'event' ? (laserOnly ? 'event_laser' : null) : null,
       eventAge: null,
     })
     // Ne pas changer d'étape - on attend que l'utilisateur saisisse le nombre de participants
@@ -462,8 +478,16 @@ function ReservationContent() {
 
   // Sélection du type de jeu (pour Game uniquement)
   const handleGameAreaSelect = (gameArea: 'ACTIVE' | 'LASER' | 'MIX') => {
-    // Bloquer ACTIVE/MIX pour Petah Tikva (pas encore ouvert)
-    if (isPetahTikva && (gameArea === 'ACTIVE' || gameArea === 'MIX')) return
+    // Bloquer selon les paramètres de la branche (dynamique) ou hardcoded legacy
+    const activeBlocked = branchOnlineSettings
+      ? !branchOnlineSettings.active_game_enabled
+      : isPetahTikva
+    const laserBlocked = branchOnlineSettings
+      ? !branchOnlineSettings.laser_enabled
+      : false
+
+    if ((gameArea === 'ACTIVE' || gameArea === 'MIX') && activeBlocked) return
+    if (gameArea === 'LASER' && laserBlocked) return
 
     // Définir le nombre de jeux par défaut selon le type
     // ACTIVE: numberOfGames en tranches de 30min (2 = 1h, 3 = 1h30, 4 = 2h)
@@ -925,6 +949,27 @@ function ReservationContent() {
               exit={{ opacity: 0, x: isRTL ? -50 : 50 }}
               className="bg-dark-100/50 backdrop-blur-sm rounded-2xl p-8 border border-primary/30"
             >
+              {/* Message si réservations désactivées pour cette branche */}
+              {branchOnlineSettings?.online_orders_enabled === false && (
+                <div className="text-center py-8">
+                  <AlertCircle className="w-16 h-16 text-amber-400 mx-auto mb-4" />
+                  <h2 className="text-2xl font-bold mb-3" style={{ fontFamily: 'Orbitron, sans-serif' }}>
+                    {locale === 'he' ? 'ההזמנות מושהות זמנית' : 'Réservations temporairement indisponibles'}
+                  </h2>
+                  <p className="text-gray-400 mb-6">
+                    {locale === 'he'
+                      ? 'ניתן ליצור קשר עמנו ישירות לתיאום'
+                      : 'Les réservations en ligne sont momentanément suspendues pour cette branche. Contactez-nous directement.'}
+                  </p>
+                  <button
+                    onClick={() => { setBookingData({ ...bookingData, branch: null, branchSlug: null }); setStep(1) }}
+                    className="border border-primary/50 text-primary hover:bg-primary/10 px-6 py-2 rounded-lg transition-colors"
+                  >
+                    {locale === 'he' ? 'חזור' : 'Choisir une autre branche'}
+                  </button>
+                </div>
+              )}
+              {branchOnlineSettings?.online_orders_enabled !== false && <>
               <div className="text-center mb-8">
                 <Users className="w-16 h-16 text-primary mx-auto mb-4" />
                 <h2 className="text-2xl font-bold mb-2" style={{ fontFamily: 'Orbitron, sans-serif' }}>
@@ -1081,6 +1126,7 @@ function ReservationContent() {
                   )}
                 </motion.div>
               )}
+              </>} {/* fin condition online_orders_enabled !== false */}
             </motion.div>
           )}
 
@@ -1102,83 +1148,85 @@ function ReservationContent() {
                     <p className="text-gray-400">{t('booking.step3_game.subtitle')}</p>
                   </div>
 
-                  <div className={`grid grid-cols-1 ${bookingData.branchSlug === 'glilot' ? 'md:grid-cols-1' : 'md:grid-cols-3'} gap-6 mb-8`}>
-                    {/* Active Games - Zap bleu comme dans l'admin - Caché pour Glilot */}
-                    {bookingData.branchSlug !== 'glilot' && (
+                  {(() => {
+                    const activeDisabled = branchOnlineSettings ? !branchOnlineSettings.active_game_enabled : isPetahTikva
+                    const laserDisabled  = branchOnlineSettings ? !branchOnlineSettings.laser_enabled : false
+                    const showActive     = branchOnlineSettings ? branchOnlineSettings.active_game_enabled || branchOnlineSettings.laser_enabled : bookingData.branchSlug !== 'glilot'
+                    const showMix        = showActive && !laserDisabled
+                    const showLaser      = !laserDisabled
+                    const colCount       = [showActive, showLaser, showMix].filter(Boolean).length
+                    return (
+                  <div className={`grid grid-cols-1 md:grid-cols-${colCount || 1} gap-6 mb-8`}>
+                    {/* Active Games */}
+                    {showActive && (
                       <motion.button
                         onClick={() => handleGameAreaSelect('ACTIVE')}
                         className={`border-2 rounded-xl p-6 text-center transition-all duration-300 ${
-                          isPetahTikva
+                          activeDisabled
                             ? 'bg-dark-200/30 border-gray-600/50 cursor-not-allowed opacity-60'
                             : bookingData.gameArea === 'ACTIVE'
                               ? 'bg-dark-200 border-blue-500/70 shadow-[0_0_20px_rgba(59,130,246,0.3)]'
                               : 'bg-dark-200/50 border-primary/30 hover:border-blue-500/70 hover:shadow-[0_0_20px_rgba(59,130,246,0.3)]'
                         }`}
-                        whileHover={isPetahTikva ? {} : { scale: 1.02 }}
-                        whileTap={isPetahTikva ? {} : { scale: 0.98 }}
-                        disabled={isPetahTikva}
+                        whileHover={activeDisabled ? {} : { scale: 1.02 }}
+                        whileTap={activeDisabled ? {} : { scale: 0.98 }}
+                        disabled={activeDisabled}
                       >
-                        <Zap className={`w-12 h-12 mx-auto mb-3 ${isPetahTikva ? 'text-gray-500' : 'text-blue-500'}`} />
+                        <Zap className={`w-12 h-12 mx-auto mb-3 ${activeDisabled ? 'text-gray-500' : 'text-blue-500'}`} />
                         <h3 className="text-xl font-bold mb-2">Active Games</h3>
-                        {isPetahTikva ? (
+                        {activeDisabled ? (
                           <p className="text-amber-400 text-sm font-medium">{t('booking.game_area.opening_soon')}</p>
                         ) : (
-                          <>
-                            <p className="text-gray-400 text-sm">{t('booking.game_area.active.description')}</p>
-                            {isRishonPreOpening && (
-                              <p className="text-amber-400 text-sm font-medium mt-1">{t('booking.game_area.opening_march22')}</p>
-                            )}
-                          </>
+                          <p className="text-gray-400 text-sm">{t('booking.game_area.active.description')}</p>
                         )}
                       </motion.button>
                     )}
 
-                    {/* Laser - Target violet comme dans l'admin - Toujours affiché */}
-                    <motion.button
-                      onClick={() => handleGameAreaSelect('LASER')}
-                      className={`border-2 rounded-xl p-6 text-center transition-all duration-300 ${
-                        bookingData.gameArea === 'LASER'
-                          ? 'bg-dark-200 border-purple-500/70 shadow-[0_0_20px_rgba(168,85,247,0.3)]'
-                          : 'bg-dark-200/50 border-primary/30 hover:border-purple-500/70 hover:shadow-[0_0_20px_rgba(168,85,247,0.3)]'
-                      }`}
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                    >
-                      <Target className="w-12 h-12 mx-auto mb-3 text-purple-500" />
-                      <h3 className="text-xl font-bold mb-2">Laser City</h3>
-                      <p className="text-gray-400 text-sm">{t('booking.game_area.laser.description')}</p>
-                    </motion.button>
+                    {/* Laser */}
+                    {showLaser && (
+                      <motion.button
+                        onClick={() => handleGameAreaSelect('LASER')}
+                        className={`border-2 rounded-xl p-6 text-center transition-all duration-300 ${
+                          bookingData.gameArea === 'LASER'
+                            ? 'bg-dark-200 border-purple-500/70 shadow-[0_0_20px_rgba(168,85,247,0.3)]'
+                            : 'bg-dark-200/50 border-primary/30 hover:border-purple-500/70 hover:shadow-[0_0_20px_rgba(168,85,247,0.3)]'
+                        }`}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                      >
+                        <Target className="w-12 h-12 mx-auto mb-3 text-purple-500" />
+                        <h3 className="text-xl font-bold mb-2">Laser City</h3>
+                        <p className="text-gray-400 text-sm">{t('booking.game_area.laser.description')}</p>
+                      </motion.button>
+                    )}
 
-                    {/* Mix/Sur mesure - Gamepad2 cyan - Caché pour Glilot */}
-                    {bookingData.branchSlug !== 'glilot' && (
+                    {/* Mix */}
+                    {showMix && (
                       <motion.button
                         onClick={() => handleGameAreaSelect('MIX')}
                         className={`border-2 rounded-xl p-6 text-center transition-all duration-300 ${
-                          isPetahTikva
+                          activeDisabled
                             ? 'bg-dark-200/30 border-gray-600/50 cursor-not-allowed opacity-60'
                             : bookingData.gameArea === 'MIX'
                               ? 'bg-dark-200 border-cyan-500/70 shadow-[0_0_20px_rgba(6,182,212,0.3)]'
                               : 'bg-dark-200/50 border-primary/30 hover:border-cyan-500/70 hover:shadow-[0_0_20px_rgba(6,182,212,0.3)]'
                         }`}
-                        whileHover={isPetahTikva ? {} : { scale: 1.02 }}
-                        whileTap={isPetahTikva ? {} : { scale: 0.98 }}
-                        disabled={isPetahTikva}
+                        whileHover={activeDisabled ? {} : { scale: 1.02 }}
+                        whileTap={activeDisabled ? {} : { scale: 0.98 }}
+                        disabled={activeDisabled}
                       >
-                        <Gamepad2 className={`w-12 h-12 mx-auto mb-3 ${isPetahTikva ? 'text-gray-500' : 'text-cyan-500'}`} />
+                        <Gamepad2 className={`w-12 h-12 mx-auto mb-3 ${activeDisabled ? 'text-gray-500' : 'text-cyan-500'}`} />
                         <h3 className="text-xl font-bold mb-2">{t('booking.game_area.mix.title')}</h3>
-                        {isPetahTikva ? (
+                        {activeDisabled ? (
                           <p className="text-amber-400 text-sm font-medium">{t('booking.game_area.opening_soon')}</p>
                         ) : (
-                          <>
-                            <p className="text-gray-400 text-sm">{t('booking.game_area.mix.description')}</p>
-                            {isRishonPreOpening && (
-                              <p className="text-amber-400 text-sm font-medium mt-1">{t('booking.game_area.opening_march22')}</p>
-                            )}
-                          </>
+                          <p className="text-gray-400 text-sm">{t('booking.game_area.mix.description')}</p>
                         )}
                       </motion.button>
                     )}
                   </div>
+                    )
+                  })()}
 
                   {/* Durée/Parties - apparaît après sélection du type */}
                   {bookingData.gameArea && (

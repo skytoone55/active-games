@@ -477,6 +477,38 @@ export async function POST(request: NextRequest) {
     // Formater le téléphone
     const formattedPhone = formatIsraeliPhone(customer_phone)
 
+    // Vérifier les paramètres de réservation en ligne de la branche
+    const { data: onlineSettings } = await supabase
+      .from('branch_settings')
+      .select('online_orders_enabled, active_game_enabled, laser_enabled')
+      .eq('branch_id', branch_id)
+      .single()
+
+    if (onlineSettings?.online_orders_enabled === false) {
+      return NextResponse.json(
+        { success: false, error: 'Les réservations en ligne sont temporairement désactivées pour cette branche.', messageKey: 'errors.onlineOrdersDisabled' },
+        { status: 403 }
+      )
+    }
+
+    if (order_type === 'GAME') {
+      const isActive = game_area === 'ACTIVE' || game_area === 'MIX' || (!game_area)
+      const isLaser  = game_area === 'LASER' || game_area === 'MIX'
+
+      if (isActive && onlineSettings?.active_game_enabled === false) {
+        return NextResponse.json(
+          { success: false, error: 'Les réservations Active Games ne sont pas disponibles pour cette branche.', messageKey: 'errors.activeGameDisabled' },
+          { status: 403 }
+        )
+      }
+      if (isLaser && onlineSettings?.laser_enabled === false) {
+        return NextResponse.json(
+          { success: false, error: 'Les réservations Laser City ne sont pas disponibles pour cette branche.', messageKey: 'errors.laserDisabled' },
+          { status: 403 }
+        )
+      }
+    }
+
     // NOUVEAU : Chercher un order ABORTED existant pour ce client/date/heure
     // Si trouvé, on le mettra à jour au lieu de créer un nouveau
     const { data: existingAbortedOrder } = await supabase
