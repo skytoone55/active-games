@@ -1,18 +1,19 @@
 'use client'
 
 import { useState } from 'react'
-import { Mail, Zap, ScrollText } from 'lucide-react'
+import { Mail, Zap, ScrollText, Forward } from 'lucide-react'
 import { useTranslation } from '@/contexts/LanguageContext'
 import { EmailTemplatesEditor } from './EmailTemplatesEditor'
 import { EmailAutomationsSection } from './EmailAutomationsSection'
 import { TermsConditionsSection } from './TermsConditionsSection'
+import { OrderRedirectionSection } from './OrderRedirectionSection'
 
 interface MailSectionProps {
   isDark: boolean
   branchId?: string
 }
 
-type SubTab = 'templates' | 'automations' | 'terms'
+type SubTab = 'templates' | 'automations' | 'terms' | 'redirection'
 
 export function MailSection({ isDark, branchId }: MailSectionProps) {
   const { t } = useTranslation()
@@ -34,12 +35,17 @@ export function MailSection({ isDark, branchId }: MailSectionProps) {
       icon: ScrollText,
       label: t('admin.settings.mail_tabs.terms') || 'CGV',
     },
+    {
+      id: 'redirection' as SubTab,
+      icon: Forward,
+      label: 'Redirection',
+    },
   ]
 
   return (
     <div className="space-y-6">
       {/* Sub-tabs */}
-      <div className={`flex gap-1 p-1 rounded-lg ${isDark ? 'bg-gray-800' : 'bg-gray-100'}`}>
+      <div className={`flex flex-wrap gap-1 p-1 rounded-lg ${isDark ? 'bg-gray-800' : 'bg-gray-100'}`}>
         {tabs.map((tab) => {
           const Icon = tab.icon
           const isActive = activeTab === tab.id
@@ -68,6 +74,7 @@ export function MailSection({ isDark, branchId }: MailSectionProps) {
       {activeTab === 'templates' && <EmailTemplatesEditor isDark={isDark} />}
       {activeTab === 'automations' && <EmailAutomationsSection isDark={isDark} branchId={branchId} />}
       {activeTab === 'terms' && <TermsConditionsSection isDark={isDark} />}
+      {activeTab === 'redirection' && <OrderRedirectionSection isDark={isDark} branchId={branchId} />}
     </div>
   )
 }

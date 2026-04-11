@@ -45,6 +45,112 @@ function generateShortReference(): string {
   return Math.random().toString(36).substring(2, 8).toUpperCase()
 }
 
+/**
+ * Envoyer un email de notification aux adresses de redirection configurées sur la branche.
+ * Appelé pour chaque nouvelle commande, quel que soit le statut.
+ */
+async function sendOrderRedirectionNotification(params: {
+  branchId: string
+  branchName: string
+  orderId: string
+  reference: string
+  status: string
+  customerFirstName: string
+  customerLastName: string | null
+  customerPhone: string
+  customerEmail: string | null
+  requestedDate: string
+  requestedTime: string
+  orderType: string
+  participantsCount: number
+}) {
+  try {
+    const { data: settings } = await supabase
+      .from('branch_settings')
+      .select('order_notification_emails')
+      .eq('branch_id', params.branchId)
+      .single()
+
+    const notifEmails: string[] = (settings?.order_notification_emails as string[]) || []
+    if (notifEmails.length === 0) return
+
+    const { sendEmail } = await import('@/lib/email-sender')
+
+    const statusLabels: Record<string, string> = {
+      pending: 'En attente',
+      auto_confirmed: 'Auto-confirmée',
+      manually_confirmed: 'Confirmée',
+      aborted: 'Abandonnée',
+      cancelled: 'Annulée',
+      closed: 'Clôturée',
+    }
+    const statusLabel = statusLabels[params.status] || params.status
+    const clientName = `${params.customerFirstName} ${params.customerLastName || ''}`.trim()
+
+    const html = `
+<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; background: #f9fafb; border-radius: 8px;">
+  <div style="background: #1e293b; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+    <h2 style="color: #fff; margin: 0; font-size: 18px;">🔔 Nouvelle commande reçue</h2>
+    <p style="color: #94a3b8; margin: 4px 0 0; font-size: 14px;">${params.branchName}</p>
+  </div>
+  <table style="width: 100%; border-collapse: collapse; background: #fff; border-radius: 8px; overflow: hidden;">
+    <tr style="border-bottom: 1px solid #e2e8f0;">
+      <td style="padding: 12px 16px; font-size: 13px; color: #64748b; width: 40%;">Référence</td>
+      <td style="padding: 12px 16px; font-size: 13px; font-weight: 600; color: #0f172a;">${params.reference}</td>
+    </tr>
+    <tr style="border-bottom: 1px solid #e2e8f0;">
+      <td style="padding: 12px 16px; font-size: 13px; color: #64748b;">Statut</td>
+      <td style="padding: 12px 16px; font-size: 13px; font-weight: 600; color: #0f172a;">${statusLabel}</td>
+    </tr>
+    <tr style="border-bottom: 1px solid #e2e8f0;">
+      <td style="padding: 12px 16px; font-size: 13px; color: #64748b;">Client</td>
+      <td style="padding: 12px 16px; font-size: 13px; color: #0f172a;">${clientName}</td>
+    </tr>
+    <tr style="border-bottom: 1px solid #e2e8f0;">
+      <td style="padding: 12px 16px; font-size: 13px; color: #64748b;">Téléphone</td>
+      <td style="padding: 12px 16px; font-size: 13px; color: #0f172a;">${params.customerPhone}</td>
+    </tr>
+    ${params.customerEmail ? `
+    <tr style="border-bottom: 1px solid #e2e8f0;">
+      <td style="padding: 12px 16px; font-size: 13px; color: #64748b;">Email</td>
+      <td style="padding: 12px 16px; font-size: 13px; color: #0f172a;">${params.customerEmail}</td>
+    </tr>` : ''}
+    <tr style="border-bottom: 1px solid #e2e8f0;">
+      <td style="padding: 12px 16px; font-size: 13px; color: #64748b;">Date souhaitée</td>
+      <td style="padding: 12px 16px; font-size: 13px; color: #0f172a;">${params.requestedDate} à ${params.requestedTime.slice(0, 5)}</td>
+    </tr>
+    <tr style="border-bottom: 1px solid #e2e8f0;">
+      <td style="padding: 12px 16px; font-size: 13px; color: #64748b;">Type</td>
+      <td style="padding: 12px 16px; font-size: 13px; color: #0f172a;">${params.orderType}</td>
+    </tr>
+    <tr>
+      <td style="padding: 12px 16px; font-size: 13px; color: #64748b;">Participants</td>
+      <td style="padding: 12px 16px; font-size: 13px; color: #0f172a;">${params.participantsCount}</td>
+    </tr>
+  </table>
+  <p style="color: #94a3b8; font-size: 12px; margin-top: 20px; text-align: center;">
+    Notification automatique — ActiveLaser Admin
+  </p>
+</div>`
+
+    await Promise.all(
+      notifEmails.map(email =>
+        sendEmail({
+          to: email,
+          subject: `[${params.branchName}] Nouvelle commande ${params.reference} — ${statusLabel}`,
+          html,
+          entityType: 'order',
+          entityId: params.orderId,
+          branchId: params.branchId,
+          triggeredBy: 'order_notification',
+        }).catch(err => console.error('[ORDER NOTIF] Failed to send to', email, err))
+      )
+    )
+  } catch (err) {
+    console.error('[ORDER NOTIF] sendOrderRedirectionNotification error:', err)
+  }
+}
+
 // Mapper event_type vers le plan de jeu (comme dans l'admin)
 // event_active = Active + Active (AA)
 // event_laser = Laser + Laser (LL)
@@ -908,7 +1014,7 @@ export async function POST(request: NextRequest) {
           cgv_validated_at: new Date().toISOString(),
           cgv_token: eventCgvToken
         })
-        .select('id, request_reference, cgv_token')
+        .select('id, request_reference, cgv_token, status')
         .single()
 
       if (orderError) {
@@ -1034,6 +1140,23 @@ export async function POST(request: NextRequest) {
         console.log('[ORDER API EVENT] No customer email provided, skipping email')
       }
       console.log('[ORDER API EVENT] === EMAIL SECTION END ===')
+
+      // Envoyer notifications de redirection
+      sendOrderRedirectionNotification({
+        branchId: branch_id,
+        branchName: (await supabase.from('branches').select('name').eq('id', branch_id).single()).data?.name || branch_id,
+        orderId: order.id,
+        reference: order.request_reference,
+        status: order.status,
+        customerFirstName: customer_first_name,
+        customerLastName: customer_last_name || null,
+        customerPhone: formattedPhone,
+        customerEmail: customer_email || null,
+        requestedDate: requested_date,
+        requestedTime: requested_time,
+        orderType: order_type,
+        participantsCount: participants_count,
+      }).catch(() => {})
 
       return NextResponse.json({
         success: true,
@@ -1500,7 +1623,7 @@ export async function POST(request: NextRequest) {
         cgv_validated_at: new Date().toISOString(),
         cgv_token: gameCgvToken
       })
-      .select('id, request_reference, cgv_token')
+      .select('id, request_reference, cgv_token, status')
       .single()
 
     if (orderError) {
@@ -1623,6 +1746,23 @@ export async function POST(request: NextRequest) {
       console.log('[ORDER API GAME] No customer email provided, skipping email')
     }
     console.log('[ORDER API GAME] === EMAIL SECTION END ===')
+
+    // Envoyer notifications de redirection
+    sendOrderRedirectionNotification({
+      branchId: branch_id,
+      branchName: (await supabase.from('branches').select('name').eq('id', branch_id).single()).data?.name || branch_id,
+      orderId: order.id,
+      reference: order.request_reference,
+      status: order.status,
+      customerFirstName: customer_first_name,
+      customerLastName: customer_last_name || null,
+      customerPhone: formattedPhone,
+      customerEmail: customer_email || null,
+      requestedDate: requested_date,
+      requestedTime: requested_time,
+      orderType: order_type,
+      participantsCount: participants_count,
+    }).catch(() => {})
 
     // iCount offer creation removed - invoice+receipt created at order close
 
