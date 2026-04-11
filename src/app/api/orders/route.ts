@@ -693,6 +693,23 @@ export async function POST(request: NextRequest) {
           ipAddress
         })
 
+        // Notification de redirection (pending - room unavailable)
+        sendOrderRedirectionNotification({
+          branchId: branch_id,
+          branchName: (await supabase.from('branches').select('name').eq('id', branch_id).single()).data?.name || branch_id,
+          orderId: order.id,
+          reference: order.request_reference,
+          status: 'pending',
+          customerFirstName: customer_first_name,
+          customerLastName: customer_last_name || null,
+          customerPhone: formattedPhone,
+          customerEmail: customer_email || null,
+          requestedDate: requested_date,
+          requestedTime: requested_time,
+          orderType: order_type,
+          participantsCount: participants_count,
+        }).catch(() => {})
+
         return NextResponse.json({
           success: true,
           order_id: order.id,
@@ -847,6 +864,23 @@ export async function POST(request: NextRequest) {
               },
               ipAddress
             })
+
+            // Notification de redirection (pending - laser unavailable)
+            sendOrderRedirectionNotification({
+              branchId: branch_id,
+              branchName: (await supabase.from('branches').select('name').eq('id', branch_id).single()).data?.name || branch_id,
+              orderId: order.id,
+              reference: order.request_reference,
+              status: 'pending',
+              customerFirstName: customer_first_name,
+              customerLastName: customer_last_name || null,
+              customerPhone: formattedPhone,
+              customerEmail: customer_email || null,
+              requestedDate: requested_date,
+              requestedTime: requested_time,
+              orderType: order_type,
+              participantsCount: participants_count,
+            }).catch(() => {})
 
             return NextResponse.json({
               success: true,
@@ -1352,6 +1386,23 @@ export async function POST(request: NextRequest) {
           ipAddress
         })
 
+        // Notification de redirection (pending - overbooking)
+        sendOrderRedirectionNotification({
+          branchId: branch_id,
+          branchName: (await supabase.from('branches').select('name').eq('id', branch_id).single()).data?.name || branch_id,
+          orderId: order.id,
+          reference: order.request_reference,
+          status: 'pending',
+          customerFirstName: customer_first_name,
+          customerLastName: customer_last_name || null,
+          customerPhone: formattedPhone,
+          customerEmail: customer_email || null,
+          requestedDate: requested_date,
+          requestedTime: requested_time,
+          orderType: order_type,
+          participantsCount: participants_count,
+        }).catch(() => {})
+
         return NextResponse.json({
           success: true,
           order_id: order.id,
@@ -1454,6 +1505,23 @@ export async function POST(request: NextRequest) {
         },
         ipAddress
       })
+
+      // Notification de redirection (pending - slot unavailable)
+      sendOrderRedirectionNotification({
+        branchId: branch_id,
+        branchName: (await supabase.from('branches').select('name').eq('id', branch_id).single()).data?.name || branch_id,
+        orderId: order.id,
+        reference: order.request_reference,
+        status: 'pending',
+        customerFirstName: customer_first_name,
+        customerLastName: customer_last_name || null,
+        customerPhone: formattedPhone,
+        customerEmail: customer_email || null,
+        requestedDate: requested_date,
+        requestedTime: requested_time,
+        orderType: order_type,
+        participantsCount: participants_count,
+      }).catch(() => {})
 
       return NextResponse.json({
         success: true,
