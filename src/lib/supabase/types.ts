@@ -123,6 +123,9 @@ export interface Database {
           laser_spare_vests: number | null
           laser_exclusive_threshold: number | null
           laser_enabled: boolean | null
+          order_notification_emails: Json | null
+          online_orders_enabled: boolean | null
+          active_game_enabled: boolean | null
           created_at: string
           updated_at: string
         }

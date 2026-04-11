@@ -27,15 +27,25 @@ export interface OrderNotificationParams {
 }
 
 export async function sendOrderRedirectionNotification(params: OrderNotificationParams): Promise<void> {
+  console.log('[ORDER NOTIF] === START ===', { branchId: params.branchId, reference: params.reference, status: params.status })
   try {
-    const { data: settings } = await supabase
+    const { data: settings, error: settingsError } = await supabase
       .from('branch_settings')
       .select('order_notification_emails')
       .eq('branch_id', params.branchId)
       .single()
 
+    if (settingsError) {
+      console.error('[ORDER NOTIF] Failed to fetch branch_settings:', settingsError.message, '— migration may not have been run')
+      return
+    }
+
     const notifEmails: string[] = (settings?.order_notification_emails as string[]) || []
-    if (notifEmails.length === 0) return
+    console.log('[ORDER NOTIF] Emails configured:', notifEmails)
+    if (notifEmails.length === 0) {
+      console.log('[ORDER NOTIF] No redirection emails configured for branch', params.branchId)
+      return
+    }
 
     const { sendEmail } = await import('@/lib/email-sender')
 
@@ -98,7 +108,8 @@ export async function sendOrderRedirectionNotification(params: OrderNotification
   </p>
 </div>`
 
-    await Promise.all(
+    console.log('[ORDER NOTIF] Sending to', notifEmails.length, 'address(es)...')
+    const results = await Promise.all(
       notifEmails.map(email =>
         sendEmail({
           to: email,
@@ -108,9 +119,15 @@ export async function sendOrderRedirectionNotification(params: OrderNotification
           entityId: params.orderId,
           branchId: params.branchId,
           triggeredBy: 'order_notification',
-        }).catch(err => console.error('[ORDER NOTIF] Failed to send to', email, err))
+        }).catch(err => {
+          console.error('[ORDER NOTIF] Failed to send to', email, err)
+          return { success: false, error: String(err) }
+        })
       )
     )
+    const sent = results.filter(r => r.success).length
+    const failed = results.filter(r => !r.success).length
+    console.log(`[ORDER NOTIF] Done — ${sent} sent, ${failed} failed`)
   } catch (err) {
     console.error('[ORDER NOTIF] sendOrderRedirectionNotification error:', err)
   }
