@@ -3380,6 +3380,7 @@ export const BookingModal = memo(function BookingModal({
                     setGameCustomGamePauses([0])
                     setGameCustomGameArea(['ACTIVE', 'ACTIVE'] as GameArea[])
                     setGameCustomLaserRoomIds(['', ''])
+                    setDurationMinutes('60') // 2 jeux × 30 min
                   }}
                   className={`p-3 rounded-xl border-2 transition-all flex items-center gap-3 ${
                     gameArea === 'CUSTOM'
@@ -3749,6 +3750,7 @@ export const BookingModal = memo(function BookingModal({
                               setGameCustomGameArea(Array(n).fill('ACTIVE' as GameArea))
                               setGameCustomLaserRoomIds(Array(n).fill(''))
                               setShowGameCustomGamesDropdown(false)
+                              setDurationMinutes(String(n * 30)) // n jeux × 30 min par défaut
                             }}
                             className={`w-full px-4 py-2.5 text-left transition-colors text-sm ${
                               gameCustomNumberOfGames === n
@@ -3821,6 +3823,9 @@ export const BookingModal = memo(function BookingModal({
                             const newDurations = [...gameCustomGameDurations]
                             newDurations[index] = e.target.value
                             setGameCustomGameDurations(newDurations)
+                            const total = newDurations.reduce((sum, d) => sum + (parseInt(d, 10) || 0), 0)
+                              + gameCustomGamePauses.reduce((sum, p) => sum + p, 0)
+                            setDurationMinutes(String(total))
                           }}
                           className={`w-full px-2 py-1 rounded border text-sm ${
                             isDark
@@ -3843,6 +3848,9 @@ export const BookingModal = memo(function BookingModal({
                               const newPauses = [...gameCustomGamePauses]
                               newPauses[index] = parseInt(e.target.value, 10) || 0
                               setGameCustomGamePauses(newPauses)
+                              const total = gameCustomGameDurations.reduce((sum, d) => sum + (parseInt(d, 10) || 0), 0)
+                                + newPauses.reduce((sum, p) => sum + p, 0)
+                              setDurationMinutes(String(total))
                             }}
                             className={`w-full px-2 py-1 rounded border text-sm ${
                               isDark
