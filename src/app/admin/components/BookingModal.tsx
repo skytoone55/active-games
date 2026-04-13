@@ -1905,6 +1905,8 @@ export const BookingModal = memo(function BookingModal({
     e.preventDefault()
     setError(null)
 
+    try {
+
     // Bloquer la soumission si un avertissement d'overbooking est actif
     if (showOverbookingWarning && overbookingInfo) {
       // Le pop-up d'overbooking doit être confirmé avant de pouvoir soumettre
@@ -2220,6 +2222,11 @@ export const BookingModal = memo(function BookingModal({
 
     // Soumettre avec la salle trouvée
     await submitWithRoom(eventRoomId)
+
+    } catch (err) {
+      console.error('[BookingModal] handleSubmit error:', err)
+      setError(t('admin.booking_modal.errors.generic_error'))
+    }
   }
 
   const handleOverCapacityConfirm = async () => {
