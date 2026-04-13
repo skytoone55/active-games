@@ -184,7 +184,7 @@ export default function PricingSection({ translations, isRTL }: PricingSectionPr
           {/* Mix Event Card */}
           <div className="backdrop-blur-sm rounded-2xl p-6 border border-secondary/40 hover:border-secondary/60 transition-all duration-300 hover:shadow-[0_0_30px_rgba(255,0,255,0.2)]" style={{ backgroundColor: 'rgba(50, 50, 70, 0.7)' }}>
             <h4 className="text-lg font-bold text-white text-center mb-2" style={{ fontFamily: 'Poppins, sans-serif' }}>
-              {t.mixEvent.description}
+              {t.mixEvent.title}
             </h4>
 
             {/* Price tiers */}
