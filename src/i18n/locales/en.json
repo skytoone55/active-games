@@ -196,7 +196,7 @@
       ]
     },
     "mixEvent": {
-      "title": "Event Packages",
+      "title": "Premium Event Packages",
       "description": "Active + Laser Event",
       "tiers": [
         { "label": "15 participants minimum", "price": "140", "currency": "NIS" },
