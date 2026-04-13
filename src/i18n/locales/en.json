@@ -165,7 +165,7 @@
       ]
     },
     "mix": {
-      "title": "Mix Active + Laser",
+      "title": "Premium Active + Laser",
       "price": "140",
       "currency": "NIS",
       "description": "30 min Active + 1 Laser game",
@@ -465,7 +465,7 @@
         "parties": "parties"
       },
       "mix": {
-        "title": "Custom",
+        "title": "Premium",
         "description": "Active + Laser combination"
       },
       "opening_soon": "Opening soon",
@@ -1035,7 +1035,7 @@
       "game_areas": {
         "laser": "Laser City",
         "active": "Active Games",
-        "mix": "Active + Laser"
+        "mix": "Premium (Active + Laser)"
       }
     },
     "invoice": {
@@ -2549,7 +2549,7 @@
         "game": "Games (all types)",
         "game_laser": "Laser Tag",
         "game_active": "Active Games",
-        "game_mix": "Mix (Laser + Active)",
+        "game_mix": "Premium (Laser + Active)",
         "event": "Events & Birthdays",
         "booking": "Booking & Policies",
         "safety": "Safety & Rules",
