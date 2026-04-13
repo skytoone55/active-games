@@ -190,8 +190,8 @@
       "title": "חבילות אירוע",
       "description": "אירוע אקטיב + לייזר",
       "tiers": [
-        { "label": "15 משתתפים מינימום", "price": "135", "currency": "₪" },
-        { "label": "30 משתתפים מינימום", "price": "125", "currency": "₪" }
+        { "label": "15 משתתפים מינימום", "price": "140", "currency": "₪" },
+        { "label": "30 משתתפים מינימום", "price": "130", "currency": "₪" }
       ],
       "roomPrice": "500₪",
       "roomLabel": "חדר אירוע פרטי",

@@ -199,8 +199,8 @@
       "title": "Forfaits Evenement",
       "description": "Evenement Active + Laser",
       "tiers": [
-        { "label": "15 participants minimum", "price": "135", "currency": "NIS" },
-        { "label": "30 participants minimum", "price": "125", "currency": "NIS" }
+        { "label": "15 participants minimum", "price": "140", "currency": "NIS" },
+        { "label": "30 participants minimum", "price": "130", "currency": "NIS" }
       ],
       "roomPrice": "500 NIS",
       "roomLabel": "Salle privee",
