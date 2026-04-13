@@ -148,9 +148,10 @@ export default function PricingSection({ translations, isRTL }: PricingSectionPr
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl mx-auto mb-8">
           {/* Event Card */}
           <div className="backdrop-blur-sm rounded-2xl p-6 border border-primary/30 hover:border-primary/50 transition-all duration-300 hover:shadow-[0_0_30px_rgba(0,240,255,0.2)]" style={{ backgroundColor: 'rgba(50, 50, 70, 0.7)' }}>
-            <h4 className="text-lg font-bold text-white text-center mb-2" style={{ fontFamily: 'Poppins, sans-serif' }}>
-              {t.event.description}
+            <h4 className="text-lg font-bold text-white text-center mb-1" style={{ fontFamily: 'Poppins, sans-serif' }}>
+              {t.event.title}
             </h4>
+            <p className="text-white/70 text-sm text-center mb-3" style={{ fontFamily: 'Poppins, sans-serif' }}>{t.event.description}</p>
 
             {/* Price tiers */}
             <div className="space-y-3 mb-4">
@@ -183,9 +184,10 @@ export default function PricingSection({ translations, isRTL }: PricingSectionPr
 
           {/* Mix Event Card */}
           <div className="backdrop-blur-sm rounded-2xl p-6 border border-secondary/40 hover:border-secondary/60 transition-all duration-300 hover:shadow-[0_0_30px_rgba(255,0,255,0.2)]" style={{ backgroundColor: 'rgba(50, 50, 70, 0.7)' }}>
-            <h4 className="text-lg font-bold text-white text-center mb-2" style={{ fontFamily: 'Poppins, sans-serif' }}>
+            <h4 className="text-lg font-bold text-white text-center mb-1" style={{ fontFamily: 'Poppins, sans-serif' }}>
               {t.mixEvent.title}
             </h4>
+            <p className="text-white/70 text-sm text-center mb-3" style={{ fontFamily: 'Poppins, sans-serif' }}>{t.mixEvent.description}</p>
 
             {/* Price tiers */}
             <div className="space-y-3 mb-4">
