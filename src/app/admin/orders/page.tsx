@@ -72,12 +72,14 @@ export default function OrdersPage() {
     cancelOrder
   } = useOrders(selectedBranchId)
 
-  const { counts: unseenCounts, refetch: refetchUnseen } = useUnseenOrdersCount(selectedBranchId)
+  const { counts: unseenCounts, refetch: refetchUnseen, markStatusSeen } = useUnseenOrdersCount(selectedBranchId)
   const [markingAllSeen, setMarkingAllSeen] = useState<string | null>(null)
 
   const handleMarkAllSeen = async (status?: string) => {
     if (!selectedBranchId || markingAllSeen) return
     setMarkingAllSeen(status || 'all')
+    // Optimistic update: instantly clear badge without waiting for server round-trip
+    markStatusSeen(status)
     try {
       const res = await fetch('/api/orders', {
         method: 'PATCH',
@@ -87,9 +89,13 @@ export default function OrdersPage() {
       if ((await res.json()).success) {
         notifyOrdersSeenChanged()
         refetchUnseen()
+      } else {
+        // Roll back optimistic update on failure
+        refetchUnseen()
       }
     } catch (_) {
-      // silencieux
+      // Roll back optimistic update on error
+      refetchUnseen()
     } finally {
       setMarkingAllSeen(null)
     }
@@ -301,6 +307,8 @@ export default function OrdersPage() {
     // Auto-marquer comme vu si pas encore vu (tous statuts)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     if (!(order as any).seen_at) {
+      // Optimistic update: instantly decrement badge by 1 for this order's status
+      markStatusSeen(order.status, true)
       fetch(`/api/orders/${order.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -312,7 +320,10 @@ export default function OrdersPage() {
             notifyOrdersSeenChanged()
           }
         })
-        .catch(() => {})
+        .catch(() => {
+          // Roll back on error
+          refetchUnseen()
+        })
     }
   }
 

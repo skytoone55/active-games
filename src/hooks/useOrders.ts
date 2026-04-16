@@ -192,7 +192,37 @@ export function useUnseenOrdersCount(branchId: string | null) {
   }, [mutate])
 
   const defaultCounts: UnseenCounts = { total: 0, pending: 0, auto_confirmed: 0, manually_confirmed: 0, aborted: 0, cancelled: 0, closed: 0 }
-  return { counts: data?.unseen_counts || defaultCounts, refetch: () => mutate() }
+
+  /**
+   * Optimistic update: instantly reduce the unseen count for a given status.
+   * - status=undefined → zero out all counts (mark all seen globally)
+   * - decrementOnly=false (default) → zero out that status count (mark all seen for a status)
+   * - decrementOnly=true → decrement by 1 (single order viewed)
+   * The SWR cache is updated immediately for a snappy UI, then revalidated from server.
+   */
+  const markStatusSeen = useCallback((status?: string, decrementOnly?: boolean) => {
+    mutate(
+      (current) => {
+        if (!current) return current
+        const prev = current.unseen_counts || defaultCounts
+        const next = { ...prev }
+        if (status && status in next) {
+          const currentVal = (next as Record<string, number>)[status] || 0
+          const newVal = decrementOnly ? Math.max(0, currentVal - 1) : 0
+          const diff = currentVal - newVal
+          next.total = Math.max(0, next.total - diff)
+          ;(next as Record<string, number>)[status] = newVal
+        } else if (!status) {
+          // mark all statuses as 0
+          Object.keys(next).forEach(k => { (next as Record<string, number>)[k] = 0 })
+        }
+        return { ...current, unseen_counts: next }
+      },
+      { revalidate: true }
+    )
+  }, [mutate]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  return { counts: data?.unseen_counts || defaultCounts, refetch: () => mutate(), markStatusSeen }
 }
 
 /** @deprecated Use useUnseenOrdersCount instead */
