@@ -85,6 +85,8 @@ function ReservationContent() {
   const [paymentError, setPaymentError] = useState<string | null>(null)
   const [isProcessingPayment, setIsProcessingPayment] = useState(false)
   const [paymentSuccess, setPaymentSuccess] = useState(false)
+  const [pendingOrderId, setPendingOrderId] = useState<string | null>(null)
+  const [pendingOrderReference, setPendingOrderReference] = useState<string | null>(null)
 
   // Paramètres de réservation en ligne de la branche sélectionnée
   const [branchOnlineSettings, setBranchOnlineSettings] = useState<{
@@ -534,6 +536,11 @@ function ReservationContent() {
   const handlePrevious = () => {
     if (step > 1) {
       setStep((step - 1) as BookingStep)
+      // Reset pending order if going back from payment step
+      if (step === 7) {
+        setPendingOrderId(null)
+        setPendingOrderReference(null)
+      }
     }
   }
 
@@ -731,41 +738,52 @@ function ReservationContent() {
         }
       }
 
-      // ÉTAPE 1: Créer la commande
-      const response = await fetch('/api/orders', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          branch_id: selectedBranch.id,
-          order_type: bookingData.type === 'event' ? 'EVENT' : 'GAME',
-          requested_date: bookingData.date,
-          requested_time: bookingData.time,
-          participants_count: bookingData.players || 1,
-          customer_first_name: bookingData.firstName,
-          customer_last_name: bookingData.lastName || '',
-          customer_phone: bookingData.phone ? formatIsraeliPhone(bookingData.phone) : bookingData.phone,
-          customer_email: bookingData.email || null,
-          customer_notes: customerNotes || null,
-          game_area: gameArea,
-          number_of_games: bookingData.numberOfGames,
-          event_type: bookingData.eventType || null,
-          event_celebrant_age: bookingData.eventAge || null,
-          terms_accepted: bookingData.termsAccepted,
-          locale: locale === 'he' ? 'he' : 'en',
-        }),
-      })
+      // ÉTAPE 1: Créer la commande (seulement si pas déjà créée)
+      let orderId = pendingOrderId
+      let orderReference = pendingOrderReference
+      let newOrderStatus: 'auto_confirmed' | 'pending' | null = null
+      let newOrderMessage: string | undefined
 
-      const result = await response.json()
+      if (!orderId) {
+        const response = await fetch('/api/orders', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            branch_id: selectedBranch.id,
+            order_type: bookingData.type === 'event' ? 'EVENT' : 'GAME',
+            requested_date: bookingData.date,
+            requested_time: bookingData.time,
+            participants_count: bookingData.players || 1,
+            customer_first_name: bookingData.firstName,
+            customer_last_name: bookingData.lastName || '',
+            customer_phone: bookingData.phone ? formatIsraeliPhone(bookingData.phone) : bookingData.phone,
+            customer_email: bookingData.email || null,
+            customer_notes: customerNotes || null,
+            game_area: gameArea,
+            number_of_games: bookingData.numberOfGames,
+            event_type: bookingData.eventType || null,
+            event_celebrant_age: bookingData.eventAge || null,
+            terms_accepted: bookingData.termsAccepted,
+            locale: locale === 'he' ? 'he' : 'en',
+          }),
+        })
 
-      if (!result.success) {
-        console.error('Error saving order:', result.error)
-        alert(`Erreur: ${result.error || t('booking.errors.save_reservation')}`)
-        setIsSubmitting(false)
-        return
+        const result = await response.json()
+
+        if (!result.success) {
+          console.error('Error saving order:', result.error)
+          alert(`Erreur: ${result.error || t('booking.errors.save_reservation')}`)
+          setIsSubmitting(false)
+          return
+        }
+
+        orderId = result.order_id
+        orderReference = result.reference
+        newOrderStatus = result.status
+        newOrderMessage = result.message
+        setPendingOrderId(orderId)
+        setPendingOrderReference(orderReference)
       }
-
-      const orderId = result.order_id
-      const orderReference = result.reference
 
       // ÉTAPE 2: Si acompte requis, effectuer le paiement
       if (depositInfo && depositInfo.amount > 0) {
@@ -796,6 +814,9 @@ function ReservationContent() {
             setPaymentError(paymentResult.error || t('booking.payment.payment_failed'))
             setIsSubmitting(false)
             setIsProcessingPayment(false)
+            // Clear pending order so next attempt creates a fresh one
+            setPendingOrderId(null)
+            setPendingOrderReference(null)
             return
           }
 
@@ -806,6 +827,8 @@ function ReservationContent() {
           setPaymentError(t('booking.payment.processing_error'))
           setIsSubmitting(false)
           setIsProcessingPayment(false)
+          setPendingOrderId(null)
+          setPendingOrderReference(null)
           return
         } finally {
           setIsProcessingPayment(false)
@@ -813,9 +836,11 @@ function ReservationContent() {
       }
 
       // Succès final
-      setReservationNumber(result.reference)
-      setOrderStatus(result.status)
-      setOrderMessage(result.message || t('booking.payment.confirmed'))
+      setReservationNumber(orderReference!)
+      setOrderStatus(newOrderStatus)
+      setOrderMessage(newOrderMessage || t('booking.payment.confirmed'))
+      setPendingOrderId(null)
+      setPendingOrderReference(null)
       setStep(8)
 
     } catch (error) {
@@ -2295,8 +2320,14 @@ function ReservationContent() {
           {step === 6 && (
             <button
               onClick={async () => {
-                await createAbortedOrder()
-                setStep(7)
+                if (isSubmitting) return
+                setIsSubmitting(true)
+                try {
+                  await createAbortedOrder()
+                  setStep(7)
+                } finally {
+                  setIsSubmitting(false)
+                }
               }}
               disabled={
                 !bookingData.firstName ||
@@ -2304,7 +2335,8 @@ function ReservationContent() {
                 !bookingData.phone ||
                 !!validationErrors.phone ||
                 !!(bookingData.email && validationErrors.email) ||
-                (bookingData.type === 'event' && !bookingData.email)
+                (bookingData.type === 'event' && !bookingData.email) ||
+                isSubmitting
               }
               className={`inline-flex items-center gap-2 px-6 py-3 rounded-xl transition-all duration-300 ${
                 bookingData.firstName &&

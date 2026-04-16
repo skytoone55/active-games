@@ -96,7 +96,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Vérifier que la commande peut être payée
-    if (order.status === 'closed' || order.status === 'cancelled') {
+    if (order.status === 'closed' || order.status === 'cancelled' || order.status === 'aborted') {
       return NextResponse.json(
         { success: false, error: 'This order cannot receive payments' },
         { status: 400 }
@@ -175,6 +175,11 @@ export async function POST(request: NextRequest) {
 
     if (!billResult.success || !billResult.data) {
       console.log('[PAY-DEPOSIT] Payment failed:', billResult.error)
+      // Mark order as aborted since payment was refused
+      await supabase
+        .from('orders')
+        .update({ status: 'aborted', updated_at: new Date().toISOString() })
+        .eq('id', order_id)
       return NextResponse.json(
         {
           success: false,
