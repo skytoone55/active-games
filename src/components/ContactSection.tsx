@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Send, Check, AlertCircle, Loader2, ChevronDown, MapPin } from 'lucide-react'
+import { trackLeadForm } from '@/lib/gtag-ads'
 
 interface Branch {
   id: string
@@ -100,6 +101,7 @@ export default function ContactSection({ translations }: ContactSectionProps) {
 
       if (response.ok) {
         setStatus('success')
+        trackLeadForm()
         setFormData({ name: '', email: '', phone: '', message: '', branch_id: '' })
         setTimeout(() => setStatus('idle'), 5000)
       } else {
