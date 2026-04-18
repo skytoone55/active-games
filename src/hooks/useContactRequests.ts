@@ -176,6 +176,14 @@ export function useContactRequests(branchId: string | null): UseContactRequestsR
         setUnreadCount(prev => Math.max(0, prev - 1))
         return true
       }
+
+      // Le contact a été créé mais le lien a échoué — supprimer le contact pour éviter les données orphelines
+      console.error('[createContactFromRequest] Failed to link contact to request — rolling back contact creation')
+      try {
+        await fetch(`/api/contacts/${contactData.contact.id}`, { method: 'DELETE' })
+      } catch {
+        console.error('[createContactFromRequest] Could not delete orphaned contact:', contactData.contact.id)
+      }
       return false
     } catch {
       return false

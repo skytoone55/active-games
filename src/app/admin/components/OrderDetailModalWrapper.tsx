@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { Loader2, AlertCircle } from 'lucide-react'
+import { Loader2, AlertCircle, X } from 'lucide-react'
 import { getClient } from '@/lib/supabase/client'
 import { useTranslation } from '@/contexts/LanguageContext'
 import { OrderDetailModal } from '../orders/components/OrderDetailModal'
@@ -40,6 +40,7 @@ export function OrderDetailModalWrapper({
   const [order, setOrder] = useState<OrderWithRelations | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [actionError, setActionError] = useState<string | null>(null)
   const [confirmModal, setConfirmModal] = useState<ConfirmModalState>({
     isOpen: false,
     title: '',
@@ -81,6 +82,7 @@ export function OrderDetailModalWrapper({
 
   // Annuler une commande
   const handleCancel = async (orderId: string) => {
+    setActionError(null)
     setConfirmModal({
       isOpen: true,
       title: t('admin.orders.modal.cancel_title'),
@@ -100,8 +102,12 @@ export function OrderDetailModalWrapper({
           // Recharger la commande pour mettre à jour l'affichage
           loadOrder()
           setConfirmModal(prev => ({ ...prev, isOpen: false }))
-        } catch (error) {
-          console.error('Error cancelling order:', error)
+        } catch (err) {
+          console.error('Error cancelling order:', err)
+          const message = err instanceof Error ? err.message : t('admin.common.error')
+          setActionError(message)
+          // Fermer la modal de confirmation — l'erreur s'affiche dans la fiche commande
+          setConfirmModal(prev => ({ ...prev, isOpen: false }))
         }
       }
     })
@@ -258,6 +264,21 @@ export function OrderDetailModalWrapper({
         canEdit={true}
         canDelete={true}
       />
+
+      {/* Toast d'erreur pour les actions (ex: annulation échouée) */}
+      {actionError && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[9999] flex items-center gap-3 px-5 py-3 rounded-xl shadow-lg bg-red-600 text-white text-sm max-w-sm">
+          <AlertCircle className="w-5 h-5 flex-shrink-0" />
+          <span className="flex-1">{actionError}</span>
+          <button
+            onClick={() => setActionError(null)}
+            className="ml-1 opacity-80 hover:opacity-100 transition-opacity"
+            aria-label="Fermer"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       {/* Modal de confirmation */}
       <ConfirmationModal
