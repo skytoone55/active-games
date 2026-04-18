@@ -365,7 +365,8 @@ export async function POST(request: NextRequest) {
       number_of_games = 1,
       event_type = null, // event_active, event_laser, event_mix
       event_celebrant_age = null,
-      locale = 'en' // 'fr' | 'en' | 'he' - langue pour l'email de confirmation
+      locale = 'en', // 'fr' | 'en' | 'he' - langue pour l'email de confirmation
+      require_payment = false // Si true: crée l'order en 'pending' jusqu'au paiement; si false: confirme directement
     } = body
 
     // Récupérer l'adresse IP pour le logging
@@ -620,6 +621,7 @@ export async function POST(request: NextRequest) {
           order_id: order.id,
           reference: order.request_reference,
           status: 'pending',
+          slot_available: false,
           message: 'Your request has been received and is pending confirmation'
         })
       }
@@ -792,6 +794,7 @@ export async function POST(request: NextRequest) {
               order_id: order.id,
               reference: order.request_reference,
               status: 'pending',
+              slot_available: false,
               message: 'Your request has been received and is pending confirmation'
             })
           }
@@ -959,7 +962,7 @@ export async function POST(request: NextRequest) {
           branch_id,
           order_type: 'EVENT',
           source: 'website',
-          status: 'auto_confirmed',
+          status: require_payment ? 'pending' : 'auto_confirmed',
           booking_id: booking.id,
           contact_id: contactId,
           request_reference: referenceCode,
@@ -1124,8 +1127,9 @@ export async function POST(request: NextRequest) {
         order_id: order.id,
         booking_id: booking.id,
         reference: order.request_reference,
-        status: 'confirmed',
-        message: 'Event booking confirmed successfully'
+        status: order.status, // 'pending' si paiement requis, 'auto_confirmed' sinon
+        slot_available: true,
+        message: require_payment ? 'Slot available — please proceed with payment' : 'Event booking confirmed successfully'
       })
     }
 
@@ -1303,6 +1307,7 @@ export async function POST(request: NextRequest) {
           order_id: order.id,
           reference: order.request_reference,
           status: 'pending',
+          slot_available: false,
           message: 'Your request has been received and is pending confirmation due to capacity limits'
         })
       }
@@ -1423,6 +1428,7 @@ export async function POST(request: NextRequest) {
         order_id: order.id,
         reference: order.request_reference,
         status: 'pending',
+        slot_available: false,
         message: 'Your request has been received and is pending confirmation'
       })
     }
@@ -1592,7 +1598,7 @@ export async function POST(request: NextRequest) {
         branch_id,
         order_type,
         source: 'website',
-        status: 'auto_confirmed',
+        status: require_payment ? 'pending' : 'auto_confirmed',
         booking_id: booking.id,
         contact_id: contactId,
         request_reference: referenceCode,
@@ -1760,8 +1766,9 @@ export async function POST(request: NextRequest) {
       order_id: order.id,
       booking_id: booking.id,
       reference: order.request_reference,
-      status: 'confirmed',
-      message: 'Booking confirmed successfully'
+      status: order.status, // 'pending' si paiement requis, 'auto_confirmed' sinon
+      slot_available: true,
+      message: require_payment ? 'Slot available — please proceed with payment' : 'Booking confirmed successfully'
     })
 
   } catch (error) {

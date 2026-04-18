@@ -745,6 +745,7 @@ function ReservationContent() {
       let newOrderMessage: string | undefined
 
       if (!orderId) {
+        const depositRequired = !!(depositInfo && depositInfo.amount > 0)
         const response = await fetch('/api/orders', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -765,6 +766,7 @@ function ReservationContent() {
             event_celebrant_age: bookingData.eventAge || null,
             terms_accepted: bookingData.termsAccepted,
             locale: locale === 'he' ? 'he' : 'en',
+            require_payment: depositRequired, // Si true: order reste 'pending' jusqu'au paiement réussi
           }),
         })
 
@@ -779,13 +781,25 @@ function ReservationContent() {
 
         orderId = result.order_id
         orderReference = result.reference
-        newOrderStatus = result.status
+        newOrderStatus = result.status as 'auto_confirmed' | 'pending' | null
         newOrderMessage = result.message
         setPendingOrderId(orderId)
         setPendingOrderReference(orderReference)
+
+        // VÉRIFICATION DISPONIBILITÉ: si le créneau n'est pas dispo → pas de paiement
+        if (result.slot_available === false) {
+          setReservationNumber(orderReference!)
+          setOrderStatus('pending')
+          setOrderMessage(newOrderMessage || t('booking.confirmation.contact_soon'))
+          setPendingOrderId(null)
+          setPendingOrderReference(null)
+          setIsSubmitting(false)
+          setStep(8)
+          return
+        }
       }
 
-      // ÉTAPE 2: Si acompte requis, effectuer le paiement
+      // ÉTAPE 2: Si acompte requis ET créneau disponible, effectuer le paiement
       if (depositInfo && depositInfo.amount > 0) {
         setIsProcessingPayment(true)
 
@@ -810,25 +824,22 @@ function ReservationContent() {
           const paymentResult = await paymentResponse.json()
 
           if (!paymentResult.success) {
-            // Paiement échoué - la commande est créée mais pas payée
+            // Paiement échoué — la commande reste 'pending' (pas abortée)
+            // On garde pendingOrderId pour permettre de réessayer sur la même commande
             setPaymentError(paymentResult.error || t('booking.payment.payment_failed'))
             setIsSubmitting(false)
             setIsProcessingPayment(false)
-            // Clear pending order so next attempt creates a fresh one
-            setPendingOrderId(null)
-            setPendingOrderReference(null)
             return
           }
 
-          // Paiement réussi
+          // Paiement réussi — la commande est passée à 'auto_confirmed' côté serveur
+          newOrderStatus = 'auto_confirmed'
           setPaymentSuccess(true)
         } catch (payError) {
           console.error('Payment error:', payError)
           setPaymentError(t('booking.payment.processing_error'))
           setIsSubmitting(false)
           setIsProcessingPayment(false)
-          setPendingOrderId(null)
-          setPendingOrderReference(null)
           return
         } finally {
           setIsProcessingPayment(false)

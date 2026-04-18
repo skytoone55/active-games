@@ -774,28 +774,33 @@ export default function AdminPage() {
       // Chercher l'order_id et status correspondant au booking
       setEditingBookingOrderId(null) // Reset pendant la recherche
       setEditingBookingOrderStatus(null)
-      const supabase = getClient()
-      const { data: orderData } = await supabase
-        .from('orders')
-        .select('id, status')
-        .eq('booking_id', booking.id)
-        .single()
-      const order = orderData as { id: string; status: string } | null
-      if (order) {
-        setEditingBookingOrderId(order.id)
-        setEditingBookingOrderStatus(order.status)
-      }
-      // Extraire l'heure de début de la réservation
+      // Ouvrir le modal immédiatement — la requête order est secondaire
       const startTime = toIL(new Date(booking.game_start_datetime || booking.start_datetime))
       setModalInitialHour(startTime.getHours())
       setModalInitialMinute(startTime.getMinutes())
-      // Le type sera celui de la réservation existante
       setModalDefaultBookingType(booking.type as 'GAME' | 'EVENT')
-      // Pour GAME, déterminer la zone depuis les sessions
       if (booking.type === 'GAME' && booking.game_sessions && booking.game_sessions.length > 0) {
         setModalDefaultGameArea(booking.game_sessions[0].game_area as 'ACTIVE' | 'LASER')
       } else {
-        setModalDefaultGameArea(undefined) // Forcer le commercial à choisir
+        setModalDefaultGameArea(undefined)
+      }
+      setShowBookingModal(true) // ← OUVERTURE IMMÉDIATE (plus de blocage sur l'await)
+      // Charger l'order en arrière-plan (non-bloquant)
+      try {
+        const supabase = getClient()
+        const { data: orderData } = await supabase
+          .from('orders')
+          .select('id, status')
+          .eq('booking_id', booking.id)
+          .single()
+        const order = orderData as { id: string; status: string } | null
+        if (order) {
+          setEditingBookingOrderId(order.id)
+          setEditingBookingOrderStatus(order.status)
+        }
+      } catch (err) {
+        console.warn('[openBookingModal] Could not load order for booking:', booking.id, err)
+        // Non-bloquant — le modal est déjà ouvert, les actions order seront indisponibles
       }
     } else {
       setEditingBooking(null)
@@ -803,10 +808,10 @@ export default function AdminPage() {
       setEditingBookingOrderStatus(null)
       setModalInitialHour(hour ?? 10)
       setModalInitialMinute(minute ?? 0)
-      setModalDefaultBookingType(defaultType) // Définir le type selon où on clique
-      setModalDefaultGameArea(defaultGameArea) // Définir la zone selon où on clique
+      setModalDefaultBookingType(defaultType)
+      setModalDefaultGameArea(defaultGameArea)
+      setShowBookingModal(true)
     }
-    setShowBookingModal(true)
   }
 
   // Créer ou mettre à jour une réservation

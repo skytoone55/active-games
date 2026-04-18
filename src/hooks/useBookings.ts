@@ -73,6 +73,8 @@ export function useBookings(branchId: string | null, date?: string) {
   const [error, setError] = useState<string | null>(null)
   const lastFetchKeyRef = useRef<string | null>(null)
   const isFetchingRef = useRef(false)
+  // Si un refresh realtime arrive pendant un fetch en cours, on le note ici pour refetch à la fin
+  const pendingRefreshRef = useRef(false)
   // Track whether we have any data displayed (avoids stale closure on bookings)
   const hasDataRef = useRef(false)
 
@@ -103,8 +105,11 @@ export function useBookings(branchId: string | null, date?: string) {
 
     // Éviter les appels concurrents — but auto-release after 15s to prevent infinite lock
     if (isFetchingRef.current && !force) {
+      // Marquer qu'un refresh est en attente: sera exécuté dès que le fetch courant se termine
+      pendingRefreshRef.current = true
       return
     }
+    pendingRefreshRef.current = false
 
     const supabase = getClient()
     isFetchingRef.current = true
@@ -285,6 +290,11 @@ export function useBookings(branchId: string | null, date?: string) {
       clearTimeout(lockTimeout)
       setLoading(false)
       isFetchingRef.current = false
+      // Si un refresh realtime était en attente pendant ce fetch, on l'exécute maintenant
+      if (pendingRefreshRef.current) {
+        pendingRefreshRef.current = false
+        setTimeout(() => fetchBookings(), 200)
+      }
     }
   }, [branchId, date])
 
@@ -302,6 +312,11 @@ export function useBookings(branchId: string | null, date?: string) {
       clearTimeout(fetchDebounceRef.current)
     }
 
+    // IMPORTANT: réinitialiser le verrou quand on navigue vers une nouvelle date/branche
+    // Sinon un fetch en cours pour l'ancienne date bloque le chargement de la nouvelle
+    isFetchingRef.current = false
+    pendingRefreshRef.current = false
+
     // Debounce: wait 150ms before fetching — lets cache display stabilize
     // and avoids hammering the API when user rapidly navigates dates
     fetchDebounceRef.current = setTimeout(() => {
@@ -316,15 +331,16 @@ export function useBookings(branchId: string | null, date?: string) {
   }, [branchId, date, fetchBookings])
 
   // Realtime: écouter les changements sur bookings et game_sessions
-  // Remplace le polling de 30 secondes - mise à jour instantanée
   // IMPORTANT: useMemo pour stabiliser la référence du tableau — sinon useEffect
   // dans useRealtimeRefresh détruit et recrée les subscriptions à chaque render,
   // causant une boucle infinie quand des events arrivent pendant la re-souscription
   const additionalRealtimeTables = useMemo<TableName[]>(() => ['game_sessions', 'booking_slots'], [])
+  // Utiliser force=true pour le realtime — les events doivent toujours passer même si un fetch est en cours
+  const handleRealtimeRefresh = useCallback(() => fetchBookings(true), [fetchBookings])
   useRealtimeRefresh(
     'bookings',
     branchId,
-    fetchBookings,
+    handleRealtimeRefresh,
     additionalRealtimeTables
   )
 

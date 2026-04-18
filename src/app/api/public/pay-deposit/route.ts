@@ -175,11 +175,8 @@ export async function POST(request: NextRequest) {
 
     if (!billResult.success || !billResult.data) {
       console.log('[PAY-DEPOSIT] Payment failed:', billResult.error)
-      // Mark order as aborted since payment was refused
-      await supabase
-        .from('orders')
-        .update({ status: 'aborted', updated_at: new Date().toISOString() })
-        .eq('id', order_id)
+      // La commande reste en 'pending' — l'équipe peut contacter le client
+      // (anciennement marqué 'aborted', mais le client doit pouvoir réessayer)
       return NextResponse.json(
         {
           success: false,
@@ -271,8 +268,9 @@ export async function POST(request: NextRequest) {
       console.error('[PAY-DEPOSIT] Error recording payment:', paymentError)
     }
 
-    // Mettre à jour la commande
+    // Mettre à jour la commande : paiement reçu + passer à auto_confirmed
     const updateData = {
+      status: 'auto_confirmed', // Confirmer la commande maintenant que le paiement est validé
       paid_amount: (order.paid_amount || 0) + amount,
       deposit_amount: amount,
       payment_status: 'deposit_paid',
