@@ -779,7 +779,7 @@ export default function AdminPage() {
     // Vérifier si le créneau est bloqué (uniquement pour les nouvelles réservations)
     if (!booking && hour !== undefined && minute !== undefined) {
       if (isSlotBlocked(dateString, hour, minute)) {
-        setBlockedSlotMessage('Ce créneau est bloqué et ne peut pas être réservé.')
+        setBlockedSlotMessage(t('admin.blocked_periods.slot_blocked'))
         setTimeout(() => setBlockedSlotMessage(null), 3500)
         return
       }
@@ -2129,7 +2129,7 @@ export default function AdminPage() {
                     ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                     : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
               }`}
-              title="Gérer les plages bloquées"
+              title={t('admin.blocked_periods.manage_button_title')}
             >
               <Lock className="w-5 h-5" />
               {blockedPeriods.length > 0 && (
@@ -2583,7 +2583,7 @@ export default function AdminPage() {
                         title={booking ? (() => {
                           const contactData = getContactDisplayData(booking)
                           return `${contactData.firstName} ${contactData.lastName || ''}`.trim() || t('admin.agenda.booking.no_name')
-                        })() + ` - ${booking.participants_count} ${t('admin.agenda.booking.people')}` : isActiveSlotBlocked ? 'Créneau bloqué' : ''}
+                        })() + ` - ${booking.participants_count} ${t('admin.agenda.booking.people')}` : isActiveSlotBlocked ? t('admin.blocked_periods.slot_blocked_tooltip') : ''}
                       >
                         {/* Overlay créneau bloqué */}
                         {isActiveSlotBlocked && (
@@ -2771,7 +2771,7 @@ export default function AdminPage() {
                                     borderLeft: `2px solid ${isDark ? '#374151' : '#e5e7eb'}`,
                                     borderRight: `2px solid ${isDark ? '#374151' : '#e5e7eb'}`,
                                   }}
-                                  title={isLaserSlotBlocked ? 'Créneau bloqué' : ''}
+                                  title={isLaserSlotBlocked ? t('admin.blocked_periods.slot_blocked_tooltip') : ''}
                                 >
                                   {isLaserSlotBlocked && (
                                     <div className="absolute inset-0 pointer-events-none" style={{
@@ -3021,7 +3021,7 @@ export default function AdminPage() {
                         title={booking ? (() => {
                           const contactData = getContactDisplayData(booking)
                           return `${contactData.firstName} ${contactData.lastName || ''}`.trim() || t('admin.agenda.booking.no_name')
-                        })() + ` - ${booking.participants_count} ${t('admin.agenda.booking.people')}` : isRoomSlotBlocked ? 'Créneau bloqué' : ''}
+                        })() + ` - ${booking.participants_count} ${t('admin.agenda.booking.people')}` : isRoomSlotBlocked ? t('admin.blocked_periods.slot_blocked_tooltip') : ''}
                       >
                         {/* Overlay créneau bloqué */}
                         {isRoomSlotBlocked && (

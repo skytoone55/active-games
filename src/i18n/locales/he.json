@@ -170,8 +170,16 @@
       "title": "חבילות אירוע",
       "description": "אירוע אקטיב גיימס",
       "tiers": [
-        { "label": "15 משתתפים מינימום", "price": "110", "currency": "₪" },
-        { "label": "30 משתתפים מינימום", "price": "100", "currency": "₪" }
+        {
+          "label": "15 משתתפים מינימום",
+          "price": "110",
+          "currency": "₪"
+        },
+        {
+          "label": "30 משתתפים מינימום",
+          "price": "100",
+          "currency": "₪"
+        }
       ],
       "roomPrice": "500₪",
       "roomLabel": "חדר אירוע פרטי",
@@ -190,8 +198,16 @@
       "title": "חבילות פרימיום",
       "description": "אירוע אקטיב + לייזר",
       "tiers": [
-        { "label": "15 משתתפים מינימום", "price": "140", "currency": "₪" },
-        { "label": "30 משתתפים מינימום", "price": "130", "currency": "₪" }
+        {
+          "label": "15 משתתפים מינימום",
+          "price": "140",
+          "currency": "₪"
+        },
+        {
+          "label": "30 משתתפים מינימום",
+          "price": "130",
+          "currency": "₪"
+        }
       ],
       "roomPrice": "500₪",
       "roomLabel": "חדר אירוע פרטי",
@@ -2537,6 +2553,60 @@
         "clients": "לקוחות",
         "team": "צוות"
       }
+    },
+    "blocked_periods": {
+      "title": "חסימת זמנים",
+      "tab_active": "פעילים ({count})",
+      "tab_new": "+ חדש",
+      "no_blocks": "אין זמנים חסומים",
+      "type_recurring": "קבוע",
+      "type_once": "חד פעמי",
+      "default_label": "סגור",
+      "until": "עד",
+      "mode_once": "📅 חד פעמי",
+      "mode_recurring": "🔁 קבוע",
+      "label_field": "סיבה / תווית",
+      "label_placeholder_once": "לדוגמה: סגירה יוצאת דופן",
+      "label_placeholder_recurring": "לדוגמה: תחזוקה שבועית",
+      "multi_day": "חסום מספר ימים רצופים",
+      "date": "תאריך",
+      "start_day": "יום התחלה",
+      "end_day": "יום סיום",
+      "start_time": "שעת התחלה",
+      "end_time": "שעת סיום",
+      "weekdays": "ימי השבוע",
+      "valid_from": "בתוקף מ",
+      "valid_until": "בתוקף עד",
+      "optional": "אופציונלי",
+      "optional_forever": "אופציונלי — ריק = ללא הגבלה",
+      "create": "צור חסימה",
+      "creating": "יוצר...",
+      "error_fill_date_time": "אנא מלא את התאריך והשעות",
+      "error_fill_days_time": "אנא בחר לפחות יום אחד ושעות",
+      "error_end_after_start": "שעת הסיום חייבת להיות אחרי שעת ההתחלה",
+      "error_create": "שגיאה ביצירת החסימה",
+      "error_unexpected": "שגיאה בלתי צפויה",
+      "slot_blocked": "משבצת זמן זו חסומה ולא ניתן לבצע בה הזמנה.",
+      "slot_blocked_tooltip": "משבצת חסומה",
+      "manage_button_title": "ניהול זמנים חסומים",
+      "days_short": [
+        "א׳",
+        "ב׳",
+        "ג׳",
+        "ד׳",
+        "ה׳",
+        "ו׳",
+        "ש׳"
+      ],
+      "days_full": [
+        "ראשון",
+        "שני",
+        "שלישי",
+        "רביעי",
+        "חמישי",
+        "שישי",
+        "שבת"
+      ]
     }
   },
   "messenger": {
@@ -2546,7 +2616,8 @@
       "faq": "שאלות נפוצות",
       "modules": "מודולים",
       "workflows": "תהליכים"
-    },    "title": "מסנג'ר",
+    },
+    "title": "מסנג'ר",
     "subtitle": "מערכת הודעות אוטומטית",
     "settings": {
       "title": "הגדרות",

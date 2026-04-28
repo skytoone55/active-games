@@ -179,8 +179,16 @@
       "title": "Forfaits Evenement",
       "description": "Evenement Active Games",
       "tiers": [
-        { "label": "15 participants minimum", "price": "110", "currency": "NIS" },
-        { "label": "30 participants minimum", "price": "100", "currency": "NIS" }
+        {
+          "label": "15 participants minimum",
+          "price": "110",
+          "currency": "NIS"
+        },
+        {
+          "label": "30 participants minimum",
+          "price": "100",
+          "currency": "NIS"
+        }
       ],
       "roomPrice": "500 NIS",
       "roomLabel": "Salle privee",
@@ -199,8 +207,16 @@
       "title": "Forfaits Premium",
       "description": "Evenement Active + Laser",
       "tiers": [
-        { "label": "15 participants minimum", "price": "140", "currency": "NIS" },
-        { "label": "30 participants minimum", "price": "130", "currency": "NIS" }
+        {
+          "label": "15 participants minimum",
+          "price": "140",
+          "currency": "NIS"
+        },
+        {
+          "label": "30 participants minimum",
+          "price": "130",
+          "currency": "NIS"
+        }
       ],
       "roomPrice": "500 NIS",
       "roomLabel": "Salle privee",
@@ -2540,6 +2556,60 @@
         "clients": "Clients",
         "team": "Équipe"
       }
+    },
+    "blocked_periods": {
+      "title": "Blocages de créneaux",
+      "tab_active": "Actifs ({count})",
+      "tab_new": "+ Nouveau",
+      "no_blocks": "Aucun créneau bloqué",
+      "type_recurring": "Récurrent",
+      "type_once": "Ponctuel",
+      "default_label": "Fermé",
+      "until": "jusqu'au",
+      "mode_once": "📅 Ponctuel",
+      "mode_recurring": "🔁 Récurrent",
+      "label_field": "Raison / étiquette",
+      "label_placeholder_once": "ex: Fermeture exceptionnelle",
+      "label_placeholder_recurring": "ex: Entretien hebdomadaire",
+      "multi_day": "Bloquer plusieurs jours consécutifs",
+      "date": "Date",
+      "start_day": "Jour de début",
+      "end_day": "Jour de fin",
+      "start_time": "Heure début",
+      "end_time": "Heure fin",
+      "weekdays": "Jours de la semaine",
+      "valid_from": "Valable du",
+      "valid_until": "Valable jusqu'au",
+      "optional": "optionnel",
+      "optional_forever": "optionnel — vide = indéfiniment",
+      "create": "Créer le blocage",
+      "creating": "Création...",
+      "error_fill_date_time": "Veuillez remplir la date et les heures",
+      "error_fill_days_time": "Veuillez sélectionner au moins un jour et les heures",
+      "error_end_after_start": "L'heure de fin doit être après l'heure de début",
+      "error_create": "Erreur lors de la création du blocage",
+      "error_unexpected": "Erreur inattendue",
+      "slot_blocked": "Ce créneau est bloqué et ne peut pas être réservé.",
+      "slot_blocked_tooltip": "Créneau bloqué",
+      "manage_button_title": "Gérer les plages bloquées",
+      "days_short": [
+        "Dim",
+        "Lun",
+        "Mar",
+        "Mer",
+        "Jeu",
+        "Ven",
+        "Sam"
+      ],
+      "days_full": [
+        "Dimanche",
+        "Lundi",
+        "Mardi",
+        "Mercredi",
+        "Jeudi",
+        "Vendredi",
+        "Samedi"
+      ]
     }
   },
   "messenger": {
@@ -2549,7 +2619,8 @@
       "faq": "FAQ",
       "modules": "Modules",
       "workflows": "Workflows"
-    },    "title": "Messenger",
+    },
+    "title": "Messenger",
     "subtitle": "Système de messagerie automatisé",
     "settings": {
       "title": "Paramètres",
@@ -2684,7 +2755,8 @@
         "max_tokens": "Tokens maximum",
         "max_tokens_help": "Longueur maximale de la réponse",
         "global_model_note": "Le provider et le modèle sont configurés globalement dans l'onglet Modèle IA"
-      },      "availability": {
+      },
+      "availability": {
         "success_message": "Message de succès (disponible)",
         "failure_message": "Message d'échec (non disponible)"
       },

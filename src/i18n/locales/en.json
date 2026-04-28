@@ -179,8 +179,16 @@
       "title": "Event Packages",
       "description": "Active Games Event",
       "tiers": [
-        { "label": "15 participants minimum", "price": "110", "currency": "NIS" },
-        { "label": "30 participants minimum", "price": "100", "currency": "NIS" }
+        {
+          "label": "15 participants minimum",
+          "price": "110",
+          "currency": "NIS"
+        },
+        {
+          "label": "30 participants minimum",
+          "price": "100",
+          "currency": "NIS"
+        }
       ],
       "roomPrice": "500 NIS",
       "roomLabel": "Private event room",
@@ -199,8 +207,16 @@
       "title": "Premium Event Packages",
       "description": "Active + Laser Event",
       "tiers": [
-        { "label": "15 participants minimum", "price": "140", "currency": "NIS" },
-        { "label": "30 participants minimum", "price": "130", "currency": "NIS" }
+        {
+          "label": "15 participants minimum",
+          "price": "140",
+          "currency": "NIS"
+        },
+        {
+          "label": "30 participants minimum",
+          "price": "130",
+          "currency": "NIS"
+        }
       ],
       "roomPrice": "500 NIS",
       "roomLabel": "Private event room",
@@ -2476,6 +2492,60 @@
         "clients": "Clients",
         "team": "Team"
       }
+    },
+    "blocked_periods": {
+      "title": "Blocked Time Slots",
+      "tab_active": "Active ({count})",
+      "tab_new": "+ New",
+      "no_blocks": "No blocked time slots",
+      "type_recurring": "Recurring",
+      "type_once": "One-time",
+      "default_label": "Closed",
+      "until": "until",
+      "mode_once": "📅 One-time",
+      "mode_recurring": "🔁 Recurring",
+      "label_field": "Reason / label",
+      "label_placeholder_once": "e.g. Exceptional closure",
+      "label_placeholder_recurring": "e.g. Weekly maintenance",
+      "multi_day": "Block multiple consecutive days",
+      "date": "Date",
+      "start_day": "Start day",
+      "end_day": "End day",
+      "start_time": "Start time",
+      "end_time": "End time",
+      "weekdays": "Days of the week",
+      "valid_from": "Valid from",
+      "valid_until": "Valid until",
+      "optional": "optional",
+      "optional_forever": "optional — empty = indefinitely",
+      "create": "Create block",
+      "creating": "Creating...",
+      "error_fill_date_time": "Please fill in the date and times",
+      "error_fill_days_time": "Please select at least one day and the times",
+      "error_end_after_start": "End time must be after start time",
+      "error_create": "Error creating block",
+      "error_unexpected": "Unexpected error",
+      "slot_blocked": "This time slot is blocked and cannot be booked.",
+      "slot_blocked_tooltip": "Blocked slot",
+      "manage_button_title": "Manage blocked time slots",
+      "days_short": [
+        "Sun",
+        "Mon",
+        "Tue",
+        "Wed",
+        "Thu",
+        "Fri",
+        "Sat"
+      ],
+      "days_full": [
+        "Sunday",
+        "Monday",
+        "Tuesday",
+        "Wednesday",
+        "Thursday",
+        "Friday",
+        "Saturday"
+      ]
     }
   },
   "messenger": {
@@ -2485,7 +2555,8 @@
       "faq": "FAQ",
       "modules": "Modules",
       "workflows": "Workflows"
-    },    "title": "Messenger",
+    },
+    "title": "Messenger",
     "subtitle": "Automated messaging system",
     "settings": {
       "title": "Settings",
@@ -2620,7 +2691,8 @@
         "max_tokens": "Maximum tokens",
         "max_tokens_help": "Maximum response length",
         "global_model_note": "Provider and model are configured globally in the AI Model tab"
-      },      "availability": {
+      },
+      "availability": {
         "success_message": "Success message (available)",
         "failure_message": "Failure message (unavailable)"
       },
