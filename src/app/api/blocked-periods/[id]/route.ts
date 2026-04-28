@@ -9,9 +9,9 @@ const supabase = createClient(
 /** DELETE /api/blocked-periods/:id — supprime un blocage */
 export async function DELETE(
   _request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const { id } = params
+  const { id } = await params
 
   const { error } = await supabase
     .from('blocked_time_periods')
