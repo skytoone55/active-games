@@ -91,8 +91,12 @@ export function useBookings(branchId: string | null, date?: string) {
     if (cached !== null) {
       setBookings(cached)
       setLoading(false) // Instant display (including empty days)
+    } else {
+      // Pas de cache pour cette date : vider immédiatement les données de la date précédente
+      // et afficher le spinner — évite un calendrier vide sans aucune indication de chargement
+      setBookings([])
+      setLoading(true)
     }
-    // If no cache, keep current loading state — fetchBookings will handle it
   }, [branchId, date])
 
   // Charger les réservations
@@ -103,9 +107,9 @@ export function useBookings(branchId: string | null, date?: string) {
       return
     }
 
-    // Éviter les appels concurrents — but auto-release after 15s to prevent infinite lock
-    if (isFetchingRef.current && !force) {
-      // Marquer qu'un refresh est en attente: sera exécuté dès que le fetch courant se termine
+    // Éviter les appels concurrents — toujours mettre en file d'attente, même avec force=true
+    // Deux fetches simultanés créent des race conditions (realtime + createBooking par exemple)
+    if (isFetchingRef.current) {
       pendingRefreshRef.current = true
       return
     }
@@ -114,14 +118,14 @@ export function useBookings(branchId: string | null, date?: string) {
     const supabase = getClient()
     isFetchingRef.current = true
 
-    // Safety: auto-release lock after 15 seconds to prevent infinite spinner
+    // Safety: auto-release lock after 8 seconds to prevent infinite spinner
     const lockTimeout = setTimeout(() => {
       if (isFetchingRef.current) {
-        console.warn('[useBookings] Fetch lock auto-released after 15s timeout')
+        console.warn('[useBookings] Fetch lock auto-released after 8s timeout')
         isFetchingRef.current = false
         setLoading(false)
       }
-    }, 15000)
+    }, 8000)
 
     // Only show loading spinner if no cache AND no data already in memory
     // This avoids the grey spinner when a refetch is triggered (realtime, visibility, etc.)
@@ -166,9 +170,9 @@ export function useBookings(branchId: string | null, date?: string) {
         return
       }
 
-      // Charger les slots et game_sessions pour chaque booking
+      // Charger slots, game_sessions et contacts EN PARALLÈLE (au lieu de séquentiellement)
       const bookingIds = bookingsData.map(b => b.id)
-      const [slotsResult, sessionsResult] = await Promise.all([
+      const [slotsResult, sessionsResult, contactsResult] = await Promise.all([
         supabase
           .from('booking_slots')
           .select('*')
@@ -180,12 +184,18 @@ export function useBookings(branchId: string | null, date?: string) {
           .select('*')
           .in('booking_id', bookingIds)
           .order('session_order')
-          .returns<GameSession[]>()
+          .returns<GameSession[]>(),
+        // CRM: contacts liés — chargé en parallèle avec slots et sessions
+        supabase
+          .from('booking_contacts')
+          .select('*, contact:contacts(*)')
+          .in('booking_id', bookingIds)
       ])
 
       const { data: slotsData, error: slotsError } = slotsResult
       const { data: sessionsData, error: sessionsError } = sessionsResult
-      
+      const { data: bookingContactsData } = contactsResult
+
       // Gérer les erreurs silencieusement si les tables n'existent pas encore
       if (slotsError) {
         console.warn('Error loading slots (table may not exist yet):', slotsError)
@@ -198,12 +208,6 @@ export function useBookings(branchId: string | null, date?: string) {
           console.warn('Error loading game_sessions:', sessionsError)
         }
       }
-
-      // CRM: Charger les contacts liés pour chaque booking
-      const { data: bookingContactsData } = await supabase
-        .from('booking_contacts')
-        .select('*, contact:contacts(*)')
-        .in('booking_id', bookingIds)
 
       // Créer un map des contacts par booking_id
       const contactsByBooking = new Map<string, { primary: Contact | null; all: Contact[] }>()
