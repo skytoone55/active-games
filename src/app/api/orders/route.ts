@@ -415,6 +415,55 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Vérifier si le créneau demandé tombe dans une plage bloquée
+    {
+      const { data: activeBlocks } = await supabase
+        .from('blocked_time_periods')
+        .select('id, is_recurring, start_datetime, end_datetime, recurrence_days, recurrence_start_time, recurrence_end_time, recurrence_valid_from, recurrence_valid_until')
+        .eq('branch_id', branch_id)
+
+      if (activeBlocks && activeBlocks.length > 0) {
+        const [reqHour, reqMinute] = (requested_time as string).split(':').map(Number)
+        const slotMinutes = reqHour * 60 + reqMinute
+        const dayOfWeek = new Date(`${requested_date}T12:00:00Z`).getDay() // 0=Dimanche
+
+        const isBlocked = activeBlocks.some((block: {
+          is_recurring: boolean
+          start_datetime: string | null
+          end_datetime: string | null
+          recurrence_days: number[] | null
+          recurrence_start_time: string | null
+          recurrence_end_time: string | null
+          recurrence_valid_from: string | null
+          recurrence_valid_until: string | null
+        }) => {
+          if (!block.is_recurring) {
+            if (!block.start_datetime || !block.end_datetime) return false
+            const slotUtc = createIsraelDateTime(requested_date as string, requested_time as string)
+            const blockStart = new Date(block.start_datetime)
+            const blockEnd = new Date(block.end_datetime)
+            return slotUtc >= blockStart && slotUtc < blockEnd
+          } else {
+            if (!block.recurrence_days?.includes(dayOfWeek)) return false
+            if (block.recurrence_valid_from && (requested_date as string) < block.recurrence_valid_from) return false
+            if (block.recurrence_valid_until && (requested_date as string) > block.recurrence_valid_until) return false
+            const [startH, startM] = (block.recurrence_start_time || '00:00').split(':').map(Number)
+            const [endH, endM] = (block.recurrence_end_time || '00:00').split(':').map(Number)
+            const startMin = startH * 60 + startM
+            const endMin = endH * 60 + endM
+            return slotMinutes >= startMin && slotMinutes < endMin
+          }
+        })
+
+        if (isBlocked) {
+          return NextResponse.json(
+            { success: false, error: 'Ce créneau est actuellement indisponible. Veuillez choisir un autre horaire.', messageKey: 'errors.slotBlocked' },
+            { status: 409 }
+          )
+        }
+      }
+    }
+
     // NOUVEAU : Chercher un order ABORTED existant pour ce client/date/heure
     // Si trouvé, on le mettra à jour au lieu de créer un nouveau
     const { data: existingAbortedOrder } = await supabase

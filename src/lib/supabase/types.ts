@@ -744,6 +744,25 @@ export type RolePermission = Database['public']['Tables']['role_permissions']['R
 export type ICountProduct = Database['public']['Tables']['icount_products']['Row']
 export type ICountFormula = Database['public']['Tables']['icount_formulas']['Row']
 
+// Créneaux bloqués (non généré depuis Database — table ajoutée manuellement)
+export interface BlockedPeriod {
+  id: string
+  branch_id: string
+  label: string
+  is_recurring: boolean
+  // Ponctuel
+  start_datetime: string | null
+  end_datetime: string | null
+  // Récurrent
+  recurrence_days: number[] | null        // [0..6] 0=Dimanche
+  recurrence_start_time: string | null    // "HH:MM" heure Israël
+  recurrence_end_time: string | null      // "HH:MM" heure Israël
+  recurrence_valid_from: string | null    // "YYYY-MM-DD"
+  recurrence_valid_until: string | null   // "YYYY-MM-DD"
+  created_by: string | null
+  created_at: string
+}
+
 // Types Insert (création)
 export type BookingInsert = Database['public']['Tables']['bookings']['Insert']
 export type BookingSlotInsert = Database['public']['Tables']['booking_slots']['Insert']

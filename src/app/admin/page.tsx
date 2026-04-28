@@ -3,9 +3,10 @@
 import { useState, useEffect, Fragment, useMemo } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import dynamic from 'next/dynamic'
-import { Loader2, ChevronLeft, ChevronRight, Calendar, Settings, Sliders } from 'lucide-react'
+import { Loader2, ChevronLeft, ChevronRight, Calendar, Settings, Sliders, Lock } from 'lucide-react'
 import { getClient } from '@/lib/supabase/client'
 import { useBookings, type BookingWithSlots, type CreateBookingData } from '@/hooks/useBookings'
+import { useBlockedPeriods } from '@/hooks/useBlockedPeriods'
 import { OrderDetailModalWrapper } from './components/OrderDetailModalWrapper'
 import { ConfirmationModal } from './components/ConfirmationModal'
 import { SettingsModal } from './components/SettingsModal'
@@ -13,6 +14,7 @@ import { SettingsModal } from './components/SettingsModal'
 // Dynamic imports pour les modals lourds — réduit le bundle initial de ~300 KB
 const BookingModal = dynamic(() => import('./components/BookingModal').then(m => ({ default: m.BookingModal })), { ssr: false })
 const AccountingModal = dynamic(() => import('./components/AccountingModal').then(m => ({ default: m.AccountingModal })), { ssr: false })
+const BlockedPeriodsModal = dynamic(() => import('./components/BlockedPeriodsModal').then(m => ({ default: m.BlockedPeriodsModal })), { ssr: false })
 import { AgendaStats } from './components/AgendaStats'
 import { useAgendaStats } from '@/hooks/useAgendaStats'
 import { GridSettingsPopup } from './components/GridSettingsPopup'
@@ -141,6 +143,8 @@ export default function AdminPage() {
   // État pour gérer les dimensions des grilles
   const [showGridSettingsModal, setShowGridSettingsModal] = useState(false)
   const [showBranchSettingsModal, setShowBranchSettingsModal] = useState(false)
+  const [showBlockedPeriodsModal, setShowBlockedPeriodsModal] = useState(false)
+  const [blockedSlotMessage, setBlockedSlotMessage] = useState<string | null>(null)
   const [gridWidths, setGridWidths] = useState({
     active: 100,  // Pourcentage par défaut
     laser: 100,
@@ -229,6 +233,9 @@ export default function AdminPage() {
     deleteAllBookings,
     refresh: refreshAllBookings
   } = useBookings(selectedBranchId, dateString) // Filtrer par date côté serveur — charge uniquement le jour affiché
+
+  // Plages horaires bloquées
+  const { blocks: blockedPeriods, loading: blockedPeriodsLoading, isSlotBlocked, createBlock, deleteBlock, refresh: refreshBlocks } = useBlockedPeriods(selectedBranchId)
 
   // refreshBranches est maintenant fourni par useAdmin() (AdminContext)
 
@@ -768,6 +775,15 @@ export default function AdminPage() {
     // - Pour une nouvelle réservation: create est requis
     if (booking && !canViewAgenda) return
     if (!booking && !canCreateAgenda) return
+
+    // Vérifier si le créneau est bloqué (uniquement pour les nouvelles réservations)
+    if (!booking && hour !== undefined && minute !== undefined) {
+      if (isSlotBlocked(dateString, hour, minute)) {
+        setBlockedSlotMessage('Ce créneau est bloqué et ne peut pas être réservé.')
+        setTimeout(() => setBlockedSlotMessage(null), 3500)
+        return
+      }
+    }
 
     if (booking) {
       setEditingBooking(booking)
@@ -2100,7 +2116,29 @@ export default function AdminPage() {
             >
               <Sliders className="w-5 h-5" />
             </button>
-            
+
+            {/* Bouton Plages bloquées */}
+            <button
+              onClick={() => setShowBlockedPeriodsModal(true)}
+              className={`p-2 rounded-lg transition-colors relative ${
+                blockedPeriods.length > 0
+                  ? isDark
+                    ? 'bg-orange-800 text-orange-200 hover:bg-orange-700'
+                    : 'bg-orange-100 text-orange-700 hover:bg-orange-200'
+                  : isDark
+                    ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              }`}
+              title="Gérer les plages bloquées"
+            >
+              <Lock className="w-5 h-5" />
+              {blockedPeriods.length > 0 && (
+                <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-orange-500 text-white text-[10px] flex items-center justify-center font-bold">
+                  {blockedPeriods.length}
+                </span>
+              )}
+            </button>
+
             <button
               onClick={() => setVisibleGrids(prev => ({ ...prev, active: !prev.active }))}
               className={`px-3 py-2 rounded-lg font-medium text-sm transition-colors ${
@@ -2519,14 +2557,18 @@ export default function AdminPage() {
                     const isBookingBottom = booking && (timeIndex === timeSlots.length - 1 || isDifferentBookingBottom)
                     const borderBottomColor = isBookingBottom ? (isDark ? '#6b7280' : '#9ca3af') : 'none' // Gris pour contour réservation
 
+                    const isActiveSlotBlocked = !booking && isSlotBlocked(dateString, slot.hour, slot.minute)
+
                     return (
                       <div
                         key={`cell-slot-${timeIndex}-${slotIndex}`}
                         onClick={() => booking ? openBookingModal(slot.hour, slot.minute, booking) : openBookingModal(slot.hour, slot.minute, undefined, 'GAME')}
-                        className={`cursor-pointer relative ${
+                        className={`relative ${
                           booking
-                            ? `flex items-center justify-center p-2 text-center`
-                            : `p-2 ${isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100'} transition-colors bg-transparent`
+                            ? `cursor-pointer flex items-center justify-center p-2 text-center`
+                            : isActiveSlotBlocked
+                              ? 'cursor-not-allowed p-2 bg-transparent'
+                              : `cursor-pointer p-2 ${isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100'} transition-colors bg-transparent`
                         }`}
                         style={{
                           gridColumn: booking ? `${gridColumn} / ${gridColumn + colSpan}` : gridColumn,
@@ -2541,8 +2583,14 @@ export default function AdminPage() {
                         title={booking ? (() => {
                           const contactData = getContactDisplayData(booking)
                           return `${contactData.firstName} ${contactData.lastName || ''}`.trim() || t('admin.agenda.booking.no_name')
-                        })() + ` - ${booking.participants_count} ${t('admin.agenda.booking.people')}` : ''}
+                        })() + ` - ${booking.participants_count} ${t('admin.agenda.booking.people')}` : isActiveSlotBlocked ? 'Créneau bloqué' : ''}
                       >
+                        {/* Overlay créneau bloqué */}
+                        {isActiveSlotBlocked && (
+                          <div className="absolute inset-0 pointer-events-none" style={{
+                            backgroundImage: `repeating-linear-gradient(45deg, transparent, transparent 4px, ${isDark ? 'rgba(156,163,175,0.25)' : 'rgba(156,163,175,0.35)'} 4px, ${isDark ? 'rgba(156,163,175,0.25)' : 'rgba(156,163,175,0.35)'} 8px)`
+                          }} />
+                        )}
                         {/* Badge OB supprimé - la colonne OB est la source de vérité */}
                         {booking && showDetails && (
                           <div className={`${getTextSizeClass(displayTextSize)} ${getTextWeightClass(displayTextWeight)} leading-tight ${isDark ? 'text-white' : 'text-white'}`} style={{ textShadow: '0 1px 3px rgba(0,0,0,0.5)' }}>
@@ -2707,11 +2755,13 @@ export default function AdminPage() {
                                 return null
                               }
                               
+                              const isLaserSlotBlocked = isSlotBlocked(dateString, slot.hour, slot.minute)
+
                               return (
                                 <div
                                   key={`laser-cell-${timeIndex}-${roomIndex}`}
                                   onClick={() => openBookingModal(slot.hour, slot.minute, undefined, 'GAME', 'LASER')}
-                                  className={`cursor-pointer relative p-2 ${isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100'} transition-colors bg-transparent`}
+                                  className={`relative p-2 ${isLaserSlotBlocked ? 'cursor-not-allowed' : `cursor-pointer ${isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100'} transition-colors`} bg-transparent`}
                                   style={{
                                     gridColumn,
                                     gridRow,
@@ -2721,7 +2771,14 @@ export default function AdminPage() {
                                     borderLeft: `2px solid ${isDark ? '#374151' : '#e5e7eb'}`,
                                     borderRight: `2px solid ${isDark ? '#374151' : '#e5e7eb'}`,
                                   }}
-                                />
+                                  title={isLaserSlotBlocked ? 'Créneau bloqué' : ''}
+                                >
+                                  {isLaserSlotBlocked && (
+                                    <div className="absolute inset-0 pointer-events-none" style={{
+                                      backgroundImage: `repeating-linear-gradient(45deg, transparent, transparent 4px, ${isDark ? 'rgba(156,163,175,0.25)' : 'rgba(156,163,175,0.35)'} 4px, ${isDark ? 'rgba(156,163,175,0.25)' : 'rgba(156,163,175,0.35)'} 8px)`
+                                    }} />
+                                  )}
+                                </div>
                               )
                             }
 
@@ -2938,14 +2995,18 @@ export default function AdminPage() {
                     const roomBookingStartTime = booking ? toIL(new Date(booking.start_datetime)) : null
                     const roomDisplayTime = roomBookingStartTime ? formatTime(roomBookingStartTime) : ''
 
+                    const isRoomSlotBlocked = !booking && isSlotBlocked(dateString, slot.hour, slot.minute)
+
                     return (
                       <div
                         key={`cell-room-${timeIndex}-${roomIndex}`}
                         onClick={() => booking ? openBookingModal(slot.hour, slot.minute, booking) : openBookingModal(slot.hour, slot.minute, undefined, 'EVENT')}
-                        className={`cursor-pointer ${
+                        className={`relative ${
                           booking
-                            ? `flex flex-col items-center justify-center p-1 text-center`
-                            : `p-1 ${isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100'} transition-colors bg-transparent`
+                            ? `cursor-pointer flex flex-col items-center justify-center p-1 text-center`
+                            : isRoomSlotBlocked
+                              ? 'cursor-not-allowed p-1 bg-transparent'
+                              : `cursor-pointer p-1 ${isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100'} transition-colors bg-transparent`
                         }`}
                         style={{
                           gridColumn: segment ? `${gridColumn} / ${gridColumn + colSpan}` : gridColumn,
@@ -2960,8 +3021,14 @@ export default function AdminPage() {
                         title={booking ? (() => {
                           const contactData = getContactDisplayData(booking)
                           return `${contactData.firstName} ${contactData.lastName || ''}`.trim() || t('admin.agenda.booking.no_name')
-                        })() + ` - ${booking.participants_count} ${t('admin.agenda.booking.people')}` : ''}
+                        })() + ` - ${booking.participants_count} ${t('admin.agenda.booking.people')}` : isRoomSlotBlocked ? 'Créneau bloqué' : ''}
                       >
+                        {/* Overlay créneau bloqué */}
+                        {isRoomSlotBlocked && (
+                          <div className="absolute inset-0 pointer-events-none" style={{
+                            backgroundImage: `repeating-linear-gradient(45deg, transparent, transparent 4px, ${isDark ? 'rgba(156,163,175,0.25)' : 'rgba(156,163,175,0.35)'} 4px, ${isDark ? 'rgba(156,163,175,0.25)' : 'rgba(156,163,175,0.35)'} 8px)`
+                          }} />
+                        )}
                         {booking && (
                           <>
                             <div className={`${getTextSizeClass(displayTextSize)} ${getTextWeightClass(displayTextWeight)} leading-tight ${isDark ? 'text-white' : 'text-white'}`} style={{ textShadow: '0 1px 3px rgba(0,0,0,0.5)' }}>
@@ -3101,6 +3168,30 @@ export default function AdminPage() {
         type={confirmationModal.type}
         isDark={isDark}
       />
+
+      {/* Panel Plages bloquées */}
+      {showBlockedPeriodsModal && selectedBranchId && (
+        <BlockedPeriodsModal
+          onClose={() => setShowBlockedPeriodsModal(false)}
+          branchId={selectedBranchId}
+          blocks={blockedPeriods}
+          loading={blockedPeriodsLoading}
+          userId={userData?.id || null}
+          onCreateBlock={createBlock}
+          onDeleteBlock={deleteBlock}
+          isDark={isDark}
+        />
+      )}
+
+      {/* Toast créneau bloqué */}
+      {blockedSlotMessage && (
+        <div className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-[9999] flex items-center gap-3 px-5 py-3 rounded-xl shadow-lg text-sm max-w-sm ${
+          isDark ? 'bg-orange-800 text-orange-100' : 'bg-orange-600 text-white'
+        }`}>
+          <Lock className="w-4 h-4 flex-shrink-0" />
+          <span>{blockedSlotMessage}</span>
+        </div>
+      )}
     </div>
   )
 }
