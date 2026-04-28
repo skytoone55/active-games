@@ -25,6 +25,7 @@ export default function HeroSection({ translations }: HeroSectionProps) {
           muted
           loop
           playsInline
+          preload="metadata"
           className="w-full h-full object-cover"
         >
           <source src="/videos/activegames.mp4" type="video/mp4" />

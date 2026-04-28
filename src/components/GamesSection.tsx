@@ -26,10 +26,38 @@ export default function GamesSection({ translations }: GamesSectionProps) {
   const [selectedGame, setSelectedGame] = useState<string | null>(null)
   const [mutedVideos, setMutedVideos] = useState<Record<string, boolean>>({})
   const videoRefs = useRef<Record<string, HTMLVideoElement | null>>({})
+  const cardRefs = useRef<Record<string, HTMLDivElement | null>>({})
 
   // Filtrer pour exclure "control" (8 jeux seulement pour le franchisé)
   const gameKeys = (Object.keys(localAssets.games) as Array<keyof typeof localAssets.games>)
     .filter(key => key !== 'control')
+
+  // Lazy-load vidéos : charger src uniquement quand la carte entre dans le viewport.
+  // Évite de télécharger ~90 MB de vidéos pour les visiteurs qui ne scrollent pas jusqu'ici.
+  const [visibleVideos, setVisibleVideos] = useState<Set<string>>(new Set())
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach(entry => {
+          const gameKey = (entry.target as HTMLElement).dataset.gameKey
+          if (!gameKey) return
+          if (entry.isIntersecting) {
+            setVisibleVideos(prev => new Set([...prev, gameKey]))
+            observer.unobserve(entry.target) // une fois chargée, plus besoin d'observer
+          }
+        })
+      },
+      { rootMargin: '150px' } // commence à charger 150px avant d'être visible
+    )
+
+    gameKeys.forEach(key => {
+      const el = cardRefs.current[key]
+      if (el) observer.observe(el)
+    })
+
+    return () => observer.disconnect()
+  }, [gameKeys.join(',')]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const toggleMute = (gameKey: string, e: React.MouseEvent) => {
     e.stopPropagation()
@@ -85,6 +113,8 @@ export default function GamesSection({ translations }: GamesSectionProps) {
             return (
               <motion.div
                 key={gameKey}
+                ref={(el) => { cardRefs.current[gameKey] = el }}
+                data-game-key={gameKey}
                 initial={{ opacity: 0, y: 30 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
@@ -98,11 +128,14 @@ export default function GamesSection({ translations }: GamesSectionProps) {
                     <>
                       <video
                         ref={(el) => { videoRefs.current[gameKey] = el }}
-                        src={assets.video!}
+                        // src chargé seulement quand la carte entre dans le viewport
+                        // (IntersectionObserver) → évite ~90 MB de téléchargement inutile
+                        src={visibleVideos.has(gameKey) ? assets.video! : undefined}
                         muted={isMuted}
                         loop
                         playsInline
                         autoPlay
+                        preload="none"
                         className="w-full h-full object-cover"
                       />
                       {/* Bouton Mute */}
