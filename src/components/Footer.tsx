@@ -3,6 +3,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { Mail, Phone, MapPin } from 'lucide-react'
+import { trackPhoneCall } from '@/lib/gtag-ads'
 
 interface FooterProps {
   translations: {
@@ -98,6 +99,7 @@ export default function Footer({ translations }: FooterProps) {
                 <a
                   href={`tel:${branch1.phone?.replace(/[^\d]/g, '') || ''}`}
                   className="flex items-center gap-2 text-gray-400 hover:text-primary transition-colors text-sm justify-center md:justify-start"
+                  onClick={trackPhoneCall}
                 >
                   <Phone className="w-4 h-4 flex-shrink-0" />
                   {branch1.phone}
@@ -121,6 +123,7 @@ export default function Footer({ translations }: FooterProps) {
                 <a
                   href={`tel:${branch2.phone?.replace(/[^\d]/g, '') || ''}`}
                   className="flex items-center gap-2 text-gray-400 hover:text-primary transition-colors text-sm justify-center md:justify-start"
+                  onClick={trackPhoneCall}
                 >
                   <Phone className="w-4 h-4 flex-shrink-0" />
                   {branch2.phone}
@@ -140,6 +143,7 @@ export default function Footer({ translations }: FooterProps) {
                   <a
                     href={`tel:${contactPhone.replace(/\s/g, '')}`}
                     className="flex items-center gap-2 text-gray-400 hover:text-primary transition-colors text-sm justify-center md:justify-start"
+                    onClick={trackPhoneCall}
                   >
                     <Phone className="w-4 h-4 flex-shrink-0" />
                     {contactPhone}

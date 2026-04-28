@@ -3,6 +3,7 @@
 import { motion } from 'framer-motion'
 import { MapPin } from 'lucide-react'
 import Image from 'next/image'
+import { trackPhoneCall } from '@/lib/gtag-ads'
 
 interface BranchesSectionProps {
   translations: {
@@ -107,10 +108,11 @@ export default function BranchesSection({ translations }: BranchesSectionProps) 
                       />
                     </a>
                   </div>
-                  <a 
+                  <a
                     href={`tel:${branch.phone.replace(/[^\d]/g, '')}`}
                     className="text-primary hover:text-primary/80 transition-colors font-medium"
                     style={{ fontFamily: 'Poppins, sans-serif' }}
+                    onClick={trackPhoneCall}
                   >
                     {branch.phone}
                   </a>
