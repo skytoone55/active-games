@@ -158,7 +158,28 @@ export function setCachedBookings(branchId: string, date: string, bookings: Book
     entry.data[date] = bookings
     entry.timestamp = Date.now()
 
-    localStorage.setItem(CACHE_KEYS.BOOKINGS, JSON.stringify(entry))
+    try {
+      localStorage.setItem(CACHE_KEYS.BOOKINGS, JSON.stringify(entry))
+    } catch (e) {
+      // QuotaExceededError : nettoyer les dates passées et réessayer une fois
+      if (e instanceof DOMException) {
+        console.warn('[Cache] LocalStorage quota exceeded, cleaning old dates...')
+        cleanOldBookings()
+        try {
+          // Re-lire après nettoyage et réinsérer juste cette date
+          const cleaned = localStorage.getItem(CACHE_KEYS.BOOKINGS)
+          const cleanedEntry = cleaned ? JSON.parse(cleaned) : { data: {}, timestamp: Date.now(), branchId }
+          cleanedEntry.data[date] = bookings
+          cleanedEntry.timestamp = Date.now()
+          localStorage.setItem(CACHE_KEYS.BOOKINGS, JSON.stringify(cleanedEntry))
+        } catch {
+          // Si ça échoue encore, on abandonne proprement (le state React est correct, juste pas de cache)
+          console.warn('[Cache] Cache write failed even after cleanup — operating without cache')
+        }
+      } else {
+        console.warn('Error writing bookings cache:', e)
+      }
+    }
   } catch (e) {
     console.warn('Error writing bookings cache:', e)
   }

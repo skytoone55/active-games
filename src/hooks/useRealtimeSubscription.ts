@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useCallback } from 'react'
+import { useEffect, useRef, useCallback, useState } from 'react'
 import { getClient } from '@/lib/supabase/client'
 import type { RealtimeChannel, RealtimePostgresChangesPayload } from '@supabase/supabase-js'
 
@@ -31,6 +31,8 @@ export function useRealtimeSubscription(
 ) {
   const channelRef = useRef<RealtimeChannel | null>(null)
   const isSubscribingRef = useRef(false)
+  // Compteur pour forcer la re-subscription après une erreur réseau
+  const [retryCount, setRetryCount] = useState(0)
 
   const { table, event = '*', filter, onInsert, onUpdate, onDelete, onChange } = config
 
@@ -46,9 +48,13 @@ export function useRealtimeSubscription(
   useEffect(() => { onDeleteRef.current = onDelete }, [onDelete])
 
   useEffect(() => {
-    // Ne pas s'abonner si désactivé ou déjà en cours
-    if (!enabled || isSubscribingRef.current) {
-      return
+    // Ne pas s'abonner si désactivé
+    if (!enabled) return
+
+    // Si une subscription est déjà en cours de connexion, on l'annule et on repart
+    // (cas: branchId change rapidement avant que la connexion aboutisse)
+    if (isSubscribingRef.current) {
+      isSubscribingRef.current = false
     }
 
     const supabase = getClient()
@@ -111,7 +117,8 @@ export function useRealtimeSubscription(
           console.log(`[Realtime] Subscribed to ${table}${filter ? ` with filter ${filter}` : ''}`)
         } else if (status === 'CHANNEL_ERROR') {
           console.error(`[Realtime] Error subscribing to ${table}`, err)
-          // Auto-retry after 3s on channel error
+          // Auto-retry after 3s — on nettoie le canal et on force une re-subscription
+          // via setRetryCount (increment → React re-run le useEffect → re-subscribe)
           setTimeout(() => {
             if (channelRef.current) {
               console.log(`[Realtime] Retrying subscription to ${table}...`)
@@ -119,13 +126,12 @@ export function useRealtimeSubscription(
               sb.removeChannel(channelRef.current)
               channelRef.current = null
             }
-            // Trigger re-subscription by resetting the subscribing flag
-            // The next render or visibility change will pick it up
             isSubscribingRef.current = false
+            setRetryCount(n => n + 1) // ← force re-subscription via React state
           }, 3000)
         } else if (status === 'TIMED_OUT') {
           console.error(`[Realtime] Timeout subscribing to ${table}`)
-          // Auto-retry after 5s on timeout
+          // Auto-retry after 5s
           setTimeout(() => {
             if (channelRef.current) {
               console.log(`[Realtime] Retrying subscription to ${table} after timeout...`)
@@ -134,6 +140,7 @@ export function useRealtimeSubscription(
               channelRef.current = null
             }
             isSubscribingRef.current = false
+            setRetryCount(n => n + 1) // ← force re-subscription via React state
           }, 5000)
         }
       })
@@ -141,7 +148,7 @@ export function useRealtimeSubscription(
     channelRef.current = channel
 
     // Cleanup au démontage ou changement de dépendances
-    // Only re-subscribe when table/event/filter/enabled change, NOT when callbacks change
+    // retryCount est inclus pour forcer la re-subscription après CHANNEL_ERROR / TIMED_OUT
     return () => {
       isSubscribingRef.current = false
       if (channelRef.current) {
@@ -149,7 +156,7 @@ export function useRealtimeSubscription(
         channelRef.current = null
       }
     }
-  }, [enabled, table, event, filter])
+  }, [enabled, table, event, filter, retryCount])
 
   const unsubscribe = useCallback(() => {
     if (channelRef.current) {

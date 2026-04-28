@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { getClient } from '@/lib/supabase/client'
+import { createIsraelDateTime } from '@/lib/dates'
 import { useRealtimeRefresh, type TableName } from './useRealtimeSubscription'
 import {
   getCachedBookings,
@@ -146,9 +147,12 @@ export function useBookings(branchId: string | null, date?: string) {
         .order('start_datetime', { ascending: true })
 
       // Filtrer par date si fournie
+      // IMPORTANT: utiliser createIsraelDateTime pour convertir la date locale en UTC correct.
+      // Israël est UTC+2 (hiver) ou UTC+3 (été). Un filtre naïf "date T00:00:00Z"
+      // manque les réservations de minuit à 3h du matin (stockées la veille en UTC).
       if (date) {
-        const startOfDay = `${date}T00:00:00.000Z`
-        const endOfDay = `${date}T23:59:59.999Z`
+        const startOfDay = createIsraelDateTime(date, '00:00').toISOString()
+        const endOfDay   = createIsraelDateTime(date, '23:59').toISOString()
         query = query
           .gte('start_datetime', startOfDay)
           .lte('start_datetime', endOfDay)
