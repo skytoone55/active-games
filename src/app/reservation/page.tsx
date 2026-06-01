@@ -155,7 +155,11 @@ function ReservationContent() {
       if (type) newBookingData.type = type
       if (players) newBookingData.players = parseInt(players, 10)
       if (gameArea) newBookingData.gameArea = gameArea
-      if (numberOfGames) newBookingData.numberOfGames = parseInt(numberOfGames, 10)
+      if (numberOfGames) {
+        const parsedGames = parseInt(numberOfGames, 10)
+        // Active Games en ligne = minimum 1h (2 créneaux de 30 min). On empêche un lien ?games=1 de forcer 30 min.
+        newBookingData.numberOfGames = gameArea === 'ACTIVE' ? Math.max(2, parsedGames) : parsedGames
+      }
       if (date) newBookingData.date = date
       if (time) newBookingData.time = time
       if (firstName) newBookingData.firstName = firstName

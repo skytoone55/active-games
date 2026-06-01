@@ -415,6 +415,19 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // GARDE MÉTIER: Active Games en ligne = minimum 1h (2 créneaux de 30 min).
+    // Le produit 30 min (active_30) existe pour la vente en magasin uniquement.
+    // Bloque les liens préremplis (?games=1) ou un lien Clara qui créeraient une session de 30 min.
+    if (order_type === 'GAME') {
+      const isActiveOnly = game_area === 'ACTIVE' || !game_area
+      if (isActiveOnly && (!number_of_games || number_of_games < 2)) {
+        return NextResponse.json(
+          { success: false, error: 'La durée minimale pour Active Games en ligne est de 1 heure.', messageKey: 'errors.activeGameMinDuration' },
+          { status: 400 }
+        )
+      }
+    }
+
     // Vérifier si le créneau demandé tombe dans une plage bloquée
     {
       const { data: activeBlocks } = await supabase

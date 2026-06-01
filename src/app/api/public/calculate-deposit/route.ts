@@ -90,6 +90,17 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // GARDE MÉTIER: Active Games en ligne = minimum 1h (2 créneaux de 30 min).
+    if (order_type === 'GAME') {
+      const isActiveOnly = game_area === 'ACTIVE' || !game_area
+      if (isActiveOnly && (!number_of_games || number_of_games < 2)) {
+        return NextResponse.json(
+          { success: false, error: 'La durée minimale pour Active Games en ligne est de 1 heure.', messageKey: 'errors.activeGameMinDuration' },
+          { status: 400 }
+        )
+      }
+    }
+
     // Load pricing data (same as usePricingData hook)
     const [productsRes, formulasRes, roomsRes] = await Promise.all([
       supabase

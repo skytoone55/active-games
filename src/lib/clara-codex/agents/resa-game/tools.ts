@@ -49,7 +49,8 @@ function formatDayName(date: string): string {
 function resolveNumberOfGames(gameArea: string, duration?: number, numberOfGames?: number): number {
   if (gameArea === 'ACTIVE') {
     const dur = duration || 60
-    return Math.round(dur / 30) // 60→2, 90→3, 120→4
+    // Minimum 1h en ligne = 2 créneaux de 30 min (le produit 30 min est réservé au magasin).
+    return Math.max(2, Math.round(dur / 30)) // 60→2, 90→3, 120→4
   }
   if (gameArea === 'MIX') {
     return 1
@@ -190,8 +191,8 @@ export function createGameBookingLink(context: AgentContext) {
       gameArea: z.enum(['ACTIVE', 'LASER', 'MIX']),
       numberOfGames: z.number().int().min(1).max(6).optional()
         .describe('For LASER TAG only: number of games (1, 2, or 3).'),
-      duration: z.number().int().optional()
-        .describe('For ACTIVE GAMES only: total duration in minutes (60, 90, or 120).'),
+      duration: z.number().int().min(60).optional()
+        .describe('For ACTIVE GAMES only: total duration in minutes. Minimum 60. Allowed: 60, 90, 120.'),
       date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
       time: z.string().regex(/^\d{2}:\d{2}$/),
       email: z.string().email(),
