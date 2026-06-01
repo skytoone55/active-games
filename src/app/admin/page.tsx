@@ -204,6 +204,23 @@ export default function AdminPage() {
     }
   }, [selectedBranchId])
 
+  // Précharger le code des fenêtres lourdes pendant que le navigateur est inactif,
+  // pour que le PREMIER clic sur une réservation ouvre la fenêtre instantanément
+  // (sinon le code est téléchargé au moment du clic → délai).
+  useEffect(() => {
+    const preload = () => {
+      import('./components/BookingModal')
+      import('./components/AccountingModal')
+    }
+    const w = window as Window & { requestIdleCallback?: (cb: () => void) => number }
+    if (typeof w.requestIdleCallback === 'function') {
+      w.requestIdleCallback(preload)
+    } else {
+      const timer = setTimeout(preload, 2000)
+      return () => clearTimeout(timer)
+    }
+  }, [])
+
   // Fonction utilitaire pour formater une date en YYYY-MM-DD (sans conversion UTC)
   const formatDateToString = (date: Date): string => {
     const year = date.getFullYear()

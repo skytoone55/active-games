@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
-import Script from 'next/script'
 import './globals.css'
 import { GlobalWidgets } from '@/components'
+import { TrackingScripts } from '@/components/TrackingScripts'
 
 export const metadata: Metadata = {
   title: 'Active Games - New Generation Leisure Activities',
@@ -25,52 +25,15 @@ export default function RootLayout({
   return (
     <html lang="he" dir="rtl" suppressHydrationWarning>
       <head>
-        {/* Google Analytics GA4 */}
-        <Script
-          strategy="afterInteractive"
-          src="https://www.googletagmanager.com/gtag/js?id=G-2PPM01Z55V"
-        />
-        <Script
-          id="google-analytics"
-          strategy="afterInteractive"
-          dangerouslySetInnerHTML={{
-            __html: `
-              window.dataLayer = window.dataLayer || [];
-              function gtag(){dataLayer.push(arguments);}
-              gtag('js', new Date());
-              gtag('config', 'G-2PPM01Z55V');
-              gtag('config', 'AW-18086069664');
-            `,
-          }}
-        />
-        {/* Meta Pixel */}
-        <Script
-          id="meta-pixel"
-          strategy="afterInteractive"
-          dangerouslySetInnerHTML={{
-            __html: `
-              !function(f,b,e,v,n,t,s)
-              {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-              n.callMethod.apply(n,arguments):n.queue.push(arguments)};
-              if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
-              n.queue=[];t=b.createElement(e);t.async=!0;
-              t.src=v;s=b.getElementsByTagName(e)[0];
-              s.parentNode.insertBefore(t,s)}(window,document,'script',
-              'https://connect.facebook.net/en_US/fbevents.js');
-              fbq('init','800335057915446');
-              fbq('track','PageView');
-            `,
-          }}
-        />
         <script
           dangerouslySetInnerHTML={{
             __html: `
-              // Disable mouse wheel on number inputs globally
+              // Disable mouse wheel on number inputs globally (passif: pas de preventDefault)
               document.addEventListener('wheel', function(e) {
-                if (document.activeElement.type === 'number') {
+                if (document.activeElement && document.activeElement.type === 'number') {
                   document.activeElement.blur();
                 }
-              });
+              }, { passive: true });
             `,
           }}
         />
@@ -93,6 +56,7 @@ export default function RootLayout({
         </a>
         {children}
         <GlobalWidgets />
+        <TrackingScripts />
       </body>
     </html>
   )
