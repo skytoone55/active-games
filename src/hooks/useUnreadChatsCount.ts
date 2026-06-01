@@ -12,9 +12,10 @@ import { useRealtimeSubscription } from './useRealtimeSubscription'
  */
 export function useUnreadChatsCount(branches: { id: string }[]) {
   const [waCount, setWaCount] = useState(0)
-  const [msCount, setMsCount] = useState(0)
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null)
 
+  // Messenger (chat du site) est 100% automatisé par Clara : son compteur de
+  // non-lus est toujours 0 côté API. On ne requête donc QUE WhatsApp.
   const fetchCounts = useCallback(async () => {
     try {
       const baseParams = new URLSearchParams({
@@ -28,16 +29,9 @@ export function useUnreadChatsCount(branches: { id: string }[]) {
         baseParams.set('allowedBranches', branches.map(b => b.id).join(','))
       }
 
-      // Fetch both counts in parallel — countOnly returns just { count: N }
-      const [waRes, msRes] = await Promise.all([
-        fetch(`/api/chat/conversations?${baseParams}`),
-        fetch(`/api/chat/messenger-conversations?${baseParams}`)
-      ])
-
-      const [waData, msData] = await Promise.all([waRes.json(), msRes.json()])
-
+      const waRes = await fetch(`/api/chat/conversations?${baseParams}`)
+      const waData = await waRes.json()
       setWaCount(waData.count || 0)
-      setMsCount(msData.count || 0)
     } catch (error) {
       console.error('[useUnreadChatsCount] Error:', error)
     }
@@ -80,25 +74,13 @@ export function useUnreadChatsCount(branches: { id: string }[]) {
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
   }, [fetchCounts, branches.length])
 
-  // Listen for changes on WhatsApp conversations & messages (single handler)
+  // Un message WhatsApp entrant met à jour conversation.unread_count (UPDATE),
+  // tout comme le marquage lu/non-lu. Écouter la table des conversations suffit
+  // donc pour le badge — inutile de s'abonner à whatsapp_messages (redondant).
   useRealtimeSubscription(
     { table: 'whatsapp_conversations', onChange: handleRealtimeChange },
     true
   )
-  useRealtimeSubscription(
-    { table: 'whatsapp_messages', onChange: handleRealtimeChange },
-    true
-  )
 
-  // Listen for changes on Messenger conversations & messages (single handler)
-  useRealtimeSubscription(
-    { table: 'messenger_conversations', onChange: handleRealtimeChange },
-    true
-  )
-  useRealtimeSubscription(
-    { table: 'messenger_messages', onChange: handleRealtimeChange },
-    true
-  )
-
-  return waCount + msCount
+  return waCount
 }

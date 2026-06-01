@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { getClient } from '@/lib/supabase/client'
 import { createIsraelDateTime } from '@/lib/dates'
-import { useRealtimeRefresh, type TableName } from './useRealtimeSubscription'
+import { useRealtimeSubscription } from './useRealtimeSubscription'
 import {
   getCachedBookings,
   setCachedBookings,
@@ -338,18 +338,141 @@ export function useBookings(branchId: string | null, date?: string) {
     }
   }, [branchId, date, fetchBookings])
 
-  // Realtime: écouter les changements sur bookings et game_sessions
-  // IMPORTANT: useMemo pour stabiliser la référence du tableau — sinon useEffect
-  // dans useRealtimeRefresh détruit et recrée les subscriptions à chaque render,
-  // causant une boucle infinie quand des events arrivent pendant la re-souscription
-  const additionalRealtimeTables = useMemo<TableName[]>(() => ['game_sessions', 'booking_slots'], [])
-  // Utiliser force=true pour le realtime — les events doivent toujours passer même si un fetch est en cours
-  const handleRealtimeRefresh = useCallback(() => fetchBookings(true), [fetchBookings])
-  useRealtimeRefresh(
-    'bookings',
-    branchId,
-    handleRealtimeRefresh,
-    additionalRealtimeTables
+  // ─── Mises à jour CIBLÉES via Realtime ───────────────────────────────────
+  // Avant : chaque événement rechargeait toute la journée (~3 requêtes).
+  // Maintenant : on n'actualise que la réservation concernée → instantané et
+  // beaucoup moins de requêtes. La suppression est appliquée sans aucune requête.
+
+  // Une réservation appartient-elle au jour affiché ? (bornes Israël)
+  const isInCurrentDay = useCallback((startDatetime: string): boolean => {
+    if (!date) return true
+    const start = createIsraelDateTime(date, '00:00').toISOString()
+    const end = createIsraelDateTime(date, '23:59').toISOString()
+    return startDatetime >= start && startDatetime <= end
+  }, [date])
+
+  // Recharger UNE seule réservation (avec slots/sessions/contacts). null si
+  // elle ne doit pas/plus apparaître (autre branche, annulée, introuvable).
+  const fetchSingleBooking = useCallback(async (bookingId: string): Promise<BookingWithSlots | null> => {
+    if (!branchId) return null
+    const supabase = getClient()
+
+    const { data: booking } = await supabase
+      .from('bookings')
+      .select('*')
+      .eq('id', bookingId)
+      .maybeSingle<Booking>()
+
+    if (!booking || booking.branch_id !== branchId || booking.status === 'CANCELLED') return null
+
+    const [slotsResult, sessionsResult, contactsResult] = await Promise.all([
+      supabase.from('booking_slots').select('*').eq('booking_id', bookingId).order('slot_start').returns<BookingSlot[]>(),
+      supabase.from('game_sessions').select('*').eq('booking_id', bookingId).order('session_order').returns<GameSession[]>(),
+      supabase.from('booking_contacts').select('*, contact:contacts(*)').eq('booking_id', bookingId),
+    ])
+
+    const slots = slotsResult.data || []
+    const game_sessions = sessionsResult.data || []
+
+    interface BookingContactRow { is_primary: boolean; contact: Contact | null }
+    const rows = (contactsResult.data as BookingContactRow[] | null) || []
+    const allContacts: Contact[] = []
+    let primaryContact: Contact | null = null
+    rows.forEach((bc) => {
+      if (!bc.contact) return
+      allContacts.push(bc.contact)
+      if (bc.is_primary) primaryContact = bc.contact
+    })
+
+    // Fallback contact principal via primary_contact_id (anciennes données)
+    if (!primaryContact && booking.primary_contact_id) {
+      const { data: pc } = await supabase
+        .from('contacts')
+        .select('*')
+        .eq('id', booking.primary_contact_id)
+        .eq('status', 'active')
+        .maybeSingle<Contact>()
+      if (pc) primaryContact = pc
+    }
+
+    return {
+      ...booking,
+      slots,
+      game_sessions,
+      primaryContact,
+      allContacts: allContacts.length > 0 ? allContacts : (primaryContact ? [primaryContact] : []),
+    }
+  }, [branchId])
+
+  // Insérer/remplacer une réservation dans l'état (et le cache), tri par heure.
+  const upsertBooking = useCallback((b: BookingWithSlots) => {
+    setBookings(prev => {
+      const idx = prev.findIndex(x => x.id === b.id)
+      const next = idx === -1 ? [...prev, b] : prev.map(x => (x.id === b.id ? b : x))
+      next.sort((a, c) => a.start_datetime.localeCompare(c.start_datetime))
+      if (date && branchId) {
+        setCachedBookings(branchId, date, next)
+        setLastSyncTime(branchId)
+      }
+      return next
+    })
+  }, [branchId, date])
+
+  // Retirer une réservation de l'état (et du cache).
+  const removeBooking = useCallback((id: string) => {
+    setBookings(prev => {
+      const next = prev.filter(b => b.id !== id)
+      if (next.length === prev.length) return prev
+      if (date && branchId) {
+        setCachedBookings(branchId, date, next)
+        setLastSyncTime(branchId)
+      }
+      return next
+    })
+  }, [branchId, date])
+
+  const handleBookingUpsert = useCallback(async (payload: { new?: Record<string, unknown> }) => {
+    const row = payload.new as Booking | undefined
+    if (!row?.id) return
+    // Annulée ou déplacée hors du jour affiché → la retirer de la vue
+    if (row.status === 'CANCELLED' || !isInCurrentDay(row.start_datetime)) {
+      removeBooking(row.id)
+      return
+    }
+    const full = await fetchSingleBooking(row.id)
+    if (full) upsertBooking(full)
+    else removeBooking(row.id)
+  }, [isInCurrentDay, fetchSingleBooking, upsertBooking, removeBooking])
+
+  const handleBookingDelete = useCallback((payload: { old?: Record<string, unknown> }) => {
+    const id = (payload.old as { id?: string } | undefined)?.id
+    if (id) removeBooking(id)
+  }, [removeBooking])
+
+  // game_sessions / booking_slots : le payload porte booking_id → recharger
+  // uniquement cette réservation.
+  const handleRelatedChange = useCallback(async (payload: { new?: Record<string, unknown>; old?: Record<string, unknown> }) => {
+    const bid = (payload.new as { booking_id?: string } | undefined)?.booking_id
+      || (payload.old as { booking_id?: string } | undefined)?.booking_id
+    if (!bid) return
+    const full = await fetchSingleBooking(bid)
+    if (full) upsertBooking(full)
+    else removeBooking(bid)
+  }, [fetchSingleBooking, upsertBooking, removeBooking])
+
+  const branchFilter = branchId ? `branch_id=eq.${branchId}` : undefined
+
+  useRealtimeSubscription(
+    { table: 'bookings', filter: branchFilter, onInsert: handleBookingUpsert, onUpdate: handleBookingUpsert, onDelete: handleBookingDelete },
+    !!branchId
+  )
+  useRealtimeSubscription(
+    { table: 'game_sessions', filter: branchFilter, onChange: handleRelatedChange },
+    !!branchId
+  )
+  useRealtimeSubscription(
+    { table: 'booking_slots', filter: branchFilter, onChange: handleRelatedChange },
+    !!branchId
   )
 
   // Créer une réservation via l'API (garantit les logs et l'email)
