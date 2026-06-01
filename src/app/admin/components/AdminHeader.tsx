@@ -192,6 +192,7 @@ function AdminHeaderComponent({
           {hasPermission('agenda', 'can_view') && (
             <Link
               href="/admin"
+              prefetch
               title={t('admin.header.agenda')}
               className={`px-3 min-[1280px]:px-4 py-2 rounded-lg transition-colors flex items-center gap-2 relative ${
                 pathname === '/admin'
@@ -214,6 +215,7 @@ function AdminHeaderComponent({
           {hasPermission('clients', 'can_view') && (
             <Link
               href="/admin/clients"
+              prefetch
               title={t('admin.header.clients')}
               className={`px-3 min-[1280px]:px-4 py-2 rounded-lg transition-colors flex items-center gap-2 relative ${
                 pathname === '/admin/clients'
@@ -236,6 +238,7 @@ function AdminHeaderComponent({
           {hasPermission('orders', 'can_view') && (
             <Link
               href="/admin/orders"
+              prefetch
               title={t('admin.header.orders')}
               className={`px-3 min-[1280px]:px-4 py-2 rounded-lg transition-colors flex items-center gap-2 relative ${
                 pathname === '/admin/orders'
@@ -269,6 +272,7 @@ function AdminHeaderComponent({
           {hasPermission('chat', 'can_view') && (
             <Link
               href="/admin/chat"
+              prefetch
               title={t('admin.header.chat')}
               className={`relative px-3 min-[1280px]:px-4 py-2 rounded-lg transition-colors flex items-center gap-2 ${
                 pathname === '/admin/chat'
@@ -601,6 +605,7 @@ function AdminHeaderComponent({
               {hasPermission('agenda', 'can_view') && (
                 <Link
                   href="/admin"
+                  prefetch
                   onClick={closeMobileMenu}
                   className={`flex items-center gap-3 px-4 py-2 rounded-lg transition-colors relative ${
                     pathname === '/admin'
