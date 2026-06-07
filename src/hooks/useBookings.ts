@@ -68,6 +68,86 @@ export interface CreateBookingData {
   locale?: 'he' | 'fr' | 'en'
 }
 
+// Décale une date "YYYY-MM-DD" de n jours (date locale, sans conversion UTC —
+// cohérent avec formatDateToString de l'agenda)
+function addDaysToDateStr(dateStr: string, n: number): string {
+  const [y, m, d] = dateStr.split('-').map(Number)
+  const dt = new Date(y, m - 1, d)
+  dt.setDate(dt.getDate() + n)
+  const yy = dt.getFullYear()
+  const mm = String(dt.getMonth() + 1).padStart(2, '0')
+  const dd = String(dt.getDate()).padStart(2, '0')
+  return `${yy}-${mm}-${dd}`
+}
+
+// Chargement complet (réservations + slots + sessions + contacts) pour UNE date,
+// renvoyé sans toucher au state. Utilisé pour préchauffer le cache des jours
+// adjacents → la navigation entre dates devient instantanée (plus d'attente réseau).
+async function loadBookingsForDate(branchId: string, dateStr: string): Promise<BookingWithSlots[]> {
+  const supabase = getClient()
+  const startOfDay = createIsraelDateTime(dateStr, '00:00').toISOString()
+  const endOfDay = createIsraelDateTime(dateStr, '23:59').toISOString()
+
+  const { data: bookingsData, error } = await supabase
+    .from('bookings')
+    .select('*')
+    .eq('branch_id', branchId)
+    .neq('status', 'CANCELLED')
+    .gte('start_datetime', startOfDay)
+    .lte('start_datetime', endOfDay)
+    .order('start_datetime', { ascending: true })
+    .returns<Booking[]>()
+
+  if (error || !bookingsData || bookingsData.length === 0) return []
+
+  const bookingIds = bookingsData.map(b => b.id)
+  const [slotsResult, sessionsResult, contactsResult] = await Promise.all([
+    supabase.from('booking_slots').select('*').in('booking_id', bookingIds).order('slot_start').returns<BookingSlot[]>(),
+    supabase.from('game_sessions').select('*').in('booking_id', bookingIds).order('session_order').returns<GameSession[]>(),
+    supabase.from('booking_contacts').select('*, contact:contacts(*)').in('booking_id', bookingIds),
+  ])
+
+  const slotsData = slotsResult.data
+  const sessionsData = sessionsResult.data
+  const bookingContactsData = contactsResult.data
+
+  const contactsByBooking = new Map<string, { primary: Contact | null; all: Contact[] }>()
+  interface BookingContactRow { booking_id: string; is_primary: boolean; contact: Contact | null }
+  ;(bookingContactsData as BookingContactRow[] | null)?.forEach((bc) => {
+    if (!bc.contact) return
+    if (!contactsByBooking.has(bc.booking_id)) contactsByBooking.set(bc.booking_id, { primary: null, all: [] })
+    const entry = contactsByBooking.get(bc.booking_id)!
+    entry.all.push(bc.contact)
+    if (bc.is_primary) entry.primary = bc.contact
+  })
+
+  const primaryContactIds = bookingsData
+    .filter(b => b.primary_contact_id && !contactsByBooking.has(b.id))
+    .map(b => b.primary_contact_id!)
+  const primaryContactsMap = new Map<string, Contact>()
+  if (primaryContactIds.length > 0) {
+    const { data: pcs } = await supabase
+      .from('contacts').select('*').in('id', primaryContactIds).eq('status', 'active').returns<Contact[]>()
+    pcs?.forEach(c => primaryContactsMap.set(c.id, c))
+  }
+
+  return bookingsData.map(booking => {
+    const slots = slotsData?.filter(s => s.booking_id === booking.id) || []
+    const game_sessions = sessionsData?.filter(s => s.booking_id === booking.id) || []
+    const contacts = contactsByBooking.get(booking.id)
+    let primaryContact: Contact | null = null
+    if (contacts?.primary) primaryContact = contacts.primary
+    else if (booking.primary_contact_id) primaryContact = primaryContactsMap.get(booking.primary_contact_id) || null
+    return {
+      ...booking,
+      slots,
+      game_sessions,
+      primaryContact,
+      allContacts: contacts?.all || (primaryContact ? [primaryContact] : []),
+    }
+  })
+}
+
 export function useBookings(branchId: string | null, date?: string) {
   const [bookings, setBookings] = useState<BookingWithSlots[]>([])
   const [loading, setLoading] = useState(true)
@@ -337,6 +417,37 @@ export function useBookings(branchId: string | null, date?: string) {
       }
     }
   }, [branchId, date, fetchBookings])
+
+  // ─── Préchargement des jours adjacents (navigation instantanée) ───────────
+  // À chaque date affichée, on précharge en arrière-plan le cache des jours
+  // voisins (J+1, J-1, J+2, J-2). Quand l'utilisateur clique suivant/précédent,
+  // le cache est déjà chaud → affichage immédiat, sans spinner ni attente réseau.
+  useEffect(() => {
+    if (!branchId || !date) return
+    let cancelled = false
+
+    const prefetch = async () => {
+      for (const offset of [1, -1, 2, -2]) {
+        if (cancelled) return
+        const d = addDaysToDateStr(date, offset)
+        if (getCachedBookings(branchId, d) !== null) continue
+        try {
+          const data = await loadBookingsForDate(branchId, d)
+          if (cancelled) return
+          setCachedBookings(branchId, d, data)
+        } catch {
+          // silencieux — un échec de préchargement n'impacte pas l'affichage courant
+        }
+      }
+    }
+
+    // Laisser le jour courant se charger d'abord
+    const timer = setTimeout(prefetch, 500)
+    return () => {
+      cancelled = true
+      clearTimeout(timer)
+    }
+  }, [branchId, date])
 
   // ─── Mises à jour CIBLÉES via Realtime ───────────────────────────────────
   // Avant : chaque événement rechargeait toute la journée (~3 requêtes).
