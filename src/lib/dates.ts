@@ -110,8 +110,22 @@ export function getIsraelHoursMinutes(date: Date): { hours: number; minutes: num
  * retournent l'heure d'Israël, quel que soit le timezone du navigateur.
  * Utile pour l'agenda qui utilise .getHours() partout pour positionner les bookings.
  */
+// Cache de conversion : toLocaleString({ timeZone }) passe par Intl et est TRÈS
+// coûteux. L'agenda appelle cette fonction des milliers de fois par rendu, presque
+// toujours sur les mêmes timestamps (heures de réservations/sessions). On mémoïse
+// donc le résultat par timestamp → l'opération Intl n'est faite qu'une fois par
+// date unique. On renvoie une COPIE pour préserver le contrat (l'appelant peut
+// muter la Date retournée, ex: .setHours()).
+const _ilCache = new Map<number, number>() // getTime(UTC) → getTime(Israel-local)
+
 export function toIsraelLocalDate(date: Date): Date {
-  const israelTime = date.toLocaleString('en-US', { timeZone: ISRAEL_TIMEZONE })
+  const t = date.getTime()
+  if (Number.isNaN(t)) return new Date(date.toLocaleString('en-US', { timeZone: ISRAEL_TIMEZONE }))
+  const cached = _ilCache.get(t)
+  if (cached !== undefined) return new Date(cached)
+  const israelTime = new Date(date.toLocaleString('en-US', { timeZone: ISRAEL_TIMEZONE })).getTime()
+  if (_ilCache.size > 5000) _ilCache.clear() // borne mémoire
+  _ilCache.set(t, israelTime)
   return new Date(israelTime)
 }
 
