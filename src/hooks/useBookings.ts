@@ -68,6 +68,14 @@ export interface CreateBookingData {
   locale?: 'he' | 'fr' | 'en'
 }
 
+// Signature légère d'une liste de réservations — pour détecter si un refetch
+// renvoie des données identiques à l'affichage courant (et éviter un re-rendu).
+function bookingsSignature(list: BookingWithSlots[]): string {
+  return list
+    .map(b => `${b.id}:${b.updated_at || ''}:${b.slots.length}:${b.game_sessions?.length || 0}:${b.primaryContact?.id || ''}`)
+    .join('|')
+}
+
 // Décale une date "YYYY-MM-DD" de n jours (date locale, sans conversion UTC —
 // cohérent avec formatDateToString de l'agenda)
 function addDaysToDateStr(dateStr: string, n: number): string {
@@ -158,10 +166,14 @@ export function useBookings(branchId: string | null, date?: string) {
   const pendingRefreshRef = useRef(false)
   // Track whether we have any data displayed (avoids stale closure on bookings)
   const hasDataRef = useRef(false)
+  // Référence vers les bookings affichés — pour comparer une signature et éviter
+  // un re-rendu (reconstruction de grille) quand un refetch renvoie des données identiques.
+  const bookingsRef = useRef<BookingWithSlots[]>([])
 
-  // Keep hasDataRef in sync
+  // Keep refs in sync
   useEffect(() => {
     hasDataRef.current = bookings.length > 0
+    bookingsRef.current = bookings
   }, [bookings])
 
   // Load from cache EVERY time branchId or date changes (instant display)
@@ -243,7 +255,7 @@ export function useBookings(branchId: string | null, date?: string) {
       if (bookingsError) throw bookingsError
 
       if (!bookingsData || bookingsData.length === 0) {
-        setBookings([])
+        if (bookingsRef.current.length !== 0) setBookings([])
         // Mettre en cache même les jours vides pour éviter de repartir "à froid"
         // à chaque événement realtime (sinon setLoading(true) à chaque fois)
         if (date && branchId) {
@@ -364,7 +376,11 @@ export function useBookings(branchId: string | null, date?: string) {
         }
       })
 
-      setBookings(bookingsWithSlots)
+      // Ne re-rendre que si les données ont réellement changé (évite la
+      // reconstruction de la grille lors d'un refetch de fond identique).
+      if (bookingsSignature(bookingsWithSlots) !== bookingsSignature(bookingsRef.current)) {
+        setBookings(bookingsWithSlots)
+      }
 
       // Sauvegarder en cache pour affichage instantané au prochain chargement
       if (date && branchId) {
@@ -427,22 +443,24 @@ export function useBookings(branchId: string | null, date?: string) {
     let cancelled = false
 
     const prefetch = async () => {
-      for (const offset of [1, -1, 2, -2]) {
+      // Toute la semaine autour du jour affiché (±3 jours), EN PARALLÈLE pour
+      // réchauffer le cache vite. Les jours déjà en cache sont ignorés.
+      const offsets = [1, -1, 2, -2, 3, -3]
+      await Promise.all(offsets.map(async (offset) => {
         if (cancelled) return
         const d = addDaysToDateStr(date, offset)
-        if (getCachedBookings(branchId, d) !== null) continue
+        if (getCachedBookings(branchId, d) !== null) return
         try {
           const data = await loadBookingsForDate(branchId, d)
-          if (cancelled) return
-          setCachedBookings(branchId, d, data)
+          if (!cancelled) setCachedBookings(branchId, d, data)
         } catch {
           // silencieux — un échec de préchargement n'impacte pas l'affichage courant
         }
-      }
+      }))
     }
 
-    // Laisser le jour courant se charger d'abord
-    const timer = setTimeout(prefetch, 500)
+    // Laisser le jour courant s'afficher d'abord, puis réchauffer la semaine
+    const timer = setTimeout(prefetch, 300)
     return () => {
       cancelled = true
       clearTimeout(timer)
