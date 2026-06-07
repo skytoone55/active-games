@@ -25,6 +25,11 @@ export interface OrderNotificationParams {
   requestedTime: string
   orderType: string
   participantsCount: number
+  // Type de notification — 'created' (défaut) = nouvelle commande reçue ;
+  // 'deposit_paid' = la commande vient d'être confirmée par paiement d'acompte
+  // (en-tête clair « ✅ confirmé + acompte payé » pour lever toute ambiguïté côté staff)
+  kind?: 'created' | 'deposit_paid'
+  depositAmount?: number
 }
 
 const statusLabels: Record<string, string> = {
@@ -68,11 +73,18 @@ export async function sendOrderRedirectionNotification(params: OrderNotification
     const orderTypeLabel = orderTypeLabels[params.orderType?.toUpperCase()] || params.orderType
     const clientName = `${params.customerFirstName} ${params.customerLastName || ''}`.trim()
 
-    const isAdmin = params.status === 'auto_confirmed'
-    const headerIcon = isAdmin ? '📋' : params.status === 'aborted' ? '⚠️' : params.status === 'cancelled' ? '❌' : '🔔'
-    const headerTitle = isAdmin ? 'הזמנה חדשה נוצרה (אדמין)' : 'הזמנה חדשה התקבלה'
+    const isDepositPaid = params.kind === 'deposit_paid'
+    const isAdmin = !isDepositPaid && params.status === 'auto_confirmed'
+    const headerIcon = isDepositPaid ? '✅' : isAdmin ? '📋' : params.status === 'aborted' ? '⚠️' : params.status === 'cancelled' ? '❌' : '🔔'
+    const headerTitle = isDepositPaid
+      ? 'הזמנה אושרה — מקדמה שולמה'
+      : isAdmin ? 'הזמנה חדשה נוצרה (אדמין)' : 'הזמנה חדשה התקבלה'
 
-    const subject = `[${params.branchName}] הזמנה ${params.reference} — ${statusLabel}`
+    // Pour une confirmation de paiement, le sujet est explicite (✅) pour que le
+    // staff repère immédiatement les réservations réellement confirmées et payées.
+    const subject = isDepositPaid
+      ? `✅ [${params.branchName}] הזמנה ${params.reference} אושרה — מקדמה שולמה`
+      : `[${params.branchName}] הזמנה ${params.reference} — ${statusLabel}`
 
     const html = `
 <div dir="rtl" style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; background: #f9fafb; border-radius: 8px; direction: rtl; text-align: right;">
@@ -110,10 +122,15 @@ export async function sendOrderRedirectionNotification(params: OrderNotification
       <td style="padding: 12px 16px; font-size: 13px; color: #64748b;">סוג</td>
       <td style="padding: 12px 16px; font-size: 13px; color: #0f172a;">${orderTypeLabel}</td>
     </tr>
-    <tr>
+    <tr${isDepositPaid ? ' style="border-bottom: 1px solid #e2e8f0;"' : ''}>
       <td style="padding: 12px 16px; font-size: 13px; color: #64748b;">מספר משתתפים</td>
       <td style="padding: 12px 16px; font-size: 13px; color: #0f172a;">${params.participantsCount}</td>
     </tr>
+    ${isDepositPaid && params.depositAmount ? `
+    <tr>
+      <td style="padding: 12px 16px; font-size: 13px; color: #64748b;">מקדמה ששולמה</td>
+      <td style="padding: 12px 16px; font-size: 14px; font-weight: 700; color: #16a34a;">${params.depositAmount} ₪ ✅</td>
+    </tr>` : ''}
   </table>
   <p style="color: #94a3b8; font-size: 12px; margin-top: 20px; text-align: center;">
     התראה אוטומטית — ActiveLaser Admin

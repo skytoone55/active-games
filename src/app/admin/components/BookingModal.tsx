@@ -3597,8 +3597,25 @@ export const BookingModal = memo(function BookingModal({
               
               {/* Nombre de jeux (1/2/3/4) */}
               <div className="mb-3">
-                <label className={`block text-xs mb-2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                  {t('admin.booking_modal.fields.games_count')}
+                <label className={`flex items-center justify-between text-xs mb-2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                  <span>{t('admin.booking_modal.fields.games_count')}</span>
+                  {/* Durée totale de jeu — lève l'ambiguïté pour ACTIVE où chaque
+                      "jeu" = une tranche de 30 min (ex: 3 jeux = 1h30 de jeu) */}
+                  {(() => {
+                    const totalMin = numberOfGames === 1
+                      ? (parseInt(durationMinutes || '30', 10) || 30)
+                      : Array.from({ length: numberOfGames }).reduce(
+                          (sum: number, _, i) => sum + (parseInt(gameDurations[i] || '30', 10) || 30), 0
+                        )
+                    const h = Math.floor(totalMin / 60)
+                    const m = totalMin % 60
+                    const label = h > 0 ? `${h}h${m > 0 ? String(m).padStart(2, '0') : ''}` : `${m} min`
+                    return (
+                      <span className={`inline-flex items-center gap-1 font-medium ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
+                        <Clock className="w-3 h-3" /> {label}
+                      </span>
+                    )
+                  })()}
                 </label>
                 <div className="flex gap-2">
                   {[1, 2, 3, 4].map(num => (

@@ -16,6 +16,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { getPaymentProvider } from '@/lib/payment-provider'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limiter'
+import { sendOrderRedirectionNotification } from '@/lib/order-notification'
 import type { CreditCardInfo } from '@/lib/payment-provider/icount/credit-card'
 
 const supabase = createClient(
@@ -289,6 +290,37 @@ export async function POST(request: NextRequest) {
 
     if (updateError) {
       console.error('[PAY-DEPOSIT] Error updating order:', updateError)
+    }
+
+    // Notification staff CLAIRE : la commande vient d'être confirmée + acompte payé.
+    // (L'email envoyé à la création disait « ממתין לאישור » car le paiement n'avait
+    // pas encore eu lieu ; celui-ci lève l'ambiguïté → « ✅ אושר — מקדמה שולמה ».)
+    try {
+      const { data: branch } = await supabase
+        .from('branches')
+        .select('name')
+        .eq('id', order.branch_id)
+        .single()
+
+      sendOrderRedirectionNotification({
+        branchId: order.branch_id,
+        branchName: branch?.name || order.branch_id,
+        orderId: order.id,
+        reference: order.request_reference,
+        status: 'auto_confirmed',
+        kind: 'deposit_paid',
+        depositAmount: amount,
+        customerFirstName: order.customer_first_name,
+        customerLastName: order.customer_last_name || null,
+        customerPhone: order.customer_phone,
+        customerEmail: order.customer_email || null,
+        requestedDate: order.requested_date,
+        requestedTime: order.requested_time,
+        orderType: order.order_type,
+        participantsCount: order.participants_count,
+      }).catch(() => {})
+    } catch (notifErr) {
+      console.warn('[PAY-DEPOSIT] Confirmation notification failed (non-blocking):', notifErr)
     }
 
     // Retourner le succès
