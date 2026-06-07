@@ -585,8 +585,19 @@ export default function AdminPage() {
   const buildUISegments = (): UISegment[] => {
     const segments: UISegment[] = []
 
+    // PERF : mémoïsation par tranche horaire. getOccupiedSlotsForTimeSlot ne dépend
+    // QUE de la tranche (et des bookings, constants ici), mais était appelé des
+    // centaines de fois (une fois par booking×session×tranche), chaque appel
+    // reparcourant toutes les réservations avec conversions de fuseau (toIL).
+    // On le calcule désormais UNE fois par tranche → résultat identique, coût divisé.
+    const occupiedSlotsCache = new Map<number, Map<string, { slotStart: number; slotEnd: number }>>()
+
     // Fonction pour calculer quels slots sont occupés pour une tranche de 15 minutes
     const getOccupiedSlotsForTimeSlot = (timeSlotStart: Date): Map<string, { slotStart: number; slotEnd: number }> => {
+      const cacheKey = timeSlotStart.getTime()
+      const cachedResult = occupiedSlotsCache.get(cacheKey)
+      if (cachedResult) return cachedResult
+
       const occupiedSlots = new Map<string, { slotStart: number; slotEnd: number }>()
       const timeSlotEnd = new Date(timeSlotStart)
       timeSlotEnd.setMinutes(timeSlotEnd.getMinutes() + SLOT_DURATION)
@@ -636,6 +647,7 @@ export default function AdminPage() {
         nextAvailableSlot += slotsNeeded
       }
 
+      occupiedSlotsCache.set(cacheKey, occupiedSlots)
       return occupiedSlots
     }
 
