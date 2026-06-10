@@ -249,6 +249,8 @@
       {
         "name": "Petah Tikva",
         "slug": "petah-tikva",
+        "comingSoon": true,
+        "comingSoonLabel": "Opening soon",
         "address": "Amal 37",
         "city": "Petah Tikva",
         "phone": "03-5512277 (Ext. 3)",

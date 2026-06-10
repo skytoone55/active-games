@@ -240,6 +240,8 @@
       {
         "name": "פתח תקווה",
         "slug": "petah-tikva",
+        "comingSoon": true,
+        "comingSoonLabel": "פתיחה בקרוב",
         "address": "עמל 37",
         "city": "פתח תקווה",
         "phone": "03-5512277 (שלוחה 3)",
