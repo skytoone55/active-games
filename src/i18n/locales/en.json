@@ -20,13 +20,13 @@
       "players": "Up to 6 players",
       "duration": "60 minutes of action",
       "bracelet": "Smart bracelet",
-      "rooms": "8 different rooms",
+      "rooms": "7 different rooms",
       "modes": "Competitive or Team",
       "strategy": "Your strategy wins"
     },
     "description": [
       "The experience is designed for groups of up to 6 players and lasts 60 minutes of non-stop action. Upon arrival, each player receives a smart bracelet that identifies you throughout the entire game – every point, every achievement, and every challenge are saved on it.",
-      "The complex includes 8 different rooms, each with its own world, concept, and unique challenges. In each room, multiple games with varying difficulty levels await, so every group can choose the challenges that suit them.",
+      "The complex includes 7 different rooms, each with its own world, concept, and unique challenges. In each room, multiple games with varying difficulty levels await, so every group can choose the challenges that suit them.",
       "You can play in competitive mode or team mode – compete against each other or collaborate with friends. There is no fixed path and no mandatory order – you choose where to enter, when to switch rooms, and which strategy will lead you to accumulate maximum points.",
       "Active Games is a dynamic, exciting, and adrenaline-filled experience, where cooperation, speed, and sharp thinking are the keys to victory."
     ]
@@ -48,7 +48,7 @@
       {
         "number": "3",
         "title": "Choose your room",
-        "description": "8 different rooms with unique worlds and challenges await you"
+        "description": "7 different rooms with unique worlds and challenges await you"
       },
       {
         "number": "4",
@@ -159,7 +159,7 @@
       "currency": "NIS",
       "duration": "One hour per participant",
       "features": [
-        "Access to all 8 rooms",
+        "Access to all 7 rooms",
         "Unlimited games",
         "Smart bracelet: 10 NIS (reusable)"
       ]
@@ -257,6 +257,8 @@
       {
         "name": "Cinema City Glilot",
         "slug": "glilot",
+        "comingSoon": true,
+        "comingSoonLabel": "Opening soon",
         "address": "Cinema City Glilot",
         "city": "Glilot",
         "phone": "03-5512277",

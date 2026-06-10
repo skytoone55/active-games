@@ -16,6 +16,8 @@ interface BranchesSectionProps {
         city: string
         phone: string
         venue: string
+        comingSoon?: boolean
+        comingSoonLabel?: string
       }>
     }
   }
@@ -67,10 +69,23 @@ export default function BranchesSection({ translations }: BranchesSectionProps) 
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: index * 0.1 }}
-              className="backdrop-blur-sm rounded-xl p-6 border border-primary/30 hover:border-primary/50 transition-all duration-300 hover:shadow-[0_0_20px_rgba(0,240,255,0.2)]"
-              style={{ backgroundColor: 'rgba(50, 50, 70, 0.7)' }}
+              className={`relative backdrop-blur-sm rounded-xl p-6 border transition-all duration-300 ${
+                branch.comingSoon
+                  ? 'border-gray-500/40'
+                  : 'border-primary/30 hover:border-primary/50 hover:shadow-[0_0_20px_rgba(0,240,255,0.2)]'
+              }`}
+              style={{ backgroundColor: branch.comingSoon ? 'rgba(40, 40, 48, 0.75)' : 'rgba(50, 50, 70, 0.7)' }}
             >
-              <div className="flex items-start gap-4 w-full">
+              {/* Badge "ouverture prochaine" pour les branches sans Active Games encore */}
+              {branch.comingSoon && (
+                <span
+                  className="absolute top-3 right-3 z-20 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide bg-amber-400 text-gray-900 shadow-lg"
+                  style={{ fontFamily: 'Poppins, sans-serif' }}
+                >
+                  {branch.comingSoonLabel || 'Coming soon'}
+                </span>
+              )}
+              <div className={`flex items-start gap-4 w-full ${branch.comingSoon ? 'opacity-50 grayscale' : ''}`}>
                 <div className="w-12 h-12 bg-primary/20 rounded-full flex items-center justify-center flex-shrink-0">
                   <MapPin className="w-6 h-6 text-primary" />
                 </div>
