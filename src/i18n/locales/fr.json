@@ -1,4 +1,10 @@
 {
+  "errors": {
+    "activeGameMinDuration": "La durée minimale pour Active Games en ligne est de 1 heure.",
+    "activeGameDisabled": "Les réservations Active Games ne sont pas disponibles pour cette branche.",
+    "laserDisabled": "Les réservations Laser City ne sont pas disponibles pour cette branche.",
+    "invalidPhoneFormat": "Format de téléphone invalide. Format israélien attendu : 05XXXXXXXX"
+  },
   "nav": {
     "games": "JEUX",
     "concept": "CONCEPT",

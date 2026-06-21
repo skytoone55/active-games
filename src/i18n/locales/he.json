@@ -1,4 +1,10 @@
 {
+  "errors": {
+    "activeGameMinDuration": "משך הזמן המינימלי להזמנת אקטיב גיימס אונליין הוא שעה אחת.",
+    "activeGameDisabled": "הזמנות אקטיב גיימס אינן זמינות בסניף זה.",
+    "laserDisabled": "הזמנות לייזר סיטי אינן זמינות בסניף זה.",
+    "invalidPhoneFormat": "מספר טלפון לא תקין. פורמט ישראלי נדרש: 05XXXXXXXX"
+  },
   "nav": {
     "concept": "על המשחק",
     "games": "משחקים",

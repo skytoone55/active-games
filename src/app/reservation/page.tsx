@@ -779,7 +779,13 @@ function ReservationContent() {
 
         if (!result.success) {
           console.error('Error saving order:', result.error)
-          alert(`Erreur: ${result.error || t('booking.errors.save_reservation')}`)
+          // Afficher le message dans la langue du site via messageKey (fallback sur
+          // le message brut renvoyé par l'API, puis sur un message générique).
+          const localized = result.messageKey ? t(result.messageKey) : null
+          const message = (localized && localized !== result.messageKey)
+            ? localized
+            : (result.error || t('booking.errors.save_reservation'))
+          alert(message)
           setIsSubmitting(false)
           return
         }

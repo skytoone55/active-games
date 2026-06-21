@@ -1,4 +1,10 @@
 {
+  "errors": {
+    "activeGameMinDuration": "The minimum duration for Active Games online is 1 hour.",
+    "activeGameDisabled": "Active Games bookings are not available at this branch.",
+    "laserDisabled": "Laser City bookings are not available at this branch.",
+    "invalidPhoneFormat": "Invalid phone number format. Expected Israeli format: 05XXXXXXXX"
+  },
   "nav": {
     "concept": "ABOUT THE GAME",
     "games": "GAMES",
