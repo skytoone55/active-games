@@ -363,6 +363,7 @@ export async function POST(request: NextRequest) {
       customer_notes,
       game_area,
       number_of_games = 1,
+      is_mix = false, // MIX (Active + Laser) : envoyé comme game_area='ACTIVE' mais ce n'est PAS un Active 30 min à bloquer
       event_type = null, // event_active, event_laser, event_mix
       event_celebrant_age = null,
       locale = 'en', // 'fr' | 'en' | 'he' - langue pour l'email de confirmation
@@ -418,7 +419,9 @@ export async function POST(request: NextRequest) {
     // GARDE MÉTIER: Active Games en ligne = minimum 1h (2 créneaux de 30 min).
     // Le produit 30 min (active_30) existe pour la vente en magasin uniquement.
     // Bloque les liens préremplis (?games=1) ou un lien Clara qui créeraient une session de 30 min.
-    if (order_type === 'GAME') {
+    // NB: le MIX (Active + Laser) est légitimement 30 min Active + 1 Laser et arrive
+    // ici avec game_area='ACTIVE' & number_of_games=1 → il NE doit PAS être bloqué.
+    if (order_type === 'GAME' && !is_mix) {
       const isActiveOnly = game_area === 'ACTIVE' || !game_area
       if (isActiveOnly && (!number_of_games || number_of_games < 2)) {
         return NextResponse.json(

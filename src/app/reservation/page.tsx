@@ -766,6 +766,7 @@ function ReservationContent() {
             customer_notes: customerNotes || null,
             game_area: gameArea,
             number_of_games: bookingData.numberOfGames,
+            is_mix: bookingData.gameArea === 'MIX', // MIX = 30 min Active + 1 Laser → ne pas bloquer comme un Active 30 min
             event_type: bookingData.eventType || null,
             event_celebrant_age: bookingData.eventAge || null,
             terms_accepted: bookingData.termsAccepted,
