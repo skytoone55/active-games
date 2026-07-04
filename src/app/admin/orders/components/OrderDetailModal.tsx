@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   X,
   Calendar,
@@ -66,6 +66,14 @@ export function OrderDetailModal({
   const [sendingCgv, setSendingCgv] = useState(false)
   const [cgvSent, setCgvSent] = useState(false)
   const [cgvError, setCgvError] = useState<string | null>(null)
+  // Anti multi-clic sur "Afficher sur l'agenda" (se réarme après 8 s si la
+  // navigation n'a pas eu lieu, pour ne pas bloquer l'utilisateur)
+  const [goingToAgenda, setGoingToAgenda] = useState(false)
+  useEffect(() => {
+    if (!goingToAgenda) return
+    const timer = setTimeout(() => setGoingToAgenda(false), 8000)
+    return () => clearTimeout(timer)
+  }, [goingToAgenda])
 
   const handleResendEmail = async () => {
     if (!onResendEmail || !order.customer_email) return
@@ -452,14 +460,26 @@ export function OrderDetailModal({
                 </>
               ) : (
                 <button
-                  onClick={() => onGoToAgenda(order.requested_date, order.booking?.id)}
+                  onClick={() => {
+                    // Anti multi-clic : la navigation peut prendre un instant —
+                    // sans feedback, l'utilisateur clique plusieurs fois et
+                    // empile des navigations. Un seul clic pris en compte.
+                    if (goingToAgenda) return
+                    setGoingToAgenda(true)
+                    onGoToAgenda(order.requested_date, order.booking?.id)
+                  }}
+                  disabled={goingToAgenda}
                   className={`w-full mb-3 flex items-center gap-3 p-3 rounded-xl transition-colors ${
-                    isDark 
-                      ? 'bg-blue-600/20 hover:bg-blue-600/30 text-blue-400' 
+                    goingToAgenda ? 'opacity-60 cursor-wait ' : ''
+                  }${
+                    isDark
+                      ? 'bg-blue-600/20 hover:bg-blue-600/30 text-blue-400'
                       : 'bg-blue-50 hover:bg-blue-100 text-blue-600'
                   }`}
                 >
-                  <Calendar className="w-5 h-5" />
+                  {goingToAgenda
+                    ? <Loader2 className="w-5 h-5 animate-spin" />
+                    : <Calendar className="w-5 h-5" />}
                   <div className="text-left flex-1">
                     <p className="font-medium">{t('admin.orders.view_in_agenda')}</p>
                     <p className={`text-xs ${isDark ? 'text-blue-400/70' : 'text-blue-500/70'}`}>
