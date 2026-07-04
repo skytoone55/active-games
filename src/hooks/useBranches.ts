@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { getClient } from '@/lib/supabase/client'
 import type { Branch, BranchSettings, EventRoom, LaserRoom } from '@/lib/supabase/types'
+import { readBranchesCache, writeBranchesCache } from '@/lib/admin-boot-cache'
 
 export interface BranchWithDetails extends Branch {
   settings: BranchSettings | null
@@ -24,31 +25,97 @@ export function useBranches() {
     }
   }, [selectedBranchId])
 
+  // Évite d'afficher le spinner pour les re-validations en arrière-plan
+  const hasHydratedRef = useRef(false)
+
+  // Logique de sélection automatique de la branche (extraite pour être
+  // réutilisée par l'hydratation cache ET le chargement frais)
+  const applyBranchSelection = useCallback((branchesWithDetails: BranchWithDetails[]) => {
+    setSelectedBranchId(prev => {
+      if (branchesWithDetails.length === 0) {
+        return null
+      }
+
+      // Si une seule branche (branch_admin avec 1 branche), la sélectionner
+      if (branchesWithDetails.length === 1) {
+        return branchesWithDetails[0].id
+      }
+
+      // Si une branche était déjà sélectionnée, vérifier qu'elle est toujours autorisée
+      if (prev) {
+        const isStillAuthorized = branchesWithDetails.some(b => b.id === prev)
+        if (isStillAuthorized) {
+          return prev
+        }
+      }
+
+      // Vérifier si on a une branche sauvegardée dans localStorage qui est autorisée
+      if (typeof window !== 'undefined') {
+        const saved = localStorage.getItem('selectedBranchId')
+        if (saved && branchesWithDetails.some(b => b.id === saved)) {
+          return saved
+        }
+      }
+
+      // Sinon, chercher Rishon LeZion en priorité (pour super_admin)
+      const rishonBranch = branchesWithDetails.find(
+        b => b.slug === 'rishon-lezion' ||
+             b.name.toLowerCase().includes('rishon') ||
+             b.name.toLowerCase().includes('rly')
+      )
+
+      return rishonBranch?.id || branchesWithDetails[0].id
+    })
+  }, [])
+
   // Charger les branches avec leurs détails
   const fetchBranches = useCallback(async () => {
     const supabase = getClient()
-    setLoading(true)
+    if (!hasHydratedRef.current) setLoading(true)
     setError(null)
 
     try {
-      // Récupérer l'utilisateur et ses branches autorisées
-      const { data: { user: authUser } } = await supabase.auth.getUser()
-      
+      // PERF: getSession() lit la session LOCALEMENT (zéro réseau),
+      // contrairement à getUser() qui payait un aller-retour auth à chaque fois.
+      const { data: { session } } = await supabase.auth.getSession()
+      const authUser = session?.user ?? null
+
       if (!authUser) {
         setBranches([])
         setLoading(false)
         return
       }
 
-      // Récupérer le rôle de l'utilisateur
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', authUser.id)
-        .single<{ role: string }>()
+      // Démarrage INSTANTANÉ depuis le cache local (si présent), puis on
+      // continue le chargement frais en arrière-plan pour mettre à jour.
+      if (!hasHydratedRef.current) {
+        const cached = readBranchesCache<BranchWithDetails[]>(authUser.id)
+        if (cached && cached.length > 0) {
+          hasHydratedRef.current = true
+          setBranches(cached)
+          applyBranchSelection(cached)
+          setLoading(false)
+          // (pas de return — on continue pour rafraîchir les données)
+        }
+      }
 
-      if (profileError) {
-        throw profileError
+      // PERF: rôle + branches assignées lancés EN PARALLÈLE (avant: en série)
+      const [profileResult, userBranchesResult] = await Promise.all([
+        supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', authUser.id)
+          .single<{ role: string }>(),
+        supabase
+          .from('user_branches')
+          .select('branch_id')
+          .eq('user_id', authUser.id)
+          .returns<Array<{ branch_id: string }>>(),
+      ])
+
+      const profile = profileResult.data
+      if (profileResult.error) {
+        throw profileResult.error
       }
 
       let branchesData: Branch[] = []
@@ -66,14 +133,9 @@ export function useBranches() {
         branchesData = data || []
       } else {
         // Branch admin et agent voient uniquement leurs branches assignées
-        const { data: userBranches, error: userBranchesError } = await supabase
-          .from('user_branches')
-          .select('branch_id')
-          .eq('user_id', authUser.id)
-          .returns<Array<{ branch_id: string }>>()
-
-        if (userBranchesError) {
-          throw userBranchesError
+        const userBranches = userBranchesResult.data
+        if (userBranchesResult.error) {
+          throw userBranchesResult.error
         }
 
         if (userBranches && userBranches.length > 0) {
@@ -135,52 +197,18 @@ export function useBranches() {
       }))
 
       setBranches(branchesWithDetails)
+      applyBranchSelection(branchesWithDetails)
 
-      // Sélectionner automatiquement la branche appropriée
-      setSelectedBranchId(prev => {
-        if (branchesWithDetails.length === 0) {
-          return null
-        }
-
-        // Si une seule branche (branch_admin avec 1 branche), la sélectionner
-        if (branchesWithDetails.length === 1) {
-          return branchesWithDetails[0].id
-        }
-
-        // Si une branche était déjà sélectionnée, vérifier qu'elle est toujours autorisée
-        if (prev) {
-          const isStillAuthorized = branchesWithDetails.some(b => b.id === prev)
-          if (isStillAuthorized) {
-            return prev // Garder la sélection actuelle si elle est toujours valide
-          }
-          // Sinon, la branche n'est plus autorisée (changement de rôle/permissions), réinitialiser
-        }
-
-        // Vérifier si on a une branche sauvegardée dans localStorage qui est autorisée
-        if (typeof window !== 'undefined') {
-          const saved = localStorage.getItem('selectedBranchId')
-          if (saved && branchesWithDetails.some(b => b.id === saved)) {
-            return saved // Utiliser la branche sauvegardée si elle est autorisée
-          }
-        }
-
-        // Sinon, chercher Rishon LeZion en priorité (pour super_admin)
-        const rishonBranch = branchesWithDetails.find(
-          b => b.slug === 'rishon-lezion' || 
-               b.name.toLowerCase().includes('rishon') ||
-               b.name.toLowerCase().includes('rly')
-        )
-        
-        // Si Rishon trouvé, l'utiliser, sinon première branche
-        return rishonBranch?.id || branchesWithDetails[0].id
-      })
+      // Mémoriser pour un démarrage instantané au prochain chargement (F5)
+      hasHydratedRef.current = true
+      writeBranchesCache(authUser.id, branchesWithDetails)
     } catch (err) {
       console.error('Error fetching branches:', err)
       setError('Erreur lors du chargement des agences')
     } finally {
       setLoading(false)
     }
-  }, []) // Plus de dépendance sur selectedBranchId
+  }, [applyBranchSelection]) // Plus de dépendance sur selectedBranchId
 
   useEffect(() => {
     fetchBranches()

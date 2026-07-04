@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { getClient } from '@/lib/supabase/client'
 import type { User } from '@supabase/supabase-js'
 import type { Profile, Branch, UserRole, ProfileInsert } from '@/lib/supabase/types'
+import { readAuthCache, writeAuthCache, clearAdminBootCache } from '@/lib/admin-boot-cache'
 
 export interface AuthUser {
   id: string
@@ -27,12 +28,23 @@ export function useAuth() {
     const supabase = getClient()
 
     try {
-      // Récupérer le profil
-      let { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', authUser.id)
-        .single<Profile>()
+      // PERF: profil + branches autorisées lancés EN PARALLÈLE
+      // (avant : requêtes en série, ~150 ms chacune vers la base US)
+      const [profileResult, userBranchesResult] = await Promise.all([
+        supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', authUser.id)
+          .single<Profile>(),
+        supabase
+          .from('user_branches')
+          .select('branch_id')
+          .eq('user_id', authUser.id)
+          .returns<Array<{ branch_id: string }>>(),
+      ])
+
+      let profile = profileResult.data
+      let profileError = profileResult.error
 
       // Si le profil n'existe pas (code PGRST116 = no rows), le créer
       if (profileError && profileError.code === 'PGRST116') {
@@ -75,12 +87,8 @@ export function useAuth() {
 
         branches = allBranches || []
       } else {
-        // Autres utilisateurs voient leurs branches
-        const { data: userBranches } = await supabase
-          .from('user_branches')
-          .select('branch_id')
-          .eq('user_id', authUser.id)
-          .returns<Array<{ branch_id: string }>>()
+        // Autres utilisateurs voient leurs branches (user_branches déjà chargé en parallèle)
+        const userBranches = userBranchesResult.data
 
         if (userBranches && userBranches.length > 0) {
           const branchIds = userBranches.map(ub => ub.branch_id)
@@ -98,7 +106,7 @@ export function useAuth() {
 
       const role = profile?.role || null
 
-      setUser({
+      const nextUser: AuthUser = {
         id: authUser.id,
         email: authUser.email || '',
         profile: profile || null,
@@ -107,7 +115,10 @@ export function useAuth() {
         isSuperAdmin: role === 'super_admin',
         isBranchAdmin: role === 'branch_admin',
         isAgent: role === 'agent',
-      })
+      }
+      setUser(nextUser)
+      // Mémoriser pour un démarrage instantané au prochain chargement (F5)
+      writeAuthCache(authUser.id, nextUser)
     } catch (err) {
       console.error('Error fetching user data:', err)
       setError('Erreur lors du chargement des données utilisateur')
@@ -118,11 +129,24 @@ export function useAuth() {
     const supabase = getClient()
 
     // Vérifier la session actuelle
+    // PERF: getSession() lit la session LOCALEMENT (cookie/storage) — aucun
+    // aller-retour réseau, contrairement à getUser(). La vérification serveur
+    // réelle reste assurée par le middleware (JWT) et les RLS Supabase.
     const checkSession = async () => {
       try {
-        const { data: { user: authUser } } = await supabase.auth.getUser()
+        const { data: { session } } = await supabase.auth.getSession()
+        const authUser = session?.user ?? null
 
         if (authUser) {
+          // Démarrage INSTANTANÉ depuis le cache si disponible, puis
+          // re-validation en arrière-plan (les données fraîches remplacent).
+          const cached = readAuthCache<AuthUser>(authUser.id)
+          if (cached) {
+            setUser(cached)
+            setLoading(false)
+            void fetchUserData(authUser) // arrière-plan — met à jour état + cache
+            return
+          }
           await fetchUserData(authUser)
         } else {
           setUser(null)
@@ -154,6 +178,7 @@ export function useAuth() {
           }
         } else if (event === 'SIGNED_OUT') {
           setUser(null)
+          clearAdminBootCache()
         }
       }
     )
@@ -177,6 +202,7 @@ export function useAuth() {
     }
     await supabase.auth.signOut()
     setUser(null)
+    clearAdminBootCache()
     router.push('/admin/login')
   }, [router])
 

@@ -97,9 +97,13 @@ function AdminLayoutContent({
       const supabase = getClient()
 
       try {
-        const { data: { user }, error } = await supabase.auth.getUser()
+        // PERF: getSession() lit la session LOCALEMENT (zéro réseau) — avant,
+        // getUser() payait un aller-retour auth (~150 ms) qui bloquait le tout
+        // premier rendu de CHAQUE chargement complet. La vraie vérification
+        // serveur est déjà faite par le middleware (JWT) sur chaque requête.
+        const { data: { session }, error } = await supabase.auth.getSession()
 
-        if (error || !user) {
+        if (error || !session?.user) {
           setIsAuthenticated(false)
         } else {
           setIsAuthenticated(true)
