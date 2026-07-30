@@ -1207,7 +1207,10 @@ export async function POST(request: NextRequest) {
     // Pour LASER : jeux × durée + (jeux - 1) × pause
     // Pour ACTIVE : jeux × durée (pas de pause par défaut dans l'admin)
     let totalDuration: number
-    if (game_area === 'LASER' && number_of_games > 1) {
+    if (game_area === 'MIX') {
+      // MIX = 1 partie LASER + 30 min ACTIVE (enchaînés)
+      totalDuration = gameDuration + 30
+    } else if (game_area === 'LASER' && number_of_games > 1) {
       totalDuration = (number_of_games * gameDuration) + ((number_of_games - 1) * pauseDuration)
     } else {
       totalDuration = number_of_games * gameDuration
@@ -1216,8 +1219,8 @@ export async function POST(request: NextRequest) {
     const endDateTime = new Date(startDateTime.getTime() + (totalDuration * 60000))
 
     // 4. VÉRIFICATION OVERBOOKING ACTIVE
-    // Si ACTIVE, vérifier si ajouter ces participants cause un overbooking
-    if (game_area === 'ACTIVE') {
+    // ACTIVE et MIX (qui contient 30 min ACTIVE) consomment de la capacité Active
+    if (game_area === 'ACTIVE' || game_area === 'MIX') {
       const maxPlayers = settings.max_concurrent_players || 84 // 14 slots × 6 joueurs par défaut
 
       // Récupérer tous les bookings ACTIVE existants sur ce créneau
@@ -1384,7 +1387,7 @@ export async function POST(request: NextRequest) {
     let sessionResult
     try {
       sessionResult = await buildGameSessionsForAPI({
-        gameArea: game_area as 'ACTIVE' | 'LASER' | null,
+        gameArea: game_area as 'ACTIVE' | 'LASER' | 'MIX' | null,
         numberOfGames: number_of_games,
         participants: participants_count,
         startDateTime,

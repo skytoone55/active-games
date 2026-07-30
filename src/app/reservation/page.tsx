@@ -729,16 +729,18 @@ function ReservationContent() {
         return
       }
 
-      // Utiliser le gameArea sélectionné par l'utilisateur
-      let gameArea: 'ACTIVE' | 'LASER' | null = null
+      // Utiliser le gameArea sélectionné par l'utilisateur.
+      // IMPORTANT : le MIX est transmis TEL QUEL. Avant, il était converti en
+      // 'ACTIVE' avec une simple note texte → la partie Laser n'était jamais
+      // créée (absente de l'agenda) et la commande était tarifée comme un
+      // Active 30 min, soit environ la MOITIÉ du prix réel du MIX.
+      let gameArea: 'ACTIVE' | 'LASER' | 'MIX' | null = null
       let customerNotes = bookingData.specialRequest || ''
 
       if (bookingData.gameArea) {
+        gameArea = bookingData.gameArea
         if (bookingData.gameArea === 'MIX') {
-          gameArea = 'ACTIVE'
-          customerNotes = `[DEMANDE MIX Active + Laser] ${customerNotes}`.trim()
-        } else {
-          gameArea = bookingData.gameArea
+          customerNotes = `[MIX Active + Laser] ${customerNotes}`.trim()
         }
       }
 

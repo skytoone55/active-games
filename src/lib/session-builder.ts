@@ -8,7 +8,8 @@ import type { LaserRoom, GameSession } from './supabase/types'
 
 export interface SessionBuilderParams {
   bookingType: 'GAME' | 'EVENT'
-  gameArea?: 'ACTIVE' | 'LASER' | null
+  // MIX = formule "Sur Mesure" du site : 1 partie LASER + 30 min ACTIVE
+  gameArea?: 'ACTIVE' | 'LASER' | 'MIX' | null
   numberOfGames: number
   participants: number
   startDateTime: Date
@@ -135,6 +136,61 @@ export async function buildGameSessions(
         currentStart.setMinutes(currentStart.getMinutes() + pauseAfter)
       }
     }
+  } else if (gameArea === 'MIX') {
+    // ─────────────────────────────────────────────────────────────────────────
+    // MIX ("Sur Mesure" du site) = 1 partie LASER + 30 min ACTIVE.
+    // Avant, le site convertissait le MIX en ACTIVE 30 min avec une simple note
+    // texte : la partie LASER n'existait PAS en base (absente de l'agenda) et la
+    // commande était tarifée comme un Active 30 min → sous-facturation de moitié.
+    // Ici on crée les DEUX vraies sessions, comme le fait le calcul d'acompte.
+    // ─────────────────────────────────────────────────────────────────────────
+    const laserStart = new Date(startDateTime)
+    const laserEnd = new Date(laserStart)
+    laserEnd.setMinutes(laserEnd.getMinutes() + gameDuration)
+
+    // 1) Partie LASER (avec allocation de salle)
+    if (findBestLaserRoom) {
+      const allocation = await findBestLaserRoom(
+        participants,
+        laserStart,
+        laserEnd,
+        excludeBookingId,
+        branchId
+      )
+
+      if (!allocation) {
+        const timeStr = `${String(laserStart.getHours()).padStart(2, '0')}:${String(laserStart.getMinutes()).padStart(2, '0')}`
+        return {
+          game_sessions: [],
+          error: `No laser room available for ${participants} participants at ${timeStr}`
+        }
+      }
+
+      allocation.roomIds.forEach((roomId) => {
+        game_sessions.push({
+          game_area: 'LASER',
+          start_datetime: laserStart.toISOString(),
+          end_datetime: laserEnd.toISOString(),
+          laser_room_id: roomId,
+          session_order: 1,
+          pause_before_minutes: 0
+        })
+      })
+    }
+
+    // 2) Puis 30 min ACTIVE, enchaînés directement après le laser
+    const activeStart = new Date(laserEnd)
+    const activeEnd = new Date(activeStart)
+    activeEnd.setMinutes(activeEnd.getMinutes() + 30)
+
+    game_sessions.push({
+      game_area: 'ACTIVE',
+      start_datetime: activeStart.toISOString(),
+      end_datetime: activeEnd.toISOString(),
+      laser_room_id: null,
+      session_order: 2,
+      pause_before_minutes: 0
+    })
   }
 
   return { game_sessions }
@@ -144,7 +200,7 @@ export async function buildGameSessions(
  * Wrapper pour l'API qui gère la récupération des bookings et appelle findBestLaserRoomsForBooking
  */
 export async function buildGameSessionsForAPI(params: {
-  gameArea?: 'ACTIVE' | 'LASER' | null
+  gameArea?: 'ACTIVE' | 'LASER' | 'MIX' | null
   numberOfGames: number
   participants: number
   startDateTime: Date
@@ -155,8 +211,8 @@ export async function buildGameSessionsForAPI(params: {
   
   const { gameArea, supabase, branchId, startDateTime, gameDuration, numberOfGames, participants } = params
   
-  // Si LASER, on doit récupérer les données pour findBestLaserRoom
-  if (gameArea === 'LASER') {
+  // LASER et MIX ont besoin des données d'allocation de salles laser
+  if (gameArea === 'LASER' || gameArea === 'MIX') {
     // Récupérer salles laser
     const { data: laserRooms } = await supabase
       .from('laser_rooms')
