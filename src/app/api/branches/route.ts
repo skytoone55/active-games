@@ -6,8 +6,12 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
+// SÉCURITÉ : clé SERVEUR (service role). Cette route tourne côté serveur et la
+// clé n'est jamais exposée au navigateur. Nécessaire depuis l'activation du RLS :
+// l'accès anonyme direct à la base est désormais bloqué (les données clients
+// étaient publiquement lisibles ET modifiables avec la clé publiable).
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
 
 const supabase = createClient(supabaseUrl, supabaseKey)
 

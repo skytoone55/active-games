@@ -7,11 +7,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
-// Client Supabase public (pas besoin d'auth pour lire les CGV)
+// SÉCURITÉ : clé SERVEUR (service role) — cette route tourne côté serveur,
+// la clé n'atteint jamais le navigateur. Requis depuis l'activation du RLS.
 const getSupabase = () => {
   return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
   )
 }
 

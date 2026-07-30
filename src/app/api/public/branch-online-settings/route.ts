@@ -6,9 +6,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
+// SÉCURITÉ : clé SERVEUR (service role) — jamais exposée au navigateur.
+// Requis depuis l'activation du RLS qui bloque l'accès anonyme direct à la base.
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
 export async function GET(request: NextRequest) {
