@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Image from 'next/image'
 import { X, Volume2, VolumeX } from 'lucide-react'
-import { localAssets } from '@/data/games'
+import { localAssets, hiddenGames } from '@/data/games'
 
 interface GamesSectionProps {
   translations: {
@@ -28,9 +28,9 @@ export default function GamesSection({ translations }: GamesSectionProps) {
   const videoRefs = useRef<Record<string, HTMLVideoElement | null>>({})
   const cardRefs = useRef<Record<string, HTMLDivElement | null>>({})
 
-  // Filtrer pour exclure "control" (8 jeux seulement pour le franchisé)
+  // Activités masquées : voir hiddenGames dans src/data/games.ts
   const gameKeys = (Object.keys(localAssets.games) as Array<keyof typeof localAssets.games>)
-    .filter(key => key !== 'control')
+    .filter(key => !hiddenGames.includes(key))
 
   // Lazy-load vidéos : charger src uniquement quand la carte entre dans le viewport.
   // Évite de télécharger ~90 MB de vidéos pour les visiteurs qui ne scrollent pas jusqu'ici.

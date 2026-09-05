@@ -72,6 +72,18 @@ export const games: Game[] = [
   },
 ]
 
+/**
+ * Activités masquées sur le site public.
+ *
+ * Pour réafficher une activité : retirer son identifiant de ce tableau.
+ * Rien n'est supprimé — vidéo, images et traductions restent en place,
+ * la réactivation est immédiate.
+ */
+export const hiddenGames: string[] = [
+  'control',   // réservé : 8 jeux seulement pour le franchisé
+  'climbing',  // masqué le 05/09/2026 — activité non proposée
+]
+
 // Assets locaux (téléchargés)
 export const localAssets = {
   logo: '/images/logo.png',
