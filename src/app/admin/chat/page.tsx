@@ -13,6 +13,29 @@ function isReengagementError(msg: { metadata?: unknown }): boolean {
   const meta = msg?.metadata as { errors?: Array<{ code?: number }> } | null | undefined
   return Array.isArray(meta?.errors) && meta.errors.some(e => e?.code === 131047)
 }
+
+/**
+ * Traduit un échec d'envoi en message compréhensible par un employé.
+ * L'API renvoie soit { error }, soit { error, details } (réponse brute de Meta).
+ */
+function describeSendError(status: number, data: { error?: string; details?: unknown }): string {
+  const details = data?.details as { error?: { code?: number; message?: string; error_data?: { details?: string } } } | undefined
+  const metaCode = details?.error?.code
+
+  // Règle des 24 h de WhatsApp : impossible d'écrire en premier passé ce délai
+  if (metaCode === 131047) {
+    return "Message NON envoyé : le client n'a pas écrit depuis plus de 24 h. WhatsApp interdit d'écrire en premier après ce délai — il faut attendre que le client réponde."
+  }
+  if (status === 401) return "Message NON envoyé : votre session a expiré. Rechargez la page (F5) et reconnectez-vous."
+  if (status === 403) return "Message NON envoyé : vous n'avez pas la permission d'écrire dans le chat. Contactez un administrateur."
+  if (status === 404) return "Message NON envoyé : conversation introuvable. Rechargez la page."
+  if (data?.error === 'WhatsApp not configured') {
+    return "Message NON envoyé : la connexion WhatsApp de cette branche n'est pas configurée."
+  }
+
+  const metaMsg = details?.error?.error_data?.details || details?.error?.message
+  return `Message NON envoyé${metaMsg ? ` : ${metaMsg}` : ` (erreur ${status})`}. Réessayez ; si ça persiste, prévenez l'administrateur.`
+}
 import dynamic from 'next/dynamic'
 import { Theme as EmojiTheme } from 'emoji-picker-react'
 
@@ -158,6 +181,8 @@ export default function ChatPage() {
   const [waLoading, setWaLoading] = useState(true)
   const [waLoadingMessages, setWaLoadingMessages] = useState(false)
   const [sending, setSending] = useState(false)
+  // Erreur d'envoi visible par l'employé (avant : échecs totalement silencieux)
+  const [sendError, setSendError] = useState<string | null>(null)
   const [isRecording, setIsRecording] = useState(false)
   const [recordingDuration, setRecordingDuration] = useState(0)
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
@@ -686,14 +711,22 @@ export default function ChatPage() {
       })
       const data = await res.json()
       if (data.success) {
+        setSendError(null)
         setNewMessage('')
         // Reset textarea height after send
         if (inputRef.current) inputRef.current.style.height = 'auto'
         fetchWaMessages(selectedWaConv.id, true)
         inputRef.current?.focus()
+      } else {
+        // AVANT : aucun traitement de l'échec — l'employé cliquait, rien ne se
+        // passait, aucune explication. D'où "on n'arrive plus à envoyer".
+        // On garde le texte saisi (pour réessayer) et on affiche la vraie cause.
+        console.error('[CHAT SEND] Échec:', res.status, data)
+        setSendError(describeSendError(res.status, data))
       }
     } catch (error) {
       console.error('Error sending message:', error)
+      setSendError(t('admin.chat.send_error_network') || 'Message non envoyé : connexion au serveur impossible. Vérifiez internet et réessayez.')
     } finally {
       setSending(false)
     }
@@ -1814,6 +1847,24 @@ export default function ChatPage() {
                   onChange={handleFileSelect}
                   className="hidden"
                 />
+
+                {/* ÉCHEC D'ENVOI — visible et explicite. Avant, un envoi raté ne
+                    produisait AUCUN retour : l'employé croyait que le logiciel
+                    était cassé. Le texte saisi est conservé pour réessayer. */}
+                {sendError && (
+                  <div className="mb-2 flex items-start gap-2 rounded-lg bg-red-600 px-3 py-2 text-white shadow-lg">
+                    <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                    <p className="text-xs leading-snug flex-1">{sendError}</p>
+                    <button
+                      type="button"
+                      onClick={() => setSendError(null)}
+                      className="flex-shrink-0 rounded p-0.5 hover:bg-red-700"
+                      title="Fermer"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
 
                 {isRecording ? (
                   /* Recording mode */
