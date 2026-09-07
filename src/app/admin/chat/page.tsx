@@ -1,7 +1,18 @@
 'use client'
 
 import React, { useState, useEffect, useRef, useCallback, useTransition } from 'react'
-import { MessageCircle, Send, Search, Phone, User, ArrowLeft, Loader2, Filter, UserPlus, Globe, Bot, Archive, X, Smile, Trash2, EyeOff, Plus, Zap, Settings2, Sparkles, HandHelping, CheckCircle, Paperclip, Mic, MicOff, FileText, Play, Square } from 'lucide-react'
+import { MessageCircle, Send, Search, Phone, User, ArrowLeft, Loader2, Filter, UserPlus, Globe, Bot, Archive, X, Smile, Trash2, EyeOff, Plus, Zap, Settings2, Sparkles, HandHelping, CheckCircle, Paperclip, Mic, MicOff, FileText, Play, Square, AlertTriangle } from 'lucide-react'
+
+/**
+ * Un message a-t-il échoué à cause de la règle des 24 h de WhatsApp ?
+ * Meta renvoie le code 131047 ("Re-engagement message") quand on tente d'écrire
+ * à un client qui n'a pas répondu depuis plus de 24 h. Le webhook stocke
+ * l'erreur dans metadata.errors.
+ */
+function isReengagementError(msg: { metadata?: unknown }): boolean {
+  const meta = msg?.metadata as { errors?: Array<{ code?: number }> } | null | undefined
+  return Array.isArray(meta?.errors) && meta.errors.some(e => e?.code === 131047)
+}
 import dynamic from 'next/dynamic'
 import { Theme as EmojiTheme } from 'emoji-picker-react'
 
@@ -63,6 +74,8 @@ interface WhatsAppMessage {
   media_type: string | null
   media_mime_type: string | null
   media_filename: string | null
+  // Détail d'erreur renvoyé par Meta quand status = 'failed' (ex: code 131047)
+  metadata?: { errors?: Array<{ code?: number; title?: string }> } | null
 }
 
 interface MessengerConversation {
@@ -1708,6 +1721,23 @@ export default function ChatPage() {
                         {(!msg.media_url || (msg.content && !msg.content.startsWith('[') && msg.content !== `[${msg.media_type}]`)) && (
                           <p className="text-sm whitespace-pre-wrap break-words">{msg.content}</p>
                         )}
+                        {/* ÉCHEC D'ENVOI — avant, un message échoué affichait un simple '✓'
+                            (identique à un message parti) : l'employé croyait avoir
+                            répondu au client alors que WhatsApp avait bloqué l'envoi.
+                            Cause n°1 : règle des 24 h de Meta (code 131047). */}
+                        {msg.direction === 'outbound' && msg.status === 'failed' && (
+                          <div className="mt-1.5 rounded-md bg-red-600/95 px-2 py-1.5 text-white">
+                            <p className="text-[11px] font-bold flex items-center gap-1">
+                              <AlertTriangle className="w-3 h-3 flex-shrink-0" />
+                              {t('admin.chat.send_failed') || 'Non envoyé au client'}
+                            </p>
+                            <p className="text-[10px] leading-snug mt-0.5 text-red-50">
+                              {isReengagementError(msg)
+                                ? (t('admin.chat.send_failed_24h') || "Le client n'a pas écrit depuis plus de 24 h. WhatsApp interdit d'écrire en premier après ce délai — il faut attendre que le client réponde.")
+                                : (t('admin.chat.send_failed_generic') || 'WhatsApp a refusé ce message.')}
+                            </p>
+                          </div>
+                        )}
                         <div className={`text-[10px] mt-1 text-right ${
                           msg.direction === 'outbound'
                             ? 'text-green-200'
@@ -1716,7 +1746,9 @@ export default function ChatPage() {
                           {formatMessageTime(msg.created_at)}
                           {msg.direction === 'outbound' && (
                             <span className="ml-1">
-                              {msg.status === 'read' ? '✓✓' : msg.status === 'delivered' ? '✓✓' : '✓'}
+                              {msg.status === 'failed'
+                                ? '⚠️'
+                                : msg.status === 'read' ? '✓✓' : msg.status === 'delivered' ? '✓✓' : '✓'}
                             </span>
                           )}
                         </div>
