@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useRef, useCallback, useTransition } from 'react'
+import React, { useState, useEffect, useRef, useCallback, useMemo, useTransition } from 'react'
 import { MessageCircle, Send, Search, Phone, User, ArrowLeft, Loader2, Filter, UserPlus, Globe, Bot, Archive, X, Smile, Trash2, EyeOff, Plus, Zap, Settings2, Sparkles, HandHelping, CheckCircle, Paperclip, Mic, MicOff, FileText, Play, Square, AlertTriangle } from 'lucide-react'
 
 /**
@@ -14,27 +14,42 @@ function isReengagementError(msg: { metadata?: unknown }): boolean {
   return Array.isArray(meta?.errors) && meta.errors.some(e => e?.code === 131047)
 }
 
+type TFunc = (key: string, params?: Record<string, string | number>) => string
+
 /**
- * Traduit un échec d'envoi en message compréhensible par un employé.
+ * Traduction SÛRE. t() renvoie la CLÉ elle-même quand la traduction manque —
+ * donc `t('x') || 'secours'` n'active jamais le secours et affiche la clé brute
+ * à l'utilisateur (ex. "admin.chat.send_failed_24h" vu par les opérateurs).
+ * Ce helper détecte ce cas et renvoie le texte de secours.
+ */
+function tr(t: TFunc, key: string, fallback: string): string {
+  const value = t(key)
+  return !value || value === key ? fallback : value
+}
+
+/**
+ * Traduit un échec d'envoi en message compréhensible, DANS LA LANGUE DE L'INTERFACE
+ * (les opérateurs travaillent en hébreu).
  * L'API renvoie soit { error }, soit { error, details } (réponse brute de Meta).
  */
-function describeSendError(status: number, data: { error?: string; details?: unknown }): string {
+function describeSendError(t: TFunc, status: number, data: { error?: string; details?: unknown }): string {
   const details = data?.details as { error?: { code?: number; message?: string; error_data?: { details?: string } } } | undefined
   const metaCode = details?.error?.code
 
   // Règle des 24 h de WhatsApp : impossible d'écrire en premier passé ce délai
   if (metaCode === 131047) {
-    return "Message NON envoyé : le client n'a pas écrit depuis plus de 24 h. WhatsApp interdit d'écrire en premier après ce délai — il faut attendre que le client réponde."
+    return tr(t, 'admin.chat.send_failed_24h', "Message non envoyé : le client n'a pas écrit depuis plus de 24 h. WhatsApp interdit d'écrire en premier après ce délai.")
   }
-  if (status === 401) return "Message NON envoyé : votre session a expiré. Rechargez la page (F5) et reconnectez-vous."
-  if (status === 403) return "Message NON envoyé : vous n'avez pas la permission d'écrire dans le chat. Contactez un administrateur."
-  if (status === 404) return "Message NON envoyé : conversation introuvable. Rechargez la page."
+  if (status === 401) return tr(t, 'admin.chat.send_error_session', 'Message non envoyé : session expirée. Rechargez la page (F5).')
+  if (status === 403) return tr(t, 'admin.chat.send_error_permission', "Message non envoyé : permission insuffisante pour écrire dans le chat.")
+  if (status === 404) return tr(t, 'admin.chat.send_error_not_found', 'Message non envoyé : conversation introuvable. Rechargez la page.')
   if (data?.error === 'WhatsApp not configured') {
-    return "Message NON envoyé : la connexion WhatsApp de cette branche n'est pas configurée."
+    return tr(t, 'admin.chat.send_error_not_configured', "Message non envoyé : connexion WhatsApp non configurée pour cette branche.")
   }
 
   const metaMsg = details?.error?.error_data?.details || details?.error?.message
-  return `Message NON envoyé${metaMsg ? ` : ${metaMsg}` : ` (erreur ${status})`}. Réessayez ; si ça persiste, prévenez l'administrateur.`
+  const base = tr(t, 'admin.chat.send_error_retry', 'Message non envoyé. Réessayez ; si ça persiste, prévenez l\'administrateur.')
+  return metaMsg ? `${base} (${metaMsg})` : base
 }
 import dynamic from 'next/dynamic'
 import { Theme as EmojiTheme } from 'emoji-picker-react'
@@ -183,6 +198,19 @@ export default function ChatPage() {
   const [sending, setSending] = useState(false)
   // Erreur d'envoi visible par l'employé (avant : échecs totalement silencieux)
   const [sendError, setSendError] = useState<string | null>(null)
+
+  // Fenêtre de service WhatsApp (24 h) : on ne peut écrire à un client que dans
+  // les 24 h suivant SON dernier message. Au-delà, Meta rejette (code 131047).
+  // On le détecte AVANT que l'opérateur rédige, pour ne pas lui faire écrire
+  // un message pour rien.
+  const waWindowClosed = useMemo(() => {
+    if (waMessages.length === 0) return false // rien de chargé → on ne présume rien
+    const lastInbound = waMessages
+      .filter(m => m.direction === 'inbound')
+      .reduce<string | null>((acc, m) => (!acc || m.created_at > acc ? m.created_at : acc), null)
+    if (!lastInbound) return false
+    return Date.now() - new Date(lastInbound).getTime() > 24 * 60 * 60 * 1000
+  }, [waMessages])
   const [isRecording, setIsRecording] = useState(false)
   const [recordingDuration, setRecordingDuration] = useState(0)
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
@@ -722,11 +750,11 @@ export default function ChatPage() {
         // passait, aucune explication. D'où "on n'arrive plus à envoyer".
         // On garde le texte saisi (pour réessayer) et on affiche la vraie cause.
         console.error('[CHAT SEND] Échec:', res.status, data)
-        setSendError(describeSendError(res.status, data))
+        setSendError(describeSendError(t, res.status, data))
       }
     } catch (error) {
       console.error('Error sending message:', error)
-      setSendError(t('admin.chat.send_error_network') || 'Message non envoyé : connexion au serveur impossible. Vérifiez internet et réessayez.')
+      setSendError(tr(t, 'admin.chat.send_error_network', 'Message non envoyé : connexion au serveur impossible. Vérifiez internet et réessayez.'))
     } finally {
       setSending(false)
     }
@@ -1762,12 +1790,12 @@ export default function ChatPage() {
                           <div className="mt-1.5 rounded-md bg-red-600/95 px-2 py-1.5 text-white">
                             <p className="text-[11px] font-bold flex items-center gap-1">
                               <AlertTriangle className="w-3 h-3 flex-shrink-0" />
-                              {t('admin.chat.send_failed') || 'Non envoyé au client'}
+                              {tr(t, 'admin.chat.send_failed', 'Message non envoyé')}
                             </p>
                             <p className="text-[10px] leading-snug mt-0.5 text-red-50">
                               {isReengagementError(msg)
-                                ? (t('admin.chat.send_failed_24h') || "Le client n'a pas écrit depuis plus de 24 h. WhatsApp interdit d'écrire en premier après ce délai — il faut attendre que le client réponde.")
-                                : (t('admin.chat.send_failed_generic') || 'WhatsApp a refusé ce message.')}
+                                ? tr(t, 'admin.chat.send_failed_24h', "Le client n'a pas écrit depuis plus de 24 h. WhatsApp interdit d'écrire en premier après ce délai — il faut attendre que le client réponde.")
+                                : tr(t, 'admin.chat.send_failed_generic', 'WhatsApp a refusé ce message.')}
                             </p>
                           </div>
                         )}
@@ -1851,6 +1879,23 @@ export default function ChatPage() {
                 {/* ÉCHEC D'ENVOI — visible et explicite. Avant, un envoi raté ne
                     produisait AUCUN retour : l'employé croyait que le logiciel
                     était cassé. Le texte saisi est conservé pour réessayer. */}
+                {/* PRÉVENTION : fenêtre de 24 h fermée → on avertit AVANT que
+                    l'opérateur rédige son message (sinon il écrit pour rien et
+                    découvre l'échec seulement après l'envoi). */}
+                {waWindowClosed && !sendError && (
+                  <div className="mb-2 flex items-start gap-2 rounded-lg bg-amber-500 px-3 py-2 text-gray-900 shadow-lg">
+                    <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                    <div className="flex-1">
+                      <p className="text-xs font-bold">
+                        {tr(t, 'admin.chat.window_closed_title', "Impossible d'écrire à ce client pour le moment")}
+                      </p>
+                      <p className="text-[11px] leading-snug mt-0.5">
+                        {tr(t, 'admin.chat.window_closed_body', "Le client n'a pas écrit depuis plus de 24 h. Les règles WhatsApp interdisent d'écrire en premier — attendez qu'il réponde, ou appelez-le.")}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
                 {sendError && (
                   <div className="mb-2 flex items-start gap-2 rounded-lg bg-red-600 px-3 py-2 text-white shadow-lg">
                     <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />

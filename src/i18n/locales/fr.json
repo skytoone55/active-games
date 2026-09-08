@@ -2298,7 +2298,21 @@
       "no_shortcuts": "Aucun raccourci. Cliquez + pour en creer.",
       "save_shortcut": "Enregistrer",
       "shortcut_label_placeholder": "Ex: Prix, Horaires...",
-      "shortcut_message_placeholder": "Le message qui sera insere..."
+      "shortcut_message_placeholder": "Le message qui sera insere...",
+      "send_failed": "Message non envoyé",
+      "send_failed_24h": "Plus de 24 h se sont écoulées depuis le dernier message du client. WhatsApp interdit d'écrire en premier après ce délai — il faut attendre que le client réponde.",
+      "send_failed_generic": "WhatsApp a refusé ce message.",
+      "send_error_network": "Message non envoyé : connexion au serveur impossible. Vérifiez internet et réessayez.",
+      "send_error_session": "Message non envoyé : votre session a expiré. Rechargez la page (F5) et reconnectez-vous.",
+      "send_error_permission": "Message non envoyé : vous n'avez pas la permission d'écrire dans le chat. Contactez un administrateur.",
+      "send_error_not_found": "Message non envoyé : conversation introuvable. Rechargez la page.",
+      "send_error_not_configured": "Message non envoyé : la connexion WhatsApp de cette branche n'est pas configurée.",
+      "send_error_retry": "Message non envoyé. Réessayez ; si ça persiste, prévenez l'administrateur.",
+      "window_closed_title": "Impossible d'écrire à ce client pour le moment",
+      "window_closed_body": "Le client n'a pas écrit depuis plus de 24 h. Les règles WhatsApp interdisent d'écrire en premier — attendez qu'il réponde, ou appelez-le.",
+      "attach_file": "Joindre un fichier",
+      "record_audio": "Enregistrer un audio",
+      "resolve": "Résoudre"
     },
     "chat_stats": {
       "error_loading": "Erreur lors du chargement des statistiques chat",
@@ -2969,5 +2983,8 @@
         "saturday": "Samedi"
       }
     }
+  },
+  "common": {
+    "cancel": "Annuler"
   }
 }

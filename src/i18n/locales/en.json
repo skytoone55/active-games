@@ -2235,7 +2235,21 @@
       "no_shortcuts": "No shortcuts. Click + to create one.",
       "save_shortcut": "Save",
       "shortcut_label_placeholder": "E.g.: Prices, Hours...",
-      "shortcut_message_placeholder": "The message that will be inserted..."
+      "shortcut_message_placeholder": "The message that will be inserted...",
+      "send_failed": "Message not sent",
+      "send_failed_24h": "More than 24 hours have passed since the customer's last message. WhatsApp does not allow initiating contact after this delay — you must wait for the customer to write again.",
+      "send_failed_generic": "WhatsApp rejected this message.",
+      "send_error_network": "Message not sent: cannot reach the server. Check your internet and try again.",
+      "send_error_session": "Message not sent: your session expired. Reload the page (F5) and sign in again.",
+      "send_error_permission": "Message not sent: you don't have permission to write in the chat. Contact an administrator.",
+      "send_error_not_found": "Message not sent: conversation not found. Reload the page.",
+      "send_error_not_configured": "Message not sent: this branch's WhatsApp connection is not configured.",
+      "send_error_retry": "Message not sent. Please try again; if it persists, notify the administrator.",
+      "window_closed_title": "Cannot message this customer right now",
+      "window_closed_body": "The customer hasn't written for more than 24 hours. WhatsApp rules forbid initiating contact — wait for their reply, or call them.",
+      "attach_file": "Attach file",
+      "record_audio": "Record audio",
+      "resolve": "Resolve"
     },
     "chat_stats": {
       "error_loading": "Error loading chat statistics",
@@ -2905,5 +2919,8 @@
         "saturday": "Saturday"
       }
     }
+  },
+  "common": {
+    "cancel": "Cancel"
   }
 }
