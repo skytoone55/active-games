@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { BOOKING_URL } from '@/lib/booking-link'
 import Image from 'next/image'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Menu, X } from 'lucide-react'
@@ -108,8 +109,8 @@ export default function Header({ translations, locale, onLocaleChange }: HeaderP
             </Link>
             
             {/* Order Now Button - Always visible, like logo */}
-            <Link
-              href="/reservation"
+            <a
+              href={BOOKING_URL}
               className="glow-button inline-flex items-center gap-1 md:gap-2 px-2 md:px-5 py-1.5 md:py-2 text-[10px] md:text-xs font-bold text-dark hover:scale-105 transition-transform duration-300"
               style={{ 
                 fontFamily: 'Orbitron, sans-serif',
@@ -121,7 +122,7 @@ export default function Header({ translations, locale, onLocaleChange }: HeaderP
               }}
             >
               {translations.booking?.order_now || 'Order now'}
-            </Link>
+            </a>
           </div>
 
           {/* Desktop Navigation */}

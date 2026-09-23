@@ -2,6 +2,7 @@
 
 import { Check, Sparkles, PartyPopper, Zap } from 'lucide-react'
 import Link from 'next/link'
+import { BOOKING_URL } from '@/lib/booking-link'
 
 interface PricingSectionProps {
   translations: {
@@ -228,14 +229,14 @@ export default function PricingSection({ translations, isRTL }: PricingSectionPr
 
         {/* Order Now Button */}
         <div className="text-center mt-10">
-          <Link
-            href="/reservation"
+          <a
+            href={BOOKING_URL}
             className="glow-button inline-flex items-center gap-3 px-10 py-4 text-lg font-bold text-dark hover:scale-105 transition-transform duration-300"
             style={{ fontFamily: 'Orbitron, sans-serif' }}
           >
             <Sparkles className="w-6 h-6" />
             {translations.booking?.order_now || 'Order now'}
-          </Link>
+          </a>
         </div>
       </div>
 
